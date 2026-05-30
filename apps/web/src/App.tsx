@@ -75,6 +75,23 @@ function accentClass(indexOrValue: number | string) {
   return `accent-${Math.abs(value) % 6}`;
 }
 
+function formatDate(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  
+  if (isToday) return `Today at ${formatTime(value)}`;
+  if (isYesterday) return `Yesterday at ${formatTime(value)}`;
+  return new Intl.DateTimeFormat('en', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric'
+  }).format(date) + ' ' + formatTime(value);
+}
+
 function extractLinks(value: string) {
   return value.match(/https?:\/\/[^\s]+/gi) ?? [];
 }
@@ -1000,11 +1017,8 @@ export function App() {
       <main className="auth-screen">
         <section className="auth-panel">
           <div className="brand-lockup">
-            <div className="brand-mark">D</div>
-            <div>
-              <h1>Discord Clone</h1>
-              <p>Realtime servers, channels, members, and messages.</p>
-            </div>
+            <h1>Welcome back!</h1>
+            <p>We're so excited to see you again!</p>
           </div>
 
           <div className="segmented" aria-label="Authentication mode">
@@ -1047,7 +1061,7 @@ export function App() {
             </label>
             {error ? <p className="error">{error}</p> : null}
             <button className="primary" type="submit">
-              {mode === 'login' ? 'Login' : 'Create account'}
+              {mode === 'login' ? 'Log In' : 'Continue'}
             </button>
           </form>
         </section>
@@ -1058,8 +1072,8 @@ export function App() {
   return (
     <main className="app-shell">
       <aside className="server-rail">
-        <button className="server-orb home active" title="Direct messages">
-          <MessageSquare size={22} />
+        <button className="server-orb home active" title="Direct Messages">
+          <MessageSquare size={20} />
         </button>
         <div className="rail-divider" />
         {servers.map((item, index) => (
@@ -1080,13 +1094,12 @@ export function App() {
             <strong>{server?.name || 'Create a server'}</strong>
             <span>{server?.description || 'Realtime workspace'}</span>
           </div>
-          {isLoadingServers ? <Loader2 className="spin" size={16} /> : <Shield size={16} />}
+          {isLoadingServers ? <Loader2 className="spin" size={16} /> : null}
         </div>
 
         <div className="sidebar-scroll">
           <section className="sidebar-card">
             <div className="section-title">
-              <ServerIcon size={14} />
               Workspace
             </div>
             <form onSubmit={createServer} className="compact-form">
@@ -1116,8 +1129,7 @@ export function App() {
             <>
               <section className="sidebar-card">
                 <div className="section-title">
-                  <Hash size={14} />
-                  Text channels
+                  Text Channels
                 </div>
                 <form onSubmit={createChannel} className="compact-form one-line">
                   <input data-testid="create-channel-input" name="name" placeholder="Create channel" required />
@@ -1146,8 +1158,7 @@ export function App() {
 
               <section className="sidebar-card">
                 <div className="section-title">
-                  <Volume2 size={14} />
-                  Voice channels
+                  Voice Channels
                 </div>
                 <form onSubmit={createChannel} className="compact-form one-line">
                   <input data-testid="create-voice-input" name="name" placeholder="Create voice" required />
@@ -1176,8 +1187,7 @@ export function App() {
 
               <section className="sidebar-card">
                 <div className="section-title">
-                  <UserPlus size={14} />
-                  Invite
+                  Invite People
                 </div>
                 <button
                   className="wide-command"
@@ -1380,7 +1390,7 @@ export function App() {
                   <div className="message-body">
                     <div className="message-meta">
                       <strong>{message.author.displayName}</strong>
-                      <span>{formatTime(message.createdAt)}</span>
+                      <span>{formatDate(message.createdAt)}</span>
                       {message.editedAt ? <span>edited</span> : null}
                     </div>
 
@@ -1535,8 +1545,7 @@ export function App() {
 
       <aside className="member-sidebar">
         <div className="member-title">
-          <Users size={16} />
-          Members
+          Members — {server?.members.length ?? 0}
         </div>
         <div className="member-list">
           {server?.members.map((member) => (
