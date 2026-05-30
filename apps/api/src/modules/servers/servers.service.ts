@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { slugifyChannelName } from '../../common/slugify';
+import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
@@ -16,7 +17,10 @@ const DEFAULT_MEMBER_PERMISSIONS = [
 
 @Injectable()
 export class ServersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissions: PermissionsService
+  ) {}
 
   async createServer(userId: string, dto: CreateServerDto) {
     const server = await this.prisma.$transaction(async (tx) => {
@@ -109,7 +113,7 @@ export class ServersService {
   }
 
   async createInvite(userId: string, serverId: string, dto: CreateInviteDto) {
-    await this.requireMembership(userId, serverId);
+    await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
     if (dto.channelId) {
       const channel = await this.prisma.channel.findFirst({
         where: { id: dto.channelId, serverId }

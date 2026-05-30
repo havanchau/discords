@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ChannelsService } from '../channels/channels.service';
+import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -8,7 +9,8 @@ import { UpdateMessageDto } from './dto/update-message.dto';
 export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly channels: ChannelsService
+    private readonly channels: ChannelsService,
+    private readonly permissions: PermissionsService
   ) {}
 
   async listMessages(userId: string, channelId: string, cursor?: string) {
@@ -45,9 +47,11 @@ export class MessagesService {
 
   async createMessage(userId: string, channelId: string, dto: CreateMessageDto) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
+    await this.permissions.requireServerPermission(userId, channel.serverId, Permission.SendMessages);
     const content = dto.content.trim();
+    const attachments = dto.attachments ?? [];
 
-    if (!content) {
+    if (!content && attachments.length === 0) {
       throw new ForbiddenException('Message content cannot be empty without attachments');
     }
 
@@ -57,7 +61,17 @@ export class MessagesService {
         serverId: channel.serverId,
         authorId: userId,
         content,
-        replyToMessageId: dto.replyToMessageId
+        replyToMessageId: dto.replyToMessageId,
+        attachments: attachments.length
+          ? {
+              create: attachments.map((attachment) => ({
+                fileName: attachment.fileName,
+                mimeType: attachment.mimeType,
+                byteSize: attachment.byteSize,
+                url: attachment.url
+              }))
+            }
+          : undefined
       },
       include: {
         author: {
@@ -114,8 +128,13 @@ export class MessagesService {
       throw new NotFoundException('Message not found');
     }
     await this.channels.requireReadableChannel(userId, message.channelId);
-    if (message.authorId !== userId) {
-      throw new ForbiddenException('Only the author can delete this message in the MVP');
+    const canModerate = await this.permissions.hasServerPermission(
+      userId,
+      message.serverId,
+      Permission.ManageMessages
+    );
+    if (message.authorId !== userId && !canModerate) {
+      throw new ForbiddenException('Only the author or message manager can delete this message');
     }
 
     const deleted = await this.prisma.message.update({

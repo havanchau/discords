@@ -42,6 +42,7 @@
     "@nestjs/schematics": "latest",
     "@types/cookie-parser": "latest",
     "@types/express": "latest",
+    "@types/multer": "latest",
     "@types/node": "latest",
     "@types/passport-jwt": "latest",
     "prisma": "^6.0.0",

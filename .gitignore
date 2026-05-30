@@ -22,6 +22,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local verification artifacts
+artifacts/
+
 # OS and editors
 .DS_Store
 Thumbs.db

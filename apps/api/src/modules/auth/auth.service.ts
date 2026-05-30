@@ -74,6 +74,55 @@ export class AuthService {
     return { user };
   }
 
+  async refresh(refreshToken: string, userAgent?: string) {
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        revokedAt: null,
+        expiresAt: { gt: new Date() }
+      },
+      include: { user: true },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    for (const session of sessions) {
+      if (!(await bcrypt.compare(refreshToken, session.refreshHash))) {
+        continue;
+      }
+
+      const nextRefreshToken = randomUUID();
+      const refreshHash = await bcrypt.hash(nextRefreshToken, 12);
+      const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: {
+          refreshHash,
+          userAgent,
+          expiresAt
+        }
+      });
+
+      return {
+        accessToken: await this.signAccessToken(session.userId, session.id),
+        refreshToken: nextRefreshToken,
+        tokenType: 'Bearer',
+        expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
+        user: {
+          id: session.user.id,
+          email: session.user.email,
+          username: session.user.username,
+          displayName: session.user.displayName,
+          avatarUrl: session.user.avatarUrl,
+          bio: session.user.bio,
+          status: session.user.status,
+          createdAt: session.user.createdAt
+        }
+      };
+    }
+
+    throw new UnauthorizedException('Invalid refresh token');
+  }
+
   private async createSession(userId: string, userAgent?: string) {
     const refreshToken = randomUUID();
     const refreshHash = await bcrypt.hash(refreshToken, 12);
@@ -88,17 +137,19 @@ export class AuthService {
       }
     });
 
-    const accessToken = await this.jwt.signAsync({
-      sub: userId,
-      sid: session.id
-    });
-
     return {
-      accessToken,
+      accessToken: await this.signAccessToken(userId, session.id),
       refreshToken,
       tokenType: 'Bearer',
       expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
       ...(await this.getMe(userId))
     };
+  }
+
+  private signAccessToken(userId: string, sessionId: string) {
+    return this.jwt.signAsync({
+      sub: userId,
+      sid: sessionId
+    });
   }
 }

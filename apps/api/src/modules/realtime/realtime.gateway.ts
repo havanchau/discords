@@ -12,6 +12,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { MessagesService } from '../messages/messages.service';
+import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
 
 interface SocketUser {
   id: string;
@@ -68,12 +69,19 @@ export class RealtimeGateway implements OnGatewayConnection {
   @SubscribeMessage('message:create')
   async createMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { channelId: string; content: string; replyToMessageId?: string }
+    @MessageBody()
+    body: {
+      channelId: string;
+      content: string;
+      replyToMessageId?: string;
+      attachments?: MessageAttachmentInputDto[];
+    }
   ) {
     const user = this.getUser(client);
     const result = await this.messages.createMessage(user.id, body.channelId, {
       content: body.content,
-      replyToMessageId: body.replyToMessageId
+      replyToMessageId: body.replyToMessageId,
+      attachments: body.attachments
     });
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
     return result;

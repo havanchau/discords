@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ServersService } from '../servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -7,11 +8,12 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 export class ChannelsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly servers: ServersService
+    private readonly servers: ServersService,
+    private readonly permissions: PermissionsService
   ) {}
 
   async createChannel(userId: string, serverId: string, dto: CreateChannelDto) {
-    await this.servers.requireMembership(userId, serverId);
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageChannels);
     const name = this.servers.normalizeChannelName(dto.name);
     const channelCount = await this.prisma.channel.count({ where: { serverId } });
 
@@ -42,6 +44,7 @@ export class ChannelsService {
       throw new NotFoundException('Channel not found');
     }
     await this.servers.requireMembership(userId, channel.serverId);
+    await this.permissions.requireServerPermission(userId, channel.serverId, Permission.ViewChannel);
     return { channel };
   }
 
@@ -50,7 +53,7 @@ export class ChannelsService {
     if (!channel) {
       throw new NotFoundException('Channel not found');
     }
-    await this.servers.requireMembership(userId, channel.serverId);
+    await this.permissions.requireServerPermission(userId, channel.serverId, Permission.ViewChannel);
     return channel;
   }
 }
