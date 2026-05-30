@@ -30,7 +30,12 @@ const auth = await loginResponse.json();
 const browser = await puppeteer.launch({
   executablePath: chromePath,
   headless: true,
-  args: ['--no-first-run', '--no-default-browser-check']
+  args: [
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--use-fake-device-for-media-stream',
+    '--use-fake-ui-for-media-stream'
+  ]
 });
 
 try {
@@ -67,6 +72,8 @@ try {
     () => document.body.innerText.includes('upload-smoke.txt') && document.querySelector('.link-preview'),
     { timeout: 10000 }
   );
+  await page.click('[data-testid="voice-call-button"]');
+  await page.waitForSelector('[data-testid="call-stage"]', { timeout: 10000 });
 
   await page.click('[data-testid="search-button"]');
   await page.waitForSelector('.utility-panel.open', { timeout: 5000 });

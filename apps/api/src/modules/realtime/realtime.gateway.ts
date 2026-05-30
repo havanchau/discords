@@ -19,6 +19,17 @@ interface SocketUser {
   sessionId: string;
 }
 
+interface CallParticipant {
+  socketId: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  mode: 'voice' | 'video' | 'screen';
+  isMuted: boolean;
+  isCameraOff: boolean;
+  isSharingScreen: boolean;
+}
+
 @WebSocketGateway({
   cors: {
     origin: process.env.WEB_ORIGIN || 'http://localhost:5173',
@@ -30,6 +41,8 @@ export class RealtimeGateway implements OnGatewayConnection {
   server!: Server;
 
   private readonly logger = new Logger(RealtimeGateway.name);
+  private readonly callParticipants = new Map<string, Map<string, CallParticipant>>();
+  private readonly socketCalls = new Map<string, Set<string>>();
 
   constructor(
     private readonly jwt: JwtService,
@@ -48,6 +61,10 @@ export class RealtimeGateway implements OnGatewayConnection {
     } catch {
       client.disconnect(true);
     }
+  }
+
+  handleDisconnect(client: Socket) {
+    this.leaveAllCalls(client);
   }
 
   @SubscribeMessage('channel:join')
@@ -85,6 +102,128 @@ export class RealtimeGateway implements OnGatewayConnection {
     });
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
     return result;
+  }
+
+  @SubscribeMessage('voice:join')
+  async joinVoice(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    body: {
+      channelId: string;
+      mode: 'voice' | 'video' | 'screen';
+      isMuted?: boolean;
+      isCameraOff?: boolean;
+      isSharingScreen?: boolean;
+    }
+  ) {
+    const user = this.getUser(client);
+    const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
+    const member = await this.prisma.serverMember.findUnique({
+      where: { userId_serverId: { userId: user.id, serverId: channel.serverId } },
+      include: { user: true }
+    });
+
+    if (!member) {
+      throw new UnauthorizedException('Not a channel member');
+    }
+
+    const room = this.callRoom(body.channelId);
+    const participants = this.getCallParticipants(body.channelId);
+    const existingParticipants = [...participants.values()].filter((item) => item.socketId !== client.id);
+    const participant: CallParticipant = {
+      socketId: client.id,
+      userId: user.id,
+      username: member.user.username,
+      displayName: member.user.displayName,
+      mode: body.mode,
+      isMuted: Boolean(body.isMuted),
+      isCameraOff: Boolean(body.isCameraOff),
+      isSharingScreen: Boolean(body.isSharingScreen)
+    };
+
+    participants.set(client.id, participant);
+    if (!this.socketCalls.has(client.id)) {
+      this.socketCalls.set(client.id, new Set());
+    }
+    this.socketCalls.get(client.id)?.add(body.channelId);
+    await client.join(room);
+    client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
+    return { participants: existingParticipants };
+  }
+
+  @SubscribeMessage('voice:state')
+  updateVoiceState(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    body: {
+      channelId: string;
+      isMuted?: boolean;
+      isCameraOff?: boolean;
+      isSharingScreen?: boolean;
+      mode?: 'voice' | 'video' | 'screen';
+    }
+  ) {
+    const participant = this.callParticipants.get(body.channelId)?.get(client.id);
+    if (!participant) return { ok: false };
+
+    const nextParticipant = {
+      ...participant,
+      mode: body.mode ?? participant.mode,
+      isMuted: body.isMuted ?? participant.isMuted,
+      isCameraOff: body.isCameraOff ?? participant.isCameraOff,
+      isSharingScreen: body.isSharingScreen ?? participant.isSharingScreen
+    };
+    this.callParticipants.get(body.channelId)?.set(client.id, nextParticipant);
+    this.server.to(this.callRoom(body.channelId)).emit('voice:user-updated', {
+      channelId: body.channelId,
+      participant: nextParticipant
+    });
+    return { ok: true };
+  }
+
+  @SubscribeMessage('voice:leave')
+  leaveVoice(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    this.leaveCall(client, body.channelId);
+    return { ok: true };
+  }
+
+  @SubscribeMessage('webrtc:offer')
+  relayOffer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    body: { channelId: string; targetSocketId: string; offer: unknown }
+  ) {
+    this.server.to(body.targetSocketId).emit('webrtc:offer', {
+      channelId: body.channelId,
+      fromSocketId: client.id,
+      offer: body.offer
+    });
+  }
+
+  @SubscribeMessage('webrtc:answer')
+  relayAnswer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    body: { channelId: string; targetSocketId: string; answer: unknown }
+  ) {
+    this.server.to(body.targetSocketId).emit('webrtc:answer', {
+      channelId: body.channelId,
+      fromSocketId: client.id,
+      answer: body.answer
+    });
+  }
+
+  @SubscribeMessage('webrtc:ice-candidate')
+  relayIceCandidate(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    body: { channelId: string; targetSocketId: string; candidate: unknown }
+  ) {
+    this.server.to(body.targetSocketId).emit('webrtc:ice-candidate', {
+      channelId: body.channelId,
+      fromSocketId: client.id,
+      candidate: body.candidate
+    });
   }
 
   private async authenticate(client: Socket): Promise<SocketUser> {
@@ -126,5 +265,44 @@ export class RealtimeGateway implements OnGatewayConnection {
 
   private channelRoom(channelId: string) {
     return `channel:${channelId}`;
+  }
+
+  private callRoom(channelId: string) {
+    return `call:${channelId}`;
+  }
+
+  private getCallParticipants(channelId: string) {
+    if (!this.callParticipants.has(channelId)) {
+      this.callParticipants.set(channelId, new Map());
+    }
+    return this.callParticipants.get(channelId)!;
+  }
+
+  private leaveCall(client: Socket, channelId: string) {
+    const participants = this.callParticipants.get(channelId);
+    const participant = participants?.get(client.id);
+    if (!participants || !participant) return;
+
+    participants.delete(client.id);
+    if (participants.size === 0) {
+      this.callParticipants.delete(channelId);
+    }
+
+    this.socketCalls.get(client.id)?.delete(channelId);
+    if (this.socketCalls.get(client.id)?.size === 0) {
+      this.socketCalls.delete(client.id);
+    }
+
+    client.leave(this.callRoom(channelId));
+    client.to(this.callRoom(channelId)).emit('voice:user-left', {
+      channelId,
+      socketId: client.id,
+      userId: participant.userId
+    });
+  }
+
+  private leaveAllCalls(client: Socket) {
+    const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
+    channelIds.forEach((channelId) => this.leaveCall(client, channelId));
   }
 }

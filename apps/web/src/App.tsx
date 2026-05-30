@@ -10,7 +10,12 @@ import {
   Loader2,
   LogOut,
   MessageSquare,
+  Mic,
+  MicOff,
+  MonitorUp,
   Paperclip,
+  Phone,
+  PhoneOff,
   Plus,
   Search,
   Send,
@@ -18,6 +23,8 @@ import {
   Shield,
   Trash2,
   UserPlus,
+  Video,
+  VideoOff,
   Users,
   Volume2
 } from 'lucide-react';
@@ -81,6 +88,59 @@ function attachmentKind(attachment: MessageAttachment) {
   return 'file';
 }
 
+type CallMode = 'voice' | 'video' | 'screen';
+
+interface CallParticipant {
+  socketId: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  mode: CallMode;
+  isMuted: boolean;
+  isCameraOff: boolean;
+  isSharingScreen: boolean;
+}
+
+interface RemoteMedia extends CallParticipant {
+  stream?: MediaStream;
+}
+
+interface CallState {
+  channelId: string;
+  mode: CallMode;
+  isMuted: boolean;
+  isCameraOff: boolean;
+  isSharingScreen: boolean;
+}
+
+function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.srcObject = participant.stream ?? null;
+    }
+  }, [participant.stream]);
+
+  return (
+    <div className="call-tile">
+      {participant.stream ? (
+        <video ref={videoRef} autoPlay playsInline />
+      ) : (
+        <div className={`avatar call-avatar ${accentClass(participant.userId)}`}>
+          {initials(participant.displayName)}
+        </div>
+      )}
+      <div className="call-label">
+        <strong>{participant.displayName}</strong>
+        <span>
+          {participant.isSharingScreen ? 'Sharing screen' : participant.isMuted ? 'Muted' : 'In call'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const [auth, setAuth] = useState<AuthState | null>(() => {
     const raw = localStorage.getItem(AUTH_KEY);
@@ -103,7 +163,13 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [callState, setCallState] = useState<CallState | null>(null);
+  const [remoteMedia, setRemoteMedia] = useState<RemoteMedia[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const callStateRef = useRef<CallState | null>(null);
 
   useEffect(() => {
     configureAuthRefresh({
@@ -156,6 +222,91 @@ export function App() {
   }, [auth?.accessToken]);
 
   useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+
+  useEffect(() => {
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [callState]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUserJoined = (payload: { channelId: string; participant: CallParticipant }) => {
+      if (payload.channelId !== callStateRef.current?.channelId) return;
+      setRemoteMedia((current) => upsertRemote(current, payload.participant));
+    };
+
+    const handleUserUpdated = (payload: { channelId: string; participant: CallParticipant }) => {
+      if (payload.channelId !== callStateRef.current?.channelId) return;
+      setRemoteMedia((current) => upsertRemote(current, payload.participant));
+    };
+
+    const handleUserLeft = (payload: { channelId: string; socketId: string }) => {
+      if (payload.channelId !== callStateRef.current?.channelId) return;
+      closePeer(payload.socketId);
+      setRemoteMedia((current) => current.filter((item) => item.socketId !== payload.socketId));
+    };
+
+    const handleOffer = async (payload: {
+      channelId: string;
+      fromSocketId: string;
+      offer: RTCSessionDescriptionInit;
+    }) => {
+      if (payload.channelId !== callStateRef.current?.channelId || !localStreamRef.current) return;
+      const peer = createPeer(payload.fromSocketId, payload.channelId);
+      await peer.setRemoteDescription(new RTCSessionDescription(payload.offer));
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      socket.emit('webrtc:answer', {
+        channelId: payload.channelId,
+        targetSocketId: payload.fromSocketId,
+        answer
+      });
+    };
+
+    const handleAnswer = async (payload: {
+      channelId: string;
+      fromSocketId: string;
+      answer: RTCSessionDescriptionInit;
+    }) => {
+      if (payload.channelId !== callStateRef.current?.channelId) return;
+      const peer = peersRef.current.get(payload.fromSocketId);
+      if (!peer) return;
+      await peer.setRemoteDescription(new RTCSessionDescription(payload.answer));
+    };
+
+    const handleIceCandidate = async (payload: {
+      channelId: string;
+      fromSocketId: string;
+      candidate: RTCIceCandidateInit;
+    }) => {
+      if (payload.channelId !== callStateRef.current?.channelId) return;
+      const peer = peersRef.current.get(payload.fromSocketId);
+      if (!peer) return;
+      await peer.addIceCandidate(new RTCIceCandidate(payload.candidate));
+    };
+
+    socket.on('voice:user-joined', handleUserJoined);
+    socket.on('voice:user-updated', handleUserUpdated);
+    socket.on('voice:user-left', handleUserLeft);
+    socket.on('webrtc:offer', handleOffer);
+    socket.on('webrtc:answer', handleAnswer);
+    socket.on('webrtc:ice-candidate', handleIceCandidate);
+
+    return () => {
+      socket.off('voice:user-joined', handleUserJoined);
+      socket.off('voice:user-updated', handleUserUpdated);
+      socket.off('voice:user-left', handleUserLeft);
+      socket.off('webrtc:offer', handleOffer);
+      socket.off('webrtc:answer', handleAnswer);
+      socket.off('webrtc:ice-candidate', handleIceCandidate);
+    };
+  }, [socket]);
+
+  useEffect(() => {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
     setWorkspaceError(null);
@@ -169,6 +320,12 @@ export function App() {
       .finally(() => setIsLoadingMessages(false));
     socket?.emit('channel:join', { channelId: channel.id });
   }, [channel?.id, auth?.accessToken, socket]);
+
+  useEffect(() => {
+    if (callState && channel?.id !== callState.channelId) {
+      endCall();
+    }
+  }, [channel?.id]);
 
   const textChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'TEXT') ?? [],
@@ -537,7 +694,188 @@ export function App() {
     );
   }
 
+  async function startCall(mode: CallMode) {
+    if (!channel || !socket?.connected) {
+      setWorkspaceError('Realtime connection is not ready yet.');
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setWorkspaceError('This browser does not support media calls.');
+      return;
+    }
+
+    try {
+      if (callState) {
+        endCall();
+      }
+
+      const stream =
+        mode === 'screen'
+          ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+          : await navigator.mediaDevices.getUserMedia({
+              audio: true,
+              video: mode === 'video'
+            });
+      const nextState: CallState = {
+        channelId: channel.id,
+        mode,
+        isMuted: false,
+        isCameraOff: mode === 'voice',
+        isSharingScreen: mode === 'screen'
+      };
+
+      stream.getVideoTracks().forEach((track) => {
+        track.onended = () => {
+          if (callStateRef.current?.isSharingScreen) {
+            endCall();
+          }
+        };
+      });
+
+      localStreamRef.current = stream;
+      setCallState(nextState);
+      setRemoteMedia([]);
+
+      socket
+        .timeout(5000)
+        .emit(
+          'voice:join',
+          {
+            channelId: channel.id,
+            mode,
+            isMuted: false,
+            isCameraOff: mode === 'voice',
+            isSharingScreen: mode === 'screen'
+          },
+          async (err: Error | null, result?: { participants: CallParticipant[] }) => {
+            if (err) {
+              setWorkspaceError('Cannot join call. Try again.');
+              endCall();
+              return;
+            }
+
+            const participants = result?.participants ?? [];
+            setRemoteMedia(participants);
+            await Promise.all(participants.map((participant) => createOffer(participant.socketId, channel.id)));
+          }
+        );
+    } catch (err) {
+      stopLocalStream();
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start call');
+    }
+  }
+
+  function endCall() {
+    const activeChannelId = callStateRef.current?.channelId;
+    if (activeChannelId) {
+      socket?.emit('voice:leave', { channelId: activeChannelId });
+    }
+    peersRef.current.forEach((peer) => peer.close());
+    peersRef.current.clear();
+    stopLocalStream();
+    setRemoteMedia([]);
+    setCallState(null);
+  }
+
+  function toggleMute() {
+    if (!callState) return;
+    const isMuted = !callState.isMuted;
+    localStreamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = !isMuted;
+    });
+    updateCallState({ isMuted });
+  }
+
+  function toggleCamera() {
+    if (!callState || callState.mode === 'voice') return;
+    const isCameraOff = !callState.isCameraOff;
+    localStreamRef.current?.getVideoTracks().forEach((track) => {
+      track.enabled = !isCameraOff;
+    });
+    updateCallState({ isCameraOff });
+  }
+
+  function updateCallState(patch: Partial<CallState>) {
+    setCallState((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      socket?.emit('voice:state', next);
+      return next;
+    });
+  }
+
+  async function createOffer(targetSocketId: string, channelId: string) {
+    if (!socket) return;
+    const peer = createPeer(targetSocketId, channelId);
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+    socket.emit('webrtc:offer', { channelId, targetSocketId, offer });
+  }
+
+  function createPeer(targetSocketId: string, channelId: string) {
+    const existingPeer = peersRef.current.get(targetSocketId);
+    if (existingPeer) return existingPeer;
+
+    const peer = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    localStreamRef.current?.getTracks().forEach((track) => {
+      const stream = localStreamRef.current;
+      if (stream) {
+        peer.addTrack(track, stream);
+      }
+    });
+
+    peer.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket?.emit('webrtc:ice-candidate', {
+          channelId,
+          targetSocketId,
+          candidate: event.candidate.toJSON()
+        });
+      }
+    };
+
+    peer.ontrack = (event) => {
+      const [stream] = event.streams;
+      if (!stream) return;
+      setRemoteMedia((current) =>
+        current.map((item) => (item.socketId === targetSocketId ? { ...item, stream } : item))
+      );
+    };
+
+    peer.onconnectionstatechange = () => {
+      if (['closed', 'failed', 'disconnected'].includes(peer.connectionState)) {
+        closePeer(targetSocketId);
+      }
+    };
+
+    peersRef.current.set(targetSocketId, peer);
+    return peer;
+  }
+
+  function closePeer(socketId: string) {
+    peersRef.current.get(socketId)?.close();
+    peersRef.current.delete(socketId);
+  }
+
+  function stopLocalStream() {
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    localStreamRef.current = null;
+  }
+
+  function upsertRemote(current: RemoteMedia[], participant: CallParticipant) {
+    const existing = current.find((item) => item.socketId === participant.socketId);
+    if (!existing) return [...current, participant];
+    return current.map((item) =>
+      item.socketId === participant.socketId ? { ...item, ...participant, stream: item.stream } : item
+    );
+  }
+
   function logout() {
+    endCall();
     localStorage.removeItem(AUTH_KEY);
     setAuth(null);
     setServers([]);
@@ -768,6 +1106,33 @@ export function App() {
           </div>
           <div className="toolbar">
             <button
+              className={callState?.mode === 'voice' ? 'selected' : ''}
+              data-testid="voice-call-button"
+              title="Start voice call"
+              onClick={() => void startCall('voice')}
+              disabled={!channel || Boolean(callState)}
+            >
+              <Phone size={18} />
+            </button>
+            <button
+              className={callState?.mode === 'video' ? 'selected' : ''}
+              data-testid="video-call-button"
+              title="Start video call"
+              onClick={() => void startCall('video')}
+              disabled={!channel || Boolean(callState)}
+            >
+              <Video size={18} />
+            </button>
+            <button
+              className={callState?.mode === 'screen' ? 'selected' : ''}
+              data-testid="screen-share-button"
+              title="Share screen"
+              onClick={() => void startCall('screen')}
+              disabled={!channel || Boolean(callState)}
+            >
+              <MonitorUp size={18} />
+            </button>
+            <button
               className={activePanel === 'notifications' ? 'selected' : ''}
               data-testid="notifications-button"
               title="Notifications"
@@ -806,6 +1171,67 @@ export function App() {
             {workspaceError}
             <button onClick={() => setWorkspaceError(null)}>Dismiss</button>
           </div>
+        ) : null}
+
+        {callState ? (
+          <section className="call-stage" data-testid="call-stage">
+            <div className="call-stage-header">
+              <div>
+                <strong>
+                  {callState.isSharingScreen
+                    ? 'Screen share'
+                    : callState.mode === 'video'
+                      ? 'Video call'
+                      : 'Voice call'}
+                </strong>
+                <span>
+                  #{channel?.name} · {remoteMedia.length + 1} participant
+                  {remoteMedia.length ? 's' : ''}
+                </span>
+              </div>
+              <div className="call-controls">
+                <button
+                  type="button"
+                  className={callState.isMuted ? 'danger' : ''}
+                  onClick={toggleMute}
+                  title={callState.isMuted ? 'Unmute' : 'Mute'}
+                >
+                  {callState.isMuted ? <MicOff size={17} /> : <Mic size={17} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  disabled={callState.mode === 'voice'}
+                  title={callState.isCameraOff ? 'Turn camera on' : 'Turn camera off'}
+                >
+                  {callState.isCameraOff ? <VideoOff size={17} /> : <Video size={17} />}
+                </button>
+                <button type="button" className="danger" onClick={endCall} title="Leave call">
+                  <PhoneOff size={17} />
+                </button>
+              </div>
+            </div>
+            <div className="call-grid">
+              <div className="call-tile local">
+                {callState.mode !== 'voice' && !callState.isCameraOff ? (
+                  <video ref={localVideoRef} autoPlay muted playsInline />
+                ) : (
+                  <div className={`avatar call-avatar ${accentClass(auth.user.id)}`}>
+                    {initials(auth.user.displayName)}
+                  </div>
+                )}
+                <div className="call-label">
+                  <strong>{auth.user.displayName}</strong>
+                  <span>
+                    {callState.isSharingScreen ? 'Sharing screen' : callState.isMuted ? 'Muted' : 'You'}
+                  </span>
+                </div>
+              </div>
+              {remoteMedia.map((participant) => (
+                <RemoteVideoTile key={participant.socketId} participant={participant} />
+              ))}
+            </div>
+          </section>
         ) : null}
 
         <div className="message-list" data-testid="message-list">
