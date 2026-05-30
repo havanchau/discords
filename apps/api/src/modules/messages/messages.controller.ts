@@ -3,6 +3,7 @@ import { CurrentUser } from '../../common/current-user.decorator';
 import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { MessagesService } from './messages.service';
 
@@ -41,5 +42,14 @@ export class MessagesController {
   @Delete('messages/:messageId')
   remove(@CurrentUser() user: RequestUser, @Param('messageId') messageId: string) {
     return this.messages.deleteMessage(user.id, messageId);
+  }
+
+  @Post('messages/:messageId/reactions')
+  react(
+    @CurrentUser() user: RequestUser,
+    @Param('messageId') messageId: string,
+    @Body() dto: ReactionDto
+  ) {
+    return this.messages.toggleReaction(user.id, messageId, dto);
   }
 }

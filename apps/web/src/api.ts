@@ -38,7 +38,14 @@ export interface ServerSummary {
 }
 
 export interface ServerDetail extends ServerSummary {
-  members: Array<{ id: string; user: User; kind: string }>;
+  members: Array<{ id: string; user: User; kind: string; roles?: Array<{ role: Role }> }>;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  color?: string | null;
+  permissions: string[];
 }
 
 export interface Channel {
@@ -59,6 +66,8 @@ export interface Message {
   deletedAt?: string | null;
   author: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
   attachments: MessageAttachment[];
+  reactions: MessageReaction[];
+  replyToMessage?: Message | null;
 }
 
 export interface MessageAttachment {
@@ -67,6 +76,12 @@ export interface MessageAttachment {
   mimeType: string;
   byteSize: number;
   url: string;
+}
+
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  me: boolean;
 }
 
 export async function apiRequest<T>(

@@ -1,4 +1,39 @@
 services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: discord-clone-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/discord_clone
+      JWT_SECRET: dev-secret-change-me
+      WEB_ORIGIN: http://localhost:5173
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - api-uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_SOCKET_URL: http://localhost:3000
+    container_name: discord-clone-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
   postgres:
     image: postgres:16-alpine
     container_name: discord-clone-postgres
@@ -31,3 +66,4 @@ services:
 
 volumes:
   postgres-data:
+  api-uploads:

@@ -13,6 +13,7 @@ import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { MessagesService } from '../messages/messages.service';
 import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
+import { ReactionDto } from '../messages/dto/reaction.dto';
 
 interface SocketUser {
   id: string;
@@ -58,13 +59,22 @@ export class RealtimeGateway implements OnGatewayConnection {
         where: { id: client.data.user.id },
         data: { status: 'ONLINE' }
       });
+      await this.broadcastPresence(client.data.user.id, 'ONLINE');
     } catch {
       client.disconnect(true);
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     this.leaveAllCalls(client);
+    const user = client.data.user as SocketUser | undefined;
+    if (user) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'OFFLINE' }
+      });
+      await this.broadcastPresence(user.id, 'OFFLINE');
+    }
   }
 
   @SubscribeMessage('channel:join')
@@ -80,6 +90,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     }
 
     await client.join(this.channelRoom(body.channelId));
+    await client.join(this.serverRoom(channel.serverId));
     return { ok: true };
   }
 
@@ -102,6 +113,44 @@ export class RealtimeGateway implements OnGatewayConnection {
     });
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
     return result;
+  }
+
+  @SubscribeMessage('reaction:toggle')
+  async toggleReaction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { channelId: string; messageId: string; emoji: string }
+  ) {
+    const user = this.getUser(client);
+    const result = await this.messages.toggleReaction(user.id, body.messageId, {
+      emoji: body.emoji
+    } satisfies ReactionDto);
+    this.server.to(this.channelRoom(body.channelId)).emit('reaction:updated', {
+      channelId: body.channelId,
+      message: result.message
+    });
+    return result;
+  }
+
+  @SubscribeMessage('typing:start')
+  async typingStart(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    const user = this.getUser(client);
+    await this.assertChannelMember(user.id, body.channelId);
+    client.to(this.channelRoom(body.channelId)).emit('typing:start', {
+      channelId: body.channelId,
+      userId: user.id
+    });
+    return { ok: true };
+  }
+
+  @SubscribeMessage('typing:stop')
+  async typingStop(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    const user = this.getUser(client);
+    await this.assertChannelMember(user.id, body.channelId);
+    client.to(this.channelRoom(body.channelId)).emit('typing:stop', {
+      channelId: body.channelId,
+      userId: user.id
+    });
+    return { ok: true };
   }
 
   @SubscribeMessage('voice:join')
@@ -267,6 +316,10 @@ export class RealtimeGateway implements OnGatewayConnection {
     return `channel:${channelId}`;
   }
 
+  private serverRoom(serverId: string) {
+    return `server:${serverId}`;
+  }
+
   private callRoom(channelId: string) {
     return `call:${channelId}`;
   }
@@ -304,5 +357,30 @@ export class RealtimeGateway implements OnGatewayConnection {
   private leaveAllCalls(client: Socket) {
     const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
     channelIds.forEach((channelId) => this.leaveCall(client, channelId));
+  }
+
+  private async assertChannelMember(userId: string, channelId: string) {
+    const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: channelId } });
+    const member = await this.prisma.serverMember.findUnique({
+      where: { userId_serverId: { userId, serverId: channel.serverId } }
+    });
+    if (!member) {
+      throw new UnauthorizedException('Not a channel member');
+    }
+    return channel;
+  }
+
+  private async broadcastPresence(userId: string, status: 'ONLINE' | 'OFFLINE') {
+    const memberships = await this.prisma.serverMember.findMany({
+      where: { userId },
+      select: { serverId: true }
+    });
+
+    memberships.forEach((membership) => {
+      this.server.to(this.serverRoom(membership.serverId)).emit('presence:update', {
+        userId,
+        status
+      });
+    });
   }
 }

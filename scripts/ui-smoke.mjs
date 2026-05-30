@@ -72,6 +72,24 @@ try {
     () => document.body.innerText.includes('upload-smoke.txt') && document.querySelector('.link-preview'),
     { timeout: 10000 }
   );
+  const firstMessage = await page.$('[data-testid="message"]');
+  await firstMessage.hover();
+  await page.click('button[title="React"]');
+  await page.waitForFunction(
+    () => [...document.querySelectorAll('.reaction-row button')].some((button) => button.textContent.includes('1')),
+    { timeout: 10000 }
+  );
+  await firstMessage.hover();
+  await page.click('button[title="Reply"]');
+  await page.waitForSelector('.composer-reply', { timeout: 5000 });
+  const replyMessage = `@demo reply smoke ${Date.now()}`;
+  await page.type('[data-testid="composer-input"]', replyMessage);
+  await page.click('[data-testid="composer-send"]');
+  await page.waitForFunction(
+    (text) => document.body.innerText.includes(text) && document.querySelector('.reply-preview'),
+    { timeout: 10000 },
+    replyMessage
+  );
   await page.click('[data-testid="voice-call-button"]');
   await page.waitForSelector('[data-testid="call-stage"]', { timeout: 10000 });
 

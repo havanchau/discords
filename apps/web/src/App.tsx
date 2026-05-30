@@ -17,16 +17,19 @@ import {
   Phone,
   PhoneOff,
   Plus,
+  Reply,
   Search,
   Send,
   Server as ServerIcon,
   Shield,
+  SmilePlus,
   Trash2,
   UserPlus,
   Video,
   VideoOff,
   Users,
-  Volume2
+  Volume2,
+  X
 } from 'lucide-react';
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -45,6 +48,7 @@ import {
 
 const AUTH_KEY = 'discord-clone-auth';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const QUICK_REACTIONS = ['👍', '🔥', '😂', '❤️'];
 
 function initials(value: string) {
   return value
@@ -86,6 +90,13 @@ function attachmentKind(attachment: MessageAttachment) {
   if (attachment.mimeType.startsWith('video/')) return 'video';
   if (attachment.mimeType.includes('zip')) return 'archive';
   return 'file';
+}
+
+function previewText(message: Message) {
+  if (message.deletedAt) return 'Message deleted';
+  if (message.content) return message.content.slice(0, 120);
+  if (message.attachments?.length) return `Attachment: ${message.attachments[0].fileName}`;
+  return 'Message';
 }
 
 type CallMode = 'voice' | 'video' | 'screen';
@@ -159,8 +170,10 @@ export function App() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
   const [activePanel, setActivePanel] = useState<'notifications' | 'search' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [callState, setCallState] = useState<CallState | null>(null);
@@ -170,6 +183,7 @@ export function App() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const callStateRef = useRef<CallState | null>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     configureAuthRefresh({
@@ -212,6 +226,38 @@ export function App() {
     nextSocket.on('message:created', (message: Message) => {
       setMessages((current) =>
         current.some((item) => item.id === message.id) ? current : [...current, message]
+      );
+    });
+
+    nextSocket.on('reaction:updated', (payload: { message: Message }) => {
+      setMessages((current) =>
+        current.map((message) => (message.id === payload.message.id ? payload.message : message))
+      );
+    });
+
+    nextSocket.on('typing:start', (payload: { channelId: string; userId: string }) => {
+      if (payload.userId === auth.user.id) return;
+      setTypingUsers((current) =>
+        current.includes(payload.userId) ? current : [...current, payload.userId]
+      );
+    });
+
+    nextSocket.on('typing:stop', (payload: { channelId: string; userId: string }) => {
+      setTypingUsers((current) => current.filter((userId) => userId !== payload.userId));
+    });
+
+    nextSocket.on('presence:update', (payload: { userId: string; status: string }) => {
+      setServer((current) =>
+        current
+          ? {
+              ...current,
+              members: current.members.map((member) =>
+                member.user.id === payload.userId
+                  ? { ...member, user: { ...member.user, status: payload.status } }
+                  : member
+              )
+            }
+          : current
       );
     });
 
@@ -309,6 +355,8 @@ export function App() {
   useEffect(() => {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
+    setTypingUsers([]);
+    setReplyingToMessage(null);
     setWorkspaceError(null);
     void apiRequest<{ messages: Message[] }>(
       `/channels/${channel.id}/messages`,
@@ -539,8 +587,15 @@ export function App() {
       const attachments = await Promise.all(files.map((file) => uploadFile(file, auth.accessToken)));
       formElement.reset();
       setSelectedFiles([]);
+      setReplyingToMessage(null);
 
-      const payload = { channelId: channel.id, content, attachments };
+      const payload = {
+        channelId: channel.id,
+        content,
+        attachments,
+        replyToMessageId: replyingToMessage?.id
+      };
+      socket?.emit('typing:stop', { channelId: channel.id });
 
       if (socket?.connected) {
         socket
@@ -561,15 +616,27 @@ export function App() {
 
       const result = await apiRequest<{ message: Message }>(
         `/channels/${channel.id}/messages`,
-        { method: 'POST', body: JSON.stringify({ content, attachments }) },
+        { method: 'POST', body: JSON.stringify({ content, attachments, replyToMessageId: replyingToMessage?.id }) },
         auth.accessToken
       );
       setMessages((current) => [...current, result.message]);
+      setReplyingToMessage(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot send message');
     } finally {
       setPendingAction(null);
     }
+  }
+
+  function handleComposerInput() {
+    if (!channel || !socket?.connected) return;
+    socket.emit('typing:start', { channelId: channel.id });
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = window.setTimeout(() => {
+      socket.emit('typing:stop', { channelId: channel.id });
+    }, 1400);
   }
 
   function selectFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -589,17 +656,40 @@ export function App() {
 
     return (
       <>
+        {message.replyToMessage ? (
+          <button
+            type="button"
+            className="reply-preview"
+            onClick={() =>
+              document.querySelector(`[data-message-id="${message.replyToMessage?.id}"]`)?.scrollIntoView()
+            }
+          >
+            <Reply size={13} />
+            <strong>{message.replyToMessage.author.displayName}</strong>
+            <span>{previewText(message.replyToMessage)}</span>
+          </button>
+        ) : null}
         {message.content ? (
           <p>
-            {parts.map((part, index) =>
-              /^https?:\/\//i.test(part) ? (
-                <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer">
-                  {part}
-                </a>
-              ) : (
-                <span key={`${part}-${index}`}>{part}</span>
-              )
-            )}
+            {parts.map((part, index) => {
+              if (/^https?:\/\//i.test(part)) {
+                return (
+                  <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer">
+                    {part}
+                  </a>
+                );
+              }
+
+              return part.split(/(@[\w.-]+)/g).map((segment, segmentIndex) =>
+                /^@[\w.-]+$/.test(segment) ? (
+                  <span className="mention" key={`${part}-${index}-${segmentIndex}`}>
+                    {segment}
+                  </span>
+                ) : (
+                  <span key={`${part}-${index}-${segmentIndex}`}>{segment}</span>
+                )
+              );
+            })}
           </p>
         ) : null}
         {links.map((link) => (
@@ -691,6 +781,27 @@ export function App() {
       current.map((message) =>
         message.id === messageId ? { ...message, content: '', deletedAt: new Date().toISOString() } : message
       )
+    );
+  }
+
+  async function toggleReaction(message: Message, emoji: string) {
+    if (!auth) return;
+
+    if (socket?.connected && channel) {
+      socket.emit('reaction:toggle', { channelId: channel.id, messageId: message.id, emoji });
+      return;
+    }
+
+    const result = await apiRequest<{ message: Message }>(
+      `/messages/${message.id}/reactions`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ emoji })
+      },
+      auth.accessToken
+    );
+    setMessages((current) =>
+      current.map((currentMessage) => (currentMessage.id === message.id ? result.message : currentMessage))
     );
   }
 
@@ -1248,7 +1359,8 @@ export function App() {
           ) : messages.length === 0 ? (
             <div className="state-panel">
               <MessageSquare size={24} />
-              This channel is empty. Send the first message.
+              <strong>Welcome to #{channel.name}</strong>
+              <span>This is the start of the channel.</span>
             </div>
           ) : visibleMessages.length === 0 ? (
             <div className="state-panel">
@@ -1261,7 +1373,7 @@ export function App() {
               const isEditing = editingMessageId === message.id;
 
               return (
-                <article key={message.id} className="message" data-testid="message">
+                <article key={message.id} className="message" data-testid="message" data-message-id={message.id}>
                   <div className={`avatar ${accentClass(message.authorId)}`}>
                     {initials(message.author.displayName)}
                   </div>
@@ -1298,20 +1410,47 @@ export function App() {
 
                     {!message.deletedAt ? renderAttachments(message.attachments ?? []) : null}
 
-                    {canManage && !isEditing ? (
+                    {!message.deletedAt ? (
+                      <div className="reaction-row">
+                        {message.reactions.map((reaction) => (
+                          <button
+                            key={reaction.emoji}
+                            type="button"
+                            className={reaction.me ? 'active' : ''}
+                            onClick={() => void toggleReaction(message, reaction.emoji)}
+                            title={`React ${reaction.emoji}`}
+                          >
+                            <span>{reaction.emoji}</span>
+                            <strong>{reaction.count}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {!message.deletedAt && !isEditing ? (
                       <div className="message-actions">
-                        <button
-                          title="Edit message"
-                          onClick={() => {
-                            setEditingMessageId(message.id);
-                            setEditingDraft(message.content);
-                          }}
-                        >
-                          <Edit3 size={14} />
+                        <button title="Reply" onClick={() => setReplyingToMessage(message)}>
+                          <Reply size={14} />
                         </button>
-                        <button title="Delete message" onClick={() => void deleteMessage(message.id)}>
-                          <Trash2 size={14} />
+                        <button title="React" onClick={() => void toggleReaction(message, QUICK_REACTIONS[0])}>
+                          <SmilePlus size={14} />
                         </button>
+                        {canManage ? (
+                          <>
+                            <button
+                              title="Edit message"
+                              onClick={() => {
+                                setEditingMessageId(message.id);
+                                setEditingDraft(message.content);
+                              }}
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button title="Delete message" onClick={() => void deleteMessage(message.id)}>
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -1321,7 +1460,24 @@ export function App() {
           )}
         </div>
 
+        {typingUsers.length ? (
+          <div className="typing-indicator">
+            {typingUsers.length === 1 ? 'Someone is typing...' : `${typingUsers.length} people are typing...`}
+          </div>
+        ) : null}
+
         <form onSubmit={sendMessage} className="composer">
+          {replyingToMessage ? (
+            <div className="composer-reply">
+              <Reply size={14} />
+              <span>
+                Replying to <strong>{replyingToMessage.author.displayName}</strong>
+              </span>
+              <button type="button" onClick={() => setReplyingToMessage(null)} title="Cancel reply">
+                <X size={14} />
+              </button>
+            </div>
+          ) : null}
           {selectedFiles.length ? (
             <div className="pending-attachments">
               {selectedFiles.map((file, index) => {
@@ -1365,6 +1521,7 @@ export function App() {
             data-testid="composer-input"
             placeholder={channel ? `Message #${channel.name}, paste a link, or attach media` : 'Select a channel'}
             disabled={!channel || pendingAction === 'send-message'}
+            onChange={handleComposerInput}
           />
           <button
             data-testid="composer-send"
@@ -1388,7 +1545,7 @@ export function App() {
                 <div className={`avatar small ${accentClass(member.user.id)}`}>
                   {initials(member.user.displayName)}
                 </div>
-                <span className="status-dot" />
+                <span className={`status-dot ${member.user.status?.toLowerCase() || 'offline'}`} />
               </div>
               <div>
                 <strong>{member.user.displayName}</strong>

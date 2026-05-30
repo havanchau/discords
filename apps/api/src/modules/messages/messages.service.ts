@@ -1,8 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ChannelsService } from '../channels/channels.service';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 
 @Injectable()
@@ -39,8 +41,32 @@ export class MessagesService {
         : {})
     });
 
+    const replyIds = messages
+      .map((message) => message.replyToMessageId)
+      .filter((replyId): replyId is string => Boolean(replyId));
+    const replyMessages = replyIds.length
+      ? await this.prisma.message.findMany({
+          where: { id: { in: replyIds } },
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            },
+            attachments: true,
+            reactions: true
+          }
+        })
+      : [];
+    const replyMap = new Map(replyMessages.map((message) => [message.id, this.formatMessage(message, userId)]));
+
     return {
-      messages: messages.reverse(),
+      messages: messages
+        .reverse()
+        .map((message) => this.formatMessage(message, userId, replyMap.get(message.replyToMessageId ?? ''))),
       nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null
     };
   }
@@ -53,6 +79,19 @@ export class MessagesService {
 
     if (!content && attachments.length === 0) {
       throw new ForbiddenException('Message content cannot be empty without attachments');
+    }
+
+    if (dto.replyToMessageId) {
+      const replyTarget = await this.prisma.message.findFirst({
+        where: {
+          id: dto.replyToMessageId,
+          channelId,
+          deletedAt: null
+        }
+      });
+      if (!replyTarget) {
+        throw new NotFoundException('Reply target not found');
+      }
     }
 
     const message = await this.prisma.message.create({
@@ -87,7 +126,31 @@ export class MessagesService {
       }
     });
 
-    return { message };
+    const replyToMessage = dto.replyToMessageId
+      ? await this.prisma.message.findUnique({
+          where: { id: dto.replyToMessageId },
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            },
+            attachments: true,
+            reactions: true
+          }
+        })
+      : null;
+
+    return {
+      message: this.formatMessage(
+        message,
+        userId,
+        replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined
+      )
+    };
   }
 
   async updateMessage(userId: string, messageId: string, dto: UpdateMessageDto) {
@@ -119,7 +182,7 @@ export class MessagesService {
         reactions: true
       }
     });
-    return { message: updated };
+    return { message: this.formatMessage(updated, userId) };
   }
 
   async deleteMessage(userId: string, messageId: string) {
@@ -144,6 +207,122 @@ export class MessagesService {
         deletedAt: new Date()
       }
     });
-    return { message: deleted };
+    return { message: await this.findMessageForUser(userId, deleted.id) };
+  }
+
+  async toggleReaction(userId: string, messageId: string, dto: ReactionDto) {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message || message.deletedAt) {
+      throw new NotFoundException('Message not found');
+    }
+    await this.channels.requireReadableChannel(userId, message.channelId);
+
+    const where = {
+      messageId_userId_emoji: {
+        messageId,
+        userId,
+        emoji: dto.emoji
+      }
+    };
+    const existing = await this.prisma.messageReaction.findUnique({ where });
+
+    if (existing) {
+      await this.prisma.messageReaction.delete({ where });
+    } else {
+      await this.prisma.messageReaction.create({
+        data: {
+          messageId,
+          userId,
+          emoji: dto.emoji
+        }
+      });
+    }
+
+    return { message: await this.findMessageForUser(userId, messageId) };
+  }
+
+  async findMessageForUser(userId: string, messageId: string) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true
+          }
+        },
+        attachments: true,
+        reactions: true
+      }
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    await this.channels.requireReadableChannel(userId, message.channelId);
+    const replyToMessage = message.replyToMessageId
+      ? await this.prisma.message.findUnique({
+          where: { id: message.replyToMessageId },
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            },
+            attachments: true,
+            reactions: true
+          }
+        })
+      : null;
+
+    return this.formatMessage(
+      message,
+      userId,
+      replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined
+    );
+  }
+
+  private formatMessage(message: MessageWithDetails, userId: string, replyToMessage?: unknown) {
+    const reactionMap = new Map<string, { emoji: string; count: number; me: boolean }>();
+
+    message.reactions.forEach((reaction) => {
+      const current = reactionMap.get(reaction.emoji) ?? {
+        emoji: reaction.emoji,
+        count: 0,
+        me: false
+      };
+      reactionMap.set(reaction.emoji, {
+        ...current,
+        count: current.count + 1,
+        me: current.me || reaction.userId === userId
+      });
+    });
+
+    return {
+      ...message,
+      reactions: [...reactionMap.values()],
+      replyToMessage
+    };
   }
 }
+
+type MessageWithDetails = Prisma.MessageGetPayload<{
+  include: {
+    author: {
+      select: {
+        id: true;
+        username: true;
+        displayName: true;
+        avatarUrl: true;
+      };
+    };
+    attachments: true;
+    reactions: true;
+  };
+}>;

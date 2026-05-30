@@ -10,6 +10,8 @@ export const RealtimeEvents = {
   TypingStart: 'typing:start',
   TypingStop: 'typing:stop',
   PresenceUpdate: 'presence:update',
+  ReactionToggle: 'reaction:toggle',
+  ReactionUpdated: 'reaction:updated',
   VoiceJoin: 'voice:join',
   VoiceLeave: 'voice:leave',
   VoiceState: 'voice:state',
