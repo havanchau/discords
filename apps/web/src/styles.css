@@ -1,0 +1,332 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #101114;
+  color: #f4f4f5;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(rgba(16, 17, 20, 0.76), rgba(16, 17, 20, 0.92)),
+    url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1800&q=80");
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-panel {
+  width: min(420px, 100%);
+  padding: 24px;
+  border: 1px solid #2a2d34;
+  border-radius: 8px;
+  background: #181a20;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.auth-panel h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.auth-panel p {
+  margin: 8px 0 0;
+  color: #a1a1aa;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 22px 0;
+  padding: 4px;
+  border-radius: 8px;
+  background: #101114;
+}
+
+.segmented button,
+.primary {
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  color: #f4f4f5;
+  background: transparent;
+}
+
+.segmented .active,
+.primary {
+  background: #5865f2;
+}
+
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: #d4d4d8;
+  font-size: 13px;
+}
+
+input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #30343d;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: #f4f4f5;
+  background: #111318;
+  outline: none;
+}
+
+input:focus {
+  border-color: #5865f2;
+}
+
+.error {
+  color: #fb7185;
+  font-size: 13px;
+}
+
+.app-shell {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 72px 280px minmax(0, 1fr) 240px;
+  overflow: hidden;
+  background: #16181d;
+}
+
+.server-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  background: #101114;
+}
+
+.round {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #f4f4f5;
+  background: #2a2d34;
+  font-weight: 700;
+}
+
+.round.active {
+  border-radius: 16px;
+  background: #5865f2;
+}
+
+.channel-sidebar,
+.member-sidebar {
+  min-width: 0;
+  background: #1f2229;
+  border-right: 1px solid #2c3038;
+}
+
+.member-sidebar {
+  border-right: 0;
+  border-left: 1px solid #2c3038;
+  padding: 16px;
+}
+
+.sidebar-header,
+.chat-header,
+.member-title {
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid #2c3038;
+}
+
+.compact-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 8px;
+  padding: 12px;
+}
+
+.compact-form input:nth-child(2) {
+  grid-column: 1 / -1;
+}
+
+.compact-form button,
+.composer button,
+.user-strip button {
+  border: 0;
+  border-radius: 6px;
+  color: #f4f4f5;
+  background: #30343d;
+}
+
+.channel-list {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+}
+
+.channel-list button {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 10px;
+  color: #c8cad0;
+  background: transparent;
+  text-align: left;
+}
+
+.channel-list button.selected,
+.channel-list button:hover {
+  color: #fff;
+  background: #30343d;
+}
+
+.user-strip {
+  position: absolute;
+  bottom: 0;
+  width: 280px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #191b20;
+}
+
+.user-strip button {
+  width: 36px;
+  height: 36px;
+}
+
+.chat-panel {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 54px minmax(0, 1fr) 72px;
+}
+
+.message-list {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.message {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #2dd4bf;
+  color: #042f2e;
+  font-weight: 800;
+}
+
+.avatar.small {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.message-meta span {
+  color: #8d93a1;
+  font-size: 12px;
+}
+
+.message p {
+  margin: 4px 0 0;
+  color: #e4e4e7;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid #2c3038;
+}
+
+.composer input {
+  min-height: 44px;
+}
+
+.member-title {
+  height: auto;
+  padding: 0 0 14px;
+  border: 0;
+  color: #a1a1aa;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  color: #d4d4d8;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 64px minmax(220px, 34vw) minmax(0, 1fr);
+  }
+
+  .member-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .channel-sidebar {
+    display: none;
+  }
+}
