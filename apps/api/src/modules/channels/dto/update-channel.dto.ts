@@ -14,8 +14,8 @@ export class UpdateChannelDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^\/uploads\/[0-9a-f-]{36}\.(?:jpg|jpeg|png|gif|webp)$/i, {
-    message: 'Avatar URL must reference an uploaded local image'
+  @Matches(/^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/image\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp)$/i, {
+    message: 'Avatar URL must reference an uploaded image'
   })
   avatarUrl?: string;
 }

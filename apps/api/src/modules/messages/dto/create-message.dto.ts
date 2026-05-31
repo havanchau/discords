@@ -39,8 +39,8 @@ export class MessageAttachmentInputDto {
 
   @IsString()
   @MaxLength(1000)
-  @Matches(/^\/uploads\/[0-9a-f-]{36}\.(?:jpg|jpeg|png|gif|webp|mp4|webm|pdf|txt|zip)$/i, {
-    message: 'Attachment URL must reference an uploaded local file'
+  @Matches(/^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/(?:image|video|raw)\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp|mp4|webm|pdf|txt|zip)$/i, {
+    message: 'Attachment URL must reference an uploaded file'
   })
   url!: string;
 }

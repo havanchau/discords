@@ -6,49 +6,43 @@ import {
   UseGuards,
   UseInterceptors
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { basename, extname } from 'path';
-import { randomUUID } from 'crypto';
+import { memoryStorage } from 'multer';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-
-const mimeExtensionMap = new Map<string, string[]>([
-  ['image/jpeg', ['.jpg', '.jpeg']],
-  ['image/png', ['.png']],
-  ['image/gif', ['.gif']],
-  ['image/webp', ['.webp']],
-  ['video/mp4', ['.mp4']],
-  ['video/webm', ['.webm']],
-  ['application/pdf', ['.pdf']],
-  ['text/plain', ['.txt']],
-  ['application/zip', ['.zip']]
-]);
+import { UploadsService } from './uploads.service';
 
 const maxUploadBytes = Number(process.env.UPLOAD_MAX_BYTES || 10 * 1024 * 1024);
-
-type IncomingUploadFile = Pick<Express.Multer.File, 'mimetype' | 'originalname'>;
 
 @UseGuards(JwtAuthGuard)
 @Controller('uploads')
 export class UploadsController {
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly uploads: UploadsService) {}
 
   @RateLimit({ keyPrefix: 'upload-file', limit: 12, windowMs: 60_000 })
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: maxUploadBytes },
-      storage: diskStorage({
-        destination: 'uploads',
-        filename: (_request, file, callback) => {
-          const extension = safeExtension(file);
-          callback(null, `${randomUUID()}${extension}`);
-        }
-      }),
+      storage: memoryStorage(),
       fileFilter: (_request, file, callback) => {
-        if (!isAllowedFile(file)) {
+        const allowedExtensions = new Set([
+          '.jpg',
+          '.jpeg',
+          '.png',
+          '.gif',
+          '.webp',
+          '.mp4',
+          '.webm',
+          '.pdf',
+          '.txt',
+          '.zip'
+        ]);
+        const hasAllowedExtension = [...allowedExtensions].some((extension) =>
+          file.originalname.toLowerCase().endsWith(extension)
+        );
+
+        if (!hasAllowedExtension) {
           callback(new BadRequestException('Unsupported file type'), false);
           return;
         }
@@ -56,35 +50,19 @@ export class UploadsController {
       }
     })
   )
-  upload(@UploadedFile() file?: Express.Multer.File) {
+  async upload(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
-    if (file.size > this.config.get<number>('UPLOAD_MAX_BYTES', maxUploadBytes)) {
+    if (file.size > this.uploads.maxUploadBytes) {
       throw new BadRequestException('File is too large');
     }
 
-    return {
-      attachment: {
-        fileName: basename(file.originalname).slice(0, 255),
-        mimeType: file.mimetype,
-        byteSize: file.size,
-        url: `/uploads/${file.filename}`
-      }
-    };
+    if (!this.uploads.isAllowedFile(file)) {
+      throw new BadRequestException('Unsupported file type');
+    }
+
+    return { attachment: await this.uploads.upload(file) };
   }
-}
-
-function isAllowedFile(file: IncomingUploadFile) {
-  const allowedExtensions = mimeExtensionMap.get(file.mimetype);
-  if (!allowedExtensions) return false;
-  const extension = extname(file.originalname).toLowerCase();
-  return allowedExtensions.includes(extension);
-}
-
-function safeExtension(file: IncomingUploadFile) {
-  const extension = extname(file.originalname).toLowerCase();
-  const allowedExtensions = mimeExtensionMap.get(file.mimetype) ?? [];
-  return allowedExtensions.includes(extension) ? extension : allowedExtensions[0] ?? '';
 }

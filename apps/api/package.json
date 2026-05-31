@@ -27,6 +27,7 @@
     "bcryptjs": "latest",
     "class-transformer": "latest",
     "class-validator": "latest",
+    "cloudinary": "^2.10.0",
     "cookie-parser": "latest",
     "helmet": "latest",
     "nanoid": "latest",
