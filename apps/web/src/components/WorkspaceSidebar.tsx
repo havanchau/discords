@@ -127,9 +127,10 @@ export function WorkspaceSidebar({
         <div className="server-header">
           <button
             type="button"
-            className="server-dropdown-button"
+            className={`server-dropdown-button ${serverMenuOpen ? 'menu-open' : ''}`}
             onClick={() => setServerMenuOpen((current) => !current)}
             title="Open server menu"
+            aria-expanded={serverMenuOpen}
           >
             <strong>{server?.name || 'Create a server'}</strong>
             <ChevronDown size={16} />
@@ -174,6 +175,7 @@ export function WorkspaceSidebar({
           ) : server ? (
             <button
               type="button"
+              className={`server-search-button ${isSearchOpen ? 'selected' : ''}`}
               title="Search channels"
               onClick={() => setIsSearchOpen((current) => !current)}
             >

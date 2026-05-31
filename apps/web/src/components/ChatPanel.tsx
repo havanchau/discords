@@ -2,11 +2,13 @@ import {
   Bell,
   Edit3,
   FileArchive,
+  FileAudio2,
   FileText,
   Hash,
   Image,
   Link as LinkIcon,
   Loader2,
+  Lock,
   MessageSquare,
   Mic,
   MicOff,
@@ -19,7 +21,9 @@ import {
   Search,
   Send,
   SmilePlus,
+  Square,
   Trash2,
+  Unlock,
   Video,
   VideoOff,
   X,
@@ -43,7 +47,7 @@ import {
 } from '../helpers';
 import { RemoteVideoTile } from './RemoteVideoTile';
 
-export type ActivePanel = 'notifications' | 'search' | null;
+export type ActivePanel = 'notifications' | 'search' | 'encryption' | null;
 export type ActiveDialog =
   | 'profile'
   | 'server-settings'
@@ -68,11 +72,13 @@ interface ChatPanelProps {
   activePanel: ActivePanel;
   activeDialog: ActiveDialog;
   searchQuery: string;
+  isChannelEncrypted: boolean;
   typingUsers: Array<{ userId: string; displayName: string }>;
   pinnedMessages: Message[];
   pinnedMessageIds: string[];
   replyingToMessage: Message | null;
   selectedFiles: File[];
+  isRecordingVoice: boolean;
   pendingAction: string | null;
   editingMessageId: string | null;
   editingDraft: string;
@@ -84,6 +90,8 @@ interface ChatPanelProps {
   setSearchQuery: (value: string) => void;
   setWorkspaceError: (value: string | null) => void;
   setWorkspaceNotice: (value: string | null) => void;
+  configureChannelEncryption: (passphrase: string) => Promise<void>;
+  clearChannelEncryption: () => void;
   setReplyingToMessage: (message: Message | null) => void;
   setEditingMessageId: (messageId: string | null) => void;
   setEditingDraft: (draft: string) => void;
@@ -98,6 +106,8 @@ interface ChatPanelProps {
   togglePinnedMessage: (message: Message) => void;
   loadMoreMessages: () => Promise<void>;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  startVoiceRecording: () => Promise<void>;
+  stopVoiceRecording: () => void;
   removeSelectedFile: (index: number) => void;
   selectFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   handleComposerInput: () => void;
@@ -126,6 +136,12 @@ function MessageContent({ message }: { message: Message }) {
       ) : null}
       {message.content ? (
         <p>
+          {message.isEncrypted ? (
+            <span className={`encrypted-pill ${message.decryptionFailed ? 'locked' : ''}`}>
+              {message.decryptionFailed ? <Lock size={12} /> : <Unlock size={12} />}
+              {message.decryptionFailed ? 'Locked' : 'E2EE'}
+            </span>
+          ) : null}
           {parts.map((part, index) => {
             if (/^https?:\/\//i.test(part)) {
               return (
@@ -208,6 +224,21 @@ function MessageAttachments({
           );
         }
 
+        if (kind === 'audio') {
+          return (
+            <div key={attachment.id ?? attachment.url} className="attachment audio-attachment">
+              <div className="audio-attachment-header">
+                <FileAudio2 size={18} />
+                <span>
+                  <strong>{attachment.fileName}</strong>
+                  <small>{formatBytes(attachment.byteSize)}</small>
+                </span>
+              </div>
+              <audio src={url} controls preload="metadata" />
+            </div>
+          );
+        }
+
         const Icon = kind === 'archive' ? FileArchive : FileText;
         return (
           <a
@@ -245,11 +276,13 @@ export function ChatPanel({
   activePanel,
   activeDialog,
   searchQuery,
+  isChannelEncrypted,
   typingUsers,
   pinnedMessages,
   pinnedMessageIds,
   replyingToMessage,
   selectedFiles,
+  isRecordingVoice,
   pendingAction,
   editingMessageId,
   editingDraft,
@@ -261,6 +294,8 @@ export function ChatPanel({
   setSearchQuery,
   setWorkspaceError,
   setWorkspaceNotice,
+  configureChannelEncryption,
+  clearChannelEncryption,
   setReplyingToMessage,
   setEditingMessageId,
   setEditingDraft,
@@ -275,6 +310,8 @@ export function ChatPanel({
   togglePinnedMessage,
   loadMoreMessages,
   sendMessage,
+  startVoiceRecording,
+  stopVoiceRecording,
   removeSelectedFile,
   selectFiles,
   handleComposerInput,
@@ -358,6 +395,17 @@ export function ChatPanel({
             <Bell size={18} />
           </button>
           <button
+            className={activePanel === 'encryption' || isChannelEncrypted ? 'selected' : ''}
+            data-testid="encryption-button"
+            title={isChannelEncrypted ? 'Encryption enabled' : 'Set encryption passphrase'}
+            onClick={() =>
+              setActivePanel((current) => (current === 'encryption' ? null : 'encryption'))
+            }
+            disabled={!channel}
+          >
+            {isChannelEncrypted ? <Lock size={18} /> : <Unlock size={18} />}
+          </button>
+          <button
             className={activePanel === 'search' ? 'selected' : ''}
             data-testid="search-button"
             title="Search"
@@ -398,6 +446,39 @@ export function ChatPanel({
               <div className="notification-empty">No pinned messages in this channel.</div>
             )}
           </div>
+        ) : activePanel === 'encryption' ? (
+          <form
+            className="encryption-panel"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              void configureChannelEncryption(String(form.get('passphrase') || ''));
+              event.currentTarget.reset();
+            }}
+          >
+            <strong>{isChannelEncrypted ? 'Encrypted channel session' : 'Enable E2EE'}</strong>
+            <span>
+              Messages are encrypted in this browser before they are sent. Share the passphrase
+              out-of-band with trusted members.
+            </span>
+            <input
+              name="passphrase"
+              type="password"
+              minLength={8}
+              placeholder="Channel passphrase"
+              autoComplete="off"
+            />
+            <div className="encryption-actions">
+              <button className="primary compact-primary" type="submit">
+                {isChannelEncrypted ? 'Update key' : 'Enable'}
+              </button>
+              {isChannelEncrypted ? (
+                <button type="button" onClick={clearChannelEncryption}>
+                  Forget key
+                </button>
+              ) : null}
+            </div>
+          </form>
         ) : null}
       </div>
 
@@ -722,6 +803,7 @@ export function ChatPanel({
           <div className="pending-attachments">
             {selectedFiles.map((file, index) => {
               const isImage = file.type.startsWith('image/');
+              const isAudio = file.type.startsWith('audio/');
               return (
                 <button
                   key={`${file.name}-${file.lastModified}-${index}`}
@@ -730,7 +812,13 @@ export function ChatPanel({
                   onClick={() => removeSelectedFile(index)}
                   title="Remove attachment"
                 >
-                  {isImage ? <Image size={17} /> : <FileText size={17} />}
+                  {isImage ? (
+                    <Image size={17} />
+                  ) : isAudio ? (
+                    <FileAudio2 size={17} />
+                  ) : (
+                    <FileText size={17} />
+                  )}
                   <span>{file.name}</span>
                   <small>{formatBytes(file.size)}</small>
                 </button>
@@ -743,7 +831,7 @@ export function ChatPanel({
           className="file-input"
           type="file"
           multiple
-          accept="image/*,video/mp4,video/webm,application/pdf,text/plain,application/zip,.zip"
+          accept="image/*,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm,application/pdf,text/plain,application/zip,.zip"
           onChange={selectFiles}
           disabled={!channel || pendingAction === 'send-message'}
         />
@@ -755,6 +843,15 @@ export function ChatPanel({
           title="Attach file"
         >
           <Paperclip size={18} />
+        </button>
+        <button
+          type="button"
+          className={`voice-record-button ${isRecordingVoice ? 'recording' : ''}`}
+          onClick={isRecordingVoice ? stopVoiceRecording : startVoiceRecording}
+          disabled={!channel || (pendingAction === 'send-message' && !isRecordingVoice)}
+          title={isRecordingVoice ? 'Stop voice message' : 'Record voice message'}
+        >
+          {isRecordingVoice ? <Square size={15} /> : <Mic size={18} />}
         </button>
         <input
           name="content"

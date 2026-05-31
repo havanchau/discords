@@ -67,6 +67,9 @@ export interface Message {
   channelId: string;
   authorId: string;
   content: string;
+  isEncrypted?: boolean;
+  encryptedContent?: string;
+  decryptionFailed?: boolean;
   createdAt: string;
   editedAt?: string | null;
   deletedAt?: string | null;
@@ -135,7 +138,9 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || 'Upload failed');
+    throw new Error(
+      `${error.message || 'Upload failed'} (${file.name}, ${file.type || 'unknown'})`,
+    );
   }
 
   const result = (await response.json()) as { attachment: MessageAttachment };

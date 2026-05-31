@@ -4,7 +4,7 @@ import {
   Post,
   UploadedFile,
   UseGuards,
-  UseInterceptors
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -32,14 +32,18 @@ export class UploadsController {
           '.png',
           '.gif',
           '.webp',
+          '.mp3',
+          '.m4a',
+          '.ogg',
+          '.wav',
           '.mp4',
           '.webm',
           '.pdf',
           '.txt',
-          '.zip'
+          '.zip',
         ]);
         const hasAllowedExtension = [...allowedExtensions].some((extension) =>
-          file.originalname.toLowerCase().endsWith(extension)
+          file.originalname.toLowerCase().endsWith(extension),
         );
 
         if (!hasAllowedExtension) {
@@ -47,8 +51,8 @@ export class UploadsController {
           return;
         }
         callback(null, true);
-      }
-    })
+      },
+    }),
   )
   async upload(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {

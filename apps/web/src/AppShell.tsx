@@ -18,6 +18,12 @@ import {
   ServerSummary,
   uploadFile,
 } from './api';
+import {
+  decryptChannelMessage,
+  deriveChannelKey,
+  encryptChannelMessage,
+  isEncryptedMessage,
+} from './e2ee';
 import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
 
 interface TypingUser {
@@ -49,7 +55,9 @@ export function AppShell() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
   const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
-  const [activePanel, setActivePanel] = useState<'notifications' | 'search' | null>(null);
+  const [activePanel, setActivePanel] = useState<'notifications' | 'search' | 'encryption' | null>(
+    null,
+  );
   const [activeDialog, setActiveDialog] = useState<
     'profile' | 'server-settings' | 'channel-settings' | 'roles' | 'member-roles' | null
   >(null);
@@ -59,17 +67,24 @@ export function AppShell() {
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
   const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
+  const [channelKeys, setChannelKeys] = useState<Record<string, CryptoKey>>({});
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>(() => {
     const raw = localStorage.getItem('discord-clone-pinned-messages');
     return raw ? JSON.parse(raw) : {};
   });
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
+  const channelKeysRef = useRef<Record<string, CryptoKey>>({});
+  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const cancelVoiceRecordingRef = useRef(false);
   const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } =
     useChannelCall({
       auth,
@@ -83,8 +98,23 @@ export function AppShell() {
   }, [channel?.id]);
 
   useEffect(() => {
+    channelKeysRef.current = channelKeys;
+  }, [channelKeys]);
+
+  useEffect(() => {
     localStorage.setItem('discord-clone-pinned-messages', JSON.stringify(pinnedMessageIds));
   }, [pinnedMessageIds]);
+
+  useEffect(
+    () => () => {
+      cancelVoiceRecordingRef.current = true;
+      if (voiceRecorderRef.current?.state !== 'inactive') {
+        voiceRecorderRef.current?.stop();
+      }
+      voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -117,6 +147,7 @@ export function AppShell() {
         setMessageCursor(null);
         setActiveCalls({});
         setChannelBadges({});
+        setChannelKeys({});
       },
     });
   }, []);
@@ -138,10 +169,13 @@ export function AppShell() {
       auth: { token: auth.accessToken },
     });
 
-    nextSocket.on('message:created', (message: Message) => {
+    nextSocket.on('message:created', async (message: Message) => {
+      const displayMessage = await decryptMessageForDisplay(message);
       if (message.channelId === activeChannelIdRef.current) {
         setMessages((current) =>
-          current.some((item) => item.id === message.id) ? current : [...current, message],
+          current.some((item) => item.id === displayMessage.id)
+            ? current
+            : [...current, displayMessage],
         );
         return;
       }
@@ -159,9 +193,10 @@ export function AppShell() {
       });
     });
 
-    nextSocket.on('reaction:updated', (payload: { message: Message }) => {
+    nextSocket.on('reaction:updated', async (payload: { message: Message }) => {
+      const displayMessage = await decryptMessageForDisplay(payload.message);
       setMessages((current) =>
-        current.map((message) => (message.id === payload.message.id ? payload.message : message)),
+        current.map((message) => (message.id === displayMessage.id ? displayMessage : message)),
       );
     });
 
@@ -237,8 +272,8 @@ export function AppShell() {
       {},
       auth.accessToken,
     )
-      .then((result) => {
-        setMessages(result.messages);
+      .then(async (result) => {
+        setMessages(await decryptMessagesForDisplay(result.messages));
         setMessageCursor(result.nextCursor ?? null);
       })
       .catch((err) =>
@@ -293,7 +328,9 @@ export function AppShell() {
   const visibleMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return messages;
-    return messages.filter((message) => message.content.toLowerCase().includes(query));
+    return messages.filter(
+      (message) => !message.decryptionFailed && message.content.toLowerCase().includes(query),
+    );
   }, [messages, searchQuery]);
 
   const selectedMember = useMemo(
@@ -316,6 +353,88 @@ export function AppShell() {
         : [message.id, ...channelPins].slice(0, 20);
       return { ...current, [message.channelId]: nextPins };
     });
+  }
+
+  async function configureChannelEncryption(passphrase: string) {
+    if (!channel) return;
+    const trimmedPassphrase = passphrase.trim();
+    if (trimmedPassphrase.length < 8) {
+      setWorkspaceError('Use at least 8 characters for the encryption passphrase.');
+      return;
+    }
+
+    const key = await deriveChannelKey(channel.id, trimmedPassphrase);
+    const nextKeys = { ...channelKeysRef.current, [channel.id]: key };
+    channelKeysRef.current = nextKeys;
+    setChannelKeys(nextKeys);
+    setMessages(await Promise.all(messages.map((message) => decryptMessageForDisplay(message))));
+    setWorkspaceNotice('End-to-end encryption enabled for this channel on this device.');
+  }
+
+  function clearChannelEncryption() {
+    if (!channel) return;
+    const nextKeys = { ...channelKeysRef.current };
+    delete nextKeys[channel.id];
+    channelKeysRef.current = nextKeys;
+    setChannelKeys(nextKeys);
+    setMessages((current) =>
+      current.map((message) =>
+        message.isEncrypted
+          ? {
+              ...message,
+              content: 'Encrypted message',
+              decryptionFailed: true,
+            }
+          : message,
+      ),
+    );
+  }
+
+  async function decryptMessagesForDisplay(nextMessages: Message[]) {
+    return Promise.all(nextMessages.map((message) => decryptMessageForDisplay(message)));
+  }
+
+  async function decryptMessageForDisplay(message: Message): Promise<Message> {
+    const encryptedContent = message.encryptedContent ?? message.content;
+    const replyToMessage = message.replyToMessage
+      ? await decryptMessageForDisplay(message.replyToMessage)
+      : message.replyToMessage;
+
+    if (!isEncryptedMessage(encryptedContent)) {
+      return { ...message, replyToMessage };
+    }
+
+    const key = channelKeysRef.current[message.channelId];
+    if (!key) {
+      return {
+        ...message,
+        content: 'Encrypted message',
+        encryptedContent,
+        isEncrypted: true,
+        decryptionFailed: true,
+        replyToMessage,
+      };
+    }
+
+    try {
+      return {
+        ...message,
+        content: await decryptChannelMessage(key, encryptedContent),
+        encryptedContent,
+        isEncrypted: true,
+        decryptionFailed: false,
+        replyToMessage,
+      };
+    } catch {
+      return {
+        ...message,
+        content: 'Encrypted message',
+        encryptedContent,
+        isEncrypted: true,
+        decryptionFailed: true,
+        replyToMessage,
+      };
+    }
   }
 
   async function loadServers(token: string) {
@@ -540,13 +659,8 @@ export function AppShell() {
     }
   }
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function sendChatMessage(content: string, files: File[]) {
     if (!auth || !channel) return;
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const content = String(form.get('content') || '').trim();
-    const files = selectedFiles;
     if (!content && files.length === 0) return;
 
     setPendingAction('send-message');
@@ -556,32 +670,41 @@ export function AppShell() {
       const attachments = await Promise.all(
         files.map((file) => uploadFile(file, auth.accessToken)),
       );
-      formElement.reset();
-      setSelectedFiles([]);
-      setReplyingToMessage(null);
+      const channelKey = channelKeysRef.current[channel.id];
+      const messageContent =
+        content && channelKey ? await encryptChannelMessage(channelKey, content) : content;
 
       const payload = {
         channelId: channel.id,
-        content,
+        content: messageContent,
         attachments,
         replyToMessageId: replyingToMessage?.id,
       };
       socket?.emit('typing:stop', { channelId: channel.id });
 
       if (socket?.connected) {
-        socket
-          .timeout(5000)
-          .emit('message:create', payload, (err: Error | null, result?: { message: Message }) => {
-            if (err || !result?.message) {
-              setWorkspaceError('Message was not acknowledged. Try again.');
-              return;
-            }
-            setMessages((current) =>
-              current.some((item) => item.id === result.message.id)
-                ? current
-                : [...current, result.message],
+        await new Promise<void>((resolve) => {
+          socket
+            .timeout(5000)
+            .emit(
+              'message:create',
+              payload,
+              async (err: Error | null, result?: { message: Message }) => {
+                if (err || !result?.message) {
+                  setWorkspaceError('Message was not acknowledged. Try again.');
+                  resolve();
+                  return;
+                }
+                const displayMessage = await decryptMessageForDisplay(result.message);
+                setMessages((current) =>
+                  current.some((item) => item.id === displayMessage.id)
+                    ? current
+                    : [...current, displayMessage],
+                );
+                resolve();
+              },
             );
-          });
+        });
         return;
       }
 
@@ -589,17 +712,113 @@ export function AppShell() {
         `/channels/${channel.id}/messages`,
         {
           method: 'POST',
-          body: JSON.stringify({ content, attachments, replyToMessageId: replyingToMessage?.id }),
+          body: JSON.stringify({
+            content: messageContent,
+            attachments,
+            replyToMessageId: replyingToMessage?.id,
+          }),
         },
         auth.accessToken,
       );
-      setMessages((current) => [...current, result.message]);
+      const displayMessage = await decryptMessageForDisplay(result.message);
+      setMessages((current) => [...current, displayMessage]);
       setReplyingToMessage(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot send message');
     } finally {
       setPendingAction(null);
     }
+  }
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const content = String(form.get('content') || '').trim();
+    const files = selectedFiles;
+    if (!content && files.length === 0) return;
+
+    await sendChatMessage(content, files);
+    formElement.reset();
+    setSelectedFiles([]);
+    setReplyingToMessage(null);
+  }
+
+  async function startVoiceRecording() {
+    if (!auth || !channel) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setWorkspaceError('Voice recording is not supported in this browser.');
+      return;
+    }
+
+    try {
+      setWorkspaceError(null);
+      cancelVoiceRecordingRef.current = false;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const supportedMimeType = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+      ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+      const recorder = new MediaRecorder(
+        stream,
+        supportedMimeType ? { mimeType: supportedMimeType } : undefined,
+      );
+
+      voiceChunksRef.current = [];
+      voiceStreamRef.current = stream;
+      voiceRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const chunks = voiceChunksRef.current;
+        const recordedType = recorder.mimeType || supportedMimeType || 'audio/webm';
+        const uploadType = recordedType.split(';')[0] || 'audio/webm';
+        const blob = new Blob(chunks, { type: uploadType });
+        const shouldSend = !cancelVoiceRecordingRef.current && blob.size > 0;
+        voiceChunksRef.current = [];
+        voiceRecorderRef.current = null;
+        setIsRecordingVoice(false);
+        stream.getTracks().forEach((track) => track.stop());
+        voiceStreamRef.current = null;
+
+        if (!shouldSend) return;
+
+        const extension = uploadType.includes('mp4')
+          ? 'm4a'
+          : uploadType.includes('ogg')
+            ? 'ogg'
+            : 'webm';
+        const file = new File([blob], `voice-message-${Date.now()}.${extension}`, {
+          type: uploadType,
+        });
+        void sendChatMessage('', [file]);
+      };
+
+      recorder.onerror = () => {
+        setWorkspaceError('Voice recording failed. Check microphone permission and try again.');
+        cancelVoiceRecordingRef.current = true;
+        setIsRecordingVoice(false);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setIsRecordingVoice(true);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start voice recording');
+    }
+  }
+
+  function stopVoiceRecording() {
+    const recorder = voiceRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') return;
+    recorder.stop();
   }
 
   function handleComposerInput() {
@@ -908,9 +1127,10 @@ export function AppShell() {
         {},
         auth.accessToken,
       );
+      const displayMessages = await decryptMessagesForDisplay(result.messages);
       setMessages((current) => {
         const existingIds = new Set(current.map((message) => message.id));
-        const olderMessages = result.messages.filter((message) => !existingIds.has(message.id));
+        const olderMessages = displayMessages.filter((message) => !existingIds.has(message.id));
         return [...olderMessages, ...current];
       });
       setMessageCursor(result.nextCursor ?? null);
@@ -923,16 +1143,22 @@ export function AppShell() {
 
   async function saveMessageEdit(messageId: string) {
     if (!auth || !editingDraft.trim()) return;
+    const editingMessage = messages.find((message) => message.id === messageId);
+    const channelKey = editingMessage ? channelKeysRef.current[editingMessage.channelId] : null;
+    const content = channelKey
+      ? await encryptChannelMessage(channelKey, editingDraft.trim())
+      : editingDraft.trim();
     const result = await apiRequest<{ message: Message }>(
       `/messages/${messageId}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ content: editingDraft.trim() }),
+        body: JSON.stringify({ content }),
       },
       auth.accessToken,
     );
+    const displayMessage = await decryptMessageForDisplay(result.message);
     setMessages((current) =>
-      current.map((message) => (message.id === messageId ? result.message : message)),
+      current.map((message) => (message.id === messageId ? displayMessage : message)),
     );
     setEditingMessageId(null);
     setEditingDraft('');
@@ -970,9 +1196,10 @@ export function AppShell() {
       },
       auth.accessToken,
     );
+    const displayMessage = await decryptMessageForDisplay(result.message);
     setMessages((current) =>
       current.map((currentMessage) =>
-        currentMessage.id === message.id ? result.message : currentMessage,
+        currentMessage.id === message.id ? displayMessage : currentMessage,
       ),
     );
   }
@@ -1050,11 +1277,13 @@ export function AppShell() {
         activePanel={activePanel}
         activeDialog={activeDialog}
         searchQuery={searchQuery}
+        isChannelEncrypted={channel ? Boolean(channelKeys[channel.id]) : false}
         typingUsers={typingUsers}
         pinnedMessages={pinnedMessages}
         pinnedMessageIds={channel ? (pinnedMessageIds[channel.id] ?? []) : []}
         replyingToMessage={replyingToMessage}
         selectedFiles={selectedFiles}
+        isRecordingVoice={isRecordingVoice}
         pendingAction={pendingAction}
         editingMessageId={editingMessageId}
         editingDraft={editingDraft}
@@ -1066,6 +1295,8 @@ export function AppShell() {
         setSearchQuery={setSearchQuery}
         setWorkspaceError={setWorkspaceError}
         setWorkspaceNotice={setWorkspaceNotice}
+        configureChannelEncryption={configureChannelEncryption}
+        clearChannelEncryption={clearChannelEncryption}
         setReplyingToMessage={setReplyingToMessage}
         setEditingMessageId={setEditingMessageId}
         setEditingDraft={setEditingDraft}
@@ -1080,6 +1311,8 @@ export function AppShell() {
         togglePinnedMessage={togglePinnedMessage}
         loadMoreMessages={loadMoreMessages}
         sendMessage={sendMessage}
+        startVoiceRecording={startVoiceRecording}
+        stopVoiceRecording={stopVoiceRecording}
         removeSelectedFile={removeSelectedFile}
         selectFiles={selectFiles}
         handleComposerInput={handleComposerInput}

@@ -8,7 +8,7 @@ import {
   Max,
   MaxLength,
   Min,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -24,11 +24,16 @@ export class MessageAttachmentInputDto {
     'image/png',
     'image/gif',
     'image/webp',
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/ogg',
+    'audio/wav',
+    'audio/webm',
     'video/mp4',
     'video/webm',
     'application/pdf',
     'text/plain',
-    'application/zip'
+    'application/zip',
   ])
   mimeType!: string;
 
@@ -39,9 +44,12 @@ export class MessageAttachmentInputDto {
 
   @IsString()
   @MaxLength(1000)
-  @Matches(/^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/(?:image|video|raw)\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp|mp4|webm|pdf|txt|zip)$/i, {
-    message: 'Attachment URL must reference an uploaded file'
-  })
+  @Matches(
+    /^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/(?:image|video|raw)\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp|mp3|m4a|ogg|wav|mp4|webm|pdf|txt|zip)$/i,
+    {
+      message: 'Attachment URL must reference an uploaded file',
+    },
+  )
   url!: string;
 }
 

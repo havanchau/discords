@@ -595,13 +595,17 @@ input:focus {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 0 16px;
   box-shadow: var(--elevation-low);
   background: var(--bg-secondary);
   z-index: 1;
 }
 
+.server-header {
+  padding: 0 10px 0 16px;
+}
+
 .chat-header {
+  padding: 0 16px;
   background: var(--bg-primary);
 }
 
@@ -638,16 +642,40 @@ input:focus {
 
 .server-dropdown-button {
   min-width: 0;
-  width: auto !important;
+  width: 100% !important;
   flex: 1;
-  justify-content: space-between;
-  padding: 0 0 0 2px;
+  height: 40px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  justify-items: start;
+  gap: 8px;
+  padding: 0 8px 0 0;
   text-align: left;
+  border-radius: 4px;
 }
 
 .server-dropdown-button svg {
+  justify-self: center;
   flex-shrink: 0;
   color: var(--interactive-normal);
+  transition:
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.server-dropdown-button.menu-open svg {
+  color: var(--interactive-active);
+  transform: rotate(180deg);
+}
+
+.server-search-button {
+  flex: 0 0 32px;
+}
+
+.server-search-button.selected {
+  color: var(--interactive-active);
+  background: var(--bg-modifier-selected);
 }
 
 .server-menu {
@@ -1375,6 +1403,49 @@ input:focus {
   color: var(--text-muted);
   font-size: 14px;
   padding: 8px 0;
+}
+
+.encryption-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.encryption-panel strong {
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.encryption-panel span {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.encryption-panel input {
+  height: 36px;
+  font-size: 14px;
+}
+
+.encryption-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.encryption-actions > button:not(.primary) {
+  height: 36px;
+  border: 0;
+  border-radius: 4px;
+  padding: 0 12px;
+  color: var(--interactive-normal);
+  background: var(--bg-modifier-hover);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.encryption-actions > button:not(.primary):hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-active);
 }
 
 /* ===== Settings Modal ===== */
@@ -2168,6 +2239,25 @@ input:focus {
   background: rgba(88, 101, 242, 0.7);
 }
 
+.encrypted-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 6px;
+  border-radius: 999px;
+  padding: 1px 6px;
+  color: #c6f6d5;
+  background: rgba(35, 165, 90, 0.2);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.encrypted-pill.locked {
+  color: var(--text-muted);
+  background: var(--bg-modifier-hover);
+}
+
 .reply-preview {
   max-width: min(520px, 100%);
   display: inline-grid;
@@ -2295,6 +2385,47 @@ input:focus {
 .video-attachment span button:hover {
   color: var(--interactive-hover);
   background: var(--bg-modifier-active);
+}
+
+.audio-attachment {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--bg-modifier-active);
+}
+
+.audio-attachment-header {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.audio-attachment-header svg {
+  color: var(--brand-500);
+}
+
+.audio-attachment-header strong,
+.audio-attachment-header small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audio-attachment-header strong {
+  color: var(--header-primary);
+  font-weight: 600;
+}
+
+.audio-attachment-header small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.audio-attachment audio {
+  width: 100%;
+  height: 36px;
 }
 
 .file-attachment {
@@ -2649,7 +2780,7 @@ input:focus {
   max-width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   grid-template-rows: auto auto auto;
   align-items: center;
   gap: 0;
@@ -2764,6 +2895,44 @@ input:focus {
   color: var(--interactive-hover);
   background: var(--channeltextarea-background) !important;
   transform: translateY(-1px);
+}
+
+.composer .voice-record-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  background: var(--channeltextarea-background);
+  color: var(--interactive-normal);
+  display: grid;
+  place-items: center;
+}
+
+.composer .voice-record-button svg {
+  grid-area: 1 / 1;
+  justify-self: center;
+  align-self: center;
+}
+
+.composer .voice-record-button:hover {
+  color: var(--interactive-hover);
+  transform: translateY(-1px);
+}
+
+.composer .voice-record-button.recording {
+  color: var(--status-danger);
+}
+
+.composer .voice-record-button.recording::after {
+  content: '';
+  position: absolute;
+  right: 9px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: recording-pulse 1s ease-in-out infinite;
 }
 
 .composer > button:last-of-type {
@@ -2928,6 +3097,19 @@ input:focus {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

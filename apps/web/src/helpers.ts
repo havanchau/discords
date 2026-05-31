@@ -108,6 +108,7 @@ export function formatBytes(value: number) {
 
 export function attachmentKind(attachment: MessageAttachment) {
   if (attachment.mimeType.startsWith('image/')) return 'image';
+  if (attachment.mimeType.startsWith('audio/')) return 'audio';
   if (attachment.mimeType.startsWith('video/')) return 'video';
   if (attachment.mimeType.includes('zip')) return 'archive';
   return 'file';

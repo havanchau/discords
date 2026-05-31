@@ -7,9 +7,10 @@ Real-time Discord-style chat application built as a full-stack monorepo with Rea
 - Real-time server/channel chat with Socket.IO rooms, typing indicators, reactions, replies, message editing, and soft delete.
 - Discord-like workspace UI with server rail, channel sidebar, member list, upload previews, link previews, and responsive app-shell layout.
 - Role-based permissions for server/channel actions, including manage roles, manage channels, send messages, create invites, connect voice, and upload files.
-- Voice/video/screen-share call foundation using WebRTC signaling over the realtime gateway.
+- Voice/video/screen-share call foundation using WebRTC signaling over the realtime gateway, plus recorded voice messages in chat.
 - Auth flow with JWT access tokens, refresh tokens, email verification support, profile editing, and avatar updates.
 - File, image, and video uploads with local development storage plus Cloudinary support for hosted media delivery.
+- Optional channel passphrase E2EE for text messages using browser Web Crypto AES-GCM; the backend stores ciphertext and cannot decrypt message bodies without the passphrase.
 - Security-focused backend hardening: DTO validation, upload type allowlist, rate limiting, Helmet/CORS setup, and guarded private endpoints.
 - Maintainable frontend structure: `AppShell` is split into focused components and hooks such as chat panel, settings modal, workspace sidebar, member sidebar, and channel call hook.
 
@@ -22,6 +23,7 @@ Recently added:
 - Channel unread indicators and mention badges for visited channels.
 - Local pinned-message panel from the notifications toolbar.
 - Image and video preview overlay for message attachments.
+- Voice message recording from the composer with inline audio playback.
 - Auth-screen visual polish, motion, and responsive background treatment.
 
 Recommended next features:
@@ -81,6 +83,22 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=discord-clone/uploads
 ```
+
+## End-to-End Encryption
+
+The web client supports optional per-channel message encryption:
+
+- Open the lock icon in the chat toolbar and enter a shared channel passphrase.
+- Outgoing message text is encrypted in the browser before it is sent to the API.
+- The backend stores the encrypted ciphertext in `Message.content`.
+- Other members must enter the same passphrase in that channel to decrypt messages locally.
+
+Current limits:
+
+- Passphrases are session-local and are not synced across devices.
+- Key exchange is manual; share passphrases outside the app with trusted members.
+- Attachments, including voice messages, metadata, authorship, timestamps, reactions, and channel membership are not E2EE.
+- This is not a full Signal-style multi-device protocol yet; adding public-key identity, member key rotation, and recovery is a future hardening step.
 
 ## Useful Commands
 
