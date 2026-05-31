@@ -293,11 +293,15 @@ export class MessagesService {
     }
 
     const channel = await this.channels.requireReadableChannel(userId, message.channelId);
-    await this.permissions.requireServerPermission(
+    const canManageMessages = await this.permissions.hasServerPermission(
       userId,
       channel.serverId,
       Permission.ManageMessages,
     );
+
+    if (message.authorId !== userId && !canManageMessages) {
+      throw new ForbiddenException('Only the author or message managers can pin this message');
+    }
 
     const existing = await this.prisma.messagePin.findUnique({ where: { messageId } });
     if (existing) {

@@ -324,6 +324,25 @@ export function ChatPanel({
   handleComposerInput,
 }: ChatPanelProps) {
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
+  const [emojiPickerMessageId, setEmojiPickerMessageId] = useState<string | null>(null);
+  const emojiOptions = [
+    '👍',
+    '🔥',
+    '😂',
+    '❤️',
+    '🎉',
+    '👏',
+    '🙏',
+    '😍',
+    '😮',
+    '😢',
+    '😡',
+    '✅',
+    '👀',
+    '💯',
+    '🚀',
+    '✨',
+  ];
 
   return (
     <section className="chat-panel">
@@ -759,7 +778,8 @@ export function ChatPanel({
                                 ? 'Unpin message'
                                 : 'Pin message'
                             }
-                            onClick={() => togglePinnedMessage(message)}
+                            className={pinnedMessageIds.includes(message.id) ? 'selected' : ''}
+                            onClick={() => void togglePinnedMessage(message)}
                           >
                             <Pin size={14} />
                           </button>
@@ -773,7 +793,34 @@ export function ChatPanel({
                                 {emoji}
                               </button>
                             ))}
-                            <SmilePlus size={14} />
+                            <button
+                              type="button"
+                              className="emoji-picker-trigger"
+                              title="More reactions"
+                              onClick={() =>
+                                setEmojiPickerMessageId((current) =>
+                                  current === message.id ? null : message.id,
+                                )
+                              }
+                            >
+                              <SmilePlus size={14} />
+                            </button>
+                            {emojiPickerMessageId === message.id ? (
+                              <div className="emoji-picker-popover">
+                                {emojiOptions.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => {
+                                      setEmojiPickerMessageId(null);
+                                      void toggleReaction(message, emoji);
+                                    }}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                           {canManage ? (
                             <>
