@@ -11,6 +11,7 @@ interface SettingsModalProps {
   channel: Channel | null;
   selectedMember: ServerDetail['members'][number] | null;
   pendingAction: string | null;
+  uiTheme: 'dark' | 'midnight' | 'slate' | 'oled';
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
   channelAvatarInputRef: RefObject<HTMLInputElement | null>;
   setActiveDialog: (dialog: ActiveDialog) => void;
@@ -21,6 +22,7 @@ interface SettingsModalProps {
   toggleRolePermission: (role: Role, permission: string, enabled: boolean) => Promise<void>;
   deleteRole: (role: Role) => Promise<void>;
   toggleMemberRole: (memberId: string, roleId: string, enabled: boolean) => Promise<void>;
+  setUiTheme: (theme: 'dark' | 'midnight' | 'slate' | 'oled') => void;
 }
 
 export function SettingsModal({
@@ -30,6 +32,7 @@ export function SettingsModal({
   channel,
   selectedMember,
   pendingAction,
+  uiTheme,
   profileAvatarInputRef,
   channelAvatarInputRef,
   setActiveDialog,
@@ -40,6 +43,7 @@ export function SettingsModal({
   toggleRolePermission,
   deleteRole,
   toggleMemberRole,
+  setUiTheme,
 }: SettingsModalProps) {
   if (!activeDialog) return null;
 
@@ -139,6 +143,21 @@ export function SettingsModal({
                   <option value="IDLE">Idle</option>
                   <option value="DND">Do Not Disturb</option>
                   <option value="INVISIBLE">Invisible</option>
+                </select>
+              </label>
+              <label>
+                App theme
+                <select
+                  name="uiTheme"
+                  defaultValue={uiTheme}
+                  onChange={(event) =>
+                    setUiTheme(event.target.value as 'dark' | 'midnight' | 'slate' | 'oled')
+                  }
+                >
+                  <option value="dark">Discord dark</option>
+                  <option value="midnight">Midnight</option>
+                  <option value="slate">Slate</option>
+                  <option value="oled">OLED</option>
                 </select>
               </label>
               <div className="profile-preview">

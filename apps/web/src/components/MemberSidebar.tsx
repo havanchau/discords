@@ -29,6 +29,7 @@ export function MemberSidebar({ assetUrl, onManageMember, server }: MemberSideba
           <div className="member-list">
             {group.members.map((member) => {
               const topRole = member.roles?.find(({ role }) => role.color)?.role;
+              const roleNames = member.roles?.map(({ role }) => role.name).filter(Boolean) ?? [];
               return (
                 <button
                   key={member.id}
@@ -56,6 +57,31 @@ export function MemberSidebar({ assetUrl, onManageMember, server }: MemberSideba
                     <span>
                       {member.kind === 'OWNER' ? 'Owner' : member.user.status || 'Member'}
                     </span>
+                  </div>
+                  <div className="member-popover" aria-hidden="true">
+                    <div className="member-popover-banner" />
+                    <div className="member-popover-body">
+                      <div className={`avatar profile-card-avatar ${accentClass(member.user.id)}`}>
+                        {member.user.avatarUrl ? (
+                          <img
+                            src={assetUrl(member.user.avatarUrl)}
+                            alt={member.user.displayName}
+                          />
+                        ) : (
+                          initials(member.user.displayName)
+                        )}
+                      </div>
+                      <strong>{member.user.displayName}</strong>
+                      <span>@{member.user.username}</span>
+                      {member.user.bio ? <p>{member.user.bio}</p> : null}
+                      {roleNames.length ? (
+                        <div className="member-role-chips">
+                          {roleNames.slice(0, 4).map((roleName) => (
+                            <small key={roleName}>{roleName}</small>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </button>
               );

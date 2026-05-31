@@ -98,6 +98,7 @@ export function WorkspaceSidebar({
       <aside className="server-rail">
         <button className="server-orb home active" title="Direct Messages">
           <MessageSquare size={20} />
+          <span className="server-tooltip">Direct Messages</span>
         </button>
         <div className="rail-divider" />
         {servers.map((item, index) => (
@@ -108,6 +109,7 @@ export function WorkspaceSidebar({
             onClick={() => void openServer(item.id)}
           >
             {initials(item.name)}
+            <span className="server-tooltip">{item.name}</span>
           </button>
         ))}
         <button
@@ -117,6 +119,7 @@ export function WorkspaceSidebar({
           onClick={() => setServerAction('create')}
         >
           <Plus size={24} />
+          <span className="server-tooltip">Add a Server</span>
         </button>
       </aside>
 

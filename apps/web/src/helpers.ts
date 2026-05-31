@@ -96,6 +96,27 @@ export function formatDate(value: string) {
   );
 }
 
+export function formatDayDivider(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === now.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return new Intl.DateTimeFormat('en', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
+
+export function isSameMessageDay(left?: string, right?: string) {
+  if (!left || !right) return false;
+  return new Date(left).toDateString() === new Date(right).toDateString();
+}
+
 export function extractLinks(value: string) {
   return value.match(/https?:\/\/[^\s]+/gi) ?? [];
 }

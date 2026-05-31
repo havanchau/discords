@@ -39,8 +39,10 @@ import {
   extractLinks,
   formatBytes,
   formatDate,
+  formatDayDivider,
   formatTime,
   initials,
+  isSameMessageDay,
   previewText,
   QUICK_REACTIONS,
   RemoteMedia,
@@ -234,6 +236,11 @@ function MessageAttachments({
                   <small>{formatBytes(attachment.byteSize)}</small>
                 </span>
               </div>
+              <div className="audio-waveform" aria-hidden="true">
+                {Array.from({ length: 18 }, (_, index) => (
+                  <i key={index} />
+                ))}
+              </div>
               <audio src={url} controls preload="metadata" />
             </div>
           );
@@ -344,7 +351,11 @@ export function ChatPanel({
           </button>
           <div>
             <strong>{channel?.name || 'Select a channel'}</strong>
-            <span>{channel ? 'Text channel' : 'Choose a workspace channel to start.'}</span>
+            <span>
+              {channel
+                ? channel.topic || `Server channel / #${channel.name}`
+                : 'Choose a workspace channel to start.'}
+            </span>
           </div>
         </div>
         <div className="toolbar">
@@ -597,9 +608,16 @@ export function ChatPanel({
 
       <div className="message-list" data-testid="message-list">
         {isLoadingMessages ? (
-          <div className="state-panel">
-            <Loader2 className="spin" size={22} />
-            Loading messages
+          <div className="message-skeleton-list" aria-label="Loading messages">
+            {Array.from({ length: 7 }, (_, index) => (
+              <div key={index} className="message-skeleton">
+                <span />
+                <div>
+                  <i />
+                  <b />
+                </div>
+              </div>
+            ))}
           </div>
         ) : !channel ? (
           <div className="state-panel">
@@ -633,8 +651,13 @@ export function ChatPanel({
             ) : null}
             {visibleMessages.map((message, index) => {
               const previousMessage = visibleMessages[index - 1];
+              const showDateDivider = !isSameMessageDay(
+                previousMessage?.createdAt,
+                message.createdAt,
+              );
               const isFirstInGroup =
                 !previousMessage ||
+                showDateDivider ||
                 previousMessage.authorId !== message.authorId ||
                 new Date(message.createdAt).getTime() -
                   new Date(previousMessage.createdAt).getTime() >
@@ -643,131 +666,139 @@ export function ChatPanel({
               const isEditing = editingMessageId === message.id;
 
               return (
-                <article
-                  key={message.id}
-                  className={`message ${isFirstInGroup ? 'first-in-group' : 'grouped-message'}`}
-                  data-testid="message"
-                  data-message-id={message.id}
-                >
-                  {isFirstInGroup ? (
-                    <div className={`avatar message-avatar ${accentClass(message.authorId)}`}>
-                      {message.author.avatarUrl ? (
-                        <img
-                          src={assetUrl(message.author.avatarUrl)}
-                          alt={message.author.displayName}
-                        />
-                      ) : (
-                        initials(message.author.displayName)
-                      )}
+                <div key={message.id} className="message-block">
+                  {showDateDivider ? (
+                    <div className="message-date-divider">
+                      <span>{formatDayDivider(message.createdAt)}</span>
                     </div>
-                  ) : (
-                    <span className="hover-timestamp">{formatTime(message.createdAt)}</span>
-                  )}
-                  <div className="message-body">
+                  ) : null}
+                  <article
+                    className={`message ${isFirstInGroup ? 'first-in-group' : 'grouped-message'}`}
+                    data-testid="message"
+                    data-message-id={message.id}
+                  >
                     {isFirstInGroup ? (
-                      <div className="message-meta">
-                        <strong>{message.author.displayName}</strong>
-                        <span>{formatDate(message.createdAt)}</span>
-                        {message.editedAt ? <span>edited</span> : null}
-                      </div>
-                    ) : null}
-
-                    {message.deletedAt ? (
-                      <p className="deleted-message">Message deleted</p>
-                    ) : isEditing ? (
-                      <div className="edit-row">
-                        <input
-                          value={editingDraft}
-                          onChange={(event) => setEditingDraft(event.target.value)}
-                          autoFocus
-                        />
-                        <button onClick={() => void saveMessageEdit(message.id)}>Save</button>
-                        <button
-                          className="ghost"
-                          onClick={() => {
-                            setEditingMessageId(null);
-                            setEditingDraft('');
-                          }}
-                        >
-                          Cancel
-                        </button>
+                      <div className={`avatar message-avatar ${accentClass(message.authorId)}`}>
+                        {message.author.avatarUrl ? (
+                          <img
+                            src={assetUrl(message.author.avatarUrl)}
+                            alt={message.author.displayName}
+                          />
+                        ) : (
+                          initials(message.author.displayName)
+                        )}
                       </div>
                     ) : (
-                      <MessageContent message={message} />
+                      <span className="hover-timestamp">{formatTime(message.createdAt)}</span>
                     )}
+                    <div className="message-body">
+                      {isFirstInGroup ? (
+                        <div className="message-meta">
+                          <strong>{message.author.displayName}</strong>
+                          <span>{formatDate(message.createdAt)}</span>
+                          {message.editedAt ? <span>edited</span> : null}
+                        </div>
+                      ) : null}
 
-                    {!message.deletedAt ? (
-                      <MessageAttachments
-                        attachments={message.attachments ?? []}
-                        onPreview={setPreviewAttachment}
-                      />
-                    ) : null}
-
-                    {!message.deletedAt ? (
-                      <div className="reaction-row">
-                        {message.reactions.map((reaction) => (
+                      {message.deletedAt ? (
+                        <p className="deleted-message">Message deleted</p>
+                      ) : isEditing ? (
+                        <div className="edit-row">
+                          <input
+                            value={editingDraft}
+                            onChange={(event) => setEditingDraft(event.target.value)}
+                            autoFocus
+                          />
+                          <button onClick={() => void saveMessageEdit(message.id)}>Save</button>
                           <button
-                            key={reaction.emoji}
-                            type="button"
-                            className={reaction.me ? 'active' : ''}
-                            onClick={() => void toggleReaction(message, reaction.emoji)}
-                            title={`React ${reaction.emoji}`}
+                            className="ghost"
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditingDraft('');
+                            }}
                           >
-                            <span>{reaction.emoji}</span>
-                            <strong>{reaction.count}</strong>
+                            Cancel
                           </button>
-                        ))}
-                      </div>
-                    ) : null}
+                        </div>
+                      ) : (
+                        <MessageContent message={message} />
+                      )}
 
-                    {!message.deletedAt && !isEditing ? (
-                      <div className="message-actions">
-                        <button title="Reply" onClick={() => setReplyingToMessage(message)}>
-                          <Reply size={14} />
-                        </button>
-                        <button
-                          title={
-                            pinnedMessageIds.includes(message.id) ? 'Unpin message' : 'Pin message'
-                          }
-                          onClick={() => togglePinnedMessage(message)}
-                        >
-                          <Pin size={14} />
-                        </button>
-                        <div className="quick-reactions" title="Quick reactions">
-                          {QUICK_REACTIONS.map((emoji) => (
+                      {!message.deletedAt ? (
+                        <MessageAttachments
+                          attachments={message.attachments ?? []}
+                          onPreview={setPreviewAttachment}
+                        />
+                      ) : null}
+
+                      {!message.deletedAt ? (
+                        <div className="reaction-row">
+                          {message.reactions.map((reaction) => (
                             <button
-                              key={emoji}
+                              key={reaction.emoji}
                               type="button"
-                              onClick={() => void toggleReaction(message, emoji)}
+                              className={reaction.me ? 'active' : ''}
+                              onClick={() => void toggleReaction(message, reaction.emoji)}
+                              title={`React ${reaction.emoji}`}
                             >
-                              {emoji}
+                              <span>{reaction.emoji}</span>
+                              <strong>{reaction.count}</strong>
                             </button>
                           ))}
-                          <SmilePlus size={14} />
                         </div>
-                        {canManage ? (
-                          <>
-                            <button
-                              title="Edit message"
-                              onClick={() => {
-                                setEditingMessageId(message.id);
-                                setEditingDraft(message.content);
-                              }}
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <button
-                              title="Delete message"
-                              onClick={() => void deleteMessage(message.id)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </article>
+                      ) : null}
+
+                      {!message.deletedAt && !isEditing ? (
+                        <div className="message-actions">
+                          <button title="Reply" onClick={() => setReplyingToMessage(message)}>
+                            <Reply size={14} />
+                          </button>
+                          <button
+                            title={
+                              pinnedMessageIds.includes(message.id)
+                                ? 'Unpin message'
+                                : 'Pin message'
+                            }
+                            onClick={() => togglePinnedMessage(message)}
+                          >
+                            <Pin size={14} />
+                          </button>
+                          <div className="quick-reactions" title="Quick reactions">
+                            {QUICK_REACTIONS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => void toggleReaction(message, emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                            <SmilePlus size={14} />
+                          </div>
+                          {canManage ? (
+                            <>
+                              <button
+                                title="Edit message"
+                                onClick={() => {
+                                  setEditingMessageId(message.id);
+                                  setEditingDraft(message.content);
+                                }}
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button
+                                title="Delete message"
+                                onClick={() => void deleteMessage(message.id)}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                </div>
               );
             })}
           </>

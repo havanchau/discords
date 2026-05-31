@@ -26,6 +26,8 @@ import {
 } from './e2ee';
 import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
 
+type UiTheme = 'dark' | 'midnight' | 'slate' | 'oled';
+
 interface TypingUser {
   userId: string;
   displayName: string;
@@ -68,6 +70,12 @@ export function AppShell() {
   const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
   const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
   const [channelKeys, setChannelKeys] = useState<Record<string, CryptoKey>>({});
+  const [uiTheme, setUiTheme] = useState<UiTheme>(() => {
+    const savedTheme = localStorage.getItem('discord-clone-ui-theme');
+    return ['dark', 'midnight', 'slate', 'oled'].includes(savedTheme ?? '')
+      ? (savedTheme as UiTheme)
+      : 'dark';
+  });
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>(() => {
     const raw = localStorage.getItem('discord-clone-pinned-messages');
     return raw ? JSON.parse(raw) : {};
@@ -104,6 +112,11 @@ export function AppShell() {
   useEffect(() => {
     localStorage.setItem('discord-clone-pinned-messages', JSON.stringify(pinnedMessageIds));
   }, [pinnedMessageIds]);
+
+  useEffect(() => {
+    document.body.dataset.theme = uiTheme;
+    localStorage.setItem('discord-clone-ui-theme', uiTheme);
+  }, [uiTheme]);
 
   useEffect(
     () => () => {
@@ -910,6 +923,7 @@ export function AppShell() {
     event.preventDefault();
     if (!auth) return;
     const form = new FormData(event.currentTarget);
+    const nextTheme = String(form.get('uiTheme') || uiTheme) as UiTheme;
     setPendingAction('profile-update');
     setWorkspaceError(null);
     try {
@@ -925,6 +939,7 @@ export function AppShell() {
         },
         auth.accessToken,
       );
+      setUiTheme(nextTheme);
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
       setServer((current) =>
         current
@@ -1335,9 +1350,11 @@ export function AppShell() {
         channel={channel}
         selectedMember={selectedMember}
         pendingAction={pendingAction}
+        uiTheme={uiTheme}
         profileAvatarInputRef={profileAvatarInputRef}
         channelAvatarInputRef={channelAvatarInputRef}
         setActiveDialog={setActiveDialog}
+        setUiTheme={setUiTheme}
         updateProfile={updateProfile}
         updateServerSettings={updateServerSettings}
         updateChannelSettings={updateChannelSettings}

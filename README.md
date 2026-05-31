@@ -25,6 +25,7 @@ Recently added:
 - Image and video preview overlay for message attachments.
 - Voice message recording from the composer with inline audio playback.
 - Auth-screen visual polish, motion, and responsive background treatment.
+- Visual engagement pass: server rail tooltips, member profile hover cards, date dividers, message skeletons, custom voice-message waveform cards, channel topic context, and selectable app themes.
 
 Recommended next features:
 
@@ -36,6 +37,17 @@ Recommended next features:
 - Voice channel occupancy: show joined users under voice channels and allow joining the voice channel directly from the sidebar.
 - Notification settings: mute server/channel, only mentions, desktop notifications, and notification inbox.
 - Deployment hardening: production migrations, health checks for Render, seed-safe demo data, and CI smoke tests against deployed URLs.
+
+Visual polish roadmap now implemented in the web client:
+
+- Presence: richer status dots and member hover cards with banner, bio, and role chips.
+- Channel header: topic/context line under the active channel name.
+- Messages: loading skeletons, date dividers, smoother message entry and hover affordances.
+- Voice messages: waveform-styled audio attachment cards.
+- Empty states and attachment cards: stronger visual hierarchy while keeping the app dense.
+- Server rail: hover tooltips and smoother active indicators.
+- Themes: Discord dark, Midnight, Slate, and OLED options from profile settings.
+- Micro-interactions: subtle hover, click, modal, banner, and composer transitions.
 
 ## Tech Stack
 
