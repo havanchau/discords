@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ServersService } from '../servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
+import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 
 @Injectable()
@@ -27,6 +29,10 @@ export class ChannelsService {
         position: channelCount,
       },
     });
+    await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_CREATE', channel.id, {
+      name: channel.name,
+      type: channel.type,
+    });
     return { channel };
   }
 
@@ -36,7 +42,13 @@ export class ChannelsService {
       where: { serverId },
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
-    return { channels };
+    const visibleChannels = [];
+    for (const channel of channels) {
+      if (await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel)) {
+        visibleChannels.push(channel);
+      }
+    }
+    return { channels: visibleChannels };
   }
 
   async getChannel(userId: string, channelId: string) {
@@ -45,9 +57,9 @@ export class ChannelsService {
       throw new NotFoundException('Channel not found');
     }
     await this.servers.requireMembership(userId, channel.serverId);
-    await this.permissions.requireServerPermission(
+    await this.permissions.requireChannelPermission(
       userId,
-      channel.serverId,
+      channel.id,
       Permission.ViewChannel,
     );
     return { channel };
@@ -73,10 +85,35 @@ export class ChannelsService {
         position: dto.position,
       },
     });
+    await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_UPDATE', channel.id, {
+      name: channel.name,
+      isPrivate: channel.isPrivate,
+      position: channel.position,
+    });
     return { channel };
   }
 
-  async requireReadableChannel(userId: string, channelId: string) {
+  async listPermissionOverrides(userId: string, channelId: string) {
+    const channel = await this.prisma.channel.findUnique({
+      where: { id: channelId },
+      include: { permissionOverrides: true },
+    });
+    if (!channel) {
+      throw new NotFoundException('Channel not found');
+    }
+    await this.permissions.requireServerPermission(
+      userId,
+      channel.serverId,
+      Permission.ManageChannels,
+    );
+    return { overrides: channel.permissionOverrides };
+  }
+
+  async updatePermissionOverrides(
+    userId: string,
+    channelId: string,
+    dto: UpdateChannelOverridesDto,
+  ) {
     const channel = await this.prisma.channel.findUnique({ where: { id: channelId } });
     if (!channel) {
       throw new NotFoundException('Channel not found');
@@ -84,8 +121,52 @@ export class ChannelsService {
     await this.permissions.requireServerPermission(
       userId,
       channel.serverId,
+      Permission.ManageChannels,
+    );
+
+    const overrides = dto.overrides.filter((override) => override.roleId || override.memberId);
+    await this.prisma.$transaction([
+      this.prisma.channelPermissionOverride.deleteMany({ where: { channelId } }),
+      ...overrides.map((override) =>
+        this.prisma.channelPermissionOverride.create({
+          data: {
+            channelId,
+            roleId: override.roleId,
+            memberId: override.memberId,
+            allow: override.allow,
+            deny: override.deny,
+          },
+        }),
+      ),
+    ]);
+    await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_OVERRIDES_UPDATE', channel.id, {
+      count: overrides.length,
+    });
+    return this.listPermissionOverrides(userId, channelId);
+  }
+
+  async requireReadableChannel(userId: string, channelId: string) {
+    const channel = await this.prisma.channel.findUnique({ where: { id: channelId } });
+    if (!channel) {
+      throw new NotFoundException('Channel not found');
+    }
+    await this.permissions.requireChannelPermission(
+      userId,
+      channel.id,
       Permission.ViewChannel,
     );
     return channel;
+  }
+
+  private async writeAuditLog(
+    serverId: string,
+    actorId: string,
+    action: string,
+    targetId?: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    await this.prisma.auditLog.create({
+      data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
+    });
   }
 }

@@ -1,6 +1,15 @@
 import { Hash, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { FormEvent, RefObject } from 'react';
-import { assetUrl, AuthState, Channel, Role, ServerDetail } from '../api';
+import {
+  assetUrl,
+  AuditLogEntry,
+  AuthState,
+  Channel,
+  ChannelPermissionOverride,
+  NotificationPreference,
+  Role,
+  ServerDetail,
+} from '../api';
 import { accentClass, initials, PERMISSION_OPTIONS } from '../helpers';
 import { ActiveDialog } from './ChatPanel';
 
@@ -10,14 +19,28 @@ interface SettingsModalProps {
   server: ServerDetail | null;
   channel: Channel | null;
   selectedMember: ServerDetail['members'][number] | null;
+  channelOverrides: ChannelPermissionOverride[];
+  auditLogs: AuditLogEntry[];
+  notificationPreferences: NotificationPreference[];
   pendingAction: string | null;
   uiTheme: 'dark' | 'midnight' | 'slate' | 'oled';
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
   channelAvatarInputRef: RefObject<HTMLInputElement | null>;
   setActiveDialog: (dialog: ActiveDialog) => void;
   updateProfile: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  updateNotificationPreference: (
+    preference: Partial<NotificationPreference> & {
+      serverId?: string | null;
+      channelId?: string | null;
+    },
+  ) => Promise<void>;
   updateServerSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   updateChannelSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  toggleChannelRoleOverride: (
+    roleId: string,
+    permission: string,
+    enabled: boolean,
+  ) => Promise<void>;
   createRole: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   toggleRolePermission: (role: Role, permission: string, enabled: boolean) => Promise<void>;
   deleteRole: (role: Role) => Promise<void>;
@@ -31,14 +54,19 @@ export function SettingsModal({
   server,
   channel,
   selectedMember,
+  channelOverrides,
+  auditLogs,
+  notificationPreferences,
   pendingAction,
   uiTheme,
   profileAvatarInputRef,
   channelAvatarInputRef,
   setActiveDialog,
   updateProfile,
+  updateNotificationPreference,
   updateServerSettings,
   updateChannelSettings,
+  toggleChannelRoleOverride,
   createRole,
   toggleRolePermission,
   deleteRole,
@@ -46,6 +74,10 @@ export function SettingsModal({
   setUiTheme,
 }: SettingsModalProps) {
   if (!activeDialog) return null;
+
+  const globalNotificationPreference = notificationPreferences.find(
+    (preference) => !preference.serverId && !preference.channelId,
+  );
 
   return (
     <div className="modal-overlay" role="presentation" onMouseDown={() => setActiveDialog(null)}>
@@ -174,6 +206,73 @@ export function SettingsModal({
                 </div>
               </div>
             </section>
+
+            <section className="settings-section">
+              <div className="settings-section-heading">
+                <strong>Notifications</strong>
+                <span>Global delivery preferences for this browser session.</span>
+              </div>
+              <label className="switch-row">
+                <span>
+                  <strong>Mute notifications</strong>
+                  <small>Keep unread badges, but silence non-critical notifications.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(globalNotificationPreference?.muted)}
+                  disabled={pendingAction === 'notification-preference'}
+                  onChange={(event) =>
+                    void updateNotificationPreference({
+                      serverId: null,
+                      channelId: null,
+                      muted: event.currentTarget.checked,
+                      mentionOnly: Boolean(globalNotificationPreference?.mentionOnly),
+                      desktopEnabled: Boolean(globalNotificationPreference?.desktopEnabled),
+                    })
+                  }
+                />
+              </label>
+              <label className="switch-row">
+                <span>
+                  <strong>Mentions only</strong>
+                  <small>Only surface notifications that mention you directly.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(globalNotificationPreference?.mentionOnly)}
+                  disabled={pendingAction === 'notification-preference'}
+                  onChange={(event) =>
+                    void updateNotificationPreference({
+                      serverId: null,
+                      channelId: null,
+                      muted: Boolean(globalNotificationPreference?.muted),
+                      mentionOnly: event.currentTarget.checked,
+                      desktopEnabled: Boolean(globalNotificationPreference?.desktopEnabled),
+                    })
+                  }
+                />
+              </label>
+              <label className="switch-row">
+                <span>
+                  <strong>Desktop notifications</strong>
+                  <small>Store consent preference for future browser notifications.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(globalNotificationPreference?.desktopEnabled)}
+                  disabled={pendingAction === 'notification-preference'}
+                  onChange={(event) =>
+                    void updateNotificationPreference({
+                      serverId: null,
+                      channelId: null,
+                      muted: Boolean(globalNotificationPreference?.muted),
+                      mentionOnly: Boolean(globalNotificationPreference?.mentionOnly),
+                      desktopEnabled: event.currentTarget.checked,
+                    })
+                  }
+                />
+              </label>
+            </section>
             <footer className="settings-modal-footer">
               <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
@@ -216,6 +315,27 @@ export function SettingsModal({
                 Save changes
               </button>
             </footer>
+            <section className="settings-section audit-section">
+              <div className="settings-section-heading">
+                <strong>Audit log</strong>
+                <span>Recent moderation and configuration changes.</span>
+              </div>
+              <div className="audit-log-list">
+                {auditLogs.length ? (
+                  auditLogs.slice(0, 8).map((log) => (
+                    <div className="audit-log-row" key={log.id}>
+                      <span>{log.action.replaceAll('_', ' ').toLowerCase()}</span>
+                      <small>
+                        {log.actor?.displayName ?? 'System'} ·{' '}
+                        {new Date(log.createdAt).toLocaleString()}
+                      </small>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-note">No audit events yet.</p>
+                )}
+              </div>
+            </section>
           </form>
         ) : null}
 
@@ -292,6 +412,60 @@ export function SettingsModal({
                 />
               </label>
             </section>
+
+            {server ? (
+              <section className="settings-section">
+                <div className="settings-section-heading">
+                  <strong>Role overrides</strong>
+                  <span>Grant specific roles access to private or restricted channels.</span>
+                </div>
+                <div className="permission-override-list">
+                  {server.roles.map((role) => {
+                    const override = channelOverrides.find((item) => item.roleId === role.id);
+                    const canView = Boolean(override?.allow.includes('VIEW_CHANNEL'));
+                    const canSend = Boolean(override?.allow.includes('SEND_MESSAGES'));
+                    return (
+                      <div className="permission-override-row" key={role.id}>
+                        <div>
+                          <strong style={{ color: role.color || undefined }}>{role.name}</strong>
+                          <span>{role.name === '@everyone' ? 'Default role' : 'Role access'}</span>
+                        </div>
+                        <label className="mini-check">
+                          <input
+                            type="checkbox"
+                            checked={canView}
+                            disabled={pendingAction?.startsWith(`channel-override-${role.id}`)}
+                            onChange={(event) =>
+                              void toggleChannelRoleOverride(
+                                role.id,
+                                'VIEW_CHANNEL',
+                                event.currentTarget.checked,
+                              )
+                            }
+                          />
+                          View
+                        </label>
+                        <label className="mini-check">
+                          <input
+                            type="checkbox"
+                            checked={canSend}
+                            disabled={pendingAction?.startsWith(`channel-override-${role.id}`)}
+                            onChange={(event) =>
+                              void toggleChannelRoleOverride(
+                                role.id,
+                                'SEND_MESSAGES',
+                                event.currentTarget.checked,
+                              )
+                            }
+                          />
+                          Send
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
             <footer className="settings-modal-footer">
               <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel

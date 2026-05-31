@@ -39,7 +39,7 @@ export class MessageAttachmentInputDto {
 
   @IsInt()
   @Min(1)
-  @Max(25 * 1024 * 1024)
+  @Max(100 * 1024 * 1024)
   byteSize!: number;
 
   @IsString()

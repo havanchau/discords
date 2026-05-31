@@ -1063,6 +1063,25 @@ input:focus {
   margin-top: 4px;
 }
 
+.voice-channel-block {
+  display: grid;
+  gap: 4px;
+}
+
+.voice-occupants {
+  display: grid;
+  gap: 2px;
+  padding-left: 28px;
+}
+
+.voice-occupants span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .compact-form + .channel-list {
   margin-top: 4px;
 }
@@ -2105,6 +2124,51 @@ input:focus {
 .role-assign-row small {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.permission-override-list,
+.audit-log-list {
+  display: grid;
+  gap: 8px;
+}
+
+.permission-override-row,
+.audit-log-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.audit-log-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.permission-override-row span,
+.audit-log-row small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.mini-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-normal);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.mini-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 .member-role-summary {

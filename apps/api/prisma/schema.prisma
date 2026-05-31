@@ -49,6 +49,9 @@ model User {
   memberships             ServerMember[]
   messages                Message[]
   messagePins             MessagePin[]               @relation("MessagePins")
+  readStates              ReadState[]
+  notificationPreferences NotificationPreference[]
+  auditLogs               AuditLog[]                 @relation("AuditActor")
   createdServers          Server[]                   @relation("ServerOwner")
   sentFriendRequests      FriendRequest[]            @relation("FriendRequester")
   receivedFriendRequests  FriendRequest[]            @relation("FriendReceiver")
@@ -92,6 +95,8 @@ model Server {
   roles       Role[]
   channels    Channel[]
   invites     Invite[]
+  notificationPreferences NotificationPreference[]
+  auditLogs   AuditLog[]
 }
 
 model ServerMember {
@@ -104,6 +109,7 @@ model ServerMember {
   user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   server   Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
   roles    MemberRole[]
+  permissionOverrides ChannelPermissionOverride[]
 
   @@unique([userId, serverId])
 }
@@ -119,6 +125,7 @@ model Role {
   updatedAt   DateTime     @updatedAt
   server      Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
   members     MemberRole[]
+  permissionOverrides ChannelPermissionOverride[]
 
   @@unique([serverId, name])
 }
@@ -146,8 +153,29 @@ model Channel {
   server    Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages  Message[]
   pins      MessagePin[]
+  permissionOverrides ChannelPermissionOverride[]
+  readStates ReadState[]
+  notificationPreferences NotificationPreference[]
 
   @@unique([serverId, name])
+}
+
+model ChannelPermissionOverride {
+  id        String        @id @default(cuid())
+  channelId String
+  roleId    String?
+  memberId  String?
+  allow     String[]      @default([])
+  deny      String[]      @default([])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  channel   Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  role      Role?         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  member    ServerMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([roleId])
+  @@index([memberId])
 }
 
 model Message {
@@ -200,6 +228,52 @@ model MessagePin {
   pinnedBy   User     @relation("MessagePins", fields: [pinnedById], references: [id])
 
   @@index([channelId, createdAt])
+}
+
+model ReadState {
+  id                String   @id @default(cuid())
+  userId            String
+  channelId         String
+  lastReadMessageId String?
+  lastReadAt        DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel           Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@index([channelId, lastReadAt])
+}
+
+model NotificationPreference {
+  id                 String   @id @default(cuid())
+  userId             String
+  serverId           String?
+  channelId          String?
+  muted              Boolean  @default(false)
+  mentionOnly        Boolean  @default(false)
+  desktopEnabled     Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server             Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel            Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([userId, serverId])
+  @@index([userId, channelId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  serverId  String
+  actorId   String
+  action    String
+  targetId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  actor     User     @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([serverId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model Invite {

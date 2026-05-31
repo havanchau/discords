@@ -80,6 +80,33 @@ export class MessagesService {
     };
   }
 
+  async markChannelRead(userId: string, channelId: string, messageId?: string) {
+    await this.channels.requireReadableChannel(userId, channelId);
+    const lastMessage =
+      messageId ??
+      (
+        await this.prisma.message.findFirst({
+          where: { channelId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true },
+        })
+      )?.id;
+
+    const readState = await this.prisma.readState.upsert({
+      where: { userId_channelId: { userId, channelId } },
+      create: {
+        userId,
+        channelId,
+        lastReadMessageId: lastMessage,
+      },
+      update: {
+        lastReadMessageId: lastMessage,
+        lastReadAt: new Date(),
+      },
+    });
+    return { readState };
+  }
+
   async listPinnedMessages(userId: string, channelId: string) {
     await this.channels.requireReadableChannel(userId, channelId);
     const pins = await this.prisma.messagePin.findMany({
@@ -114,9 +141,9 @@ export class MessagesService {
 
   async createMessage(userId: string, channelId: string, dto: CreateMessageDto) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
-    await this.permissions.requireServerPermission(
+    await this.permissions.requireChannelPermission(
       userId,
-      channel.serverId,
+      channel.id,
       Permission.SendMessages,
     );
     const content = dto.content.trim();
@@ -252,6 +279,10 @@ export class MessagesService {
         deletedAt: new Date(),
       },
     });
+    await this.writeAuditLog(message.serverId, userId, 'MESSAGE_DELETE', message.id, {
+      authorId: message.authorId,
+      channelId: message.channelId,
+    });
     return { message: await this.findMessageForUser(userId, deleted.id) };
   }
 
@@ -306,6 +337,9 @@ export class MessagesService {
     const existing = await this.prisma.messagePin.findUnique({ where: { messageId } });
     if (existing) {
       await this.prisma.messagePin.delete({ where: { messageId } });
+      await this.writeAuditLog(channel.serverId, userId, 'MESSAGE_UNPIN', message.id, {
+        channelId: message.channelId,
+      });
       return { pinned: false, message: await this.findMessageForUser(userId, messageId) };
     }
 
@@ -315,6 +349,9 @@ export class MessagesService {
         channelId: message.channelId,
         pinnedById: userId,
       },
+    });
+    await this.writeAuditLog(channel.serverId, userId, 'MESSAGE_PIN', message.id, {
+      channelId: message.channelId,
     });
     return { pinned: true, message: await this.findMessageForUser(userId, messageId) };
   }
@@ -387,6 +424,18 @@ export class MessagesService {
       reactions: [...reactionMap.values()],
       replyToMessage,
     };
+  }
+
+  private async writeAuditLog(
+    serverId: string,
+    actorId: string,
+    action: string,
+    targetId?: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    await this.prisma.auditLog.create({
+      data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
+    });
   }
 }
 

@@ -12,6 +12,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { MessagesService } from '../messages/messages.service';
+import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
 import { ReactionDto } from '../messages/dto/reaction.dto';
 import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
@@ -58,6 +59,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
     private readonly messages: MessagesService,
+    private readonly permissions: PermissionsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -90,11 +92,12 @@ export class RealtimeGateway implements OnGatewayConnection {
   async joinChannel(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
     const user = this.getUser(client);
     const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
-    const member = await this.prisma.serverMember.findUnique({
-      where: { userId_serverId: { userId: user.id, serverId: channel.serverId } },
-    });
-
-    if (!member) {
+    const canView = await this.permissions.hasChannelPermission(
+      user.id,
+      channel.id,
+      Permission.ViewChannel,
+    );
+    if (!canView) {
       throw new UnauthorizedException('Not a channel member');
     }
 

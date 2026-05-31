@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { slugifyChannelName } from '../../common/slugify';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
@@ -83,7 +84,17 @@ export class ServersService {
       },
       orderBy: { updatedAt: 'desc' }
     });
-    return { servers };
+    const visibleServers = [];
+    for (const server of servers) {
+      const channels = [];
+      for (const channel of server.channels) {
+        if (await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel)) {
+          channels.push(channel);
+        }
+      }
+      visibleServers.push({ ...server, channels });
+    }
+    return { servers: visibleServers };
   }
 
   async getServerForUser(userId: string, serverId: string) {
@@ -91,7 +102,12 @@ export class ServersService {
     const server = await this.prisma.server.findFirstOrThrow({
       where: { id: serverId, deletedAt: null },
       include: {
-        channels: { orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] },
+        channels: {
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+          include: {
+            readStates: { where: { userId }, take: 1 },
+          },
+        },
         members: {
           include: {
             user: {
@@ -110,7 +126,24 @@ export class ServersService {
         roles: { orderBy: { position: 'asc' } }
       }
     });
-    return { server };
+    const channels = [];
+    for (const channel of server.channels) {
+      if (!(await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel))) {
+        continue;
+      }
+      const readState = channel.readStates[0];
+      const unreadCount = await this.prisma.message.count({
+        where: {
+          channelId: channel.id,
+          deletedAt: null,
+          authorId: { not: userId },
+          ...(readState ? { createdAt: { gt: readState.lastReadAt } } : {}),
+        },
+      });
+      const { readStates: _readStates, ...rest } = channel;
+      channels.push({ ...rest, unreadCount });
+    }
+    return { server: { ...server, channels } };
   }
 
   async updateServer(userId: string, serverId: string, dto: UpdateServerDto) {
@@ -122,7 +155,30 @@ export class ServersService {
         description: dto.description?.trim()
       }
     });
+    await this.writeAuditLog(serverId, userId, 'SERVER_UPDATE', serverId, {
+      name: dto.name?.trim(),
+    });
     return this.getServerForUser(userId, serverId);
+  }
+
+  async listAuditLogs(userId: string, serverId: string) {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageServer);
+    const logs = await this.prisma.auditLog.findMany({
+      where: { serverId },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return { logs };
   }
 
   async createInvite(userId: string, serverId: string, dto: CreateInviteDto) {
@@ -145,6 +201,11 @@ export class ServersService {
         maxUses: dto.maxUses ?? 100,
         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
       }
+    });
+    await this.writeAuditLog(serverId, userId, 'INVITE_CREATE', invite.id, {
+      channelId: invite.channelId,
+      maxUses: invite.maxUses,
+      expiresAt: invite.expiresAt,
     });
     return { invite };
   }
@@ -228,5 +289,17 @@ export class ServersService {
       throw new ForbiddenException('Invalid channel name');
     }
     return slug;
+  }
+
+  private async writeAuditLog(
+    serverId: string,
+    actorId: string,
+    action: string,
+    targetId?: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    await this.prisma.auditLog.create({
+      data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
+    });
   }
 }

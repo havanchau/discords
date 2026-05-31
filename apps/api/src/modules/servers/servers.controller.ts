@@ -39,6 +39,11 @@ export class ServersController {
     return this.servers.updateServer(user.id, serverId, dto);
   }
 
+  @Get('servers/:serverId/audit-logs')
+  auditLogs(@CurrentUser() user: RequestUser, @Param('serverId') serverId: string) {
+    return this.servers.listAuditLogs(user.id, serverId);
+  }
+
   @RateLimit({ keyPrefix: 'invite-create', limit: 10, windowMs: 60_000 })
   @Post('servers/:serverId/invites')
   createInvite(

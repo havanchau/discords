@@ -38,6 +38,15 @@ export class MessagesController {
     return this.messages.listPinnedMessages(user.id, channelId);
   }
 
+  @Post('channels/:channelId/read')
+  markRead(
+    @CurrentUser() user: RequestUser,
+    @Param('channelId') channelId: string,
+    @Body() dto: { messageId?: string },
+  ) {
+    return this.messages.markChannelRead(user.id, channelId, dto.messageId);
+  }
+
   @RateLimit({ keyPrefix: 'message-create', limit: 30, windowMs: 60_000 })
   @Post('channels/:channelId/messages')
   create(

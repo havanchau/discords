@@ -10,7 +10,9 @@ import { useChannelCall } from './hooks/useChannelCall';
 import {
   apiRequest,
   assetUrl,
+  AuditLogEntry,
   AuthState,
+  ChannelPermissionOverride,
   Channel,
   configureAuthRefresh,
   DirectConversation,
@@ -18,6 +20,7 @@ import {
   FriendRequestEntry,
   FriendsSummary,
   Message,
+  NotificationPreference,
   Role,
   ServerDetail,
   ServerSummary,
@@ -90,6 +93,11 @@ export function AppShell() {
       : 'dark';
   });
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>({});
+  const [channelOverrides, setChannelOverrides] = useState<ChannelPermissionOverride[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreference[]>(
+    [],
+  );
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -181,6 +189,7 @@ export function AppShell() {
     void loadServers(auth.accessToken);
     void loadFriends(auth.accessToken);
     void loadDirectConversations(auth.accessToken);
+    void loadNotificationPreferences(auth.accessToken);
   }, [auth]);
 
   useEffect(() => {
@@ -202,6 +211,7 @@ export function AppShell() {
             ? current
             : [...current, displayMessage],
         );
+        void markChannelRead(message.channelId, message.id);
         return;
       }
 
@@ -299,8 +309,11 @@ export function AppShell() {
       auth.accessToken,
     )
       .then(async (result) => {
-        setMessages(await decryptMessagesForDisplay(result.messages));
+        const displayMessages = await decryptMessagesForDisplay(result.messages);
+        setMessages(displayMessages);
         setMessageCursor(result.nextCursor ?? null);
+        const lastMessage = result.messages[result.messages.length - 1];
+        void markChannelRead(channel.id, lastMessage?.id);
       })
       .catch((err) =>
         setWorkspaceError(err instanceof Error ? err.message : 'Cannot load messages'),
@@ -391,6 +404,16 @@ export function AppShell() {
 
   const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
   const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
+
+  useEffect(() => {
+    if (!auth || !channel || activeDialog !== 'channel-settings') return;
+    void loadChannelOverrides(channel.id, auth.accessToken);
+  }, [activeDialog, channel?.id, auth?.accessToken]);
+
+  useEffect(() => {
+    if (!auth || !server || activeDialog !== 'server-settings') return;
+    void loadAuditLogs(server.id, auth.accessToken);
+  }, [activeDialog, server?.id, auth?.accessToken]);
 
   async function togglePinnedMessage(message: Message) {
     if (!auth) return;
@@ -532,6 +555,48 @@ export function AppShell() {
     }
   }
 
+  async function loadNotificationPreferences(token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<{ preferences: NotificationPreference[] }>(
+        '/users/me/notification-preferences',
+        {},
+        token,
+      );
+      setNotificationPreferences(result.preferences);
+    } catch {
+      setNotificationPreferences([]);
+    }
+  }
+
+  async function updateNotificationPreference(
+    preference: Partial<NotificationPreference> & {
+      serverId?: string | null;
+      channelId?: string | null;
+    },
+  ) {
+    if (!auth) return;
+    setPendingAction('notification-preference');
+    try {
+      const result = await apiRequest<{ preference: NotificationPreference }>(
+        '/users/me/notification-preferences',
+        {
+          method: 'PATCH',
+          body: JSON.stringify(preference),
+        },
+        auth.accessToken,
+      );
+      setNotificationPreferences((current) => [
+        result.preference,
+        ...current.filter((item) => item.id !== result.preference.id),
+      ]);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update notifications');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   function openHome() {
     setServer(null);
     setChannel(null);
@@ -561,6 +626,34 @@ export function AppShell() {
       }));
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot load pinned messages');
+    }
+  }
+
+  async function loadChannelOverrides(channelId: string, token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
+        `/channels/${channelId}/overrides`,
+        {},
+        token,
+      );
+      setChannelOverrides(result.overrides);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load channel permissions');
+    }
+  }
+
+  async function loadAuditLogs(serverId: string, token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<{ logs: AuditLogEntry[] }>(
+        `/servers/${serverId}/audit-logs`,
+        {},
+        token,
+      );
+      setAuditLogs(result.logs);
+    } catch {
+      setAuditLogs([]);
     }
   }
 
@@ -669,6 +762,7 @@ export function AppShell() {
         ...current.filter((item) => item.id !== result.server.id),
       ]);
       setServer(result.server);
+      hydratePersistentChannelBadges(result.server);
       setChannel(result.server.channels.find((item) => item.type === 'TEXT') ?? null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot create server');
@@ -1192,7 +1286,8 @@ export function AppShell() {
         },
         auth.accessToken,
       );
-      setServer(result.server);
+    setServer(result.server);
+    hydratePersistentChannelBadges(result.server);
       setServers((current) =>
         current.map((item) =>
           item.id === result.server.id
@@ -1210,6 +1305,37 @@ export function AppShell() {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot update server');
     } finally {
       setPendingAction(null);
+    }
+  }
+
+  function hydratePersistentChannelBadges(nextServer: ServerDetail) {
+    const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>((current, item) => {
+      if (item.unreadCount) {
+        current[item.id] = { count: item.unreadCount, mentions: 0 };
+      }
+      return current;
+    }, {});
+    setChannelBadges((current) => ({ ...current, ...badges }));
+  }
+
+  async function markChannelRead(channelId: string, messageId?: string) {
+    if (!auth) return;
+    try {
+      await apiRequest(
+        `/channels/${channelId}/read`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ messageId }),
+        },
+        auth.accessToken,
+      );
+      setChannelBadges((current) => {
+        const next = { ...current };
+        delete next[channelId];
+        return next;
+      });
+    } catch {
+      // Read state is a convenience feature; avoid blocking chat if it fails.
     }
   }
 
@@ -1244,6 +1370,50 @@ export function AppShell() {
       setActiveDialog(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function toggleChannelRoleOverride(roleId: string, permission: string, enabled: boolean) {
+    if (!auth || !channel) return;
+    setPendingAction(`channel-override-${roleId}-${permission}`);
+    setWorkspaceError(null);
+    try {
+      const existing = channelOverrides.find((override) => override.roleId === roleId);
+      const nextOverride: ChannelPermissionOverride = {
+        id: existing?.id ?? `local-${roleId}`,
+        channelId: channel.id,
+        roleId,
+        memberId: null,
+        allow: enabled
+          ? Array.from(new Set([...(existing?.allow ?? []), permission]))
+          : (existing?.allow ?? []).filter((item) => item !== permission),
+        deny: (existing?.deny ?? []).filter((item) => item !== permission),
+      };
+      const nextOverrides = [
+        ...channelOverrides.filter((override) => override.roleId !== roleId),
+        nextOverride,
+      ].filter((override) => override.allow.length || override.deny.length);
+      const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
+        `/channels/${channel.id}/overrides`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            overrides: nextOverrides.map(({ roleId, memberId, allow, deny }) => ({
+              roleId,
+              memberId,
+              allow,
+              deny,
+            })),
+          }),
+        },
+        auth.accessToken,
+      );
+      setChannelOverrides(result.overrides);
+      await openServer(channel.serverId, auth.accessToken, channel.id);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel permission');
     } finally {
       setPendingAction(null);
     }
@@ -1585,6 +1755,9 @@ export function AppShell() {
         server={server}
         channel={channel}
         selectedMember={selectedMember}
+        channelOverrides={channelOverrides}
+        auditLogs={auditLogs}
+        notificationPreferences={notificationPreferences}
         pendingAction={pendingAction}
         uiTheme={uiTheme}
         profileAvatarInputRef={profileAvatarInputRef}
@@ -1592,8 +1765,10 @@ export function AppShell() {
         setActiveDialog={setActiveDialog}
         setUiTheme={setUiTheme}
         updateProfile={updateProfile}
+        updateNotificationPreference={updateNotificationPreference}
         updateServerSettings={updateServerSettings}
         updateChannelSettings={updateChannelSettings}
+        toggleChannelRoleOverride={toggleChannelRoleOverride}
         createRole={createRole}
         toggleRolePermission={toggleRolePermission}
         deleteRole={deleteRole}

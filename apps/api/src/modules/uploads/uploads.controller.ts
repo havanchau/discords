@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Post,
   UploadedFile,
@@ -13,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
 
 const maxUploadBytes = Number(process.env.UPLOAD_MAX_BYTES || 10 * 1024 * 1024);
+const maxChunkBytes = Number(process.env.UPLOAD_CHUNK_BYTES || 2 * 1024 * 1024);
 
 @UseGuards(JwtAuthGuard)
 @Controller('uploads')
@@ -68,5 +70,39 @@ export class UploadsController {
     }
 
     return { attachment: await this.uploads.upload(file) };
+  }
+
+  @RateLimit({ keyPrefix: 'upload-chunk', limit: 180, windowMs: 60_000 })
+  @Post('chunks')
+  @UseInterceptors(
+    FileInterceptor('chunk', {
+      limits: { fileSize: maxChunkBytes },
+      storage: memoryStorage(),
+    }),
+  )
+  async uploadChunk(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body()
+    body: {
+      uploadId?: string;
+      chunkIndex?: string;
+      totalChunks?: string;
+      fileName?: string;
+      mimeType?: string;
+      fileSize?: string;
+    },
+  ) {
+    if (!file) {
+      throw new BadRequestException('Upload chunk is required');
+    }
+
+    return this.uploads.uploadChunk(file, {
+      uploadId: body.uploadId,
+      chunkIndex: Number(body.chunkIndex),
+      totalChunks: Number(body.totalChunks),
+      fileName: body.fileName || file.originalname,
+      mimeType: body.mimeType || file.mimetype,
+      fileSize: Number(body.fileSize),
+    });
   }
 }

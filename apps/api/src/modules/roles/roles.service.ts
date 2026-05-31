@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -32,6 +33,10 @@ export class RolesService {
         position
       }
     });
+    await this.writeAuditLog(serverId, userId, 'ROLE_CREATE', role.id, {
+      name: role.name,
+      permissions: role.permissions,
+    });
     return { role };
   }
 
@@ -46,6 +51,10 @@ export class RolesService {
         permissions: dto.permissions
       }
     });
+    await this.writeAuditLog(existing.serverId, userId, 'ROLE_UPDATE', role.id, {
+      name: role.name,
+      permissions: role.permissions,
+    });
     return { role };
   }
 
@@ -53,6 +62,9 @@ export class RolesService {
     const existing = await this.findMutableRole(roleId);
     await this.permissions.requireServerPermission(userId, existing.serverId, Permission.ManageRoles);
     await this.prisma.role.delete({ where: { id: roleId } });
+    await this.writeAuditLog(existing.serverId, userId, 'ROLE_DELETE', roleId, {
+      name: existing.name,
+    });
     return { ok: true };
   }
 
@@ -72,6 +84,7 @@ export class RolesService {
       create: { memberId, roleId },
       update: {}
     });
+    await this.writeAuditLog(serverId, userId, 'MEMBER_ROLE_ADD', memberId, { roleId });
     return { ok: true };
   }
 
@@ -86,6 +99,7 @@ export class RolesService {
     }
 
     await this.prisma.memberRole.deleteMany({ where: { memberId, roleId } });
+    await this.writeAuditLog(serverId, userId, 'MEMBER_ROLE_REMOVE', memberId, { roleId });
     return { ok: true };
   }
 
@@ -98,5 +112,17 @@ export class RolesService {
       throw new ForbiddenException('Cannot mutate @everyone role');
     }
     return role;
+  }
+
+  private async writeAuditLog(
+    serverId: string,
+    actorId: string,
+    action: string,
+    targetId?: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    await this.prisma.auditLog.create({
+      data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
+    });
   }
 }

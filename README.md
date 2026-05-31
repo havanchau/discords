@@ -10,6 +10,7 @@ Real-time Discord-style chat application built as a full-stack monorepo with Rea
 - Voice/video/screen-share call foundation using WebRTC signaling over the realtime gateway, plus recorded voice messages in chat.
 - Auth flow with JWT access tokens, refresh tokens, email verification support, profile editing, and avatar updates.
 - File, image, and video uploads with local development storage plus Cloudinary support for hosted media delivery.
+- Chunked large-file uploads for files above 5 MB, reducing request timeout and API memory pressure.
 - Optional channel passphrase E2EE for text messages using browser Web Crypto AES-GCM; the backend stores ciphertext and cannot decrypt message bodies without the passphrase.
 - Security-focused backend hardening: DTO validation, upload type allowlist, rate limiting, Helmet/CORS setup, and guarded private endpoints.
 - Maintainable frontend structure: `AppShell` is split into focused components and hooks such as chat panel, settings modal, workspace sidebar, member sidebar, and channel call hook.
@@ -21,33 +22,32 @@ Recently added:
 - Active screen-share and call banner in text channels, including receive-only `Join stream`.
 - Named typing indicators, so the composer can show who is typing instead of a generic message.
 - Channel unread indicators and mention badges for visited channels.
-- Local pinned-message panel from the notifications toolbar.
+- Server-backed pinned messages with permission checks and a pinned-message panel from the notifications toolbar.
 - Image and video preview overlay for message attachments.
 - Voice message recording from the composer with inline audio playback.
 - Auth-screen visual polish, motion, and responsive background treatment.
 - Visual engagement pass: server rail tooltips, member profile hover cards, date dividers, message skeletons, custom voice-message waveform cards, channel topic context, and selectable app themes.
+- Persistent channel read state with unread counts restored from PostgreSQL after refresh/relogin.
+- Channel role overrides for `VIEW_CHANNEL` and `SEND_MESSAGES`, including private-channel access controls.
+- Server audit log foundation for server, channel, role, invite, pin, and moderation-adjacent actions.
+- Voice channel occupancy in the sidebar, showing active call participants under voice channels.
 
 Recommended next features:
 
-- Direct Messages: 1:1 conversation list, realtime DM room, unread DM count, and a focused DM chat surface.
-- Friends: friend requests, accept/decline/block flows, and friend-scoped presence.
-- Persistent read state: store last-read message per channel/user in PostgreSQL instead of keeping unread UI state client-side.
-- Persistent pinned messages: promote the current local pin UI into a server-backed pin table with permission checks.
-- Channel permission overrides: allow roles/members to override `VIEW_CHANNEL`, `SEND_MESSAGES`, and voice permissions per channel.
-- Voice channel occupancy: show joined users under voice channels and allow joining the voice channel directly from the sidebar.
-- Notification settings: mute server/channel, only mentions, desktop notifications, and notification inbox.
+- Realtime Direct Messages: socket-backed DM delivery, typing indicators, and unread DM counts.
+- Friend system polish: richer block/unblock flows and friend-scoped presence.
+- Member-specific channel overrides and voice permission overrides, beyond the current role-level text permissions.
+- Notification settings UI: mute server/channel, only mentions, desktop notifications, and notification inbox.
 - Deployment hardening: production migrations, health checks for Render, seed-safe demo data, and CI smoke tests against deployed URLs.
 
 Feature expansion backlog to make the app feel closer to a full Discord-class product:
 
-- Direct Messages with a home inbox, realtime-ready conversation list, and paginated private chat.
-- Friend system with username/email lookup, pending requests, accept/decline, block, and DM shortcut.
-- Server-backed pinned messages with permission checks and reload-safe pinned message panel.
+- Realtime Direct Messages with socket delivery, presence, and unread private chat.
+- Friend system polish with clearer pending/block management and DM shortcut affordances.
 - Backend message search for channel search results beyond the currently loaded page.
-- Persistent read state for channels and DMs, including unread counts that survive refresh/relogin.
+- Persistent read state for DMs, including unread counts that survive refresh/relogin.
 - Notification preferences for muted servers/channels, mention-only mode, and an event inbox.
-- Channel permission overrides by role or member for visibility, sending messages, and voice access.
-- Voice channel occupancy under sidebar voice channels with joined users and mute/camera/share state.
+- Member-level channel permission overrides and voice access overrides.
 - Server discovery and invite preview before joining a server.
 - Full message search with author/date/attachment filters.
 - Mentions with `@user`, `@here`, `@everyone`, autocomplete, and mention-specific badges.
@@ -110,11 +110,19 @@ Required Cloudinary environment variables:
 
 ```env
 STORAGE_DRIVER=cloudinary
+UPLOAD_MAX_BYTES=104857600
+UPLOAD_CHUNK_BYTES=2097152
+UPLOAD_TMP_DIR=uploads/.chunks
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=discord-clone/uploads
 ```
+
+Files larger than 5 MB are uploaded from the browser in 2 MB chunks through
+`POST /uploads/chunks`. The API writes chunks to a temporary directory, assembles
+them when complete, then stores the final file locally or sends it to Cloudinary
+with a large-upload path.
 
 ## End-to-End Encryption
 

@@ -60,6 +60,36 @@ export interface Channel {
   avatarUrl?: string | null;
   position?: number;
   isPrivate?: boolean;
+  unreadCount?: number;
+}
+
+export interface ChannelPermissionOverride {
+  id: string;
+  channelId: string;
+  roleId?: string | null;
+  memberId?: string | null;
+  allow: string[];
+  deny: string[];
+}
+
+export interface NotificationPreference {
+  id: string;
+  serverId?: string | null;
+  channelId?: string | null;
+  muted: boolean;
+  mentionOnly: boolean;
+  desktopEnabled: boolean;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  serverId: string;
+  actorId: string;
+  action: string;
+  targetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  actor?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
 }
 
 export interface Message {
@@ -159,6 +189,10 @@ export async function apiRequest<T>(
 }
 
 export async function uploadFile(file: File, token: string): Promise<MessageAttachment> {
+  if (file.size > CHUNKED_UPLOAD_THRESHOLD_BYTES) {
+    return uploadFileInChunks(file, token);
+  }
+
   const form = new FormData();
   form.append('file', file);
 
@@ -184,6 +218,66 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
 
   const result = (await response.json()) as { attachment: MessageAttachment };
   return result.attachment;
+}
+
+const CHUNKED_UPLOAD_THRESHOLD_BYTES = 5 * 1024 * 1024;
+const UPLOAD_CHUNK_BYTES = 2 * 1024 * 1024;
+
+async function uploadFileInChunks(file: File, token: string): Promise<MessageAttachment> {
+  const uploadId = createUploadId();
+  const totalChunks = Math.ceil(file.size / UPLOAD_CHUNK_BYTES);
+  let attachment: MessageAttachment | null = null;
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+    const start = chunkIndex * UPLOAD_CHUNK_BYTES;
+    const chunk = file.slice(start, Math.min(start + UPLOAD_CHUNK_BYTES, file.size));
+    const form = new FormData();
+    form.append('uploadId', uploadId);
+    form.append('chunkIndex', String(chunkIndex));
+    form.append('totalChunks', String(totalChunks));
+    form.append('fileName', file.name);
+    form.append('mimeType', file.type || 'application/octet-stream');
+    form.append('fileSize', String(file.size));
+    form.append('chunk', chunk, file.name);
+
+    const response = await fetch(`${API_URL}/uploads/chunks`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+
+    if (response.status === 401 && authRefreshConfig) {
+      const nextAuth = await refreshAuth();
+      return uploadFileInChunks(file, nextAuth.accessToken);
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(
+        `${error.message || 'Chunk upload failed'} (${file.name}, ${file.type || 'unknown'})`,
+      );
+    }
+
+    const result = (await response.json()) as {
+      done: boolean;
+      attachment?: MessageAttachment;
+    };
+    if (result.done && result.attachment) {
+      attachment = result.attachment;
+    }
+  }
+
+  if (!attachment) {
+    throw new Error(`Chunk upload did not complete (${file.name})`);
+  }
+
+  return attachment;
+}
+
+function createUploadId() {
+  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function assetUrl(url: string) {

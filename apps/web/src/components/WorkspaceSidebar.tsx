@@ -264,10 +264,27 @@ export function WorkspaceSidebar({
                 <div className="channel-list muted-list">
                   {visibleVoiceChannels.length ? (
                     visibleVoiceChannels.map((item) => (
-                      <button key={item.id} type="button">
-                        <Volume2 size={16} />
-                        <span>{item.name}</span>
-                      </button>
+                      <div className="voice-channel-block" key={item.id}>
+                        <button type="button">
+                          <Volume2 size={16} />
+                          <span>{item.name}</span>
+                          {activeCalls[item.id]?.participants.length ? (
+                            <span className="channel-live-badge">
+                              {activeCalls[item.id].participants.length}
+                            </span>
+                          ) : null}
+                        </button>
+                        {activeCalls[item.id]?.participants.length ? (
+                          <div className="voice-occupants">
+                            {activeCalls[item.id].participants.map((participant) => (
+                              <span key={participant.socketId}>
+                                {participant.displayName}
+                                {participant.isMuted ? ' muted' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                     ))
                   ) : (
                     <p className="empty-note">No voice channels yet.</p>

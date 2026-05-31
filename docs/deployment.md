@@ -36,6 +36,9 @@ JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=15m
 WEB_ORIGIN=https://your-vercel-domain.vercel.app,https://*.vercel.app
 STORAGE_DRIVER=cloudinary
+UPLOAD_MAX_BYTES=104857600
+UPLOAD_CHUNK_BYTES=2097152
+UPLOAD_TMP_DIR=uploads/.chunks
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
@@ -57,7 +60,8 @@ npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
 Current schema update note:
 
 - The latest sprint adds the `MessagePin` table for server-backed pinned messages.
-- Before deploying the API commit that uses pins, run one of these against the live Render database:
+- The latest follow-up adds channel permission overrides, persistent read states, notification preferences, and audit logs.
+- Before deploying the API commit that uses these tables, run one of these against the live Render database:
 
 ```bash
 npm run db:push --workspace apps/api

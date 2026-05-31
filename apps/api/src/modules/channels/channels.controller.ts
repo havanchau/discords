@@ -3,6 +3,7 @@ import { CurrentUser } from '../../common/current-user.decorator';
 import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChannelsService } from './channels.service';
+import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 
@@ -37,5 +38,19 @@ export class ChannelsController {
     @Body() dto: UpdateChannelDto
   ) {
     return this.channels.updateChannel(user.id, channelId, dto);
+  }
+
+  @Get('channels/:channelId/overrides')
+  listOverrides(@CurrentUser() user: RequestUser, @Param('channelId') channelId: string) {
+    return this.channels.listPermissionOverrides(user.id, channelId);
+  }
+
+  @Patch('channels/:channelId/overrides')
+  updateOverrides(
+    @CurrentUser() user: RequestUser,
+    @Param('channelId') channelId: string,
+    @Body() dto: UpdateChannelOverridesDto,
+  ) {
+    return this.channels.updatePermissionOverrides(user.id, channelId, dto);
   }
 }
