@@ -35,7 +35,8 @@
   --deprecated-card-bg: #232428;
   --scrollbar-thin-thumb: #1a1b1e;
   --scrollbar-thin-track: transparent;
-  --elevation-low: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
+  --elevation-low:
+    0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
   --elevation-high: 0 8px 16px rgba(0, 0, 0, 0.24);
 }
 
@@ -43,7 +44,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
 }
@@ -92,7 +95,8 @@ body {
   scrollbar-color: var(--scrollbar-thin-thumb) var(--scrollbar-thin-track);
 }
 
-button, input {
+button,
+input {
   font: inherit;
 }
 
@@ -100,20 +104,25 @@ button {
   cursor: pointer;
 }
 
-button, input {
-  transition: background-color 0.17s ease, color 0.17s ease, opacity 0.17s ease;
+button,
+input {
+  transition:
+    background-color 0.17s ease,
+    color 0.17s ease,
+    opacity 0.17s ease;
 }
 
-button:focus-visible, input:focus-visible {
+button:focus-visible,
+input:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: -2px;
 }
 
-button:disabled, input:disabled {
+button:disabled,
+input:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
-
 
 /* ===== Auth Screen ===== */
 
@@ -287,11 +296,11 @@ input:focus {
   outline: none;
 }
 
-.error, .error-banner {
+.error,
+.error-banner {
   color: var(--status-danger);
   font-size: 14px;
 }
-
 
 /* ===== App Shell ===== */
 
@@ -335,7 +344,10 @@ input:focus {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  transition: border-radius 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-radius 0.15s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
   position: relative;
 }
 
@@ -382,12 +394,30 @@ input:focus {
   color: #fff;
 }
 
-.accent-0 { --avatar-bg: #5865f2; --avatar-text: #fff; }
-.accent-1 { --avatar-bg: #eb459e; --avatar-text: #fff; }
-.accent-2 { --avatar-bg: #57f287; --avatar-text: #1a3a1a; }
-.accent-3 { --avatar-bg: #fee75c; --avatar-text: #3b2600; }
-.accent-4 { --avatar-bg: #5865f2; --avatar-text: #fff; }
-.accent-5 { --avatar-bg: #ed4245; --avatar-text: #fff; }
+.accent-0 {
+  --avatar-bg: #5865f2;
+  --avatar-text: #fff;
+}
+.accent-1 {
+  --avatar-bg: #eb459e;
+  --avatar-text: #fff;
+}
+.accent-2 {
+  --avatar-bg: #57f287;
+  --avatar-text: #1a3a1a;
+}
+.accent-3 {
+  --avatar-bg: #fee75c;
+  --avatar-text: #3b2600;
+}
+.accent-4 {
+  --avatar-bg: #5865f2;
+  --avatar-text: #fff;
+}
+.accent-5 {
+  --avatar-bg: #ed4245;
+  --avatar-text: #fff;
+}
 
 .rail-divider {
   width: 32px;
@@ -396,7 +426,6 @@ input:focus {
   border-radius: 1px;
   background: var(--bg-modifier-active);
 }
-
 
 /* ===== Channel Sidebar ===== */
 
@@ -486,7 +515,6 @@ input:focus {
   line-height: 1.3333;
 }
 
-
 .sidebar-scroll {
   min-height: 0;
   overflow-y: auto;
@@ -546,7 +574,7 @@ input:focus {
   margin-top: 4px;
 }
 
-.compact-form input:nth-child(2):not([type="hidden"]) {
+.compact-form input:nth-child(2):not([type='hidden']) {
   grid-column: 1 / -1;
 }
 
@@ -716,7 +744,6 @@ input:focus {
   font-size: 14px;
 }
 
-
 /* ===== User Strip (bottom bar) ===== */
 
 .user-strip {
@@ -768,7 +795,6 @@ input:focus {
   object-fit: cover;
   border-radius: inherit;
 }
-
 
 /* ===== Chat Panel ===== */
 
@@ -845,8 +871,62 @@ input:focus {
   background: transparent;
 }
 
-
 /* ===== Voice / Video Call Stage ===== */
+
+.active-call-banner {
+  grid-row: 2;
+  min-width: 0;
+  margin: 8px 16px 0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(35, 165, 90, 0.16), rgba(88, 101, 242, 0.14));
+  border: 1px solid rgba(35, 165, 90, 0.28);
+}
+
+.active-call-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--green-360);
+}
+
+.active-call-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.active-call-copy strong,
+.active-call-copy span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-call-copy strong {
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.active-call-copy span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.active-call-join {
+  height: 36px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
 
 .call-stage {
   grid-row: 2;
@@ -969,7 +1049,6 @@ input:focus {
   white-space: nowrap;
 }
 
-
 /* ===== Utility Panel (Search / Notifications overlay) ===== */
 
 .utility-panel {
@@ -999,7 +1078,6 @@ input:focus {
   font-size: 14px;
   padding: 8px 0;
 }
-
 
 /* ===== Settings Modal ===== */
 
@@ -1408,7 +1486,6 @@ input:focus {
   background: var(--bg-secondary);
 }
 
-
 /* ===== Error Banner ===== */
 
 .banner {
@@ -1446,7 +1523,6 @@ input:focus {
   background: var(--green-360);
 }
 
-
 /* ===== Message List ===== */
 
 .message-list {
@@ -1482,7 +1558,6 @@ input:focus {
   color: var(--text-muted);
   font-size: 14px;
 }
-
 
 /* ===== Messages ===== */
 
@@ -1696,7 +1771,6 @@ input:focus {
   white-space: nowrap;
 }
 
-
 /* ===== Attachments ===== */
 
 .attachment-grid {
@@ -1789,14 +1863,12 @@ input:focus {
   font-size: 12px;
 }
 
-
 /* ===== Deleted Messages ===== */
 
 .deleted-message {
   color: var(--text-muted) !important;
   font-style: italic;
 }
-
 
 /* ===== Reactions ===== */
 
@@ -1836,7 +1908,6 @@ input:focus {
   font-size: 12px;
   font-weight: 500;
 }
-
 
 /* ===== Message Actions (hover toolbar) ===== */
 
@@ -1885,7 +1956,6 @@ input:focus {
   font-size: 13px;
 }
 
-
 /* ===== Edit Row ===== */
 
 .edit-row {
@@ -1926,7 +1996,6 @@ input:focus {
   text-decoration: underline;
 }
 
-
 /* ===== Typing Indicator ===== */
 
 .typing-indicator {
@@ -1939,7 +2008,6 @@ input:focus {
   display: flex;
   align-items: center;
 }
-
 
 /* ===== Composer ===== */
 
@@ -2032,7 +2100,7 @@ input:focus {
 }
 
 /* Composer input — mimic Discord's embedded input bar */
-.composer input[data-testid="composer-input"] {
+.composer input[data-testid='composer-input'] {
   min-width: 0;
   height: 44px;
   border: none;
@@ -2043,7 +2111,7 @@ input:focus {
   font-size: 1rem;
 }
 
-.composer input[data-testid="composer-input"]::placeholder {
+.composer input[data-testid='composer-input']::placeholder {
   color: var(--text-muted);
 }
 
@@ -2079,7 +2147,6 @@ input:focus {
   cursor: not-allowed;
   opacity: 0.5;
 }
-
 
 /* ===== Member List ===== */
 
@@ -2127,7 +2194,6 @@ input:focus {
   font-size: 12px;
 }
 
-
 /* ===== Loading Spinner ===== */
 
 .spin {
@@ -2139,7 +2205,6 @@ input:focus {
     transform: rotate(360deg);
   }
 }
-
 
 /* ===== Responsive ===== */
 

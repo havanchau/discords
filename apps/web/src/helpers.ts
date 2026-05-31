@@ -15,7 +15,7 @@ export const PERMISSION_OPTIONS = [
   { value: 'CREATE_INVITE', label: 'Create invites' },
   { value: 'CONNECT_VOICE', label: 'Connect voice' },
   { value: 'SPEAK_VOICE', label: 'Speak voice' },
-  { value: 'UPLOAD_FILES', label: 'Upload files' }
+  { value: 'UPLOAD_FILES', label: 'Upload files' },
 ];
 
 export type CallMode = 'voice' | 'video' | 'screen';
@@ -29,6 +29,13 @@ export interface CallParticipant {
   isMuted: boolean;
   isCameraOff: boolean;
   isSharingScreen: boolean;
+}
+
+export interface ActiveCallSummary {
+  channelId: string;
+  mode: CallMode;
+  participants: CallParticipant[];
+  screenSharer?: CallParticipant;
 }
 
 export interface RemoteMedia extends CallParticipant {
@@ -56,7 +63,7 @@ export function initials(value: string) {
 export function formatTime(value: string) {
   return new Intl.DateTimeFormat('en', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   }).format(new Date(value));
 }
 
@@ -82,7 +89,7 @@ export function formatDate(value: string) {
     new Intl.DateTimeFormat('en', {
       month: '2-digit',
       day: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
     }).format(date) +
     ' ' +
     formatTime(value)

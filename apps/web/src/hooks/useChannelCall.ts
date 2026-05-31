@@ -10,7 +10,16 @@ interface UseChannelCallOptions {
   setWorkspaceError: (message: string | null) => void;
 }
 
-export function useChannelCall({ auth, channel, socket, setWorkspaceError }: UseChannelCallOptions) {
+export interface StartCallOptions {
+  receiveOnly?: boolean;
+}
+
+export function useChannelCall({
+  auth,
+  channel,
+  socket,
+  setWorkspaceError,
+}: UseChannelCallOptions) {
   const [callState, setCallState] = useState<CallState | null>(null);
   const [remoteMedia, setRemoteMedia] = useState<RemoteMedia[]>([]);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -61,7 +70,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
       socket.emit('webrtc:answer', {
         channelId: payload.channelId,
         targetSocketId: payload.fromSocketId,
-        answer
+        answer,
       });
     };
 
@@ -104,25 +113,26 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     };
   }, [socket]);
 
-  async function startCall(mode: CallMode) {
+  async function startCall(mode: CallMode, options: StartCallOptions = {}) {
     if (!channel || !auth || !socket) return;
     try {
-      const stream =
-        mode === 'screen'
+      const stream = options.receiveOnly
+        ? null
+        : mode === 'screen'
           ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
           : await navigator.mediaDevices.getUserMedia({
               audio: true,
-              video: mode === 'video'
+              video: mode === 'video',
             });
       const nextState: CallState = {
         channelId: channel.id,
         mode,
-        isMuted: false,
-        isCameraOff: mode === 'voice',
-        isSharingScreen: mode === 'screen'
+        isMuted: Boolean(options.receiveOnly),
+        isCameraOff: options.receiveOnly || mode === 'voice',
+        isSharingScreen: !options.receiveOnly && mode === 'screen',
       };
 
-      stream.getVideoTracks().forEach((track) => {
+      stream?.getVideoTracks().forEach((track) => {
         track.onended = () => {
           if (callStateRef.current?.isSharingScreen) {
             endCall();
@@ -131,32 +141,33 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
       });
 
       localStreamRef.current = stream;
+      callStateRef.current = nextState;
       setCallState(nextState);
       setRemoteMedia([]);
 
-      socket
-        .timeout(5000)
-        .emit(
-          'voice:join',
-          {
-            channelId: channel.id,
-            mode,
-            isMuted: false,
-            isCameraOff: mode === 'voice',
-            isSharingScreen: mode === 'screen'
-          },
-          async (err: Error | null, result?: { participants: CallParticipant[] }) => {
-            if (err) {
-              setWorkspaceError('Cannot join call. Try again.');
-              endCall();
-              return;
-            }
-
-            const participants = result?.participants ?? [];
-            setRemoteMedia(participants);
-            await Promise.all(participants.map((participant) => createOffer(participant.socketId, channel.id)));
+      socket.timeout(5000).emit(
+        'voice:join',
+        {
+          channelId: channel.id,
+          mode,
+          isMuted: nextState.isMuted,
+          isCameraOff: nextState.isCameraOff,
+          isSharingScreen: nextState.isSharingScreen,
+        },
+        async (err: Error | null, result?: { participants: CallParticipant[] }) => {
+          if (err) {
+            setWorkspaceError('Cannot join call. Try again.');
+            endCall();
+            return;
           }
-        );
+
+          const participants = result?.participants ?? [];
+          setRemoteMedia(participants);
+          await Promise.all(
+            participants.map((participant) => createOffer(participant.socketId, channel.id)),
+          );
+        },
+      );
     } catch (err) {
       stopLocalStream();
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot start call');
@@ -172,6 +183,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     peersRef.current.clear();
     stopLocalStream();
     setRemoteMedia([]);
+    callStateRef.current = null;
     setCallState(null);
   }
 
@@ -197,6 +209,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     setCallState((current) => {
       if (!current) return current;
       const next = { ...current, ...patch };
+      callStateRef.current = next;
       socket?.emit('voice:state', next);
       return next;
     });
@@ -215,7 +228,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     if (existingPeer) return existingPeer;
 
     const peer = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
 
     localStreamRef.current?.getTracks().forEach((track) => {
@@ -230,7 +243,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
         socket?.emit('webrtc:ice-candidate', {
           channelId,
           targetSocketId,
-          candidate: event.candidate.toJSON()
+          candidate: event.candidate.toJSON(),
         });
       }
     };
@@ -239,7 +252,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
       const [stream] = event.streams;
       if (!stream) return;
       setRemoteMedia((current) =>
-        current.map((item) => (item.socketId === targetSocketId ? { ...item, stream } : item))
+        current.map((item) => (item.socketId === targetSocketId ? { ...item, stream } : item)),
       );
     };
 
@@ -267,7 +280,9 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     const existing = current.find((item) => item.socketId === participant.socketId);
     if (!existing) return [...current, participant];
     return current.map((item) =>
-      item.socketId === participant.socketId ? { ...item, ...participant, stream: item.stream } : item
+      item.socketId === participant.socketId
+        ? { ...item, ...participant, stream: item.stream }
+        : item,
     );
   }
 
@@ -278,6 +293,6 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     startCall,
     endCall,
     toggleMute,
-    toggleCamera
+    toggleCamera,
   };
 }

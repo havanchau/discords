@@ -16,9 +16,9 @@ import {
   Role,
   ServerDetail,
   ServerSummary,
-  uploadFile
+  uploadFile,
 } from './api';
-import { AUTH_KEY, SOCKET_URL } from './helpers';
+import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
 
 export function AppShell() {
   const [auth, setAuth] = useState<AuthState | null>(() => {
@@ -50,18 +50,20 @@ export function AppShell() {
   const [searchQuery, setSearchQuery] = useState('');
   const [channelQuery, setChannelQuery] = useState('');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
-  const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } = useChannelCall({
-    auth,
-    channel,
-    socket,
-    setWorkspaceError
-  });
+  const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } =
+    useChannelCall({
+      auth,
+      channel,
+      socket,
+      setWorkspaceError,
+    });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -91,7 +93,8 @@ export function AppShell() {
         setServer(null);
         setChannel(null);
         setMessages([]);
-      }
+        setActiveCalls({});
+      },
     });
   }, []);
 
@@ -109,25 +112,25 @@ export function AppShell() {
     }
 
     const nextSocket = io(SOCKET_URL, {
-      auth: { token: auth.accessToken }
+      auth: { token: auth.accessToken },
     });
 
     nextSocket.on('message:created', (message: Message) => {
       setMessages((current) =>
-        current.some((item) => item.id === message.id) ? current : [...current, message]
+        current.some((item) => item.id === message.id) ? current : [...current, message],
       );
     });
 
     nextSocket.on('reaction:updated', (payload: { message: Message }) => {
       setMessages((current) =>
-        current.map((message) => (message.id === payload.message.id ? payload.message : message))
+        current.map((message) => (message.id === payload.message.id ? payload.message : message)),
       );
     });
 
     nextSocket.on('typing:start', (payload: { channelId: string; userId: string }) => {
       if (payload.userId === auth.user.id) return;
       setTypingUsers((current) =>
-        current.includes(payload.userId) ? current : [...current, payload.userId]
+        current.includes(payload.userId) ? current : [...current, payload.userId],
       );
     });
 
@@ -143,11 +146,23 @@ export function AppShell() {
               members: current.members.map((member) =>
                 member.user.id === payload.userId
                   ? { ...member, user: { ...member.user, status: payload.status } }
-                  : member
-              )
+                  : member,
+              ),
             }
-          : current
+          : current,
       );
+    });
+
+    nextSocket.on('voice:active', (activeCall: ActiveCallSummary) => {
+      setActiveCalls((current) => ({ ...current, [activeCall.channelId]: activeCall }));
+    });
+
+    nextSocket.on('voice:ended', (payload: { channelId: string }) => {
+      setActiveCalls((current) => {
+        const next = { ...current };
+        delete next[payload.channelId];
+        return next;
+      });
     });
 
     setSocket(nextSocket);
@@ -165,12 +180,28 @@ export function AppShell() {
     void apiRequest<{ messages: Message[] }>(
       `/channels/${channel.id}/messages`,
       {},
-      auth.accessToken
+      auth.accessToken,
     )
       .then((result) => setMessages(result.messages))
-      .catch((err) => setWorkspaceError(err instanceof Error ? err.message : 'Cannot load messages'))
+      .catch((err) =>
+        setWorkspaceError(err instanceof Error ? err.message : 'Cannot load messages'),
+      )
       .finally(() => setIsLoadingMessages(false));
-    socket?.emit('channel:join', { channelId: channel.id });
+    socket?.emit(
+      'channel:join',
+      { channelId: channel.id },
+      (result?: { activeCall?: ActiveCallSummary | null }) => {
+        setActiveCalls((current) => {
+          const next = { ...current };
+          if (result?.activeCall) {
+            next[channel.id] = result.activeCall;
+          } else {
+            delete next[channel.id];
+          }
+          return next;
+        });
+      },
+    );
   }, [channel?.id, auth?.accessToken, socket]);
 
   useEffect(() => {
@@ -181,7 +212,7 @@ export function AppShell() {
 
   const textChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'TEXT') ?? [],
-    [server]
+    [server],
   );
 
   const visibleTextChannels = useMemo(() => {
@@ -192,7 +223,7 @@ export function AppShell() {
 
   const voiceChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'VOICE') ?? [],
-    [server]
+    [server],
   );
 
   const visibleVoiceChannels = useMemo(() => {
@@ -209,8 +240,10 @@ export function AppShell() {
 
   const selectedMember = useMemo(
     () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
-    [server?.members, selectedMemberId]
+    [server?.members, selectedMemberId],
   );
+
+  const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
 
   async function loadServers(token: string) {
     setIsLoadingServers(true);
@@ -228,7 +261,11 @@ export function AppShell() {
     }
   }
 
-  async function openServer(serverId: string, token = auth?.accessToken, preferredChannelId?: string | null) {
+  async function openServer(
+    serverId: string,
+    token = auth?.accessToken,
+    preferredChannelId?: string | null,
+  ) {
     if (!token) return;
     setWorkspaceError(null);
     setWorkspaceNotice(null);
@@ -236,9 +273,13 @@ export function AppShell() {
     setServer(result.server);
     setInviteCode(null);
     const preferredChannel = preferredChannelId
-      ? result.server.channels.find((item) => item.id === preferredChannelId && item.type === 'TEXT')
+      ? result.server.channels.find(
+          (item) => item.id === preferredChannelId && item.type === 'TEXT',
+        )
       : null;
-    setChannel(preferredChannel ?? result.server.channels.find((item) => item.type === 'TEXT') ?? null);
+    setChannel(
+      preferredChannel ?? result.server.channels.find((item) => item.type === 'TEXT') ?? null,
+    );
   }
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
@@ -249,7 +290,7 @@ export function AppShell() {
       email: String(form.get('email')),
       username: String(form.get('username') || ''),
       displayName: String(form.get('displayName') || ''),
-      password: String(form.get('password'))
+      password: String(form.get('password')),
     };
 
     try {
@@ -258,9 +299,9 @@ export function AppShell() {
         {
           method: 'POST',
           body: JSON.stringify(
-            mode === 'login' ? { email: payload.email, password: payload.password } : payload
-          )
-        }
+            mode === 'login' ? { email: payload.email, password: payload.password } : payload,
+          ),
+        },
       );
       if ('verificationRequired' in result) {
         const verification = result as AuthState & { verificationToken?: string; message?: string };
@@ -283,7 +324,7 @@ export function AppShell() {
     try {
       const result = await apiRequest<AuthState>('/auth/verify-email', {
         method: 'POST',
-        body: JSON.stringify({ token: verificationToken.trim() })
+        body: JSON.stringify({ token: verificationToken.trim() }),
       });
       setVerificationToken('');
       setVerificationHint(null);
@@ -307,10 +348,10 @@ export function AppShell() {
           method: 'POST',
           body: JSON.stringify({
             name: String(form.get('name')),
-            description: String(form.get('description') || '')
-          })
+            description: String(form.get('description') || ''),
+          }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       formElement.reset();
       setServers((current) => [
@@ -318,9 +359,9 @@ export function AppShell() {
           id: result.server.id,
           name: result.server.name,
           description: result.server.description,
-          channels: result.server.channels
+          channels: result.server.channels,
         },
-        ...current.filter((item) => item.id !== result.server.id)
+        ...current.filter((item) => item.id !== result.server.id),
       ]);
       setServer(result.server);
       setChannel(result.server.channels.find((item) => item.type === 'TEXT') ?? null);
@@ -345,24 +386,24 @@ export function AppShell() {
           method: 'POST',
           body: JSON.stringify({
             name: String(form.get('name')),
-            type: String(form.get('type')) || 'TEXT'
-          })
+            type: String(form.get('type')) || 'TEXT',
+          }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       formElement.reset();
       setServer((current) =>
         current
           ? {
               ...current,
-              channels: [...current.channels, result.channel]
+              channels: [...current.channels, result.channel],
             }
-          : current
+          : current,
       );
       setServers((current) =>
         current.map((item) =>
-          item.id === server.id ? { ...item, channels: [...item.channels, result.channel] } : item
-        )
+          item.id === server.id ? { ...item, channels: [...item.channels, result.channel] } : item,
+        ),
       );
       if (result.channel.type === 'TEXT') {
         setChannel(result.channel);
@@ -384,9 +425,9 @@ export function AppShell() {
         `/servers/${server.id}/invites`,
         {
           method: 'POST',
-          body: JSON.stringify({ channelId: channel?.id })
+          body: JSON.stringify({ channelId: channel?.id }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       setInviteCode(result.invite.code);
       setWorkspaceNotice('Invite created. Click the code to copy it.');
@@ -413,7 +454,7 @@ export function AppShell() {
       const result = await apiRequest<{ serverId: string; channelId?: string | null }>(
         `/invites/${code}/join`,
         { method: 'POST' },
-        auth.accessToken
+        auth.accessToken,
       );
       formElement.reset();
       await loadServers(auth.accessToken);
@@ -439,7 +480,9 @@ export function AppShell() {
     setWorkspaceError(null);
 
     try {
-      const attachments = await Promise.all(files.map((file) => uploadFile(file, auth.accessToken)));
+      const attachments = await Promise.all(
+        files.map((file) => uploadFile(file, auth.accessToken)),
+      );
       formElement.reset();
       setSelectedFiles([]);
       setReplyingToMessage(null);
@@ -448,7 +491,7 @@ export function AppShell() {
         channelId: channel.id,
         content,
         attachments,
-        replyToMessageId: replyingToMessage?.id
+        replyToMessageId: replyingToMessage?.id,
       };
       socket?.emit('typing:stop', { channelId: channel.id });
 
@@ -463,7 +506,7 @@ export function AppShell() {
             setMessages((current) =>
               current.some((item) => item.id === result.message.id)
                 ? current
-                : [...current, result.message]
+                : [...current, result.message],
             );
           });
         return;
@@ -471,8 +514,11 @@ export function AppShell() {
 
       const result = await apiRequest<{ message: Message }>(
         `/channels/${channel.id}/messages`,
-        { method: 'POST', body: JSON.stringify({ content, attachments, replyToMessageId: replyingToMessage?.id }) },
-        auth.accessToken
+        {
+          method: 'POST',
+          body: JSON.stringify({ content, attachments, replyToMessageId: replyingToMessage?.id }),
+        },
+        auth.accessToken,
       );
       setMessages((current) => [...current, result.message]);
       setReplyingToMessage(null);
@@ -517,9 +563,9 @@ export function AppShell() {
         '/users/me',
         {
           method: 'PATCH',
-          body: JSON.stringify({ avatarUrl: attachment.url })
+          body: JSON.stringify({ avatarUrl: attachment.url }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
     } catch (err) {
@@ -541,14 +587,16 @@ export function AppShell() {
         `/channels/${channel.id}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ avatarUrl: attachment.url })
+          body: JSON.stringify({ avatarUrl: attachment.url }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       setChannel(result.channel);
       setServer({
         ...server,
-        channels: server.channels.map((item) => (item.id === result.channel.id ? result.channel : item))
+        channels: server.channels.map((item) =>
+          item.id === result.channel.id ? result.channel : item,
+        ),
       });
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel avatar');
@@ -570,10 +618,10 @@ export function AppShell() {
           method: 'PATCH',
           body: JSON.stringify({
             displayName: String(form.get('displayName') || '').trim(),
-            bio: String(form.get('bio') || '').trim()
-          })
+            bio: String(form.get('bio') || '').trim(),
+          }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
       setActiveDialog(null);
@@ -597,10 +645,10 @@ export function AppShell() {
           method: 'PATCH',
           body: JSON.stringify({
             name: String(form.get('name') || '').trim(),
-            description: String(form.get('description') || '').trim()
-          })
+            description: String(form.get('description') || '').trim(),
+          }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       setServer(result.server);
       setServers((current) =>
@@ -610,10 +658,10 @@ export function AppShell() {
                 ...item,
                 name: result.server.name,
                 description: result.server.description,
-                channels: result.server.channels
+                channels: result.server.channels,
               }
-            : item
-        )
+            : item,
+        ),
       );
       setActiveDialog(null);
     } catch (err) {
@@ -636,15 +684,17 @@ export function AppShell() {
           method: 'PATCH',
           body: JSON.stringify({
             name: String(form.get('name') || '').trim(),
-            topic: String(form.get('topic') || '').trim()
-          })
+            topic: String(form.get('topic') || '').trim(),
+          }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       setChannel(result.channel);
       setServer({
         ...server,
-        channels: server.channels.map((item) => (item.id === result.channel.id ? result.channel : item))
+        channels: server.channels.map((item) =>
+          item.id === result.channel.id ? result.channel : item,
+        ),
       });
       setActiveDialog(null);
     } catch (err) {
@@ -674,10 +724,10 @@ export function AppShell() {
           body: JSON.stringify({
             name: String(form.get('name') || '').trim(),
             color: String(form.get('color') || '').trim() || undefined,
-            permissions: form.getAll('permissions').map(String)
-          })
+            permissions: form.getAll('permissions').map(String),
+          }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       formElement.reset();
       await reloadCurrentServer();
@@ -700,9 +750,9 @@ export function AppShell() {
         `/roles/${role.id}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ permissions })
+          body: JSON.stringify({ permissions }),
         },
-        auth.accessToken
+        auth.accessToken,
       );
       await reloadCurrentServer();
     } catch (err) {
@@ -720,9 +770,9 @@ export function AppShell() {
       await apiRequest<{ ok: true }>(
         `/roles/${role.id}`,
         {
-          method: 'DELETE'
+          method: 'DELETE',
         },
-        auth.accessToken
+        auth.accessToken,
       );
       await reloadCurrentServer();
     } catch (err) {
@@ -740,9 +790,9 @@ export function AppShell() {
       await apiRequest<{ ok: true }>(
         `/servers/${server.id}/members/${memberId}/roles/${roleId}`,
         {
-          method: enabled ? 'POST' : 'DELETE'
+          method: enabled ? 'POST' : 'DELETE',
         },
-        auth.accessToken
+        auth.accessToken,
       );
       await reloadCurrentServer();
     } catch (err) {
@@ -765,11 +815,13 @@ export function AppShell() {
       `/messages/${messageId}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ content: editingDraft.trim() })
+        body: JSON.stringify({ content: editingDraft.trim() }),
       },
-      auth.accessToken
+      auth.accessToken,
     );
-    setMessages((current) => current.map((message) => (message.id === messageId ? result.message : message)));
+    setMessages((current) =>
+      current.map((message) => (message.id === messageId ? result.message : message)),
+    );
     setEditingMessageId(null);
     setEditingDraft('');
   }
@@ -779,12 +831,14 @@ export function AppShell() {
     await apiRequest<{ message: Message }>(
       `/messages/${messageId}`,
       { method: 'DELETE' },
-      auth.accessToken
+      auth.accessToken,
     );
     setMessages((current) =>
       current.map((message) =>
-        message.id === messageId ? { ...message, content: '', deletedAt: new Date().toISOString() } : message
-      )
+        message.id === messageId
+          ? { ...message, content: '', deletedAt: new Date().toISOString() }
+          : message,
+      ),
     );
   }
 
@@ -800,12 +854,14 @@ export function AppShell() {
       `/messages/${message.id}/reactions`,
       {
         method: 'POST',
-        body: JSON.stringify({ emoji })
+        body: JSON.stringify({ emoji }),
       },
-      auth.accessToken
+      auth.accessToken,
     );
     setMessages((current) =>
-      current.map((currentMessage) => (currentMessage.id === message.id ? result.message : currentMessage))
+      current.map((currentMessage) =>
+        currentMessage.id === message.id ? result.message : currentMessage,
+      ),
     );
   }
 
@@ -817,6 +873,7 @@ export function AppShell() {
     setServer(null);
     setChannel(null);
     setMessages([]);
+    setActiveCalls({});
   }
 
   if (!auth) {
@@ -870,6 +927,7 @@ export function AppShell() {
         workspaceError={workspaceError}
         workspaceNotice={workspaceNotice}
         callState={callState}
+        activeCall={activeCall}
         remoteMedia={remoteMedia}
         activePanel={activePanel}
         activeDialog={activeDialog}

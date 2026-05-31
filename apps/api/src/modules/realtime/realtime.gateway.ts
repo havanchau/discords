@@ -7,7 +7,7 @@ import {
   OnGatewayConnection,
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,11 +32,18 @@ interface CallParticipant {
   isSharingScreen: boolean;
 }
 
+interface ActiveCallSummary {
+  channelId: string;
+  mode: 'voice' | 'video' | 'screen';
+  participants: CallParticipant[];
+  screenSharer?: CallParticipant;
+}
+
 @WebSocketGateway({
   cors: {
     origin: parseWebOrigins(process.env.WEB_ORIGIN || defaultWebOrigin),
-    credentials: true
-  }
+    credentials: true,
+  },
 })
 export class RealtimeGateway implements OnGatewayConnection {
   @WebSocketServer()
@@ -51,7 +58,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
     private readonly messages: MessagesService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -59,7 +66,7 @@ export class RealtimeGateway implements OnGatewayConnection {
       client.data.user = await this.authenticate(client);
       await this.prisma.user.update({
         where: { id: client.data.user.id },
-        data: { status: 'ONLINE' }
+        data: { status: 'ONLINE' },
       });
       await this.broadcastPresence(client.data.user.id, 'ONLINE');
     } catch {
@@ -73,7 +80,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     if (user) {
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { status: 'OFFLINE' }
+        data: { status: 'OFFLINE' },
       });
       await this.broadcastPresence(user.id, 'OFFLINE');
     }
@@ -84,7 +91,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     const user = this.getUser(client);
     const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
     const member = await this.prisma.serverMember.findUnique({
-      where: { userId_serverId: { userId: user.id, serverId: channel.serverId } }
+      where: { userId_serverId: { userId: user.id, serverId: channel.serverId } },
     });
 
     if (!member) {
@@ -93,7 +100,7 @@ export class RealtimeGateway implements OnGatewayConnection {
 
     await client.join(this.channelRoom(body.channelId));
     await client.join(this.serverRoom(channel.serverId));
-    return { ok: true };
+    return { ok: true, activeCall: this.getActiveCallSummary(body.channelId) };
   }
 
   @SubscribeMessage('message:create')
@@ -105,14 +112,14 @@ export class RealtimeGateway implements OnGatewayConnection {
       content: string;
       replyToMessageId?: string;
       attachments?: MessageAttachmentInputDto[];
-    }
+    },
   ) {
     this.assertSocketRateLimit(client, 'message:create', 20, 60_000);
     const user = this.getUser(client);
     const result = await this.messages.createMessage(user.id, body.channelId, {
       content: body.content,
       replyToMessageId: body.replyToMessageId,
-      attachments: body.attachments
+      attachments: body.attachments,
     });
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
     return result;
@@ -121,16 +128,16 @@ export class RealtimeGateway implements OnGatewayConnection {
   @SubscribeMessage('reaction:toggle')
   async toggleReaction(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { channelId: string; messageId: string; emoji: string }
+    @MessageBody() body: { channelId: string; messageId: string; emoji: string },
   ) {
     this.assertSocketRateLimit(client, 'reaction:toggle', 60, 60_000);
     const user = this.getUser(client);
     const result = await this.messages.toggleReaction(user.id, body.messageId, {
-      emoji: body.emoji
+      emoji: body.emoji,
     } satisfies ReactionDto);
     this.server.to(this.channelRoom(body.channelId)).emit('reaction:updated', {
       channelId: body.channelId,
-      message: result.message
+      message: result.message,
     });
     return result;
   }
@@ -142,7 +149,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     await this.assertChannelMember(user.id, body.channelId);
     client.to(this.channelRoom(body.channelId)).emit('typing:start', {
       channelId: body.channelId,
-      userId: user.id
+      userId: user.id,
     });
     return { ok: true };
   }
@@ -154,7 +161,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     await this.assertChannelMember(user.id, body.channelId);
     client.to(this.channelRoom(body.channelId)).emit('typing:stop', {
       channelId: body.channelId,
-      userId: user.id
+      userId: user.id,
     });
     return { ok: true };
   }
@@ -169,14 +176,14 @@ export class RealtimeGateway implements OnGatewayConnection {
       isMuted?: boolean;
       isCameraOff?: boolean;
       isSharingScreen?: boolean;
-    }
+    },
   ) {
     this.assertSocketRateLimit(client, 'voice:join', 10, 60_000);
     const user = this.getUser(client);
     const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
     const member = await this.prisma.serverMember.findUnique({
       where: { userId_serverId: { userId: user.id, serverId: channel.serverId } },
-      include: { user: true }
+      include: { user: true },
     });
 
     if (!member) {
@@ -185,7 +192,9 @@ export class RealtimeGateway implements OnGatewayConnection {
 
     const room = this.callRoom(body.channelId);
     const participants = this.getCallParticipants(body.channelId);
-    const existingParticipants = [...participants.values()].filter((item) => item.socketId !== client.id);
+    const existingParticipants = [...participants.values()].filter(
+      (item) => item.socketId !== client.id,
+    );
     const participant: CallParticipant = {
       socketId: client.id,
       userId: user.id,
@@ -194,7 +203,7 @@ export class RealtimeGateway implements OnGatewayConnection {
       mode: body.mode,
       isMuted: Boolean(body.isMuted),
       isCameraOff: Boolean(body.isCameraOff),
-      isSharingScreen: Boolean(body.isSharingScreen)
+      isSharingScreen: Boolean(body.isSharingScreen),
     };
 
     participants.set(client.id, participant);
@@ -204,6 +213,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     this.socketCalls.get(client.id)?.add(body.channelId);
     await client.join(room);
     client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
+    this.emitActiveCall(body.channelId);
     return { participants: existingParticipants };
   }
 
@@ -217,7 +227,7 @@ export class RealtimeGateway implements OnGatewayConnection {
       isCameraOff?: boolean;
       isSharingScreen?: boolean;
       mode?: 'voice' | 'video' | 'screen';
-    }
+    },
   ) {
     this.assertSocketRateLimit(client, 'voice:state', 30, 60_000);
     const participant = this.callParticipants.get(body.channelId)?.get(client.id);
@@ -228,13 +238,14 @@ export class RealtimeGateway implements OnGatewayConnection {
       mode: body.mode ?? participant.mode,
       isMuted: body.isMuted ?? participant.isMuted,
       isCameraOff: body.isCameraOff ?? participant.isCameraOff,
-      isSharingScreen: body.isSharingScreen ?? participant.isSharingScreen
+      isSharingScreen: body.isSharingScreen ?? participant.isSharingScreen,
     };
     this.callParticipants.get(body.channelId)?.set(client.id, nextParticipant);
     this.server.to(this.callRoom(body.channelId)).emit('voice:user-updated', {
       channelId: body.channelId,
-      participant: nextParticipant
+      participant: nextParticipant,
     });
+    this.emitActiveCall(body.channelId);
     return { ok: true };
   }
 
@@ -248,14 +259,14 @@ export class RealtimeGateway implements OnGatewayConnection {
   relayOffer(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    body: { channelId: string; targetSocketId: string; offer: unknown }
+    body: { channelId: string; targetSocketId: string; offer: unknown },
   ) {
     this.assertSocketRateLimit(client, 'webrtc:offer', 30, 60_000);
     this.assertCallPeer(client, body.channelId, body.targetSocketId);
     this.server.to(body.targetSocketId).emit('webrtc:offer', {
       channelId: body.channelId,
       fromSocketId: client.id,
-      offer: body.offer
+      offer: body.offer,
     });
   }
 
@@ -263,14 +274,14 @@ export class RealtimeGateway implements OnGatewayConnection {
   relayAnswer(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    body: { channelId: string; targetSocketId: string; answer: unknown }
+    body: { channelId: string; targetSocketId: string; answer: unknown },
   ) {
     this.assertSocketRateLimit(client, 'webrtc:answer', 30, 60_000);
     this.assertCallPeer(client, body.channelId, body.targetSocketId);
     this.server.to(body.targetSocketId).emit('webrtc:answer', {
       channelId: body.channelId,
       fromSocketId: client.id,
-      answer: body.answer
+      answer: body.answer,
     });
   }
 
@@ -278,14 +289,14 @@ export class RealtimeGateway implements OnGatewayConnection {
   relayIceCandidate(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    body: { channelId: string; targetSocketId: string; candidate: unknown }
+    body: { channelId: string; targetSocketId: string; candidate: unknown },
   ) {
     this.assertSocketRateLimit(client, 'webrtc:ice-candidate', 120, 60_000);
     this.assertCallPeer(client, body.channelId, body.targetSocketId);
     this.server.to(body.targetSocketId).emit('webrtc:ice-candidate', {
       channelId: body.channelId,
       fromSocketId: client.id,
-      candidate: body.candidate
+      candidate: body.candidate,
     });
   }
 
@@ -299,7 +310,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     }
 
     const payload = await this.jwt.verifyAsync<{ sub: string; sid: string }>(token, {
-      secret: this.config.get<string>('JWT_SECRET', 'dev-secret-change-me')
+      secret: this.config.get<string>('JWT_SECRET', 'dev-secret-change-me'),
     });
 
     const session = await this.prisma.session.findFirst({
@@ -307,8 +318,8 @@ export class RealtimeGateway implements OnGatewayConnection {
         id: payload.sid,
         userId: payload.sub,
         revokedAt: null,
-        expiresAt: { gt: new Date() }
-      }
+        expiresAt: { gt: new Date() },
+      },
     });
 
     if (!session) {
@@ -364,8 +375,9 @@ export class RealtimeGateway implements OnGatewayConnection {
     client.to(this.callRoom(channelId)).emit('voice:user-left', {
       channelId,
       socketId: client.id,
-      userId: participant.userId
+      userId: participant.userId,
     });
+    this.emitActiveCall(channelId);
   }
 
   private leaveAllCalls(client: Socket) {
@@ -383,6 +395,30 @@ export class RealtimeGateway implements OnGatewayConnection {
     if (!participants?.has(client.id) || !participants.has(targetSocketId)) {
       throw new UnauthorizedException('Target is not in the call');
     }
+  }
+
+  private getActiveCallSummary(channelId: string): ActiveCallSummary | null {
+    const participants = [...(this.callParticipants.get(channelId)?.values() ?? [])];
+    if (!participants.length) return null;
+
+    const screenSharer = participants.find(
+      (participant) => participant.isSharingScreen || participant.mode === 'screen',
+    );
+    const mode = screenSharer
+      ? 'screen'
+      : participants.some((participant) => participant.mode === 'video')
+        ? 'video'
+        : 'voice';
+    return { channelId, mode, participants, screenSharer };
+  }
+
+  private emitActiveCall(channelId: string) {
+    const activeCall = this.getActiveCallSummary(channelId);
+    if (activeCall) {
+      this.server.to(this.channelRoom(channelId)).emit('voice:active', activeCall);
+      return;
+    }
+    this.server.to(this.channelRoom(channelId)).emit('voice:ended', { channelId });
   }
 
   private assertSocketRateLimit(client: Socket, event: string, limit: number, windowMs: number) {
@@ -404,7 +440,7 @@ export class RealtimeGateway implements OnGatewayConnection {
   private async assertChannelMember(userId: string, channelId: string) {
     const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: channelId } });
     const member = await this.prisma.serverMember.findUnique({
-      where: { userId_serverId: { userId, serverId: channel.serverId } }
+      where: { userId_serverId: { userId, serverId: channel.serverId } },
     });
     if (!member) {
       throw new UnauthorizedException('Not a channel member');
@@ -415,13 +451,13 @@ export class RealtimeGateway implements OnGatewayConnection {
   private async broadcastPresence(userId: string, status: 'ONLINE' | 'OFFLINE') {
     const memberships = await this.prisma.serverMember.findMany({
       where: { userId },
-      select: { serverId: true }
+      select: { serverId: true },
     });
 
     memberships.forEach((membership) => {
       this.server.to(this.serverRoom(membership.serverId)).emit('presence:update', {
         userId,
-        status
+        status,
       });
     });
   }

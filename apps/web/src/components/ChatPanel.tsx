@@ -21,12 +21,13 @@ import {
   Trash2,
   Video,
   VideoOff,
-  X
+  X,
 } from 'lucide-react';
 import { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
 import { assetUrl, AuthState, Channel, Message, MessageAttachment } from '../api';
 import {
   accentClass,
+  ActiveCallSummary,
   attachmentKind,
   CallMode,
   CallState,
@@ -37,12 +38,18 @@ import {
   initials,
   previewText,
   QUICK_REACTIONS,
-  RemoteMedia
+  RemoteMedia,
 } from '../helpers';
 import { RemoteVideoTile } from './RemoteVideoTile';
 
 export type ActivePanel = 'notifications' | 'search' | null;
-export type ActiveDialog = 'profile' | 'server-settings' | 'channel-settings' | 'roles' | 'member-roles' | null;
+export type ActiveDialog =
+  | 'profile'
+  | 'server-settings'
+  | 'channel-settings'
+  | 'roles'
+  | 'member-roles'
+  | null;
 
 interface ChatPanelProps {
   auth: AuthState;
@@ -53,6 +60,7 @@ interface ChatPanelProps {
   workspaceError: string | null;
   workspaceNotice: string | null;
   callState: CallState | null;
+  activeCall: ActiveCallSummary | null;
   remoteMedia: RemoteMedia[];
   activePanel: ActivePanel;
   activeDialog: ActiveDialog;
@@ -75,7 +83,7 @@ interface ChatPanelProps {
   setEditingMessageId: (messageId: string | null) => void;
   setEditingDraft: (draft: string) => void;
   updateChannelAvatar: (event: ChangeEvent<HTMLInputElement>) => void;
-  startCall: (mode: CallMode) => Promise<void>;
+  startCall: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<void>;
   toggleMute: () => void;
   toggleCamera: () => void;
   endCall: () => void;
@@ -98,7 +106,11 @@ function MessageContent({ message }: { message: Message }) {
         <button
           type="button"
           className="reply-preview"
-          onClick={() => document.querySelector(`[data-message-id="${message.replyToMessage?.id}"]`)?.scrollIntoView()}
+          onClick={() =>
+            document
+              .querySelector(`[data-message-id="${message.replyToMessage?.id}"]`)
+              ?.scrollIntoView()
+          }
         >
           <Reply size={13} />
           <strong>{message.replyToMessage.author.displayName}</strong>
@@ -123,7 +135,7 @@ function MessageContent({ message }: { message: Message }) {
                 </span>
               ) : (
                 <span key={`${part}-${index}-${segmentIndex}`}>{segment}</span>
-              )
+              ),
             );
           })}
         </p>
@@ -200,6 +212,7 @@ export function ChatPanel({
   workspaceError,
   workspaceNotice,
   callState,
+  activeCall,
   remoteMedia,
   activePanel,
   activeDialog,
@@ -232,7 +245,7 @@ export function ChatPanel({
   sendMessage,
   removeSelectedFile,
   selectFiles,
-  handleComposerInput
+  handleComposerInput,
 }: ChatPanelProps) {
   return (
     <section className="chat-panel">
@@ -252,7 +265,11 @@ export function ChatPanel({
             onClick={() => channelAvatarInputRef.current?.click()}
             disabled={!channel || pendingAction === 'channel-avatar'}
           >
-            {channel?.avatarUrl ? <img src={assetUrl(channel.avatarUrl)} alt={channel.name} /> : <Hash size={20} />}
+            {channel?.avatarUrl ? (
+              <img src={assetUrl(channel.avatarUrl)} alt={channel.name} />
+            ) : (
+              <Hash size={20} />
+            )}
           </button>
           <div>
             <strong>{channel?.name || 'Select a channel'}</strong>
@@ -300,7 +317,9 @@ export function ChatPanel({
             className={activePanel === 'notifications' ? 'selected' : ''}
             data-testid="notifications-button"
             title="Notifications"
-            onClick={() => setActivePanel((current) => (current === 'notifications' ? null : 'notifications'))}
+            onClick={() =>
+              setActivePanel((current) => (current === 'notifications' ? null : 'notifications'))
+            }
           >
             <Bell size={18} />
           </button>
@@ -344,15 +363,54 @@ export function ChatPanel({
         </div>
       ) : null}
 
+      {activeCall && !callState ? (
+        <section className="active-call-banner" data-testid="active-call-banner">
+          <div className="active-call-icon">
+            {activeCall.mode === 'screen' ? (
+              <MonitorUp size={18} />
+            ) : activeCall.mode === 'video' ? (
+              <Video size={18} />
+            ) : (
+              <Phone size={18} />
+            )}
+          </div>
+          <div className="active-call-copy">
+            <strong>
+              {activeCall.mode === 'screen'
+                ? `${activeCall.screenSharer?.displayName ?? 'Someone'} is sharing screen`
+                : activeCall.mode === 'video'
+                  ? 'Video call is active'
+                  : 'Voice call is active'}
+            </strong>
+            <span>
+              #{channel?.name} · {activeCall.participants.length} participant
+              {activeCall.participants.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="primary active-call-join"
+            onClick={() => void startCall('voice', { receiveOnly: true })}
+          >
+            {activeCall.mode === 'screen' ? 'Join stream' : 'Join call'}
+          </button>
+        </section>
+      ) : null}
+
       {callState ? (
         <section className="call-stage" data-testid="call-stage">
           <div className="call-stage-header">
             <div>
               <strong>
-                {callState.isSharingScreen ? 'Screen share' : callState.mode === 'video' ? 'Video call' : 'Voice call'}
+                {callState.isSharingScreen
+                  ? 'Screen share'
+                  : callState.mode === 'video'
+                    ? 'Video call'
+                    : 'Voice call'}
               </strong>
               <span>
-                #{channel?.name} Â· {remoteMedia.length + 1} participant{remoteMedia.length ? 's' : ''}
+                #{channel?.name} Â· {remoteMedia.length + 1} participant
+                {remoteMedia.length ? 's' : ''}
               </span>
             </div>
             <div className="call-controls">
@@ -382,11 +440,19 @@ export function ChatPanel({
               {callState.mode !== 'voice' && !callState.isCameraOff ? (
                 <video ref={localVideoRef} autoPlay muted playsInline />
               ) : (
-                <div className={`avatar call-avatar ${accentClass(auth.user.id)}`}>{initials(auth.user.displayName)}</div>
+                <div className={`avatar call-avatar ${accentClass(auth.user.id)}`}>
+                  {initials(auth.user.displayName)}
+                </div>
               )}
               <div className="call-label">
                 <strong>{auth.user.displayName}</strong>
-                <span>{callState.isSharingScreen ? 'Sharing screen' : callState.isMuted ? 'Muted' : 'You'}</span>
+                <span>
+                  {callState.isSharingScreen
+                    ? 'Sharing screen'
+                    : callState.isMuted
+                      ? 'Muted'
+                      : 'You'}
+                </span>
               </div>
             </div>
             {remoteMedia.map((participant) => (
@@ -424,7 +490,9 @@ export function ChatPanel({
             const isFirstInGroup =
               !previousMessage ||
               previousMessage.authorId !== message.authorId ||
-              new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() > 5 * 60 * 1000;
+              new Date(message.createdAt).getTime() -
+                new Date(previousMessage.createdAt).getTime() >
+                5 * 60 * 1000;
             const canManage = message.authorId === auth.user.id && !message.deletedAt;
             const isEditing = editingMessageId === message.id;
 
@@ -438,7 +506,10 @@ export function ChatPanel({
                 {isFirstInGroup ? (
                   <div className={`avatar message-avatar ${accentClass(message.authorId)}`}>
                     {message.author.avatarUrl ? (
-                      <img src={assetUrl(message.author.avatarUrl)} alt={message.author.displayName} />
+                      <img
+                        src={assetUrl(message.author.avatarUrl)}
+                        alt={message.author.displayName}
+                      />
                     ) : (
                       initials(message.author.displayName)
                     )}
@@ -459,7 +530,11 @@ export function ChatPanel({
                     <p className="deleted-message">Message deleted</p>
                   ) : isEditing ? (
                     <div className="edit-row">
-                      <input value={editingDraft} onChange={(event) => setEditingDraft(event.target.value)} autoFocus />
+                      <input
+                        value={editingDraft}
+                        onChange={(event) => setEditingDraft(event.target.value)}
+                        autoFocus
+                      />
                       <button onClick={() => void saveMessageEdit(message.id)}>Save</button>
                       <button
                         className="ghost"
@@ -475,7 +550,9 @@ export function ChatPanel({
                     <MessageContent message={message} />
                   )}
 
-                  {!message.deletedAt ? <MessageAttachments attachments={message.attachments ?? []} /> : null}
+                  {!message.deletedAt ? (
+                    <MessageAttachments attachments={message.attachments ?? []} />
+                  ) : null}
 
                   {!message.deletedAt ? (
                     <div className="reaction-row">
@@ -501,7 +578,11 @@ export function ChatPanel({
                       </button>
                       <div className="quick-reactions" title="Quick reactions">
                         {QUICK_REACTIONS.map((emoji) => (
-                          <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)}>
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => void toggleReaction(message, emoji)}
+                          >
                             {emoji}
                           </button>
                         ))}
@@ -518,7 +599,10 @@ export function ChatPanel({
                           >
                             <Edit3 size={14} />
                           </button>
-                          <button title="Delete message" onClick={() => void deleteMessage(message.id)}>
+                          <button
+                            title="Delete message"
+                            onClick={() => void deleteMessage(message.id)}
+                          >
                             <Trash2 size={14} />
                           </button>
                         </>
@@ -534,7 +618,9 @@ export function ChatPanel({
 
       {typingUsers.length ? (
         <div className="typing-indicator">
-          {typingUsers.length === 1 ? 'Someone is typing...' : `${typingUsers.length} people are typing...`}
+          {typingUsers.length === 1
+            ? 'Someone is typing...'
+            : `${typingUsers.length} people are typing...`}
         </div>
       ) : null}
 
@@ -591,12 +677,22 @@ export function ChatPanel({
         <input
           name="content"
           data-testid="composer-input"
-          placeholder={channel ? `Message #${channel.name}, paste a link, or attach media` : 'Select a channel'}
+          placeholder={
+            channel ? `Message #${channel.name}, paste a link, or attach media` : 'Select a channel'
+          }
           disabled={!channel || pendingAction === 'send-message'}
           onChange={handleComposerInput}
         />
-        <button data-testid="composer-send" disabled={!channel || pendingAction === 'send-message'} title="Send message">
-          {pendingAction === 'send-message' ? <Loader2 className="spin" size={18} /> : <Send size={18} />}
+        <button
+          data-testid="composer-send"
+          disabled={!channel || pendingAction === 'send-message'}
+          title="Send message"
+        >
+          {pendingAction === 'send-message' ? (
+            <Loader2 className="spin" size={18} />
+          ) : (
+            <Send size={18} />
+          )}
         </button>
       </form>
     </section>
