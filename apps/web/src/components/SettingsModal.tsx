@@ -1,4 +1,4 @@
-import { Hash, Trash2, X } from 'lucide-react';
+import { Hash, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { FormEvent, RefObject } from 'react';
 import { assetUrl, AuthState, Channel, Role, ServerDetail } from '../api';
 import { accentClass, initials, PERMISSION_OPTIONS } from '../helpers';
@@ -45,7 +45,12 @@ export function SettingsModal({
 
   return (
     <div className="modal-overlay" role="presentation" onMouseDown={() => setActiveDialog(null)}>
-      <section className="settings-modal" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+      <section
+        className={`settings-modal ${activeDialog === 'roles' ? 'roles-modal' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <header className="settings-modal-header">
           <strong>
             {activeDialog === 'profile'
@@ -150,19 +155,39 @@ export function SettingsModal({
         ) : null}
 
         {activeDialog === 'roles' && server ? (
-          <div className="settings-form">
+          <div className="settings-form roles-shell">
             <form className="role-create-form" onSubmit={createRole}>
-              <input name="name" placeholder="New role" maxLength={50} required />
-              <input name="color" placeholder="#5865F2" maxLength={24} />
-              <div className="permission-grid compact-permissions">
-                {PERMISSION_OPTIONS.slice(0, 4).map((permission) => (
-                  <label key={permission.value} className="check-row">
+              <div className="role-create-header">
+                <span className="role-create-icon">
+                  <Plus size={18} />
+                </span>
+                <div>
+                  <strong>Create role</strong>
+                  <span>{PERMISSION_OPTIONS.length} permissions available</span>
+                </div>
+              </div>
+              <div className="role-create-fields">
+                <label className="role-field">
+                  Role name
+                  <input name="name" placeholder="Moderator" maxLength={50} required />
+                </label>
+                <label className="role-field role-color-field">
+                  Color
+                  <span className="role-color-input">
+                    <span className="role-color-preview" />
+                    <input name="color" placeholder="#5865F2" maxLength={24} />
+                  </span>
+                </label>
+              </div>
+              <div className="permission-grid role-permission-palette">
+                {PERMISSION_OPTIONS.map((permission) => (
+                  <label key={permission.value} className="check-row permission-tile">
                     <input name="permissions" type="checkbox" value={permission.value} />
                     <span>{permission.label}</span>
                   </label>
                 ))}
               </div>
-              <button className="primary compact-primary" disabled={pendingAction === 'role-create'}>
+              <button className="primary compact-primary role-create-submit" disabled={pendingAction === 'role-create'}>
                 Create role
               </button>
             </form>
@@ -173,9 +198,14 @@ export function SettingsModal({
                 return (
                   <section key={role.id} className="role-editor">
                     <div className="role-editor-header">
-                      <div>
-                        <strong style={{ color: role.color || undefined }}>{role.name}</strong>
-                        <span>{isEveryone ? 'Default server role' : `${role.permissions.length} permissions`}</span>
+                      <div className="role-identity">
+                        <span className="role-color-dot" style={{ backgroundColor: role.color || undefined }}>
+                          {!role.color ? <ShieldCheck size={14} /> : null}
+                        </span>
+                        <div>
+                          <strong style={{ color: role.color || undefined }}>{role.name}</strong>
+                          <span>{isEveryone ? 'Default server role' : `${role.permissions.length} permissions`}</span>
+                        </div>
                       </div>
                       {!isEveryone ? (
                         <button
@@ -191,7 +221,7 @@ export function SettingsModal({
                     </div>
                     <div className="permission-grid">
                       {PERMISSION_OPTIONS.map((permission) => (
-                        <label key={permission.value} className="check-row">
+                        <label key={permission.value} className="check-row permission-toggle">
                           <input
                             type="checkbox"
                             checked={role.permissions.includes(permission.value)}

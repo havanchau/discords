@@ -40,5 +40,6 @@ Thumbs.db
 prisma/dev.db
 
 # Uploads
-uploads/
+/uploads/
+apps/api/uploads/
 storage/
