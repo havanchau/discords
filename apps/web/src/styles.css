@@ -109,7 +109,10 @@ input {
   transition:
     background-color 0.17s ease,
     color 0.17s ease,
-    opacity 0.17s ease;
+    opacity 0.17s ease,
+    border-color 0.17s ease,
+    box-shadow 0.17s ease,
+    transform 0.14s ease;
 }
 
 button:focus-visible,
@@ -127,25 +130,81 @@ input:disabled {
 /* ===== Auth Screen ===== */
 
 .auth-screen {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: var(--bg-tertiary);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(35, 37, 42, 0.86), rgba(25, 26, 30, 1)), var(--bg-tertiary);
+}
+
+.auth-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 72px);
+}
+
+.auth-screen::after {
+  content: '';
+  position: absolute;
+  right: max(40px, 7vw);
+  top: 50%;
+  width: min(420px, 28vw);
+  height: min(620px, 72vh);
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 18px;
+  opacity: 0.3;
+  transform: translateY(-50%) rotate(-2deg);
+  background:
+    linear-gradient(90deg, rgba(88, 101, 242, 0.32) 0 58px, transparent 58px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0 50px, transparent 50px),
+    linear-gradient(
+      90deg,
+      transparent 84px,
+      rgba(255, 255, 255, 0.06) 84px 210px,
+      transparent 210px
+    ),
+    linear-gradient(
+      90deg,
+      transparent 84px,
+      rgba(255, 255, 255, 0.04) 84px 310px,
+      transparent 310px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 82px,
+      rgba(255, 255, 255, 0.06) 82px 118px,
+      transparent 118px 142px
+    ),
+    var(--bg-secondary);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .auth-panel {
-  width: min(480px, 100%);
-  padding: 32px;
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  padding: 28px 30px 30px;
   border-radius: 5px;
   background: var(--bg-primary);
   box-shadow: var(--elevation-high);
+  animation: auth-panel-in 0.22s ease-out both;
 }
 
 .brand-lockup {
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .brand-mark {
@@ -154,18 +213,18 @@ input:disabled {
 
 .auth-panel h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--header-primary);
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.18;
 }
 
 .auth-panel p {
-  margin: 8px 0 0;
+  margin: 7px 0 0;
   color: var(--header-secondary);
-  font-size: 16px;
-  line-height: 1.25;
+  font-size: 14px;
+  line-height: 1.35;
   text-align: center;
 }
 
@@ -197,7 +256,7 @@ input:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
-  margin: 20px 0;
+  margin: 18px 0;
   padding: 0;
   border: 0;
   border-radius: 3px;
@@ -205,13 +264,13 @@ input:disabled {
 }
 
 .segmented button {
-  min-height: 40px;
+  min-height: 36px;
   border: 0;
   border-radius: 3px;
   color: var(--interactive-normal);
   background: transparent;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   position: relative;
 }
 
@@ -255,15 +314,49 @@ input:disabled {
 
 .primary:hover {
   background: var(--brand-560);
+  transform: translateY(-1px);
 }
 
 .primary:active {
   background: var(--brand-600);
+  transform: translateY(0) scale(0.99);
 }
 
 .stack {
   display: grid;
-  gap: 20px;
+  gap: 15px;
+}
+
+.auth-panel label {
+  gap: 7px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.auth-panel input {
+  height: 36px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.auth-panel input:-webkit-autofill,
+.auth-panel input:-webkit-autofill:hover,
+.auth-panel input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-normal);
+  caret-color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 0 0 1000px var(--input-background) inset;
+  transition: background-color 9999s ease-out;
+}
+
+.auth-panel .primary {
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 label {
@@ -347,14 +440,20 @@ input:focus {
   transition:
     border-radius 0.15s ease,
     color 0.15s ease,
-    background-color 0.15s ease;
+    background-color 0.15s ease,
+    transform 0.16s ease;
   position: relative;
 }
 
 .server-orb:hover {
+  transform: translateY(-1px);
   border-radius: 50%;
   color: #fff;
   background: var(--brand-500);
+}
+
+.server-orb:active {
+  transform: scale(0.94);
 }
 
 .server-orb.active {
@@ -616,6 +715,16 @@ input:focus {
 .toolbar button:hover {
   color: var(--interactive-hover);
   background: var(--bg-modifier-hover);
+  transform: translateY(-1px);
+}
+
+.compact-form button:active,
+.toolbar button:active,
+.wide-command:active,
+.message-actions button:active,
+.composer button:active,
+.user-strip button:active {
+  transform: scale(0.96);
 }
 
 .wide-command {
@@ -635,6 +744,7 @@ input:focus {
 .wide-command:hover {
   color: var(--interactive-hover);
   background: var(--bg-modifier-hover);
+  transform: translateY(-1px);
 }
 
 .invite-code {
@@ -885,6 +995,7 @@ input:focus {
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(35, 165, 90, 0.16), rgba(88, 101, 242, 0.14));
   border: 1px solid rgba(35, 165, 90, 0.28);
+  animation: panel-rise-in 0.18s ease-out both;
 }
 
 .active-call-icon {
@@ -936,6 +1047,7 @@ input:focus {
   border-radius: 8px;
   background: var(--bg-secondary);
   border: none;
+  animation: panel-rise-in 0.18s ease-out both;
 }
 
 .call-stage-header {
@@ -981,6 +1093,11 @@ input:focus {
 
 .call-controls button:hover {
   background: var(--bg-modifier-active);
+  transform: translateY(-1px);
+}
+
+.call-controls button:active {
+  transform: scale(0.94);
 }
 
 .call-controls .danger {
@@ -1067,6 +1184,7 @@ input:focus {
 
 .utility-panel.open {
   display: block;
+  animation: panel-drop-in 0.16s ease-out both;
 }
 
 .utility-panel label {
@@ -1090,6 +1208,7 @@ input:focus {
   justify-content: center;
   padding: 24px;
   background: rgba(0, 0, 0, 0.85);
+  animation: fade-in 0.16s ease-out both;
 }
 
 .settings-modal {
@@ -1099,6 +1218,7 @@ input:focus {
   border-radius: 8px;
   background: var(--bg-primary-solid);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.54);
+  animation: modal-pop-in 0.2s ease-out both;
 }
 
 .settings-modal.roles-modal {
@@ -1503,6 +1623,7 @@ input:focus {
   color: #fff;
   background: var(--status-danger);
   font-size: 14px;
+  animation: banner-slide-in 0.18s ease-out both;
 }
 
 .banner button {
@@ -1517,6 +1638,7 @@ input:focus {
 
 .banner button:hover {
   background: rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
 }
 
 .notice-banner {
@@ -1546,6 +1668,7 @@ input:focus {
   background: transparent;
   border: 0;
   border-radius: 0;
+  animation: fade-in 0.2s ease-out both;
 }
 
 .state-panel strong {
@@ -1565,6 +1688,7 @@ input:focus {
   min-height: 22px;
   padding: 2px 48px 2px 72px;
   position: relative;
+  animation: message-in 0.16s ease-out both;
 }
 
 .message.first-in-group {
@@ -2051,6 +2175,7 @@ input:focus {
   color: var(--text-muted);
   background: var(--channeltextarea-background);
   font-size: 13px;
+  animation: composer-item-in 0.16s ease-out both;
 }
 
 .composer-reply strong {
@@ -2082,6 +2207,7 @@ input:focus {
   background: var(--bg-secondary) !important;
   border-radius: 4px;
   font-size: 13px;
+  animation: composer-item-in 0.16s ease-out both;
 }
 
 .pending-file span {
@@ -2129,6 +2255,7 @@ input:focus {
 .composer .attach-button:hover {
   color: var(--interactive-hover);
   background: var(--channeltextarea-background) !important;
+  transform: translateY(-1px);
 }
 
 .composer > button:last-of-type {
@@ -2141,6 +2268,7 @@ input:focus {
 
 .composer > button:last-of-type:hover {
   color: var(--brand-500);
+  transform: translateY(-1px);
 }
 
 .composer button:disabled {
@@ -2174,6 +2302,7 @@ input:focus {
 .member:hover {
   background: var(--bg-modifier-hover);
   color: var(--interactive-hover);
+  transform: translateX(1px);
 }
 
 .member strong {
@@ -2197,12 +2326,109 @@ input:focus {
 /* ===== Loading Spinner ===== */
 
 .spin {
-  animation: spin 1s linear infinite;
+  animation: spin 0.78s linear infinite;
+}
+
+@keyframes auth-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panel-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes banner-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes composer-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
@@ -2219,6 +2445,14 @@ input:focus {
 }
 
 @media (max-width: 720px) {
+  .auth-screen::before {
+    opacity: 0.14;
+  }
+
+  .auth-screen::after {
+    display: none;
+  }
+
   .app-shell {
     grid-template-columns: 72px minmax(0, 1fr);
   }
