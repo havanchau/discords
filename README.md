@@ -78,5 +78,6 @@ npm run db:seed
 - See `RULE.md` for product, permission, messaging, and realtime rules.
 - See `docs/architecture.md` for architecture notes.
 - See `docs/security-check.md` for security and rate-limit checks.
+- See `docs/deployment.md` for Vercel, Railway, Cloudinary, and GitHub Actions deployment setup.
 - See `docs/design-rules.md` and `docs/ui-design-spec.md` for UI direction.
 - See `IMPLEMENTATION_PLAN.md` for the sprint roadmap and test links.
