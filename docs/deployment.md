@@ -34,7 +34,7 @@ PORT=3000
 DATABASE_URL=<Render PostgreSQL External Database URL or Internal Database URL>
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=15m
-WEB_ORIGIN=https://your-vercel-domain.vercel.app
+WEB_ORIGIN=https://your-vercel-domain.vercel.app,https://*.vercel.app
 STORAGE_DRIVER=cloudinary
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
@@ -73,7 +73,7 @@ VITE_API_URL=https://your-render-api-domain.onrender.com
 VITE_SOCKET_URL=https://your-render-api-domain.onrender.com
 ```
 
-After the Vercel URL is known, update Render `WEB_ORIGIN` to the Vercel production URL and redeploy the API.
+After the Vercel URL is known, update Render `WEB_ORIGIN` to the Vercel production URL and redeploy the API. You can include multiple comma-separated origins; `https://*.vercel.app` is supported for Vercel preview deployments.
 
 ## 3. GitHub Actions Secrets
 

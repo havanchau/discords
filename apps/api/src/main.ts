@@ -9,15 +9,12 @@ import { join } from 'path';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { defaultWebOrigin, isAllowedWebOrigin, parseWebOrigins } from './common/web-origins';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   const config = app.get(ConfigService);
-  const webOrigins = config
-    .get<string>('WEB_ORIGIN', 'http://localhost:5173')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const webOrigins = parseWebOrigins(config.get<string>('WEB_ORIGIN', defaultWebOrigin));
   const jwtSecret = config.get<string>('JWT_SECRET', 'dev-secret-change-me');
   const uploadsDir = join(process.cwd(), 'uploads');
 
@@ -64,7 +61,7 @@ async function bootstrap() {
   });
   app.enableCors({
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
-      if (!origin || webOrigins.includes(origin)) {
+      if (isAllowedWebOrigin(origin, webOrigins)) {
         callback(null, true);
         return;
       }

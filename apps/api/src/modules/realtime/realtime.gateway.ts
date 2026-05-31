@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MessagesService } from '../messages/messages.service';
 import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
 import { ReactionDto } from '../messages/dto/reaction.dto';
+import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
 
 interface SocketUser {
   id: string;
@@ -33,7 +34,7 @@ interface CallParticipant {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.WEB_ORIGIN || 'http://localhost:5173',
+    origin: parseWebOrigins(process.env.WEB_ORIGIN || defaultWebOrigin),
     credentials: true
   }
 })
