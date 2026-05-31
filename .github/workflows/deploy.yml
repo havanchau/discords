@@ -9,29 +9,19 @@ concurrency:
 
 jobs:
   deploy-api:
-    name: Deploy API to Railway
+    name: Deploy API to Render
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API service
+      - name: Trigger Render deploy hook
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
-          RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
-        run: railway up --ci --detach --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service "$RAILWAY_API_SERVICE"
+          RENDER_API_DEPLOY_HOOK_URL: ${{ secrets.RENDER_API_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_API_DEPLOY_HOOK_URL" ]; then
+            echo "Missing RENDER_API_DEPLOY_HOOK_URL secret"
+            exit 1
+          fi
+          curl --fail --request POST "$RENDER_API_DEPLOY_HOOK_URL"
 
   deploy-web:
     name: Deploy Web to Vercel

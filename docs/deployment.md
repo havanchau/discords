@@ -5,31 +5,33 @@ This project is split into a static Vite web app and a long-running NestJS API w
 Recommended production layout:
 
 - Web: Vercel
-- API: Railway
-- Database: Railway PostgreSQL
+- API: Render Web Service
+- Database: Render PostgreSQL
 - Media storage: Cloudinary
 - CI/CD: GitHub Actions
 
-## 1. Railway API
+## 1. Render API
 
-Create a Railway project with two services:
+Create a Render project with two resources:
 
-- PostgreSQL database
-- API service connected to this GitHub repository
+- Render PostgreSQL database
+- Render Web Service connected to this GitHub repository
 
 API service settings:
 
-- Builder: Dockerfile
+- Runtime: Docker
 - Dockerfile path: `apps/api/Dockerfile`
-- Root directory: repository root
+- Build context / root directory: repository root
+- Branch: `main`
 - Health check path: `/health`
+- Auto-deploy: optional. If using GitHub Actions deploy hooks, keep auto-deploy off to avoid double deploys.
 
-Railway API variables:
+Render API variables:
 
 ```env
 NODE_ENV=production
 PORT=3000
-DATABASE_URL=${{Postgres.DATABASE_URL}}
+DATABASE_URL=<Render PostgreSQL External Database URL or Internal Database URL>
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=15m
 WEB_ORIGIN=https://your-vercel-domain.vercel.app
@@ -40,13 +42,13 @@ CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=discord-clone/uploads
 ```
 
-For the first deploy, initialize the production schema against the Railway database:
+For the first deploy, initialize the production schema against the Render database:
 
 ```bash
-railway run npm run db:push --workspace apps/api
+npm run db:push --workspace apps/api
 ```
 
-For mature production releases, replace `db:push` with Prisma migrations and use:
+Run that command locally with `DATABASE_URL` pointed at Render, or use a one-off Render shell/job. For mature production releases, replace `db:push` with Prisma migrations and use:
 
 ```bash
 npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
@@ -67,21 +69,18 @@ Project settings:
 Vercel variables:
 
 ```env
-VITE_API_URL=https://your-railway-api-domain.up.railway.app
-VITE_SOCKET_URL=https://your-railway-api-domain.up.railway.app
+VITE_API_URL=https://your-render-api-domain.onrender.com
+VITE_SOCKET_URL=https://your-render-api-domain.onrender.com
 ```
 
-After the Vercel URL is known, update Railway `WEB_ORIGIN` to the Vercel production URL and redeploy the API.
+After the Vercel URL is known, update Render `WEB_ORIGIN` to the Vercel production URL and redeploy the API.
 
 ## 3. GitHub Actions Secrets
 
 The deploy workflow expects these repository secrets:
 
 ```env
-RAILWAY_TOKEN=
-RAILWAY_PROJECT_ID=
-RAILWAY_ENVIRONMENT=production
-RAILWAY_API_SERVICE=
+RENDER_API_DEPLOY_HOOK_URL=
 VERCEL_TOKEN=
 VERCEL_ORG_ID=
 VERCEL_PROJECT_ID=
@@ -89,10 +88,7 @@ VERCEL_PROJECT_ID=
 
 Where to find them:
 
-- `RAILWAY_TOKEN`: Railway account settings or project token.
-- `RAILWAY_PROJECT_ID`: Railway project settings.
-- `RAILWAY_ENVIRONMENT`: usually `production`.
-- `RAILWAY_API_SERVICE`: API service name or ID.
+- `RENDER_API_DEPLOY_HOOK_URL`: Render API service settings, Deploy Hook URL.
 - `VERCEL_TOKEN`: Vercel account tokens.
 - `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`: Vercel project settings or `.vercel/project.json` after linking locally.
 
@@ -107,7 +103,7 @@ lint -> typecheck -> build
 Manual production deploy:
 
 ```text
-GitHub Actions -> Deploy workflow -> Railway API -> Vercel Web
+GitHub Actions -> Deploy workflow -> Render API deploy hook -> Vercel Web
 ```
 
 The deploy workflow can be run from GitHub Actions with `workflow_dispatch`.
