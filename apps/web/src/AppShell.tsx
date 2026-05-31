@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 're
 import { io, Socket } from 'socket.io-client';
 import { AuthScreen } from './components/AuthScreen';
 import { ChatPanel } from './components/ChatPanel';
+import { HomePanel } from './components/HomePanel';
 import { MemberSidebar } from './components/MemberSidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { ChannelBadgeState, WorkspaceSidebar } from './components/WorkspaceSidebar';
@@ -12,6 +13,10 @@ import {
   AuthState,
   Channel,
   configureAuthRefresh,
+  DirectConversation,
+  DirectMessage,
+  FriendRequestEntry,
+  FriendsSummary,
   Message,
   Role,
   ServerDetail,
@@ -45,6 +50,14 @@ export function AppShell() {
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [searchResults, setSearchResults] = useState<Message[] | null>(null);
+  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>(
+    {},
+  );
+  const [friendsSummary, setFriendsSummary] = useState<FriendsSummary | null>(null);
+  const [directConversations, setDirectConversations] = useState<DirectConversation[]>([]);
+  const [activeConversation, setActiveConversation] = useState<DirectConversation | null>(null);
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
@@ -76,10 +89,7 @@ export function AppShell() {
       ? (savedTheme as UiTheme)
       : 'dark';
   });
-  const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>(() => {
-    const raw = localStorage.getItem('discord-clone-pinned-messages');
-    return raw ? JSON.parse(raw) : {};
-  });
+  const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>({});
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -108,10 +118,6 @@ export function AppShell() {
   useEffect(() => {
     channelKeysRef.current = channelKeys;
   }, [channelKeys]);
-
-  useEffect(() => {
-    localStorage.setItem('discord-clone-pinned-messages', JSON.stringify(pinnedMessageIds));
-  }, [pinnedMessageIds]);
 
   useEffect(() => {
     document.body.dataset.theme = uiTheme;
@@ -161,6 +167,10 @@ export function AppShell() {
         setActiveCalls({});
         setChannelBadges({});
         setChannelKeys({});
+        setFriendsSummary(null);
+        setDirectConversations([]);
+        setActiveConversation(null);
+        setDirectMessages([]);
       },
     });
   }, []);
@@ -169,6 +179,8 @@ export function AppShell() {
     if (!auth) return;
     localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
     void loadServers(auth.accessToken);
+    void loadFriends(auth.accessToken);
+    void loadDirectConversations(auth.accessToken);
   }, [auth]);
 
   useEffect(() => {
@@ -279,6 +291,7 @@ export function AppShell() {
       return next;
     });
     setReplyingToMessage(null);
+    setSearchResults(null);
     setWorkspaceError(null);
     void apiRequest<{ messages: Message[]; nextCursor?: string | null }>(
       `/channels/${channel.id}/messages`,
@@ -293,6 +306,7 @@ export function AppShell() {
         setWorkspaceError(err instanceof Error ? err.message : 'Cannot load messages'),
       )
       .finally(() => setIsLoadingMessages(false));
+    void loadPinnedMessages(channel.id, auth.accessToken);
     socket?.emit(
       'channel:join',
       { channelId: channel.id },
@@ -309,6 +323,29 @@ export function AppShell() {
       },
     );
   }, [channel?.id, auth?.accessToken, socket]);
+
+  useEffect(() => {
+    if (!auth || !channel) return;
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void apiRequest<{ messages: Message[] }>(
+        `/channels/${channel.id}/messages?search=${encodeURIComponent(query)}`,
+        {},
+        auth.accessToken,
+      )
+        .then(async (result) => setSearchResults(await decryptMessagesForDisplay(result.messages)))
+        .catch((err) =>
+          setWorkspaceError(err instanceof Error ? err.message : 'Cannot search messages'),
+        );
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery, channel?.id, auth?.accessToken]);
 
   useEffect(() => {
     if (callState && channel?.id !== callState.channelId) {
@@ -340,11 +377,12 @@ export function AppShell() {
 
   const visibleMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
+    if (query.length >= 2 && searchResults) return searchResults;
     if (!query) return messages;
     return messages.filter(
       (message) => !message.decryptionFailed && message.content.toLowerCase().includes(query),
     );
-  }, [messages, searchQuery]);
+  }, [messages, searchQuery, searchResults]);
 
   const selectedMember = useMemo(
     () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
@@ -352,20 +390,24 @@ export function AppShell() {
   );
 
   const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
-  const pinnedMessages = channel
-    ? (pinnedMessageIds[channel.id] ?? [])
-        .map((messageId) => messages.find((message) => message.id === messageId))
-        .filter((message): message is Message => Boolean(message && !message.deletedAt))
-    : [];
+  const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
 
-  function togglePinnedMessage(message: Message) {
-    setPinnedMessageIds((current) => {
-      const channelPins = current[message.channelId] ?? [];
-      const nextPins = channelPins.includes(message.id)
-        ? channelPins.filter((messageId) => messageId !== message.id)
-        : [message.id, ...channelPins].slice(0, 20);
-      return { ...current, [message.channelId]: nextPins };
-    });
+  async function togglePinnedMessage(message: Message) {
+    if (!auth) return;
+    setPendingAction(`pin-${message.id}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest<{ pinned: boolean; message: Message }>(
+        `/messages/${message.id}/pins`,
+        { method: 'POST' },
+        auth.accessToken,
+      );
+      await loadPinnedMessages(message.channelId, auth.accessToken);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update pinned message');
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   async function configureChannelEncryption(passphrase: string) {
@@ -466,6 +508,62 @@ export function AppShell() {
     }
   }
 
+  async function loadFriends(token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<FriendsSummary>('/friends', {}, token);
+      setFriendsSummary(result);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load friends');
+    }
+  }
+
+  async function loadDirectConversations(token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<{ conversations: DirectConversation[] }>(
+        '/direct-conversations',
+        {},
+        token,
+      );
+      setDirectConversations(result.conversations);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load direct messages');
+    }
+  }
+
+  function openHome() {
+    setServer(null);
+    setChannel(null);
+    setMessages([]);
+    setMessageCursor(null);
+    setActiveDialog(null);
+    setActivePanel(null);
+    if (auth) {
+      void loadFriends(auth.accessToken);
+      void loadDirectConversations(auth.accessToken);
+    }
+  }
+
+  async function loadPinnedMessages(channelId: string, token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<{ messages: Message[] }>(
+        `/channels/${channelId}/pins`,
+        {},
+        token,
+      );
+      const displayMessages = await decryptMessagesForDisplay(result.messages);
+      setPinnedMessagesByChannel((current) => ({ ...current, [channelId]: displayMessages }));
+      setPinnedMessageIds((current) => ({
+        ...current,
+        [channelId]: displayMessages.map((message) => message.id),
+      }));
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load pinned messages');
+    }
+  }
+
   async function openServer(
     serverId: string,
     token = auth?.accessToken,
@@ -476,6 +574,8 @@ export function AppShell() {
     setWorkspaceNotice(null);
     const result = await apiRequest<{ server: ServerDetail }>(`/servers/${serverId}`, {}, token);
     setServer(result.server);
+    setActiveConversation(null);
+    setDirectMessages([]);
     setInviteCode(null);
     const preferredChannel = preferredChannelId
       ? result.server.channels.find(
@@ -676,6 +776,119 @@ export function AppShell() {
       setWorkspaceNotice('Invite joined.');
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot join invite');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function requestFriend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!auth) return;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setPendingAction('friend-request');
+    setWorkspaceError(null);
+    try {
+      await apiRequest(
+        '/friends/requests',
+        {
+          method: 'POST',
+          body: JSON.stringify({ usernameOrEmail: String(form.get('usernameOrEmail') || '') }),
+        },
+        auth.accessToken,
+      );
+      formElement.reset();
+      await loadFriends(auth.accessToken);
+      setWorkspaceNotice('Friend request sent.');
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send friend request');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function respondFriendRequest(
+    request: FriendRequestEntry,
+    status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED',
+  ) {
+    if (!auth) return;
+    setPendingAction(`friend-${request.id}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest(
+        `/friends/requests/${request.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status }),
+        },
+        auth.accessToken,
+      );
+      await loadFriends(auth.accessToken);
+      setWorkspaceNotice(
+        status === 'ACCEPTED' ? 'Friend request accepted.' : 'Friend request updated.',
+      );
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update friend request');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function openDirectConversation(conversation: DirectConversation) {
+    if (!auth) return;
+    setActiveConversation(conversation);
+    setWorkspaceError(null);
+    try {
+      const result = await apiRequest<{ messages: DirectMessage[] }>(
+        `/direct-conversations/${conversation.id}/messages`,
+        {},
+        auth.accessToken,
+      );
+      setDirectMessages(result.messages);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot open conversation');
+    }
+  }
+
+  async function startDirectConversation(userId: string) {
+    if (!auth) return;
+    setPendingAction(`dm-${userId}`);
+    setWorkspaceError(null);
+    try {
+      const result = await apiRequest<{ conversation: DirectConversation }>(
+        `/friends/${userId}/dm`,
+        { method: 'POST' },
+        auth.accessToken,
+      );
+      await loadDirectConversations(auth.accessToken);
+      await openDirectConversation(result.conversation);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start direct message');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function sendDirectMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!auth || !activeConversation) return;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const content = String(form.get('content') || '').trim();
+    if (!content) return;
+    setPendingAction('direct-message');
+    setWorkspaceError(null);
+    try {
+      const result = await apiRequest<{ message: DirectMessage }>(
+        `/direct-conversations/${activeConversation.id}/messages`,
+        { method: 'POST', body: JSON.stringify({ content }) },
+        auth.accessToken,
+      );
+      formElement.reset();
+      setDirectMessages((current) => [...current, result.message]);
+      await loadDirectConversations(auth.accessToken);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send direct message');
     } finally {
       setPendingAction(null);
     }
@@ -1232,6 +1445,10 @@ export function AppShell() {
     setMessageCursor(null);
     setActiveCalls({});
     setChannelBadges({});
+    setFriendsSummary(null);
+    setDirectConversations([]);
+    setActiveConversation(null);
+    setDirectMessages([]);
   }
 
   if (!auth) {
@@ -1265,6 +1482,7 @@ export function AppShell() {
         activeCalls={activeCalls}
         channelBadges={channelBadges}
         profileAvatarInputRef={profileAvatarInputRef}
+        openHome={openHome}
         openServer={openServer}
         createServer={createServer}
         joinInvite={joinInvite}
@@ -1277,71 +1495,89 @@ export function AppShell() {
         setActiveDialog={setActiveDialog}
       />
 
-      <ChatPanel
-        auth={auth}
-        channel={channel}
-        messages={messages}
-        visibleMessages={visibleMessages}
-        isLoadingMessages={isLoadingMessages}
-        isLoadingMoreMessages={isLoadingMoreMessages}
-        hasMoreMessages={Boolean(messageCursor)}
-        workspaceError={workspaceError}
-        workspaceNotice={workspaceNotice}
-        callState={callState}
-        activeCall={activeCall}
-        remoteMedia={remoteMedia}
-        activePanel={activePanel}
-        activeDialog={activeDialog}
-        searchQuery={searchQuery}
-        isChannelEncrypted={channel ? Boolean(channelKeys[channel.id]) : false}
-        typingUsers={typingUsers}
-        pinnedMessages={pinnedMessages}
-        pinnedMessageIds={channel ? (pinnedMessageIds[channel.id] ?? []) : []}
-        replyingToMessage={replyingToMessage}
-        selectedFiles={selectedFiles}
-        isRecordingVoice={isRecordingVoice}
-        pendingAction={pendingAction}
-        editingMessageId={editingMessageId}
-        editingDraft={editingDraft}
-        channelAvatarInputRef={channelAvatarInputRef}
-        localVideoRef={localVideoRef}
-        fileInputRef={fileInputRef}
-        setActiveDialog={setActiveDialog}
-        setActivePanel={setActivePanel}
-        setSearchQuery={setSearchQuery}
-        setWorkspaceError={setWorkspaceError}
-        setWorkspaceNotice={setWorkspaceNotice}
-        configureChannelEncryption={configureChannelEncryption}
-        clearChannelEncryption={clearChannelEncryption}
-        setReplyingToMessage={setReplyingToMessage}
-        setEditingMessageId={setEditingMessageId}
-        setEditingDraft={setEditingDraft}
-        updateChannelAvatar={updateChannelAvatar}
-        startCall={startCall}
-        toggleMute={toggleMute}
-        toggleCamera={toggleCamera}
-        endCall={endCall}
-        saveMessageEdit={saveMessageEdit}
-        deleteMessage={deleteMessage}
-        toggleReaction={toggleReaction}
-        togglePinnedMessage={togglePinnedMessage}
-        loadMoreMessages={loadMoreMessages}
-        sendMessage={sendMessage}
-        startVoiceRecording={startVoiceRecording}
-        stopVoiceRecording={stopVoiceRecording}
-        removeSelectedFile={removeSelectedFile}
-        selectFiles={selectFiles}
-        handleComposerInput={handleComposerInput}
-      />
+      {server ? (
+        <>
+          <ChatPanel
+            auth={auth}
+            channel={channel}
+            messages={messages}
+            visibleMessages={visibleMessages}
+            isLoadingMessages={isLoadingMessages}
+            isLoadingMoreMessages={isLoadingMoreMessages}
+            hasMoreMessages={Boolean(messageCursor)}
+            workspaceError={workspaceError}
+            workspaceNotice={workspaceNotice}
+            callState={callState}
+            activeCall={activeCall}
+            remoteMedia={remoteMedia}
+            activePanel={activePanel}
+            activeDialog={activeDialog}
+            searchQuery={searchQuery}
+            isChannelEncrypted={channel ? Boolean(channelKeys[channel.id]) : false}
+            typingUsers={typingUsers}
+            pinnedMessages={pinnedMessages}
+            pinnedMessageIds={channel ? (pinnedMessageIds[channel.id] ?? []) : []}
+            replyingToMessage={replyingToMessage}
+            selectedFiles={selectedFiles}
+            isRecordingVoice={isRecordingVoice}
+            pendingAction={pendingAction}
+            editingMessageId={editingMessageId}
+            editingDraft={editingDraft}
+            channelAvatarInputRef={channelAvatarInputRef}
+            localVideoRef={localVideoRef}
+            fileInputRef={fileInputRef}
+            setActiveDialog={setActiveDialog}
+            setActivePanel={setActivePanel}
+            setSearchQuery={setSearchQuery}
+            setWorkspaceError={setWorkspaceError}
+            setWorkspaceNotice={setWorkspaceNotice}
+            configureChannelEncryption={configureChannelEncryption}
+            clearChannelEncryption={clearChannelEncryption}
+            setReplyingToMessage={setReplyingToMessage}
+            setEditingMessageId={setEditingMessageId}
+            setEditingDraft={setEditingDraft}
+            updateChannelAvatar={updateChannelAvatar}
+            startCall={startCall}
+            toggleMute={toggleMute}
+            toggleCamera={toggleCamera}
+            endCall={endCall}
+            saveMessageEdit={saveMessageEdit}
+            deleteMessage={deleteMessage}
+            toggleReaction={toggleReaction}
+            togglePinnedMessage={togglePinnedMessage}
+            loadMoreMessages={loadMoreMessages}
+            sendMessage={sendMessage}
+            startVoiceRecording={startVoiceRecording}
+            stopVoiceRecording={stopVoiceRecording}
+            removeSelectedFile={removeSelectedFile}
+            selectFiles={selectFiles}
+            handleComposerInput={handleComposerInput}
+          />
 
-      <MemberSidebar
-        assetUrl={assetUrl}
-        server={server}
-        onManageMember={(memberId) => {
-          setSelectedMemberId(memberId);
-          setActiveDialog('member-roles');
-        }}
-      />
+          <MemberSidebar
+            assetUrl={assetUrl}
+            server={server}
+            onManageMember={(memberId) => {
+              setSelectedMemberId(memberId);
+              setActiveDialog('member-roles');
+            }}
+          />
+        </>
+      ) : (
+        <HomePanel
+          auth={auth}
+          friendsSummary={friendsSummary}
+          conversations={directConversations}
+          activeConversation={activeConversation}
+          directMessages={directMessages}
+          pendingAction={pendingAction}
+          requestFriend={requestFriend}
+          respondFriendRequest={respondFriendRequest}
+          openDirectConversation={openDirectConversation}
+          startDirectConversation={startDirectConversation}
+          sendDirectMessage={sendDirectMessage}
+        />
+      )}
 
       <SettingsModal
         activeDialog={activeDialog}

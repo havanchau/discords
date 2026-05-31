@@ -4,6 +4,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { RateLimitGuard } from './common/rate-limit.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChannelsModule } from './modules/channels/channels.module';
+import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
+import { FriendsModule } from './modules/friends/friends.module';
 import { HealthModule } from './modules/health/health.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
@@ -21,19 +23,21 @@ import { UsersModule } from './modules/users/users.module';
     HealthModule,
     AuthModule,
     UsersModule,
+    FriendsModule,
+    DirectMessagesModule,
     ServersModule,
     ChannelsModule,
     MessagesModule,
     PermissionsModule,
     RolesModule,
     UploadsModule,
-    RealtimeModule
+    RealtimeModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: RateLimitGuard
-    }
-  ]
+      useClass: RateLimitGuard,
+    },
+  ],
 })
 export class AppModule {}

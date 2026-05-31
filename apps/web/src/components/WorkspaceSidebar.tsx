@@ -36,6 +36,7 @@ interface WorkspaceSidebarProps {
   activeCalls: Record<string, ActiveCallSummary>;
   channelBadges: Record<string, ChannelBadgeState>;
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
+  openHome: () => void;
   openServer: (serverId: string) => Promise<void>;
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   joinInvite: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -62,6 +63,7 @@ export function WorkspaceSidebar({
   activeCalls,
   channelBadges,
   profileAvatarInputRef,
+  openHome,
   openServer,
   createServer,
   joinInvite,
@@ -96,7 +98,12 @@ export function WorkspaceSidebar({
   return (
     <>
       <aside className="server-rail">
-        <button className="server-orb home active" title="Direct Messages">
+        <button
+          type="button"
+          className={`server-orb home ${!server ? 'active' : ''}`}
+          title="Direct Messages"
+          onClick={openHome}
+        >
           <MessageSquare size={20} />
           <span className="server-tooltip">Direct Messages</span>
         </button>
@@ -123,20 +130,32 @@ export function WorkspaceSidebar({
         </button>
       </aside>
 
-      <aside className="channel-sidebar">
+      <aside className={`channel-sidebar ${server ? '' : 'home-mode'}`}>
         <div className="server-header">
-          <button
-            type="button"
-            className={`server-dropdown-button ${serverMenuOpen ? 'menu-open' : ''}`}
-            onClick={() => setServerMenuOpen((current) => !current)}
-            title="Open server menu"
-            aria-expanded={serverMenuOpen}
-          >
-            <strong>{server?.name || 'Create a server'}</strong>
-            <span className="server-dropdown-indicator" aria-hidden="true">
-              <ChevronDown size={15} />
-            </span>
-          </button>
+          {server ? (
+            <button
+              type="button"
+              className={`server-dropdown-button ${serverMenuOpen ? 'menu-open' : ''}`}
+              onClick={() => setServerMenuOpen((current) => !current)}
+              title="Open server menu"
+              aria-expanded={serverMenuOpen}
+            >
+              <strong>{server.name}</strong>
+              <span className="server-dropdown-indicator" aria-hidden="true">
+                <ChevronDown size={15} />
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="server-dropdown-button home-title"
+              onClick={openHome}
+              title="Direct Messages"
+            >
+              <MessageSquare size={18} />
+              <strong>Direct Messages</strong>
+            </button>
+          )}
           {serverMenuOpen && server ? (
             <div className="server-menu">
               <button

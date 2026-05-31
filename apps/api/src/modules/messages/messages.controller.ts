@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../../common/current-user.decorator';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { RequestUser } from '../../common/request-user';
@@ -17,9 +27,15 @@ export class MessagesController {
   list(
     @CurrentUser() user: RequestUser,
     @Param('channelId') channelId: string,
-    @Query('cursor') cursor?: string
+    @Query('cursor') cursor?: string,
+    @Query('search') search?: string,
   ) {
-    return this.messages.listMessages(user.id, channelId, cursor);
+    return this.messages.listMessages(user.id, channelId, cursor, search);
+  }
+
+  @Get('channels/:channelId/pins')
+  listPins(@CurrentUser() user: RequestUser, @Param('channelId') channelId: string) {
+    return this.messages.listPinnedMessages(user.id, channelId);
   }
 
   @RateLimit({ keyPrefix: 'message-create', limit: 30, windowMs: 60_000 })
@@ -27,7 +43,7 @@ export class MessagesController {
   create(
     @CurrentUser() user: RequestUser,
     @Param('channelId') channelId: string,
-    @Body() dto: CreateMessageDto
+    @Body() dto: CreateMessageDto,
   ) {
     return this.messages.createMessage(user.id, channelId, dto);
   }
@@ -36,7 +52,7 @@ export class MessagesController {
   update(
     @CurrentUser() user: RequestUser,
     @Param('messageId') messageId: string,
-    @Body() dto: UpdateMessageDto
+    @Body() dto: UpdateMessageDto,
   ) {
     return this.messages.updateMessage(user.id, messageId, dto);
   }
@@ -51,8 +67,13 @@ export class MessagesController {
   react(
     @CurrentUser() user: RequestUser,
     @Param('messageId') messageId: string,
-    @Body() dto: ReactionDto
+    @Body() dto: ReactionDto,
   ) {
     return this.messages.toggleReaction(user.id, messageId, dto);
+  }
+
+  @Post('messages/:messageId/pins')
+  pin(@CurrentUser() user: RequestUser, @Param('messageId') messageId: string) {
+    return this.messages.togglePin(user.id, messageId);
   }
 }

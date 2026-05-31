@@ -12,33 +12,38 @@ export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly channels: ChannelsService,
-    private readonly permissions: PermissionsService
+    private readonly permissions: PermissionsService,
   ) {}
 
-  async listMessages(userId: string, channelId: string, cursor?: string) {
+  async listMessages(userId: string, channelId: string, cursor?: string, search?: string) {
     await this.channels.requireReadableChannel(userId, channelId);
+    const trimmedSearch = search?.trim();
     const messages = await this.prisma.message.findMany({
-      where: { channelId },
+      where: {
+        channelId,
+        deletedAt: null,
+        ...(trimmedSearch ? { content: { contains: trimmedSearch, mode: 'insensitive' } } : {}),
+      },
       include: {
         author: {
           select: {
             id: true,
             username: true,
             displayName: true,
-            avatarUrl: true
-          }
+            avatarUrl: true,
+          },
         },
         attachments: true,
-        reactions: true
+        reactions: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
       ...(cursor
         ? {
             cursor: { id: cursor },
-            skip: 1
+            skip: 1,
           }
-        : {})
+        : {}),
     });
 
     const replyIds = messages
@@ -53,27 +58,67 @@ export class MessagesService {
                 id: true,
                 username: true,
                 displayName: true,
-                avatarUrl: true
-              }
+                avatarUrl: true,
+              },
             },
             attachments: true,
-            reactions: true
-          }
+            reactions: true,
+          },
         })
       : [];
-    const replyMap = new Map(replyMessages.map((message) => [message.id, this.formatMessage(message, userId)]));
+    const replyMap = new Map(
+      replyMessages.map((message) => [message.id, this.formatMessage(message, userId)]),
+    );
 
     return {
       messages: messages
         .reverse()
-        .map((message) => this.formatMessage(message, userId, replyMap.get(message.replyToMessageId ?? ''))),
-      nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null
+        .map((message) =>
+          this.formatMessage(message, userId, replyMap.get(message.replyToMessageId ?? '')),
+        ),
+      nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
+    };
+  }
+
+  async listPinnedMessages(userId: string, channelId: string) {
+    await this.channels.requireReadableChannel(userId, channelId);
+    const pins = await this.prisma.messagePin.findMany({
+      where: { channelId },
+      include: {
+        message: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                avatarUrl: true,
+              },
+            },
+            attachments: true,
+            reactions: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    return {
+      messages: pins
+        .map((pin) => pin.message)
+        .filter((message) => !message.deletedAt)
+        .map((message) => this.formatMessage(message, userId)),
     };
   }
 
   async createMessage(userId: string, channelId: string, dto: CreateMessageDto) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
-    await this.permissions.requireServerPermission(userId, channel.serverId, Permission.SendMessages);
+    await this.permissions.requireServerPermission(
+      userId,
+      channel.serverId,
+      Permission.SendMessages,
+    );
     const content = dto.content.trim();
     const attachments = dto.attachments ?? [];
 
@@ -86,8 +131,8 @@ export class MessagesService {
         where: {
           id: dto.replyToMessageId,
           channelId,
-          deletedAt: null
-        }
+          deletedAt: null,
+        },
       });
       if (!replyTarget) {
         throw new NotFoundException('Reply target not found');
@@ -107,10 +152,10 @@ export class MessagesService {
                 fileName: attachment.fileName,
                 mimeType: attachment.mimeType,
                 byteSize: attachment.byteSize,
-                url: attachment.url
-              }))
+                url: attachment.url,
+              })),
             }
-          : undefined
+          : undefined,
       },
       include: {
         author: {
@@ -118,12 +163,12 @@ export class MessagesService {
             id: true,
             username: true,
             displayName: true,
-            avatarUrl: true
-          }
+            avatarUrl: true,
+          },
         },
         attachments: true,
-        reactions: true
-      }
+        reactions: true,
+      },
     });
 
     const replyToMessage = dto.replyToMessageId
@@ -135,12 +180,12 @@ export class MessagesService {
                 id: true,
                 username: true,
                 displayName: true,
-                avatarUrl: true
-              }
+                avatarUrl: true,
+              },
             },
             attachments: true,
-            reactions: true
-          }
+            reactions: true,
+          },
         })
       : null;
 
@@ -148,8 +193,8 @@ export class MessagesService {
       message: this.formatMessage(
         message,
         userId,
-        replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined
-      )
+        replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined,
+      ),
     };
   }
 
@@ -167,7 +212,7 @@ export class MessagesService {
       where: { id: messageId },
       data: {
         content: dto.content.trim(),
-        editedAt: new Date()
+        editedAt: new Date(),
       },
       include: {
         author: {
@@ -175,12 +220,12 @@ export class MessagesService {
             id: true,
             username: true,
             displayName: true,
-            avatarUrl: true
-          }
+            avatarUrl: true,
+          },
         },
         attachments: true,
-        reactions: true
-      }
+        reactions: true,
+      },
     });
     return { message: this.formatMessage(updated, userId) };
   }
@@ -194,7 +239,7 @@ export class MessagesService {
     const canModerate = await this.permissions.hasServerPermission(
       userId,
       message.serverId,
-      Permission.ManageMessages
+      Permission.ManageMessages,
     );
     if (message.authorId !== userId && !canModerate) {
       throw new ForbiddenException('Only the author or message manager can delete this message');
@@ -204,8 +249,8 @@ export class MessagesService {
       where: { id: messageId },
       data: {
         content: '',
-        deletedAt: new Date()
-      }
+        deletedAt: new Date(),
+      },
     });
     return { message: await this.findMessageForUser(userId, deleted.id) };
   }
@@ -221,8 +266,8 @@ export class MessagesService {
       messageId_userId_emoji: {
         messageId,
         userId,
-        emoji: dto.emoji
-      }
+        emoji: dto.emoji,
+      },
     };
     const existing = await this.prisma.messageReaction.findUnique({ where });
 
@@ -233,12 +278,41 @@ export class MessagesService {
         data: {
           messageId,
           userId,
-          emoji: dto.emoji
-        }
+          emoji: dto.emoji,
+        },
       });
     }
 
     return { message: await this.findMessageForUser(userId, messageId) };
+  }
+
+  async togglePin(userId: string, messageId: string) {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message || message.deletedAt) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const channel = await this.channels.requireReadableChannel(userId, message.channelId);
+    await this.permissions.requireServerPermission(
+      userId,
+      channel.serverId,
+      Permission.ManageMessages,
+    );
+
+    const existing = await this.prisma.messagePin.findUnique({ where: { messageId } });
+    if (existing) {
+      await this.prisma.messagePin.delete({ where: { messageId } });
+      return { pinned: false, message: await this.findMessageForUser(userId, messageId) };
+    }
+
+    await this.prisma.messagePin.create({
+      data: {
+        messageId,
+        channelId: message.channelId,
+        pinnedById: userId,
+      },
+    });
+    return { pinned: true, message: await this.findMessageForUser(userId, messageId) };
   }
 
   async findMessageForUser(userId: string, messageId: string) {
@@ -250,12 +324,12 @@ export class MessagesService {
             id: true,
             username: true,
             displayName: true,
-            avatarUrl: true
-          }
+            avatarUrl: true,
+          },
         },
         attachments: true,
-        reactions: true
-      }
+        reactions: true,
+      },
     });
 
     if (!message) {
@@ -272,19 +346,19 @@ export class MessagesService {
                 id: true,
                 username: true,
                 displayName: true,
-                avatarUrl: true
-              }
+                avatarUrl: true,
+              },
             },
             attachments: true,
-            reactions: true
-          }
+            reactions: true,
+          },
         })
       : null;
 
     return this.formatMessage(
       message,
       userId,
-      replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined
+      replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined,
     );
   }
 
@@ -295,19 +369,19 @@ export class MessagesService {
       const current = reactionMap.get(reaction.emoji) ?? {
         emoji: reaction.emoji,
         count: 0,
-        me: false
+        me: false,
       };
       reactionMap.set(reaction.emoji, {
         ...current,
         count: current.count + 1,
-        me: current.me || reaction.userId === userId
+        me: current.me || reaction.userId === userId,
       });
     });
 
     return {
       ...message,
       reactions: [...reactionMap.values()],
-      replyToMessage
+      replyToMessage,
     };
   }
 }

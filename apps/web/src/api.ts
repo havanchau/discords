@@ -93,6 +93,45 @@ export interface MessageReaction {
   me: boolean;
 }
 
+export interface FriendEntry {
+  id: string;
+  user: User;
+  status: 'ACCEPTED';
+}
+
+export interface FriendRequestEntry {
+  id: string;
+  requesterId: string;
+  receiverId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'BLOCKED';
+  requester?: User;
+  receiver?: User;
+}
+
+export interface FriendsSummary {
+  friends: FriendEntry[];
+  pendingIncoming: FriendRequestEntry[];
+  pendingOutgoing: FriendRequestEntry[];
+  blocked: FriendRequestEntry[];
+}
+
+export interface DirectConversation {
+  id: string;
+  members: Array<{ user: User }>;
+  messages: DirectMessage[];
+  updatedAt?: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  conversationId: string;
+  authorId: string;
+  content: string;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  createdAt: string;
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},

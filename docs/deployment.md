@@ -54,6 +54,23 @@ Run that command locally with `DATABASE_URL` pointed at Render, or use a one-off
 npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
 ```
 
+Current schema update note:
+
+- The latest sprint adds the `MessagePin` table for server-backed pinned messages.
+- Before deploying the API commit that uses pins, run one of these against the live Render database:
+
+```bash
+npm run db:push --workspace apps/api
+```
+
+or apply the included SQL migration:
+
+```bash
+npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+```
+
+If the live database was originally created with `db:push` and does not have Prisma migration history, prefer `db:push` for this release.
+
 ## 2. Vercel Web
 
 Create a Vercel project connected to this GitHub repository.

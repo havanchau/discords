@@ -38,6 +38,26 @@ Recommended next features:
 - Notification settings: mute server/channel, only mentions, desktop notifications, and notification inbox.
 - Deployment hardening: production migrations, health checks for Render, seed-safe demo data, and CI smoke tests against deployed URLs.
 
+Feature expansion backlog to make the app feel closer to a full Discord-class product:
+
+- Direct Messages with a home inbox, realtime-ready conversation list, and paginated private chat.
+- Friend system with username/email lookup, pending requests, accept/decline, block, and DM shortcut.
+- Server-backed pinned messages with permission checks and reload-safe pinned message panel.
+- Backend message search for channel search results beyond the currently loaded page.
+- Persistent read state for channels and DMs, including unread counts that survive refresh/relogin.
+- Notification preferences for muted servers/channels, mention-only mode, and an event inbox.
+- Channel permission overrides by role or member for visibility, sending messages, and voice access.
+- Voice channel occupancy under sidebar voice channels with joined users and mute/camera/share state.
+- Server discovery and invite preview before joining a server.
+- Full message search with author/date/attachment filters.
+- Mentions with `@user`, `@here`, `@everyone`, autocomplete, and mention-specific badges.
+- Threads for side conversations and unread thread counters.
+- Moderation tools including kick, ban, timeout, server mute, and audit log.
+- Realtime updates for server-backed pinned messages.
+- Emoji picker with recently used reactions.
+- Upload progress with cancel/retry for file, image, video, and voice attachments.
+- Stronger E2EE with per-user identity keys, key rotation, encrypted attachments, and recovery flows.
+
 Visual polish roadmap now implemented in the web client:
 
 - Presence: richer status dots and member hover cards with banner, bio, and role chips.

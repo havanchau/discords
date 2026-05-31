@@ -33,48 +33,49 @@ enum FriendStatus {
 }
 
 model User {
-  id                    String                     @id @default(cuid())
-  email                 String                     @unique
-  username              String                     @unique
-  displayName           String
-  passwordHash          String
-  avatarUrl             String?
-  bio                   String?
-  status                UserStatus                 @default(OFFLINE)
-  emailVerifiedAt       DateTime?
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  sessions              Session[]
+  id                      String                     @id @default(cuid())
+  email                   String                     @unique
+  username                String                     @unique
+  displayName             String
+  passwordHash            String
+  avatarUrl               String?
+  bio                     String?
+  status                  UserStatus                 @default(OFFLINE)
+  emailVerifiedAt         DateTime?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  sessions                Session[]
   emailVerificationTokens EmailVerificationToken[]
-  memberships           ServerMember[]
-  messages              Message[]
-  createdServers         Server[]                   @relation("ServerOwner")
-  sentFriendRequests    FriendRequest[]            @relation("FriendRequester")
-  receivedFriendRequests FriendRequest[]           @relation("FriendReceiver")
-  conversations          DirectConversationMember[]
+  memberships             ServerMember[]
+  messages                Message[]
+  messagePins             MessagePin[]               @relation("MessagePins")
+  createdServers          Server[]                   @relation("ServerOwner")
+  sentFriendRequests      FriendRequest[]            @relation("FriendRequester")
+  receivedFriendRequests  FriendRequest[]            @relation("FriendReceiver")
+  conversations           DirectConversationMember[]
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   tokenHash String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
 
 model Session {
-  id           String    @id @default(cuid())
-  userId       String
-  refreshHash  String
-  userAgent    String?
-  revokedAt    DateTime?
-  expiresAt    DateTime
-  createdAt    DateTime  @default(now())
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  userId      String
+  refreshHash String
+  userAgent   String?
+  revokedAt   DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Server {
@@ -94,15 +95,15 @@ model Server {
 }
 
 model ServerMember {
-  id        String       @id @default(cuid())
-  userId    String
-  serverId  String
-  kind      MemberKind   @default(MEMBER)
-  nickname  String?
-  joinedAt  DateTime     @default(now())
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  server    Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  roles     MemberRole[]
+  id       String       @id @default(cuid())
+  userId   String
+  serverId String
+  kind     MemberKind   @default(MEMBER)
+  nickname String?
+  joinedAt DateTime     @default(now())
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server   Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  roles    MemberRole[]
 
   @@unique([userId, serverId])
 }
@@ -132,18 +133,19 @@ model MemberRole {
 }
 
 model Channel {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   serverId  String
   name      String
-  type      ChannelType @default(TEXT)
+  type      ChannelType  @default(TEXT)
   topic     String?
   avatarUrl String?
-  position  Int         @default(0)
-  isPrivate Boolean     @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  position  Int          @default(0)
+  isPrivate Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  server    Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages  Message[]
+  pins      MessagePin[]
 
   @@unique([serverId, name])
 }
@@ -162,6 +164,7 @@ model Message {
   author           User                @relation(fields: [authorId], references: [id])
   attachments      MessageAttachment[]
   reactions        MessageReaction[]
+  pin              MessagePin?
 
   @@index([channelId, createdAt])
 }
@@ -185,6 +188,18 @@ model MessageReaction {
   message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@id([messageId, userId, emoji])
+}
+
+model MessagePin {
+  messageId  String   @id
+  channelId  String
+  pinnedById String
+  createdAt  DateTime @default(now())
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  pinnedBy   User     @relation("MessagePins", fields: [pinnedById], references: [id])
+
+  @@index([channelId, createdAt])
 }
 
 model Invite {
