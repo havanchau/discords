@@ -1,8 +1,27 @@
-import { Copy, Edit3, Hash, Loader2, LogOut, MessageSquare, Plus, Search, UserPlus, Volume2 } from 'lucide-react';
-import { ChangeEvent, FormEvent, RefObject } from 'react';
+import {
+  ChevronDown,
+  Copy,
+  Edit3,
+  Hash,
+  Loader2,
+  LogOut,
+  MessageSquare,
+  Plus,
+  Search,
+  Settings,
+  UserPlus,
+  Volume2,
+  X,
+} from 'lucide-react';
+import { ChangeEvent, FormEvent, RefObject, useState } from 'react';
 import { assetUrl, AuthState, Channel, ServerDetail, ServerSummary } from '../api';
-import { accentClass, initials } from '../helpers';
+import { accentClass, ActiveCallSummary, initials } from '../helpers';
 import { ActiveDialog } from './ChatPanel';
+
+export interface ChannelBadgeState {
+  count: number;
+  mentions: number;
+}
 
 interface WorkspaceSidebarProps {
   auth: AuthState;
@@ -15,6 +34,8 @@ interface WorkspaceSidebarProps {
   inviteCode: string | null;
   isLoadingServers: boolean;
   pendingAction: string | null;
+  activeCalls: Record<string, ActiveCallSummary>;
+  channelBadges: Record<string, ChannelBadgeState>;
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
   openServer: (serverId: string) => Promise<void>;
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -40,6 +61,8 @@ export function WorkspaceSidebar({
   inviteCode,
   isLoadingServers,
   pendingAction,
+  activeCalls,
+  channelBadges,
   profileAvatarInputRef,
   openServer,
   createServer,
@@ -51,8 +74,28 @@ export function WorkspaceSidebar({
   logout,
   setChannel,
   setChannelQuery,
-  setActiveDialog
+  setActiveDialog,
 }: WorkspaceSidebarProps) {
+  const [serverAction, setServerAction] = useState<'create' | 'join' | null>(null);
+  const [channelCreateType, setChannelCreateType] = useState<'TEXT' | 'VOICE' | null>(null);
+  const [serverMenuOpen, setServerMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  async function submitCreateServer(event: FormEvent<HTMLFormElement>) {
+    await createServer(event);
+    setServerAction(null);
+  }
+
+  async function submitJoinInvite(event: FormEvent<HTMLFormElement>) {
+    await joinInvite(event);
+    setServerAction(null);
+  }
+
+  async function submitCreateChannel(event: FormEvent<HTMLFormElement>) {
+    await createChannel(event);
+    setChannelCreateType(null);
+  }
+
   return (
     <>
       <aside className="server-rail">
@@ -70,48 +113,79 @@ export function WorkspaceSidebar({
             {initials(item.name)}
           </button>
         ))}
+        <button
+          type="button"
+          className="server-orb add-server"
+          title="Add a Server"
+          onClick={() => setServerAction('create')}
+        >
+          <Plus size={24} />
+        </button>
       </aside>
 
       <aside className="channel-sidebar">
         <div className="server-header">
-          <div>
+          <button
+            type="button"
+            className="server-dropdown-button"
+            onClick={() => setServerMenuOpen((current) => !current)}
+            title="Open server menu"
+          >
             <strong>{server?.name || 'Create a server'}</strong>
-            <span>{server?.description || 'Realtime workspace'}</span>
-          </div>
+            <ChevronDown size={16} />
+          </button>
+          {serverMenuOpen && server ? (
+            <div className="server-menu">
+              <button
+                type="button"
+                onClick={() => {
+                  setServerMenuOpen(false);
+                  setActiveDialog('server-settings');
+                }}
+              >
+                <Settings size={16} />
+                Server Settings
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setServerMenuOpen(false);
+                  void createInvite();
+                }}
+                disabled={pendingAction === 'create-invite'}
+              >
+                {pendingAction === 'create-invite' ? (
+                  <Loader2 className="spin" size={16} />
+                ) : (
+                  <UserPlus size={16} />
+                )}
+                Invite People
+              </button>
+              {inviteCode ? (
+                <button type="button" onClick={() => void copyInviteCode()}>
+                  <Copy size={16} />
+                  Copy Invite Code
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {isLoadingServers ? (
             <Loader2 className="spin" size={16} />
           ) : server ? (
-            <button type="button" title="Server settings" onClick={() => setActiveDialog('server-settings')}>
-              <Edit3 size={16} />
+            <button
+              type="button"
+              title="Search channels"
+              onClick={() => setIsSearchOpen((current) => !current)}
+            >
+              <Search size={16} />
             </button>
           ) : null}
         </div>
 
         <div className="sidebar-scroll">
-          <section className="sidebar-card">
-            <div className="section-title">Workspace</div>
-            <form onSubmit={createServer} className="compact-form">
-              <input name="name" placeholder="New server" required />
-              <input name="description" placeholder="Description" />
-              <button data-testid="create-server-button" title="Create server" disabled={pendingAction === 'create-server'}>
-                {pendingAction === 'create-server' ? <Loader2 className="spin" size={16} /> : <Plus size={16} />}
-              </button>
-            </form>
-          </section>
-
-          <section className="sidebar-card">
-            <div className="section-title">Join Server</div>
-            <form onSubmit={joinInvite} className="compact-form one-line">
-              <input name="code" placeholder="Paste invite code" aria-label="Invite code" />
-              <button data-testid="join-invite-button" title="Join server with invite code" disabled={pendingAction === 'join-invite'}>
-                {pendingAction === 'join-invite' ? <Loader2 className="spin" size={16} /> : <UserPlus size={16} />}
-              </button>
-            </form>
-          </section>
-
           {server ? (
             <>
-              <div className="channel-search">
+              <div className={`channel-search ${isSearchOpen ? 'open' : ''}`}>
                 <Search size={14} />
                 <input
                   value={channelQuery}
@@ -120,33 +194,53 @@ export function WorkspaceSidebar({
                 />
               </div>
               <section className="sidebar-card">
-                <div className="section-title">Text Channels</div>
-                <form onSubmit={createChannel} className="compact-form one-line">
-                  <input data-testid="create-channel-input" name="name" placeholder="Create channel" required />
-                  <input name="type" type="hidden" value="TEXT" readOnly />
-                  <button data-testid="create-channel-button" title="Create text channel" disabled={pendingAction === 'create-channel'}>
-                    {pendingAction === 'create-channel' ? <Loader2 className="spin" size={16} /> : <Plus size={16} />}
+                <div className="section-title">
+                  Text Channels
+                  <button
+                    type="button"
+                    title="Create text channel"
+                    onClick={() => setChannelCreateType('TEXT')}
+                  >
+                    <Plus size={16} />
                   </button>
-                </form>
+                </div>
                 <div className="channel-list">
                   {visibleTextChannels.map((item) => (
-                    <button key={item.id} className={channel?.id === item.id ? 'selected' : ''} onClick={() => setChannel(item)}>
+                    <button
+                      key={item.id}
+                      className={channel?.id === item.id ? 'selected' : ''}
+                      onClick={() => setChannel(item)}
+                    >
                       <Hash size={16} />
                       <span>{item.name}</span>
+                      {activeCalls[item.id] ? (
+                        <span className="channel-live-badge">
+                          {activeCalls[item.id].mode === 'screen' ? 'Live' : 'Call'}
+                        </span>
+                      ) : null}
+                      {channelBadges[item.id]?.mentions ? (
+                        <span className="channel-mention-badge">
+                          {channelBadges[item.id].mentions}
+                        </span>
+                      ) : channelBadges[item.id]?.count ? (
+                        <span className="channel-unread-dot" />
+                      ) : null}
                     </button>
                   ))}
                 </div>
               </section>
 
               <section className="sidebar-card">
-                <div className="section-title">Voice Channels</div>
-                <form onSubmit={createChannel} className="compact-form one-line">
-                  <input data-testid="create-voice-input" name="name" placeholder="Create voice" required />
-                  <input name="type" type="hidden" value="VOICE" readOnly />
-                  <button data-testid="create-voice-button" title="Create voice channel" disabled={pendingAction === 'create-channel'}>
-                    {pendingAction === 'create-channel' ? <Loader2 className="spin" size={16} /> : <Plus size={16} />}
+                <div className="section-title">
+                  Voice Channels
+                  <button
+                    type="button"
+                    title="Create voice channel"
+                    onClick={() => setChannelCreateType('VOICE')}
+                  >
+                    <Plus size={16} />
                   </button>
-                </form>
+                </div>
                 <div className="channel-list muted-list">
                   {visibleVoiceChannels.length ? (
                     visibleVoiceChannels.map((item) => (
@@ -159,25 +253,6 @@ export function WorkspaceSidebar({
                     <p className="empty-note">No voice channels yet.</p>
                   )}
                 </div>
-              </section>
-
-              <section className="sidebar-card">
-                <div className="section-title">Invite People</div>
-                <button
-                  className="wide-command"
-                  data-testid="create-invite-button"
-                  onClick={createInvite}
-                  disabled={pendingAction === 'create-invite'}
-                >
-                  {pendingAction === 'create-invite' ? <Loader2 className="spin" size={15} /> : <Copy size={15} />}
-                  Create invite
-                </button>
-                {inviteCode ? (
-                  <button type="button" className="invite-code" onClick={() => void copyInviteCode()}>
-                    {inviteCode}
-                    <Copy size={13} />
-                  </button>
-                ) : null}
               </section>
             </>
           ) : null}
@@ -201,7 +276,9 @@ export function WorkspaceSidebar({
             {auth.user.avatarUrl ? (
               <img src={assetUrl(auth.user.avatarUrl)} alt={auth.user.displayName} />
             ) : (
-              <span className={`avatar small ${accentClass(auth.user.id)}`}>{initials(auth.user.displayName)}</span>
+              <span className={`avatar small ${accentClass(auth.user.id)}`}>
+                {initials(auth.user.displayName)}
+              </span>
             )}
           </button>
           <div>
@@ -216,6 +293,125 @@ export function WorkspaceSidebar({
           </button>
         </div>
       </aside>
+
+      {serverAction ? (
+        <div className="server-add-modal" onClick={() => setServerAction(null)}>
+          <div className="server-add-card" onClick={(event) => event.stopPropagation()}>
+            <div className="server-add-header">
+              <strong>{serverAction === 'create' ? 'Create a server' : 'Join a server'}</strong>
+              <button type="button" onClick={() => setServerAction(null)} title="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="server-action-tabs">
+              <button
+                type="button"
+                className={serverAction === 'create' ? 'active' : ''}
+                onClick={() => setServerAction('create')}
+              >
+                <Plus size={16} />
+                Create
+              </button>
+              <button
+                type="button"
+                className={serverAction === 'join' ? 'active' : ''}
+                onClick={() => setServerAction('join')}
+              >
+                <UserPlus size={16} />
+                Join
+              </button>
+            </div>
+            {serverAction === 'create' ? (
+              <form onSubmit={submitCreateServer} className="modal-form">
+                <label>
+                  Server name
+                  <input name="name" placeholder="New server" required />
+                </label>
+                <label>
+                  Description
+                  <input name="description" placeholder="Optional description" />
+                </label>
+                <button
+                  className="primary"
+                  data-testid="create-server-button"
+                  disabled={pendingAction === 'create-server'}
+                >
+                  {pendingAction === 'create-server' ? (
+                    <Loader2 className="spin" size={16} />
+                  ) : (
+                    'Create Server'
+                  )}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={submitJoinInvite} className="modal-form">
+                <label>
+                  Invite code
+                  <input
+                    name="code"
+                    placeholder="Paste invite code"
+                    aria-label="Invite code"
+                    required
+                  />
+                </label>
+                <button
+                  className="primary"
+                  data-testid="join-invite-button"
+                  disabled={pendingAction === 'join-invite'}
+                >
+                  {pendingAction === 'join-invite' ? (
+                    <Loader2 className="spin" size={16} />
+                  ) : (
+                    'Join Server'
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {channelCreateType ? (
+        <div className="channel-create-modal" onClick={() => setChannelCreateType(null)}>
+          <form
+            className="channel-create-card"
+            onSubmit={submitCreateChannel}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="server-add-header">
+              <strong>Create {channelCreateType === 'TEXT' ? 'text' : 'voice'} channel</strong>
+              <button type="button" onClick={() => setChannelCreateType(null)} title="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <label>
+              Channel name
+              <input
+                data-testid={
+                  channelCreateType === 'TEXT' ? 'create-channel-input' : 'create-voice-input'
+                }
+                name="name"
+                placeholder={channelCreateType === 'TEXT' ? 'new-channel' : 'New voice'}
+                required
+              />
+            </label>
+            <input name="type" type="hidden" value={channelCreateType} readOnly />
+            <button
+              className="primary"
+              data-testid={
+                channelCreateType === 'TEXT' ? 'create-channel-button' : 'create-voice-button'
+              }
+              disabled={pendingAction === 'create-channel'}
+            >
+              {pendingAction === 'create-channel' ? (
+                <Loader2 className="spin" size={16} />
+              ) : (
+                'Create Channel'
+              )}
+            </button>
+          </form>
+        </div>
+      ) : null}
     </>
   );
 }

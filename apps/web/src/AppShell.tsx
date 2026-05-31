@@ -4,7 +4,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { ChatPanel } from './components/ChatPanel';
 import { MemberSidebar } from './components/MemberSidebar';
 import { SettingsModal } from './components/SettingsModal';
-import { WorkspaceSidebar } from './components/WorkspaceSidebar';
+import { ChannelBadgeState, WorkspaceSidebar } from './components/WorkspaceSidebar';
 import { useChannelCall } from './hooks/useChannelCall';
 import {
   apiRequest,
@@ -19,6 +19,11 @@ import {
   uploadFile,
 } from './api';
 import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
+
+interface TypingUser {
+  userId: string;
+  displayName: string;
+}
 
 export function AppShell() {
   const [auth, setAuth] = useState<AuthState | null>(() => {
@@ -49,14 +54,20 @@ export function AppShell() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [channelQuery, setChannelQuery] = useState('');
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
+  const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
+  const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>(() => {
+    const raw = localStorage.getItem('discord-clone-pinned-messages');
+    return raw ? JSON.parse(raw) : {};
+  });
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
+  const activeChannelIdRef = useRef<string | null>(null);
   const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } =
     useChannelCall({
       auth,
@@ -64,6 +75,14 @@ export function AppShell() {
       socket,
       setWorkspaceError,
     });
+
+  useEffect(() => {
+    activeChannelIdRef.current = channel?.id ?? null;
+  }, [channel?.id]);
+
+  useEffect(() => {
+    localStorage.setItem('discord-clone-pinned-messages', JSON.stringify(pinnedMessageIds));
+  }, [pinnedMessageIds]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -94,6 +113,7 @@ export function AppShell() {
         setChannel(null);
         setMessages([]);
         setActiveCalls({});
+        setChannelBadges({});
       },
     });
   }, []);
@@ -116,9 +136,24 @@ export function AppShell() {
     });
 
     nextSocket.on('message:created', (message: Message) => {
-      setMessages((current) =>
-        current.some((item) => item.id === message.id) ? current : [...current, message],
-      );
+      if (message.channelId === activeChannelIdRef.current) {
+        setMessages((current) =>
+          current.some((item) => item.id === message.id) ? current : [...current, message],
+        );
+        return;
+      }
+
+      setChannelBadges((current) => {
+        const currentBadge = current[message.channelId] ?? { count: 0, mentions: 0 };
+        const mentionsMe = messageMentionsUser(message, auth.user);
+        return {
+          ...current,
+          [message.channelId]: {
+            count: currentBadge.count + 1,
+            mentions: currentBadge.mentions + (mentionsMe ? 1 : 0),
+          },
+        };
+      });
     });
 
     nextSocket.on('reaction:updated', (payload: { message: Message }) => {
@@ -127,15 +162,26 @@ export function AppShell() {
       );
     });
 
-    nextSocket.on('typing:start', (payload: { channelId: string; userId: string }) => {
-      if (payload.userId === auth.user.id) return;
-      setTypingUsers((current) =>
-        current.includes(payload.userId) ? current : [...current, payload.userId],
-      );
-    });
+    nextSocket.on(
+      'typing:start',
+      (payload: { channelId: string; userId: string; displayName?: string }) => {
+        if (payload.userId === auth.user.id) return;
+        setTypingUsers((current) =>
+          current.some((user) => user.userId === payload.userId)
+            ? current
+            : [
+                ...current,
+                {
+                  userId: payload.userId,
+                  displayName: payload.displayName ?? 'Someone',
+                },
+              ],
+        );
+      },
+    );
 
     nextSocket.on('typing:stop', (payload: { channelId: string; userId: string }) => {
-      setTypingUsers((current) => current.filter((userId) => userId !== payload.userId));
+      setTypingUsers((current) => current.filter((user) => user.userId !== payload.userId));
     });
 
     nextSocket.on('presence:update', (payload: { userId: string; status: string }) => {
@@ -175,6 +221,11 @@ export function AppShell() {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
     setTypingUsers([]);
+    setChannelBadges((current) => {
+      const next = { ...current };
+      delete next[channel.id];
+      return next;
+    });
     setReplyingToMessage(null);
     setWorkspaceError(null);
     void apiRequest<{ messages: Message[] }>(
@@ -244,6 +295,21 @@ export function AppShell() {
   );
 
   const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
+  const pinnedMessages = channel
+    ? (pinnedMessageIds[channel.id] ?? [])
+        .map((messageId) => messages.find((message) => message.id === messageId))
+        .filter((message): message is Message => Boolean(message && !message.deletedAt))
+    : [];
+
+  function togglePinnedMessage(message: Message) {
+    setPinnedMessageIds((current) => {
+      const channelPins = current[message.channelId] ?? [];
+      const nextPins = channelPins.includes(message.id)
+        ? channelPins.filter((messageId) => messageId !== message.id)
+        : [message.id, ...channelPins].slice(0, 20);
+      return { ...current, [message.channelId]: nextPins };
+    });
+  }
 
   async function loadServers(token: string) {
     setIsLoadingServers(true);
@@ -874,6 +940,7 @@ export function AppShell() {
     setChannel(null);
     setMessages([]);
     setActiveCalls({});
+    setChannelBadges({});
   }
 
   if (!auth) {
@@ -904,6 +971,8 @@ export function AppShell() {
         inviteCode={inviteCode}
         isLoadingServers={isLoadingServers}
         pendingAction={pendingAction}
+        activeCalls={activeCalls}
+        channelBadges={channelBadges}
         profileAvatarInputRef={profileAvatarInputRef}
         openServer={openServer}
         createServer={createServer}
@@ -933,6 +1002,8 @@ export function AppShell() {
         activeDialog={activeDialog}
         searchQuery={searchQuery}
         typingUsers={typingUsers}
+        pinnedMessages={pinnedMessages}
+        pinnedMessageIds={channel ? (pinnedMessageIds[channel.id] ?? []) : []}
         replyingToMessage={replyingToMessage}
         selectedFiles={selectedFiles}
         pendingAction={pendingAction}
@@ -957,6 +1028,7 @@ export function AppShell() {
         saveMessageEdit={saveMessageEdit}
         deleteMessage={deleteMessage}
         toggleReaction={toggleReaction}
+        togglePinnedMessage={togglePinnedMessage}
         sendMessage={sendMessage}
         removeSelectedFile={removeSelectedFile}
         selectFiles={selectFiles}
@@ -992,4 +1064,10 @@ export function AppShell() {
       />
     </main>
   );
+}
+
+function messageMentionsUser(message: Message, user: AuthState['user']) {
+  const content = message.content.toLowerCase();
+  const handles = [`@${user.username.toLowerCase()}`, `@${user.displayName.toLowerCase()}`];
+  return handles.some((handle) => content.includes(handle));
 }

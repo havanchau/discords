@@ -14,6 +14,7 @@ import {
   Paperclip,
   Phone,
   PhoneOff,
+  Pin,
   Reply,
   Search,
   Send,
@@ -23,7 +24,7 @@ import {
   VideoOff,
   X,
 } from 'lucide-react';
-import { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
+import { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction, useState } from 'react';
 import { assetUrl, AuthState, Channel, Message, MessageAttachment } from '../api';
 import {
   accentClass,
@@ -65,7 +66,9 @@ interface ChatPanelProps {
   activePanel: ActivePanel;
   activeDialog: ActiveDialog;
   searchQuery: string;
-  typingUsers: string[];
+  typingUsers: Array<{ userId: string; displayName: string }>;
+  pinnedMessages: Message[];
+  pinnedMessageIds: string[];
   replyingToMessage: Message | null;
   selectedFiles: File[];
   pendingAction: string | null;
@@ -90,6 +93,7 @@ interface ChatPanelProps {
   saveMessageEdit: (messageId: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   toggleReaction: (message: Message, emoji: string) => Promise<void>;
+  togglePinnedMessage: (message: Message) => void;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   removeSelectedFile: (index: number) => void;
   selectFiles: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -150,7 +154,19 @@ function MessageContent({ message }: { message: Message }) {
   );
 }
 
-function MessageAttachments({ attachments }: { attachments: MessageAttachment[] }) {
+interface PreviewAttachment {
+  url: string;
+  fileName: string;
+  kind: 'image' | 'video';
+}
+
+function MessageAttachments({
+  attachments,
+  onPreview,
+}: {
+  attachments: MessageAttachment[];
+  onPreview: (attachment: PreviewAttachment) => void;
+}) {
   if (!attachments.length) return null;
 
   return (
@@ -161,15 +177,14 @@ function MessageAttachments({ attachments }: { attachments: MessageAttachment[] 
 
         if (kind === 'image') {
           return (
-            <a
+            <button
+              type="button"
               key={attachment.id ?? attachment.url}
               className="attachment image-attachment"
-              href={url}
-              target="_blank"
-              rel="noreferrer"
+              onClick={() => onPreview({ url, fileName: attachment.fileName, kind: 'image' })}
             >
               <img src={url} alt={attachment.fileName} />
-            </a>
+            </button>
           );
         }
 
@@ -177,7 +192,15 @@ function MessageAttachments({ attachments }: { attachments: MessageAttachment[] 
           return (
             <div key={attachment.id ?? attachment.url} className="attachment video-attachment">
               <video src={url} controls preload="metadata" />
-              <span>{attachment.fileName}</span>
+              <span>
+                {attachment.fileName}
+                <button
+                  type="button"
+                  onClick={() => onPreview({ url, fileName: attachment.fileName, kind: 'video' })}
+                >
+                  Open preview
+                </button>
+              </span>
             </div>
           );
         }
@@ -218,6 +241,8 @@ export function ChatPanel({
   activeDialog,
   searchQuery,
   typingUsers,
+  pinnedMessages,
+  pinnedMessageIds,
   replyingToMessage,
   selectedFiles,
   pendingAction,
@@ -242,11 +267,14 @@ export function ChatPanel({
   saveMessageEdit,
   deleteMessage,
   toggleReaction,
+  togglePinnedMessage,
   sendMessage,
   removeSelectedFile,
   selectFiles,
   handleComposerInput,
 }: ChatPanelProps) {
+  const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
+
   return (
     <section className="chat-panel">
       <header className="chat-header">
@@ -345,7 +373,25 @@ export function ChatPanel({
             />
           </label>
         ) : activePanel === 'notifications' ? (
-          <div className="notification-empty">No new notifications.</div>
+          <div className="notification-panel">
+            <strong>Pinned messages</strong>
+            {pinnedMessages.length ? (
+              pinnedMessages.map((message) => (
+                <button
+                  type="button"
+                  key={message.id}
+                  onClick={() =>
+                    document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView()
+                  }
+                >
+                  <Pin size={13} />
+                  <span>{previewText(message)}</span>
+                </button>
+              ))
+            ) : (
+              <div className="notification-empty">No pinned messages in this channel.</div>
+            )}
+          </div>
         ) : null}
       </div>
 
@@ -492,7 +538,7 @@ export function ChatPanel({
               previousMessage.authorId !== message.authorId ||
               new Date(message.createdAt).getTime() -
                 new Date(previousMessage.createdAt).getTime() >
-                5 * 60 * 1000;
+                7 * 60 * 1000;
             const canManage = message.authorId === auth.user.id && !message.deletedAt;
             const isEditing = editingMessageId === message.id;
 
@@ -551,7 +597,10 @@ export function ChatPanel({
                   )}
 
                   {!message.deletedAt ? (
-                    <MessageAttachments attachments={message.attachments ?? []} />
+                    <MessageAttachments
+                      attachments={message.attachments ?? []}
+                      onPreview={setPreviewAttachment}
+                    />
                   ) : null}
 
                   {!message.deletedAt ? (
@@ -575,6 +624,14 @@ export function ChatPanel({
                     <div className="message-actions">
                       <button title="Reply" onClick={() => setReplyingToMessage(message)}>
                         <Reply size={14} />
+                      </button>
+                      <button
+                        title={
+                          pinnedMessageIds.includes(message.id) ? 'Unpin message' : 'Pin message'
+                        }
+                        onClick={() => togglePinnedMessage(message)}
+                      >
+                        <Pin size={14} />
                       </button>
                       <div className="quick-reactions" title="Quick reactions">
                         {QUICK_REACTIONS.map((emoji) => (
@@ -619,8 +676,13 @@ export function ChatPanel({
       {typingUsers.length ? (
         <div className="typing-indicator">
           {typingUsers.length === 1
-            ? 'Someone is typing...'
-            : `${typingUsers.length} people are typing...`}
+            ? `${typingUsers[0].displayName} is typing...`
+            : `${typingUsers
+                .slice(0, 2)
+                .map((user) => user.displayName)
+                .join(
+                  ', ',
+                )}${typingUsers.length > 2 ? ` and ${typingUsers.length - 2} more` : ''} are typing...`}
         </div>
       ) : null}
 
@@ -695,6 +757,28 @@ export function ChatPanel({
           )}
         </button>
       </form>
+
+      {previewAttachment ? (
+        <div className="media-preview-overlay" onClick={() => setPreviewAttachment(null)}>
+          <div className="media-preview" onClick={(event) => event.stopPropagation()}>
+            <div className="media-preview-header">
+              <strong>{previewAttachment.fileName}</strong>
+              <button
+                type="button"
+                onClick={() => setPreviewAttachment(null)}
+                title="Close preview"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {previewAttachment.kind === 'image' ? (
+              <img src={previewAttachment.url} alt={previewAttachment.fileName} />
+            ) : (
+              <video src={previewAttachment.url} controls autoPlay />
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

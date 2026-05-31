@@ -493,6 +493,17 @@ input:focus {
   color: #fff;
 }
 
+.server-orb.add-server {
+  margin-top: auto;
+  color: var(--green-360);
+  background: var(--bg-secondary-solid);
+}
+
+.server-orb.add-server:hover {
+  color: #fff;
+  background: var(--green-360);
+}
+
 .accent-0 {
   --avatar-bg: #5865f2;
   --avatar-text: #fff;
@@ -543,10 +554,13 @@ input:focus {
 .member-sidebar {
   padding: 0;
   background: var(--bg-secondary);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .server-header,
 .chat-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -590,6 +604,51 @@ input:focus {
 
 .server-header span {
   display: none; /* Discord hides description in the header */
+}
+
+.server-dropdown-button {
+  min-width: 0;
+  width: auto !important;
+  flex: 1;
+  justify-content: space-between;
+  padding: 0 0 0 2px;
+  text-align: left;
+}
+
+.server-dropdown-button svg {
+  flex-shrink: 0;
+  color: var(--interactive-normal);
+}
+
+.server-menu {
+  position: absolute;
+  top: 44px;
+  left: 8px;
+  right: 8px;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--bg-floating);
+  box-shadow: var(--elevation-high);
+  animation: panel-drop-in 0.16s ease-out both;
+}
+
+.server-menu button {
+  width: 100%;
+  height: 34px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  justify-content: start;
+  gap: 8px;
+  padding: 0 8px;
+  color: var(--interactive-normal);
+  text-align: left;
+}
+
+.server-menu button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
 }
 
 .chat-title strong {
@@ -638,6 +697,7 @@ input:focus {
 .member-title {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 4px;
   padding: 18px 8px 4px 2px;
   color: var(--text-muted);
@@ -650,11 +710,27 @@ input:focus {
 }
 
 .section-title svg {
-  display: none; /* Discord doesn't show icons in section titles */
+  display: block;
+}
+
+.section-title button {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 3px;
+  color: var(--interactive-normal);
+  background: transparent;
+}
+
+.section-title button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
 }
 
 .member-title {
-  padding: 16px 8px 8px 16px;
+  padding: 20px 8px 8px 16px;
 }
 
 .member-title svg {
@@ -766,7 +842,7 @@ input:focus {
 }
 
 .channel-search {
-  display: grid;
+  display: none;
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
   gap: 6px;
@@ -776,6 +852,11 @@ input:focus {
   border-radius: 4px;
   color: var(--interactive-muted);
   background: var(--input-background);
+}
+
+.channel-search.open {
+  display: grid;
+  animation: panel-drop-in 0.16s ease-out both;
 }
 
 .channel-search input {
@@ -823,6 +904,40 @@ input:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 15px;
+}
+
+.channel-live-badge,
+.channel-mention-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: 999px;
+  font-size: 11px !important;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.channel-live-badge {
+  padding: 0 7px;
+  color: #fff;
+  background: var(--green-360);
+}
+
+.channel-mention-badge {
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--status-danger);
+}
+
+.channel-unread-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--interactive-normal);
 }
 
 .channel-list button:hover {
@@ -1189,6 +1304,41 @@ input:focus {
 
 .utility-panel label {
   text-transform: uppercase;
+}
+
+.notification-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.notification-panel > strong {
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.notification-panel button {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  padding: 8px;
+  color: var(--text-normal);
+  background: var(--bg-secondary);
+  text-align: left;
+}
+
+.notification-panel button:hover {
+  background: var(--bg-modifier-hover);
+}
+
+.notification-panel button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notification-empty {
@@ -1914,8 +2064,10 @@ input:focus {
 .image-attachment {
   display: block;
   max-height: 350px;
+  padding: 0;
   background: transparent;
   border-radius: 8px;
+  cursor: zoom-in;
 }
 
 .image-attachment img {
@@ -1940,10 +2092,28 @@ input:focus {
 }
 
 .video-attachment span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   color: var(--text-normal);
   font-size: 13px;
   padding: 0 4px;
   overflow-wrap: anywhere;
+}
+
+.video-attachment span button {
+  border: 0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--interactive-normal);
+  background: var(--bg-modifier-hover);
+  font-size: 12px;
+}
+
+.video-attachment span button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-active);
 }
 
 .file-attachment {
@@ -2078,6 +2248,163 @@ input:focus {
   min-width: 24px;
   min-height: 24px;
   font-size: 13px;
+}
+
+/* ===== Media Preview ===== */
+
+.media-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.78);
+  animation: fade-in 0.16s ease-out both;
+}
+
+.media-preview {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 64px);
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-floating);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.58);
+  animation: modal-pop-in 0.18s ease-out both;
+}
+
+.media-preview-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--background-modifier-accent);
+}
+
+.media-preview-header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.media-preview-header button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: transparent;
+}
+
+.media-preview-header button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.media-preview img,
+.media-preview video {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  background: #000;
+}
+
+/* ===== Discord-style Creation Modals ===== */
+
+.server-add-modal,
+.channel-create-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 720;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.64);
+  animation: fade-in 0.16s ease-out both;
+}
+
+.server-add-card,
+.channel-create-card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 8px;
+  background: var(--bg-primary-solid);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.56);
+  animation: modal-pop-in 0.18s ease-out both;
+}
+
+.server-add-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-add-header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--header-primary);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.server-add-header button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: transparent;
+}
+
+.server-add-header button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.server-action-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.server-action-tabs button {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.server-action-tabs button:hover,
+.server-action-tabs button.active {
+  color: var(--interactive-active);
+  background: var(--bg-modifier-selected);
+}
+
+.modal-form {
+  display: grid;
+  gap: 14px;
 }
 
 /* ===== Edit Row ===== */
@@ -2282,6 +2609,14 @@ input:focus {
   display: grid;
   gap: 2px;
   padding: 0 8px;
+}
+
+.member-group:first-child .member-title {
+  padding-top: 16px;
+}
+
+.member-empty {
+  padding: 16px;
 }
 
 .member {

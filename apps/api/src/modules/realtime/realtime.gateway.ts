@@ -147,9 +147,14 @@ export class RealtimeGateway implements OnGatewayConnection {
     this.assertSocketRateLimit(client, 'typing:start', 20, 30_000);
     const user = this.getUser(client);
     await this.assertChannelMember(user.id, body.channelId);
+    const profile = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { displayName: true, username: true },
+    });
     client.to(this.channelRoom(body.channelId)).emit('typing:start', {
       channelId: body.channelId,
       userId: user.id,
+      displayName: profile?.displayName ?? profile?.username ?? 'Someone',
     });
     return { ok: true };
   }

@@ -13,6 +13,28 @@ Real-time Discord-style chat application built as a full-stack monorepo with Rea
 - Security-focused backend hardening: DTO validation, upload type allowlist, rate limiting, Helmet/CORS setup, and guarded private endpoints.
 - Maintainable frontend structure: `AppShell` is split into focused components and hooks such as chat panel, settings modal, workspace sidebar, member sidebar, and channel call hook.
 
+## Feature Roadmap
+
+Recently added:
+
+- Active screen-share and call banner in text channels, including receive-only `Join stream`.
+- Named typing indicators, so the composer can show who is typing instead of a generic message.
+- Channel unread indicators and mention badges for visited channels.
+- Local pinned-message panel from the notifications toolbar.
+- Image and video preview overlay for message attachments.
+- Auth-screen visual polish, motion, and responsive background treatment.
+
+Recommended next features:
+
+- Direct Messages: 1:1 conversation list, realtime DM room, unread DM count, and a focused DM chat surface.
+- Friends: friend requests, accept/decline/block flows, and friend-scoped presence.
+- Persistent read state: store last-read message per channel/user in PostgreSQL instead of keeping unread UI state client-side.
+- Persistent pinned messages: promote the current local pin UI into a server-backed pin table with permission checks.
+- Channel permission overrides: allow roles/members to override `VIEW_CHANNEL`, `SEND_MESSAGES`, and voice permissions per channel.
+- Voice channel occupancy: show joined users under voice channels and allow joining the voice channel directly from the sidebar.
+- Notification settings: mute server/channel, only mentions, desktop notifications, and notification inbox.
+- Deployment hardening: production migrations, health checks for Render, seed-safe demo data, and CI smoke tests against deployed URLs.
+
 ## Tech Stack
 
 - Frontend: React, Vite, TypeScript, Socket.IO client, lucide-react.
