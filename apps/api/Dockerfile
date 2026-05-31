@@ -23,6 +23,7 @@ RUN npm ci --omit=dev --workspace apps/api --workspace packages/shared
 COPY --from=build /app/apps/api/dist apps/api/dist
 COPY --from=build /app/apps/api/prisma apps/api/prisma
 COPY --from=build /app/packages/shared/dist packages/shared/dist
+RUN npm exec --workspace apps/api prisma generate
 RUN mkdir -p apps/api/uploads
 EXPOSE 3000
 WORKDIR /app/apps/api
