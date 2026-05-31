@@ -613,6 +613,13 @@ export function AppShell() {
     setPendingAction('create-invite');
     setWorkspaceError(null);
     try {
+      if (inviteCode) {
+        await navigator.clipboard?.writeText(inviteCode);
+        setWorkspaceNotice('Invite code copied.');
+        window.setTimeout(() => setWorkspaceNotice(null), 1600);
+        return;
+      }
+
       const result = await apiRequest<{ invite: { code: string } }>(
         `/servers/${server.id}/invites`,
         {
@@ -622,7 +629,9 @@ export function AppShell() {
         auth.accessToken,
       );
       setInviteCode(result.invite.code);
-      setWorkspaceNotice('Invite created. Click the code to copy it.');
+      await navigator.clipboard?.writeText(result.invite.code);
+      setWorkspaceNotice('Invite created and copied.');
+      window.setTimeout(() => setWorkspaceNotice(null), 1600);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot create invite');
     } finally {
@@ -1110,13 +1119,6 @@ export function AppShell() {
     }
   }
 
-  async function copyInviteCode() {
-    if (!inviteCode) return;
-    await navigator.clipboard?.writeText(inviteCode);
-    setWorkspaceNotice('Invite code copied.');
-    window.setTimeout(() => setWorkspaceNotice(null), 1600);
-  }
-
   async function loadMoreMessages() {
     if (!auth || !channel || !messageCursor || isLoadingMoreMessages) return;
     setIsLoadingMoreMessages(true);
@@ -1253,7 +1255,6 @@ export function AppShell() {
         joinInvite={joinInvite}
         createChannel={createChannel}
         createInvite={createInvite}
-        copyInviteCode={copyInviteCode}
         updateProfileAvatar={updateProfileAvatar}
         logout={logout}
         setChannel={setChannel}

@@ -1,6 +1,5 @@
 import {
   ChevronDown,
-  Copy,
   Edit3,
   Hash,
   Loader2,
@@ -42,7 +41,6 @@ interface WorkspaceSidebarProps {
   joinInvite: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   createChannel: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   createInvite: () => Promise<void>;
-  copyInviteCode: () => Promise<void>;
   updateProfileAvatar: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   logout: () => void;
   setChannel: (channel: Channel) => void;
@@ -69,7 +67,6 @@ export function WorkspaceSidebar({
   joinInvite,
   createChannel,
   createInvite,
-  copyInviteCode,
   updateProfileAvatar,
   logout,
   setChannel,
@@ -133,7 +130,9 @@ export function WorkspaceSidebar({
             aria-expanded={serverMenuOpen}
           >
             <strong>{server?.name || 'Create a server'}</strong>
-            <ChevronDown size={16} />
+            <span className="server-dropdown-indicator" aria-hidden="true">
+              <ChevronDown size={15} />
+            </span>
           </button>
           {serverMenuOpen && server ? (
             <div className="server-menu">
@@ -163,10 +162,7 @@ export function WorkspaceSidebar({
                 Invite People
               </button>
               {inviteCode ? (
-                <button type="button" onClick={() => void copyInviteCode()}>
-                  <Copy size={16} />
-                  Copy Invite Code
-                </button>
+                <span className="server-menu-hint">Invite is ready to paste</span>
               ) : null}
             </div>
           ) : null}
