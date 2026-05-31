@@ -59,7 +59,7 @@ try {
 
   const message = `UI smoke ${new Date().toISOString()} https://example.com/smoke`;
   await page.$eval('.file-input', (input, filePath) => input.setAttribute('data-smoke-path', filePath), uploadFixturePath);
-  const fileInput = await page.$('.file-input');
+  const fileInput = await page.$('.composer .file-input');
   await fileInput.uploadFile(uploadFixturePath);
   await page.type('[data-testid="composer-input"]', message);
   await page.click('[data-testid="composer-send"]');
@@ -74,7 +74,7 @@ try {
   );
   const firstMessage = await page.$('[data-testid="message"]');
   await firstMessage.hover();
-  await page.click('button[title="React"]');
+  await page.click('.quick-reactions button');
   await page.waitForFunction(
     () => [...document.querySelectorAll('.reaction-row button')].some((button) => button.textContent.includes('1')),
     { timeout: 10000 }

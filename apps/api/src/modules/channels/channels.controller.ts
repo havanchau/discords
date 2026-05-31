@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/current-user.decorator';
 import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
+import { UpdateChannelDto } from './dto/update-channel.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
@@ -27,5 +28,14 @@ export class ChannelsController {
   @Get('channels/:channelId')
   getOne(@CurrentUser() user: RequestUser, @Param('channelId') channelId: string) {
     return this.channels.getChannel(user.id, channelId);
+  }
+
+  @Patch('channels/:channelId')
+  update(
+    @CurrentUser() user: RequestUser,
+    @Param('channelId') channelId: string,
+    @Body() dto: UpdateChannelDto
+  ) {
+    return this.channels.updateChannel(user.id, channelId, dto);
   }
 }

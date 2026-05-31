@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { RateLimitGuard } from './common/rate-limit.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { HealthModule } from './modules/health/health.module';
@@ -26,6 +28,12 @@ import { UsersModule } from './modules/users/users.module';
     RolesModule,
     UploadsModule,
     RealtimeModule
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RateLimitGuard
+    }
   ]
 })
 export class AppModule {}

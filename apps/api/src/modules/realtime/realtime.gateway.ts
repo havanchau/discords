@@ -1,4 +1,4 @@
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -44,6 +44,7 @@ export class RealtimeGateway implements OnGatewayConnection {
   private readonly logger = new Logger(RealtimeGateway.name);
   private readonly callParticipants = new Map<string, Map<string, CallParticipant>>();
   private readonly socketCalls = new Map<string, Set<string>>();
+  private readonly socketRateLimits = new Map<string, { count: number; resetAt: number }>();
 
   constructor(
     private readonly jwt: JwtService,
@@ -105,6 +106,7 @@ export class RealtimeGateway implements OnGatewayConnection {
       attachments?: MessageAttachmentInputDto[];
     }
   ) {
+    this.assertSocketRateLimit(client, 'message:create', 20, 60_000);
     const user = this.getUser(client);
     const result = await this.messages.createMessage(user.id, body.channelId, {
       content: body.content,
@@ -120,6 +122,7 @@ export class RealtimeGateway implements OnGatewayConnection {
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { channelId: string; messageId: string; emoji: string }
   ) {
+    this.assertSocketRateLimit(client, 'reaction:toggle', 60, 60_000);
     const user = this.getUser(client);
     const result = await this.messages.toggleReaction(user.id, body.messageId, {
       emoji: body.emoji
@@ -133,6 +136,7 @@ export class RealtimeGateway implements OnGatewayConnection {
 
   @SubscribeMessage('typing:start')
   async typingStart(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    this.assertSocketRateLimit(client, 'typing:start', 20, 30_000);
     const user = this.getUser(client);
     await this.assertChannelMember(user.id, body.channelId);
     client.to(this.channelRoom(body.channelId)).emit('typing:start', {
@@ -144,6 +148,7 @@ export class RealtimeGateway implements OnGatewayConnection {
 
   @SubscribeMessage('typing:stop')
   async typingStop(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    this.assertSocketRateLimit(client, 'typing:stop', 20, 30_000);
     const user = this.getUser(client);
     await this.assertChannelMember(user.id, body.channelId);
     client.to(this.channelRoom(body.channelId)).emit('typing:stop', {
@@ -165,6 +170,7 @@ export class RealtimeGateway implements OnGatewayConnection {
       isSharingScreen?: boolean;
     }
   ) {
+    this.assertSocketRateLimit(client, 'voice:join', 10, 60_000);
     const user = this.getUser(client);
     const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
     const member = await this.prisma.serverMember.findUnique({
@@ -212,6 +218,7 @@ export class RealtimeGateway implements OnGatewayConnection {
       mode?: 'voice' | 'video' | 'screen';
     }
   ) {
+    this.assertSocketRateLimit(client, 'voice:state', 30, 60_000);
     const participant = this.callParticipants.get(body.channelId)?.get(client.id);
     if (!participant) return { ok: false };
 
@@ -242,6 +249,8 @@ export class RealtimeGateway implements OnGatewayConnection {
     @MessageBody()
     body: { channelId: string; targetSocketId: string; offer: unknown }
   ) {
+    this.assertSocketRateLimit(client, 'webrtc:offer', 30, 60_000);
+    this.assertCallPeer(client, body.channelId, body.targetSocketId);
     this.server.to(body.targetSocketId).emit('webrtc:offer', {
       channelId: body.channelId,
       fromSocketId: client.id,
@@ -255,6 +264,8 @@ export class RealtimeGateway implements OnGatewayConnection {
     @MessageBody()
     body: { channelId: string; targetSocketId: string; answer: unknown }
   ) {
+    this.assertSocketRateLimit(client, 'webrtc:answer', 30, 60_000);
+    this.assertCallPeer(client, body.channelId, body.targetSocketId);
     this.server.to(body.targetSocketId).emit('webrtc:answer', {
       channelId: body.channelId,
       fromSocketId: client.id,
@@ -268,6 +279,8 @@ export class RealtimeGateway implements OnGatewayConnection {
     @MessageBody()
     body: { channelId: string; targetSocketId: string; candidate: unknown }
   ) {
+    this.assertSocketRateLimit(client, 'webrtc:ice-candidate', 120, 60_000);
+    this.assertCallPeer(client, body.channelId, body.targetSocketId);
     this.server.to(body.targetSocketId).emit('webrtc:ice-candidate', {
       channelId: body.channelId,
       fromSocketId: client.id,
@@ -357,6 +370,34 @@ export class RealtimeGateway implements OnGatewayConnection {
   private leaveAllCalls(client: Socket) {
     const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
     channelIds.forEach((channelId) => this.leaveCall(client, channelId));
+    for (const key of this.socketRateLimits.keys()) {
+      if (key.startsWith(`${client.id}:`)) {
+        this.socketRateLimits.delete(key);
+      }
+    }
+  }
+
+  private assertCallPeer(client: Socket, channelId: string, targetSocketId: string) {
+    const participants = this.callParticipants.get(channelId);
+    if (!participants?.has(client.id) || !participants.has(targetSocketId)) {
+      throw new UnauthorizedException('Target is not in the call');
+    }
+  }
+
+  private assertSocketRateLimit(client: Socket, event: string, limit: number, windowMs: number) {
+    const now = Date.now();
+    const key = `${client.id}:${event}`;
+    const bucket = this.socketRateLimits.get(key);
+
+    if (!bucket || bucket.resetAt <= now) {
+      this.socketRateLimits.set(key, { count: 1, resetAt: now + windowMs });
+      return;
+    }
+
+    bucket.count += 1;
+    if (bucket.count > limit) {
+      throw new HttpException('Socket rate limit exceeded', HttpStatus.TOO_MANY_REQUESTS);
+    }
   }
 
   private async assertChannelMember(userId: string, channelId: string) {

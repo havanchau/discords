@@ -27,7 +27,9 @@ export interface User {
   username: string;
   displayName: string;
   avatarUrl?: string | null;
+  bio?: string | null;
   status?: string;
+  emailVerifiedAt?: string | null;
 }
 
 export interface ServerSummary {
@@ -39,6 +41,7 @@ export interface ServerSummary {
 
 export interface ServerDetail extends ServerSummary {
   members: Array<{ id: string; user: User; kind: string; roles?: Array<{ role: Role }> }>;
+  roles: Role[];
 }
 
 export interface Role {
@@ -54,6 +57,7 @@ export interface Channel {
   name: string;
   type: 'TEXT' | 'VOICE';
   topic?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface Message {

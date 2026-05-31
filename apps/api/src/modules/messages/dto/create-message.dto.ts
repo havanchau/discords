@@ -3,6 +3,8 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsIn,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -17,6 +19,17 @@ export class MessageAttachmentInputDto {
 
   @IsString()
   @MaxLength(120)
+  @IsIn([
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/webm',
+    'application/pdf',
+    'text/plain',
+    'application/zip'
+  ])
   mimeType!: string;
 
   @IsInt()
@@ -26,6 +39,9 @@ export class MessageAttachmentInputDto {
 
   @IsString()
   @MaxLength(1000)
+  @Matches(/^\/uploads\/[0-9a-f-]{36}\.(?:jpg|jpeg|png|gif|webp|mp4|webm|pdf|txt|zip)$/i, {
+    message: 'Attachment URL must reference an uploaded local file'
+  })
   url!: string;
 }
 

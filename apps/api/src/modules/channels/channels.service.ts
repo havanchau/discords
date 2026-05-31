@@ -3,6 +3,7 @@ import { Permission, PermissionsService } from '../permissions/permissions.servi
 import { PrismaService } from '../prisma/prisma.service';
 import { ServersService } from '../servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
+import { UpdateChannelDto } from './dto/update-channel.dto';
 
 @Injectable()
 export class ChannelsService {
@@ -45,6 +46,23 @@ export class ChannelsService {
     }
     await this.servers.requireMembership(userId, channel.serverId);
     await this.permissions.requireServerPermission(userId, channel.serverId, Permission.ViewChannel);
+    return { channel };
+  }
+
+  async updateChannel(userId: string, channelId: string, dto: UpdateChannelDto) {
+    const existing = await this.prisma.channel.findUnique({ where: { id: channelId } });
+    if (!existing) {
+      throw new NotFoundException('Channel not found');
+    }
+    await this.permissions.requireServerPermission(userId, existing.serverId, Permission.ManageChannels);
+    const channel = await this.prisma.channel.update({
+      where: { id: channelId },
+      data: {
+        name: dto.name ? this.servers.normalizeChannelName(dto.name) : undefined,
+        topic: dto.topic,
+        avatarUrl: dto.avatarUrl
+      }
+    });
     return { channel };
   }
 

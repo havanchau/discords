@@ -1,6 +1,6 @@
 # Discord Clone - Implementation Plan
 
-Plan này bám theo `AGENT.md`, `RULE.md` và `discord-clone-feature-spec.md`. Mục tiêu là đi từ nền tảng kỹ thuật đến MVP demo được, sau đó mở rộng bằng permission, DM, voice/video và production polish.
+Plan này bám theo `AGENT.md`, `RULE.md`, `docs` và `discord-clone-feature-spec.md`. Mục tiêu là đi từ nền tảng kỹ thuật đến MVP demo được, sau đó mở rộng bằng permission, DM, voice/video và production polish.
 
 ## Quy Ước Chung
 

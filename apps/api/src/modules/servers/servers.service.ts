@@ -5,6 +5,7 @@ import { Permission, PermissionsService } from '../permissions/permissions.servi
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
+import { UpdateServerDto } from './dto/update-server.dto';
 
 const DEFAULT_MEMBER_PERMISSIONS = [
   'VIEW_CHANNEL',
@@ -112,6 +113,18 @@ export class ServersService {
     return { server };
   }
 
+  async updateServer(userId: string, serverId: string, dto: UpdateServerDto) {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageServer);
+    await this.prisma.server.update({
+      where: { id: serverId },
+      data: {
+        name: dto.name?.trim(),
+        description: dto.description?.trim()
+      }
+    });
+    return this.getServerForUser(userId, serverId);
+  }
+
   async createInvite(userId: string, serverId: string, dto: CreateInviteDto) {
     await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
     if (dto.channelId) {
@@ -129,7 +142,8 @@ export class ServersService {
         serverId,
         channelId: dto.channelId,
         creatorId: userId,
-        maxUses: dto.maxUses
+        maxUses: dto.maxUses ?? 100,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
       }
     });
     return { invite };
@@ -153,22 +167,47 @@ export class ServersService {
       throw new ForbiddenException('Invite usage limit reached');
     }
 
-    const member = await this.prisma.serverMember.upsert({
-      where: { userId_serverId: { userId, serverId: invite.serverId } },
-      create: {
-        userId,
-        serverId: invite.serverId,
-        kind: 'MEMBER'
-      },
-      update: {}
+    const { member, joinedNow } = await this.prisma.$transaction(async (tx) => {
+      const existingMember = await tx.serverMember.findUnique({
+        where: { userId_serverId: { userId, serverId: invite.serverId } }
+      });
+      const member =
+        existingMember ??
+        (await tx.serverMember.create({
+          data: {
+            userId,
+            serverId: invite.serverId,
+            kind: 'MEMBER'
+          }
+        }));
+      const everyoneRole = await tx.role.upsert({
+        where: { serverId_name: { serverId: invite.serverId, name: '@everyone' } },
+        create: {
+          serverId: invite.serverId,
+          name: '@everyone',
+          position: 0,
+          permissions: DEFAULT_MEMBER_PERMISSIONS
+        },
+        update: {}
+      });
+
+      await tx.memberRole.upsert({
+        where: { memberId_roleId: { memberId: member.id, roleId: everyoneRole.id } },
+        create: { memberId: member.id, roleId: everyoneRole.id },
+        update: {}
+      });
+
+      if (!existingMember) {
+        await tx.invite.update({
+          where: { id: invite.id },
+          data: { usedCount: { increment: 1 } }
+        });
+      }
+
+      return { member, joinedNow: !existingMember };
     });
 
-    await this.prisma.invite.update({
-      where: { id: invite.id },
-      data: { usedCount: { increment: 1 } }
-    });
-
-    return { serverId: invite.serverId, channelId: invite.channelId, member };
+    return { serverId: invite.serverId, channelId: invite.channelId, member, joinedNow };
   }
 
   async requireMembership(userId: string, serverId: string) {

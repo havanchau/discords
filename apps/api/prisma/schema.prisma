@@ -41,15 +41,29 @@ model User {
   avatarUrl             String?
   bio                   String?
   status                UserStatus                 @default(OFFLINE)
+  emailVerifiedAt       DateTime?
   createdAt             DateTime                   @default(now())
   updatedAt             DateTime                   @updatedAt
   sessions              Session[]
+  emailVerificationTokens EmailVerificationToken[]
   memberships           ServerMember[]
   messages              Message[]
   createdServers         Server[]                   @relation("ServerOwner")
   sentFriendRequests    FriendRequest[]            @relation("FriendRequester")
   receivedFriendRequests FriendRequest[]           @relation("FriendReceiver")
   conversations          DirectConversationMember[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model Session {
@@ -123,6 +137,7 @@ model Channel {
   name      String
   type      ChannelType @default(TEXT)
   topic     String?
+  avatarUrl String?
   position  Int         @default(0)
   isPrivate Boolean     @default(false)
   createdAt DateTime    @default(now())

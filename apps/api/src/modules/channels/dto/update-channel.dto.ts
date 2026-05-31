@@ -1,15 +1,15 @@
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
-export class UpdateMeDto {
+export class UpdateChannelDto {
   @IsOptional()
   @IsString()
-  @MaxLength(64)
-  displayName?: string;
+  @MaxLength(80)
+  name?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(280)
-  bio?: string;
+  @MaxLength(200)
+  topic?: string;
 
   @IsOptional()
   @IsString()

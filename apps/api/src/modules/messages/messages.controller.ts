@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/current-user.decorator';
+import { RateLimit } from '../../common/rate-limit.decorator';
 import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -21,6 +22,7 @@ export class MessagesController {
     return this.messages.listMessages(user.id, channelId, cursor);
   }
 
+  @RateLimit({ keyPrefix: 'message-create', limit: 30, windowMs: 60_000 })
   @Post('channels/:channelId/messages')
   create(
     @CurrentUser() user: RequestUser,
@@ -44,6 +46,7 @@ export class MessagesController {
     return this.messages.deleteMessage(user.id, messageId);
   }
 
+  @RateLimit({ keyPrefix: 'reaction-toggle', limit: 60, windowMs: 60_000 })
   @Post('messages/:messageId/reactions')
   react(
     @CurrentUser() user: RequestUser,
