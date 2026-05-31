@@ -34,6 +34,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
     const handleUserJoined = (payload: { channelId: string; participant: CallParticipant }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
       setRemoteMedia((current) => upsertRemote(current, payload.participant));
+      void createOffer(payload.participant.socketId, payload.channelId);
     };
 
     const handleUserUpdated = (payload: { channelId: string; participant: CallParticipant }) => {
@@ -52,7 +53,7 @@ export function useChannelCall({ auth, channel, socket, setWorkspaceError }: Use
       fromSocketId: string;
       offer: RTCSessionDescriptionInit;
     }) => {
-      if (payload.channelId !== callStateRef.current?.channelId || !localStreamRef.current) return;
+      if (payload.channelId !== callStateRef.current?.channelId) return;
       const peer = createPeer(payload.fromSocketId, payload.channelId);
       await peer.setRemoteDescription(new RTCSessionDescription(payload.offer));
       const answer = await peer.createAnswer();
