@@ -58,6 +58,8 @@ export interface Channel {
   type: 'TEXT' | 'VOICE';
   topic?: string | null;
   avatarUrl?: string | null;
+  position?: number;
+  isPrivate?: boolean;
 }
 
 export interface Message {
@@ -91,18 +93,18 @@ export interface MessageReaction {
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
-  token?: string | null
+  token?: string | null,
 ): Promise<T> {
   let response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: buildHeaders(options.headers, token)
+    headers: buildHeaders(options.headers, token),
   });
 
   if (response.status === 401 && token && authRefreshConfig) {
     const nextAuth = await refreshAuth();
     response = await fetch(`${API_URL}${path}`, {
       ...options,
-      headers: buildHeaders(options.headers, nextAuth.accessToken)
+      headers: buildHeaders(options.headers, nextAuth.accessToken),
     });
   }
 
@@ -121,9 +123,9 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
   const response = await fetch(`${API_URL}/uploads`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     },
-    body: form
+    body: form,
   });
 
   if (response.status === 401 && authRefreshConfig) {
@@ -149,7 +151,7 @@ function buildHeaders(headers: RequestInit['headers'], token?: string | null) {
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...headers
+    ...headers,
   };
 }
 
@@ -178,7 +180,7 @@ async function refreshAuthState(config: AuthRefreshConfig) {
   const response = await fetch(`${API_URL}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken: current.refreshToken })
+    body: JSON.stringify({ refreshToken: current.refreshToken }),
   });
 
   if (!response.ok) {

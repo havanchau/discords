@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 
 export class UpdateChannelDto {
   @IsOptional()
@@ -12,10 +12,22 @@ export class UpdateChannelDto {
   topic?: string;
 
   @IsOptional()
+  @IsBoolean()
+  isPrivate?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  position?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/image\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp)$/i, {
-    message: 'Avatar URL must reference an uploaded image'
-  })
+  @Matches(
+    /^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/image\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp)$/i,
+    {
+      message: 'Avatar URL must reference an uploaded image',
+    },
+  )
   avatarUrl?: string;
 }

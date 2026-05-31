@@ -39,7 +39,7 @@ export function SettingsModal({
   createRole,
   toggleRolePermission,
   deleteRole,
-  toggleMemberRole
+  toggleMemberRole,
 }: SettingsModalProps) {
   if (!activeDialog) return null;
 
@@ -70,31 +70,99 @@ export function SettingsModal({
 
         {activeDialog === 'profile' ? (
           <form className="settings-form" onSubmit={updateProfile}>
-            <div className="settings-avatar-row">
-              <button type="button" className="avatar-button modal-avatar" onClick={() => profileAvatarInputRef.current?.click()}>
-                {auth.user.avatarUrl ? (
-                  <img src={assetUrl(auth.user.avatarUrl)} alt={auth.user.displayName} />
-                ) : (
-                  <span className={`avatar ${accentClass(auth.user.id)}`}>{initials(auth.user.displayName)}</span>
-                )}
-              </button>
-              <button type="button" className="wide-command" onClick={() => profileAvatarInputRef.current?.click()}>
-                Change avatar
-              </button>
-            </div>
-            <label>
-              Display name
-              <input name="displayName" defaultValue={auth.user.displayName} maxLength={64} required />
-            </label>
-            <label>
-              Bio
-              <input name="bio" defaultValue={auth.user.bio ?? ''} maxLength={280} placeholder="Short profile note" />
-            </label>
+            <section className="settings-section">
+              <div className="settings-section-heading">
+                <strong>Profile</strong>
+                <span>How other members see you across servers.</span>
+              </div>
+              <div className="settings-avatar-row">
+                <button
+                  type="button"
+                  className="avatar-button modal-avatar"
+                  onClick={() => profileAvatarInputRef.current?.click()}
+                >
+                  {auth.user.avatarUrl ? (
+                    <img src={assetUrl(auth.user.avatarUrl)} alt={auth.user.displayName} />
+                  ) : (
+                    <span className={`avatar ${accentClass(auth.user.id)}`}>
+                      {initials(auth.user.displayName)}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="wide-command"
+                  onClick={() => profileAvatarInputRef.current?.click()}
+                >
+                  Change avatar
+                </button>
+              </div>
+              <label>
+                Display name
+                <input
+                  name="displayName"
+                  defaultValue={auth.user.displayName}
+                  maxLength={64}
+                  required
+                />
+              </label>
+              <label>
+                Bio
+                <textarea
+                  name="bio"
+                  defaultValue={auth.user.bio ?? ''}
+                  maxLength={280}
+                  placeholder="Short profile note"
+                />
+              </label>
+            </section>
+
+            <section className="settings-section">
+              <div className="settings-section-heading">
+                <strong>Account</strong>
+                <span>Identity and presence controls.</span>
+              </div>
+              <div className="settings-grid">
+                <label>
+                  Username
+                  <input value={auth.user.username} readOnly className="readonly-input" />
+                </label>
+                <label>
+                  Email
+                  <input value={auth.user.email} readOnly className="readonly-input" />
+                </label>
+              </div>
+              <label>
+                Status
+                <select name="status" defaultValue={auth.user.status ?? 'ONLINE'}>
+                  <option value="ONLINE">Online</option>
+                  <option value="IDLE">Idle</option>
+                  <option value="DND">Do Not Disturb</option>
+                  <option value="INVISIBLE">Invisible</option>
+                </select>
+              </label>
+              <div className="profile-preview">
+                <div className={`avatar small ${accentClass(auth.user.id)}`}>
+                  {auth.user.avatarUrl ? (
+                    <img src={assetUrl(auth.user.avatarUrl)} alt={auth.user.displayName} />
+                  ) : (
+                    initials(auth.user.displayName)
+                  )}
+                </div>
+                <div>
+                  <strong>{auth.user.displayName}</strong>
+                  <span>@{auth.user.username}</span>
+                </div>
+              </div>
+            </section>
             <footer className="settings-modal-footer">
               <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
               </button>
-              <button className="primary compact-primary" disabled={pendingAction === 'profile-update'}>
+              <button
+                className="primary compact-primary"
+                disabled={pendingAction === 'profile-update'}
+              >
                 Save changes
               </button>
             </footer>
@@ -103,7 +171,11 @@ export function SettingsModal({
 
         {activeDialog === 'server-settings' && server ? (
           <form className="settings-form" onSubmit={updateServerSettings}>
-            <button type="button" className="wide-command settings-secondary-action" onClick={() => setActiveDialog('roles')}>
+            <button
+              type="button"
+              className="wide-command settings-secondary-action"
+              onClick={() => setActiveDialog('roles')}
+            >
               Manage roles and permissions
             </button>
             <label>
@@ -118,7 +190,10 @@ export function SettingsModal({
               <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
               </button>
-              <button className="primary compact-primary" disabled={pendingAction === 'server-update'}>
+              <button
+                className="primary compact-primary"
+                disabled={pendingAction === 'server-update'}
+              >
                 Save changes
               </button>
             </footer>
@@ -127,27 +202,85 @@ export function SettingsModal({
 
         {activeDialog === 'channel-settings' && channel ? (
           <form className="settings-form" onSubmit={updateChannelSettings}>
-            <div className="settings-avatar-row">
-              <button type="button" className="channel-avatar-button modal-avatar" onClick={() => channelAvatarInputRef.current?.click()}>
-                {channel.avatarUrl ? <img src={assetUrl(channel.avatarUrl)} alt={channel.name} /> : <Hash size={24} />}
-              </button>
-              <button type="button" className="wide-command" onClick={() => channelAvatarInputRef.current?.click()}>
-                Change channel avatar
-              </button>
-            </div>
-            <label>
-              Channel name
-              <input name="name" defaultValue={channel.name} maxLength={80} required />
-            </label>
-            <label>
-              Topic
-              <input name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
-            </label>
+            <section className="settings-section">
+              <div className="settings-section-heading">
+                <strong>Overview</strong>
+                <span>Basic channel identity and placement.</span>
+              </div>
+              <div className="settings-avatar-row">
+                <button
+                  type="button"
+                  className="channel-avatar-button modal-avatar"
+                  onClick={() => channelAvatarInputRef.current?.click()}
+                >
+                  {channel.avatarUrl ? (
+                    <img src={assetUrl(channel.avatarUrl)} alt={channel.name} />
+                  ) : (
+                    <Hash size={24} />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="wide-command"
+                  onClick={() => channelAvatarInputRef.current?.click()}
+                >
+                  Change channel avatar
+                </button>
+              </div>
+              <div className="settings-grid">
+                <label>
+                  Channel name
+                  <input name="name" defaultValue={channel.name} maxLength={80} required />
+                </label>
+                <label>
+                  Position
+                  <input
+                    name="position"
+                    type="number"
+                    min={0}
+                    defaultValue={channel.position ?? 0}
+                  />
+                </label>
+              </div>
+              <label>
+                Topic
+                <textarea name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
+              </label>
+            </section>
+
+            <section className="settings-section">
+              <div className="settings-section-heading">
+                <strong>Access</strong>
+                <span>Control channel visibility for regular members.</span>
+              </div>
+              <label className="switch-row">
+                <span>
+                  <strong>Private channel</strong>
+                  <small>Hide this channel from members without view permission.</small>
+                </span>
+                <input
+                  name="isPrivate"
+                  type="checkbox"
+                  defaultChecked={Boolean(channel.isPrivate)}
+                />
+              </label>
+              <label>
+                Channel type
+                <input
+                  value={channel.type === 'VOICE' ? 'Voice channel' : 'Text channel'}
+                  readOnly
+                  className="readonly-input"
+                />
+              </label>
+            </section>
             <footer className="settings-modal-footer">
               <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
               </button>
-              <button className="primary compact-primary" disabled={pendingAction === 'channel-update'}>
+              <button
+                className="primary compact-primary"
+                disabled={pendingAction === 'channel-update'}
+              >
                 Save changes
               </button>
             </footer>
@@ -187,7 +320,10 @@ export function SettingsModal({
                   </label>
                 ))}
               </div>
-              <button className="primary compact-primary role-create-submit" disabled={pendingAction === 'role-create'}>
+              <button
+                className="primary compact-primary role-create-submit"
+                disabled={pendingAction === 'role-create'}
+              >
                 Create role
               </button>
             </form>
@@ -199,12 +335,19 @@ export function SettingsModal({
                   <section key={role.id} className="role-editor">
                     <div className="role-editor-header">
                       <div className="role-identity">
-                        <span className="role-color-dot" style={{ backgroundColor: role.color || undefined }}>
+                        <span
+                          className="role-color-dot"
+                          style={{ backgroundColor: role.color || undefined }}
+                        >
                           {!role.color ? <ShieldCheck size={14} /> : null}
                         </span>
                         <div>
                           <strong style={{ color: role.color || undefined }}>{role.name}</strong>
-                          <span>{isEveryone ? 'Default server role' : `${role.permissions.length} permissions`}</span>
+                          <span>
+                            {isEveryone
+                              ? 'Default server role'
+                              : `${role.permissions.length} permissions`}
+                          </span>
                         </div>
                       </div>
                       {!isEveryone ? (
@@ -227,7 +370,11 @@ export function SettingsModal({
                             checked={role.permissions.includes(permission.value)}
                             disabled={isEveryone || pendingAction === `role-${role.id}`}
                             onChange={(event) =>
-                              void toggleRolePermission(role, permission.value, event.currentTarget.checked)
+                              void toggleRolePermission(
+                                role,
+                                permission.value,
+                                event.currentTarget.checked,
+                              )
                             }
                           />
                           <span>{permission.label}</span>
@@ -246,20 +393,29 @@ export function SettingsModal({
             <div className="member-role-summary">
               <div className={`avatar ${accentClass(selectedMember.user.id)}`}>
                 {selectedMember.user.avatarUrl ? (
-                  <img src={assetUrl(selectedMember.user.avatarUrl)} alt={selectedMember.user.displayName} />
+                  <img
+                    src={assetUrl(selectedMember.user.avatarUrl)}
+                    alt={selectedMember.user.displayName}
+                  />
                 ) : (
                   initials(selectedMember.user.displayName)
                 )}
               </div>
               <div>
                 <strong>{selectedMember.user.displayName}</strong>
-                <span>{selectedMember.kind === 'OWNER' ? 'Owner' : selectedMember.user.status || 'Member'}</span>
+                <span>
+                  {selectedMember.kind === 'OWNER'
+                    ? 'Owner'
+                    : selectedMember.user.status || 'Member'}
+                </span>
               </div>
             </div>
             <div className="role-list">
               {server.roles.map((role) => {
                 const isEveryone = role.name === '@everyone';
-                const hasRole = Boolean(selectedMember.roles?.some((item) => item.role.id === role.id));
+                const hasRole = Boolean(
+                  selectedMember.roles?.some((item) => item.role.id === role.id),
+                );
                 return (
                   <label key={role.id} className="check-row role-assign-row">
                     <input
@@ -270,7 +426,13 @@ export function SettingsModal({
                         selectedMember.kind === 'OWNER' ||
                         pendingAction === `member-role-${selectedMember.id}-${role.id}`
                       }
-                      onChange={(event) => void toggleMemberRole(selectedMember.id, role.id, event.currentTarget.checked)}
+                      onChange={(event) =>
+                        void toggleMemberRole(
+                          selectedMember.id,
+                          role.id,
+                          event.currentTarget.checked,
+                        )
+                      }
                     />
                     <span style={{ color: role.color || undefined }}>{role.name}</span>
                     <small>

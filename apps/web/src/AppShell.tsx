@@ -43,6 +43,8 @@ export function AppShell() {
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isLoadingServers, setIsLoadingServers] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const [messageCursor, setMessageCursor] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
@@ -112,6 +114,7 @@ export function AppShell() {
         setServer(null);
         setChannel(null);
         setMessages([]);
+        setMessageCursor(null);
         setActiveCalls({});
         setChannelBadges({});
       },
@@ -220,6 +223,7 @@ export function AppShell() {
   useEffect(() => {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
+    setMessageCursor(null);
     setTypingUsers([]);
     setChannelBadges((current) => {
       const next = { ...current };
@@ -228,12 +232,15 @@ export function AppShell() {
     });
     setReplyingToMessage(null);
     setWorkspaceError(null);
-    void apiRequest<{ messages: Message[] }>(
+    void apiRequest<{ messages: Message[]; nextCursor?: string | null }>(
       `/channels/${channel.id}/messages`,
       {},
       auth.accessToken,
     )
-      .then((result) => setMessages(result.messages))
+      .then((result) => {
+        setMessages(result.messages);
+        setMessageCursor(result.nextCursor ?? null);
+      })
       .catch((err) =>
         setWorkspaceError(err instanceof Error ? err.message : 'Cannot load messages'),
       )
@@ -685,11 +692,24 @@ export function AppShell() {
           body: JSON.stringify({
             displayName: String(form.get('displayName') || '').trim(),
             bio: String(form.get('bio') || '').trim(),
+            status: String(form.get('status') || auth.user.status || 'ONLINE'),
           }),
         },
         auth.accessToken,
       );
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
+      setServer((current) =>
+        current
+          ? {
+              ...current,
+              members: current.members.map((member) =>
+                member.user.id === auth.user.id
+                  ? { ...member, user: { ...member.user, ...result.user } }
+                  : member,
+              ),
+            }
+          : current,
+      );
       setActiveDialog(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot update profile');
@@ -744,6 +764,7 @@ export function AppShell() {
     setPendingAction('channel-update');
     setWorkspaceError(null);
     try {
+      const positionValue = String(form.get('position') || '').trim();
       const result = await apiRequest<{ channel: Channel }>(
         `/channels/${channel.id}`,
         {
@@ -751,6 +772,8 @@ export function AppShell() {
           body: JSON.stringify({
             name: String(form.get('name') || '').trim(),
             topic: String(form.get('topic') || '').trim(),
+            isPrivate: form.get('isPrivate') === 'on',
+            position: positionValue ? Number(positionValue) : undefined,
           }),
         },
         auth.accessToken,
@@ -875,6 +898,29 @@ export function AppShell() {
     window.setTimeout(() => setWorkspaceNotice(null), 1600);
   }
 
+  async function loadMoreMessages() {
+    if (!auth || !channel || !messageCursor || isLoadingMoreMessages) return;
+    setIsLoadingMoreMessages(true);
+    setWorkspaceError(null);
+    try {
+      const result = await apiRequest<{ messages: Message[]; nextCursor?: string | null }>(
+        `/channels/${channel.id}/messages?cursor=${encodeURIComponent(messageCursor)}`,
+        {},
+        auth.accessToken,
+      );
+      setMessages((current) => {
+        const existingIds = new Set(current.map((message) => message.id));
+        const olderMessages = result.messages.filter((message) => !existingIds.has(message.id));
+        return [...olderMessages, ...current];
+      });
+      setMessageCursor(result.nextCursor ?? null);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load older messages');
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  }
+
   async function saveMessageEdit(messageId: string) {
     if (!auth || !editingDraft.trim()) return;
     const result = await apiRequest<{ message: Message }>(
@@ -939,6 +985,7 @@ export function AppShell() {
     setServer(null);
     setChannel(null);
     setMessages([]);
+    setMessageCursor(null);
     setActiveCalls({});
     setChannelBadges({});
   }
@@ -993,6 +1040,8 @@ export function AppShell() {
         messages={messages}
         visibleMessages={visibleMessages}
         isLoadingMessages={isLoadingMessages}
+        isLoadingMoreMessages={isLoadingMoreMessages}
+        hasMoreMessages={Boolean(messageCursor)}
         workspaceError={workspaceError}
         workspaceNotice={workspaceNotice}
         callState={callState}
@@ -1029,6 +1078,7 @@ export function AppShell() {
         deleteMessage={deleteMessage}
         toggleReaction={toggleReaction}
         togglePinnedMessage={togglePinnedMessage}
+        loadMoreMessages={loadMoreMessages}
         sendMessage={sendMessage}
         removeSelectedFile={removeSelectedFile}
         selectFiles={selectFiles}

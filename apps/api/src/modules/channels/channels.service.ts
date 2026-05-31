@@ -10,7 +10,7 @@ export class ChannelsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly servers: ServersService,
-    private readonly permissions: PermissionsService
+    private readonly permissions: PermissionsService,
   ) {}
 
   async createChannel(userId: string, serverId: string, dto: CreateChannelDto) {
@@ -24,8 +24,8 @@ export class ChannelsService {
         name,
         type: dto.type || 'TEXT',
         topic: dto.topic,
-        position: channelCount
-      }
+        position: channelCount,
+      },
     });
     return { channel };
   }
@@ -34,7 +34,7 @@ export class ChannelsService {
     await this.servers.requireMembership(userId, serverId);
     const channels = await this.prisma.channel.findMany({
       where: { serverId },
-      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
     return { channels };
   }
@@ -45,7 +45,11 @@ export class ChannelsService {
       throw new NotFoundException('Channel not found');
     }
     await this.servers.requireMembership(userId, channel.serverId);
-    await this.permissions.requireServerPermission(userId, channel.serverId, Permission.ViewChannel);
+    await this.permissions.requireServerPermission(
+      userId,
+      channel.serverId,
+      Permission.ViewChannel,
+    );
     return { channel };
   }
 
@@ -54,14 +58,20 @@ export class ChannelsService {
     if (!existing) {
       throw new NotFoundException('Channel not found');
     }
-    await this.permissions.requireServerPermission(userId, existing.serverId, Permission.ManageChannels);
+    await this.permissions.requireServerPermission(
+      userId,
+      existing.serverId,
+      Permission.ManageChannels,
+    );
     const channel = await this.prisma.channel.update({
       where: { id: channelId },
       data: {
         name: dto.name ? this.servers.normalizeChannelName(dto.name) : undefined,
         topic: dto.topic,
-        avatarUrl: dto.avatarUrl
-      }
+        avatarUrl: dto.avatarUrl,
+        isPrivate: dto.isPrivate,
+        position: dto.position,
+      },
     });
     return { channel };
   }
@@ -71,7 +81,11 @@ export class ChannelsService {
     if (!channel) {
       throw new NotFoundException('Channel not found');
     }
-    await this.permissions.requireServerPermission(userId, channel.serverId, Permission.ViewChannel);
+    await this.permissions.requireServerPermission(
+      userId,
+      channel.serverId,
+      Permission.ViewChannel,
+    );
     return channel;
   }
 }

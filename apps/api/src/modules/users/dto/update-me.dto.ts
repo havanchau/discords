@@ -1,4 +1,5 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { UserStatus } from '@prisma/client';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateMeDto {
   @IsOptional()
@@ -12,10 +13,17 @@ export class UpdateMeDto {
   bio?: string;
 
   @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
+
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
-  @Matches(/^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/image\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp)$/i, {
-    message: 'Avatar URL must reference an uploaded image'
-  })
+  @Matches(
+    /^(?:\/uploads\/[0-9a-f-]{36}|https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/image\/upload\/.+)\.(?:jpg|jpeg|png|gif|webp)$/i,
+    {
+      message: 'Avatar URL must reference an uploaded image',
+    },
+  )
   avatarUrl?: string;
 }
