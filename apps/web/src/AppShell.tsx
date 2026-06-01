@@ -33,6 +33,8 @@ import {
   isEncryptedMessage,
 } from './e2ee';
 import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
+import { updateFaviconBadge } from './utils/faviconBadge';
+import { disablePushNotifications, enablePushNotifications } from './utils/pushNotifications';
 
 type UiTheme = 'dark' | 'midnight' | 'slate' | 'oled';
 
@@ -361,6 +363,33 @@ export function AppShell() {
   }, [searchQuery, channel?.id, auth?.accessToken]);
 
   useEffect(() => {
+    const totalUnread = Object.values(channelBadges).reduce(
+      (total, badge) => total + badge.count,
+      0,
+    );
+    updateFaviconBadge(totalUnread);
+  }, [channelBadges]);
+
+  useEffect(() => {
+    if (!auth) return;
+    const handler = (event: MessageEvent<{ type?: string; url?: string }>) => {
+      if (event.data?.type === 'NAVIGATE' && event.data.url) {
+        void navigateToNotificationUrl(event.data.url);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, [auth?.accessToken, servers]);
+
+  useEffect(() => {
+    if (!auth || !servers.length) return;
+    if (window.location.pathname.startsWith('/channels/')) {
+      void navigateToNotificationUrl(window.location.pathname);
+      window.history.replaceState({}, '', '/');
+    }
+  }, [auth?.accessToken, servers.length]);
+
+  useEffect(() => {
     if (callState && channel?.id !== callState.channelId) {
       endCall();
     }
@@ -578,6 +607,13 @@ export function AppShell() {
     if (!auth) return;
     setPendingAction('notification-preference');
     try {
+      if (!preference.serverId && !preference.channelId && preference.desktopEnabled) {
+        await enablePushNotifications(auth.accessToken);
+      }
+      if (!preference.serverId && !preference.channelId && preference.desktopEnabled === false) {
+        await disablePushNotifications(auth.accessToken);
+      }
+
       const result = await apiRequest<{ preference: NotificationPreference }>(
         '/users/me/notification-preferences',
         {
@@ -595,6 +631,20 @@ export function AppShell() {
     } finally {
       setPendingAction(null);
     }
+  }
+
+  async function navigateToNotificationUrl(url: string) {
+    if (!auth) return;
+    const channelId = url.match(/\/channels\/([^/?#]+)/)?.[1];
+    if (!channelId) return;
+    const serverWithChannel = servers.find((item) =>
+      item.channels.some((serverChannel) => serverChannel.id === channelId),
+    );
+    if (serverWithChannel) {
+      await openServer(serverWithChannel.id, auth.accessToken, channelId);
+      return;
+    }
+    await loadServers(auth.accessToken);
   }
 
   function openHome() {
@@ -1286,8 +1336,8 @@ export function AppShell() {
         },
         auth.accessToken,
       );
-    setServer(result.server);
-    hydratePersistentChannelBadges(result.server);
+      setServer(result.server);
+      hydratePersistentChannelBadges(result.server);
       setServers((current) =>
         current.map((item) =>
           item.id === result.server.id
@@ -1309,12 +1359,15 @@ export function AppShell() {
   }
 
   function hydratePersistentChannelBadges(nextServer: ServerDetail) {
-    const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>((current, item) => {
-      if (item.unreadCount) {
-        current[item.id] = { count: item.unreadCount, mentions: 0 };
-      }
-      return current;
-    }, {});
+    const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>(
+      (current, item) => {
+        if (item.unreadCount) {
+          current[item.id] = { count: item.unreadCount, mentions: 0 };
+        }
+        return current;
+      },
+      {},
+    );
     setChannelBadges((current) => ({ ...current, ...badges }));
   }
 

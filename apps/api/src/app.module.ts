@@ -10,6 +10,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { PushModule } from './modules/push/push.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { ServersModule } from './modules/servers/servers.module';
@@ -31,6 +32,7 @@ import { UsersModule } from './modules/users/users.module';
     PermissionsModule,
     RolesModule,
     UploadsModule,
+    PushModule,
     RealtimeModule,
   ],
   providers: [
