@@ -115,18 +115,19 @@ Goal: make the baseline reproducible and verifiable. No behavior changes.
 
 Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable for UI work, not redesign state management. Only extract hooks when a file is too large or is blocking UI work.
 
-- [ ] Define the event-to-hook ownership map before writing any new hook.
+- [x] Define the event-to-hook ownership map before writing any new hook.
 - [ ] Extract AppShell state and side effects into focused hooks:
-  - `useAuthSession`
-  - `useServers`
-  - `useMessages`
-  - `useDirectMessages`
-  - `useRealtimeSocket`
-  - keep existing `useChannelCall`
-- [ ] Add lightweight React context providers for auth, socket, and theme only. Follow the context rules above.
-- [ ] Reduce `AppShell.tsx` below 1000 lines before starting Phase 1.
-- [ ] Keep all extracted hooks **behavior-compatible** with current API calls and Socket.IO events.
-- [ ] Run minimum merge checks before proceeding.
+  - [x] `useAuthSession`
+  - [ ] `useServers`
+  - [ ] `useMessages`
+  - [x] `useDirectMessages`
+  - [x] `useRealtimeSocket`
+  - [x] keep existing `useChannelCall`
+  - [x] supporting Phase 0B hooks: `useTheme`, `useSettingsActions`, `useChannelEncryption`, `useComposerAttachments`
+- [x] Add lightweight React context providers for auth, socket, and theme only. Follow the context rules above.
+- [x] Reduce `AppShell.tsx` below 1000 lines before starting Phase 1.
+- [x] Keep all extracted hooks **behavior-compatible** with current API calls and Socket.IO events.
+- [x] Run minimum merge checks before proceeding.
 
 ---
 

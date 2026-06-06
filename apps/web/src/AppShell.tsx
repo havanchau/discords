@@ -1,56 +1,33 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthScreen } from './components/AuthScreen';
 import { ChatPanel } from './components/ChatPanel';
 import { HomePanel } from './components/HomePanel';
 import { MemberSidebar } from './components/MemberSidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { ChannelBadgeState, WorkspaceSidebar } from './components/WorkspaceSidebar';
+import { AuthProvider, SocketProvider, ThemeProvider } from './contexts/appContexts';
+import { useAuthSession } from './hooks/useAuthSession';
+import { useChannelEncryption } from './hooks/useChannelEncryption';
 import { useChannelCall } from './hooks/useChannelCall';
+import { useComposerAttachments } from './hooks/useComposerAttachments';
+import { useDirectMessages } from './hooks/useDirectMessages';
+import { useRealtimeSocket } from './hooks/useRealtimeSocket';
+import { useSettingsActions } from './hooks/useSettingsActions';
+import { useTheme } from './hooks/useTheme';
 import {
   apiRequest,
   assetUrl,
-  AuditLogEntry,
-  AuthState,
-  ChannelPermissionOverride,
   Channel,
-  configureAuthRefresh,
-  DirectConversation,
-  DirectMessage,
-  FriendRequestEntry,
-  FriendsSummary,
   Message,
-  NotificationPreference,
-  Role,
   ServerDetail,
   ServerSummary,
   uploadFile,
 } from './api';
-import {
-  decryptChannelMessage,
-  deriveChannelKey,
-  encryptChannelMessage,
-  isEncryptedMessage,
-} from './e2ee';
-import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
+import { encryptChannelMessage } from './e2ee';
+import { ActiveCallSummary } from './helpers';
 import { updateFaviconBadge } from './utils/faviconBadge';
-import { disablePushNotifications, enablePushNotifications } from './utils/pushNotifications';
-
-type UiTheme = 'dark' | 'midnight' | 'slate' | 'oled';
-
-interface TypingUser {
-  userId: string;
-  displayName: string;
-}
 
 export function AppShell() {
-  const [auth, setAuth] = useState<AuthState | null>(() => {
-    const raw = localStorage.getItem(AUTH_KEY);
-    return raw ? JSON.parse(raw) : null;
-  });
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [verificationToken, setVerificationToken] = useState('');
-  const [verificationHint, setVerificationHint] = useState<string | null>(null);
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
@@ -59,12 +36,6 @@ export function AppShell() {
   const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>(
     {},
   );
-  const [friendsSummary, setFriendsSummary] = useState<FriendsSummary | null>(null);
-  const [directConversations, setDirectConversations] = useState<DirectConversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<DirectConversation | null>(null);
-  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isLoadingServers, setIsLoadingServers] = useState(false);
@@ -78,41 +49,124 @@ export function AppShell() {
   const [activePanel, setActivePanel] = useState<'notifications' | 'search' | 'encryption' | null>(
     null,
   );
-  const [activeDialog, setActiveDialog] = useState<
-    'profile' | 'server-settings' | 'channel-settings' | 'roles' | 'member-roles' | null
-  >(null);
+  const [activeDialog, setActiveDialog] =
+    useState<'profile' | 'server-settings' | 'channel-settings' | 'roles' | 'member-roles' | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [channelQuery, setChannelQuery] = useState('');
-  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [typingUsers, setTypingUsers] = useState<{ userId: string; displayName: string }[]>([]);
   const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
   const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
-  const [channelKeys, setChannelKeys] = useState<Record<string, CryptoKey>>({});
-  const [uiTheme, setUiTheme] = useState<UiTheme>(() => {
-    const savedTheme = localStorage.getItem('discord-clone-ui-theme');
-    return ['dark', 'midnight', 'slate', 'oled'].includes(savedTheme ?? '')
-      ? (savedTheme as UiTheme)
-      : 'dark';
-  });
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>({});
-  const [channelOverrides, setChannelOverrides] = useState<ChannelPermissionOverride[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreference[]>(
-    [],
-  );
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
-  const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
-  const channelKeysRef = useRef<Record<string, CryptoKey>>({});
-  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
-  const voiceStreamRef = useRef<MediaStream | null>(null);
-  const voiceChunksRef = useRef<Blob[]>([]);
-  const cancelVoiceRecordingRef = useRef(false);
+  const clearWorkspaceState = useCallback(() => {
+    setServers([]);
+    setServer(null);
+    setChannel(null);
+    setMessages([]);
+    setMessageCursor(null);
+    setActiveCalls({});
+    setChannelBadges({});
+  }, []);
+  const {
+    auth,
+    setAuth,
+    mode,
+    setMode,
+    verificationToken,
+    verificationHint,
+    setVerificationToken,
+    error,
+    submitAuth,
+    submitVerification,
+    clearAuth,
+  } = useAuthSession({ onClearAuth: clearWorkspaceState });
+  const {
+    friendsSummary,
+    directConversations,
+    activeConversation,
+    directMessages,
+    setActiveConversation,
+    setDirectMessages,
+    clearDirectMessages,
+    loadFriends,
+    loadDirectConversations,
+    requestFriend,
+    respondFriendRequest,
+    openDirectConversation,
+    startDirectConversation,
+    sendDirectMessage,
+  } = useDirectMessages({
+    auth,
+    setPendingAction,
+    setWorkspaceError,
+    setWorkspaceNotice,
+  });
+  const { uiTheme, setUiTheme } = useTheme();
+  const {
+    channelKeys,
+    channelKeysRef,
+    clearChannelKeys,
+    configureChannelEncryption,
+    clearChannelEncryption,
+    decryptMessagesForDisplay,
+    decryptMessageForDisplay,
+  } = useChannelEncryption({
+    channel,
+    messages,
+    setMessages,
+    setWorkspaceError,
+    setWorkspaceNotice,
+  });
+  const {
+    channelOverrides,
+    auditLogs,
+    notificationPreferences,
+    profileAvatarInputRef,
+    channelAvatarInputRef,
+    loadNotificationPreferences,
+    updateNotificationPreference,
+    updateProfileAvatar,
+    updateChannelAvatar,
+    updateProfile,
+    updateServerSettings,
+    updateChannelSettings,
+    toggleChannelRoleOverride,
+    createRole,
+    toggleRolePermission,
+    deleteRole,
+    toggleMemberRole,
+    hydratePersistentChannelBadges,
+  } = useSettingsActions({
+    auth,
+    server,
+    channel,
+    activeDialog,
+    uiTheme,
+    setAuth,
+    setServer,
+    setServers,
+    setChannel,
+    setActiveDialog,
+    setUiTheme,
+    setPendingAction,
+    setWorkspaceError,
+    setChannelBadges,
+    openServer,
+  });
+  const socket = useRealtimeSocket({
+    auth,
+    activeChannelIdRef,
+    decryptMessageForDisplay,
+    markChannelRead,
+    setMessages,
+    setTypingUsers,
+    setServer,
+    setActiveCalls,
+    setChannelBadges,
+  });
   const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } =
     useChannelCall({
       auth,
@@ -120,74 +174,28 @@ export function AppShell() {
       socket,
       setWorkspaceError,
     });
+  const {
+    selectedFiles,
+    setSelectedFiles,
+    isRecordingVoice,
+    fileInputRef,
+    selectFiles,
+    removeSelectedFile,
+    startVoiceRecording,
+    stopVoiceRecording,
+  } = useComposerAttachments({
+    auth,
+    channel,
+    sendChatMessage,
+    setWorkspaceError,
+  });
 
   useEffect(() => {
     activeChannelIdRef.current = channel?.id ?? null;
   }, [channel?.id]);
 
   useEffect(() => {
-    channelKeysRef.current = channelKeys;
-  }, [channelKeys]);
-
-  useEffect(() => {
-    document.body.dataset.theme = uiTheme;
-    localStorage.setItem('discord-clone-ui-theme', uiTheme);
-  }, [uiTheme]);
-
-  useEffect(
-    () => () => {
-      cancelVoiceRecordingRef.current = true;
-      if (voiceRecorderRef.current?.state !== 'inactive') {
-        voiceRecorderRef.current?.stop();
-      }
-      voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (window.location.pathname === '/verify-email' && token) {
-      setVerificationToken(token);
-      setVerificationHint('Email token loaded. Confirm verification to continue.');
-      setMode('login');
-      window.history.replaceState({}, '', '/');
-    }
-  }, []);
-
-  useEffect(() => {
-    configureAuthRefresh({
-      getAuth: () => {
-        const raw = localStorage.getItem(AUTH_KEY);
-        return raw ? (JSON.parse(raw) as AuthState) : null;
-      },
-      setAuth: (nextAuth) => {
-        localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
-        setAuth(nextAuth);
-      },
-      clearAuth: () => {
-        localStorage.removeItem(AUTH_KEY);
-        setAuth(null);
-        setServers([]);
-        setServer(null);
-        setChannel(null);
-        setMessages([]);
-        setMessageCursor(null);
-        setActiveCalls({});
-        setChannelBadges({});
-        setChannelKeys({});
-        setFriendsSummary(null);
-        setDirectConversations([]);
-        setActiveConversation(null);
-        setDirectMessages([]);
-      },
-    });
-  }, []);
-
-  useEffect(() => {
     if (!auth) return;
-    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
     void loadServers(auth.accessToken);
     void loadFriends(auth.accessToken);
     void loadDirectConversations(auth.accessToken);
@@ -195,128 +203,10 @@ export function AppShell() {
   }, [auth]);
 
   useEffect(() => {
-    if (!auth) {
-      socket?.disconnect();
-      setSocket(null);
-      return;
-    }
-
-    const nextSocket = io(SOCKET_URL, {
-      auth: { token: auth.accessToken },
-    });
-
-    nextSocket.on('connect', () => {
-      nextSocket.emit('unread:get', (result?: { counts?: Record<string, number> }) => {
-        setChannelBadges((current) => ({
-          ...current,
-          ...Object.fromEntries(
-            Object.entries(result?.counts ?? {}).map(([channelId, count]) => [
-              channelId,
-              { count, mentions: current[channelId]?.mentions ?? 0 },
-            ]),
-          ),
-        }));
-      });
-    });
-
-    nextSocket.on(
-      'unread:updated',
-      (payload: { channelId: string; count: number; mentions: number }) => {
-        if (payload.channelId === activeChannelIdRef.current) return;
-        setChannelBadges((current) => {
-          const currentBadge = current[payload.channelId] ?? { count: 0, mentions: 0 };
-          return {
-            ...current,
-            [payload.channelId]: {
-              count: currentBadge.count + payload.count,
-              mentions: currentBadge.mentions + payload.mentions,
-            },
-          };
-        });
-      },
-    );
-
-    nextSocket.on('unread:cleared', (payload: { channelId: string }) => {
-      setChannelBadges((current) => {
-        const next = { ...current };
-        delete next[payload.channelId];
-        return next;
-      });
-    });
-
-    nextSocket.on('message:created', async (message: Message) => {
-      const displayMessage = await decryptMessageForDisplay(message);
-      if (message.channelId === activeChannelIdRef.current) {
-        setMessages((current) =>
-          current.some((item) => item.id === displayMessage.id)
-            ? current
-            : [...current, displayMessage],
-        );
-        void markChannelRead(message.channelId, message.id);
-      }
-    });
-
-    nextSocket.on('reaction:updated', async (payload: { message: Message }) => {
-      const displayMessage = await decryptMessageForDisplay(payload.message);
-      setMessages((current) =>
-        current.map((message) => (message.id === displayMessage.id ? displayMessage : message)),
-      );
-    });
-
-    nextSocket.on(
-      'typing:start',
-      (payload: { channelId: string; userId: string; displayName?: string }) => {
-        if (payload.userId === auth.user.id) return;
-        setTypingUsers((current) =>
-          current.some((user) => user.userId === payload.userId)
-            ? current
-            : [
-                ...current,
-                {
-                  userId: payload.userId,
-                  displayName: payload.displayName ?? 'Someone',
-                },
-              ],
-        );
-      },
-    );
-
-    nextSocket.on('typing:stop', (payload: { channelId: string; userId: string }) => {
-      setTypingUsers((current) => current.filter((user) => user.userId !== payload.userId));
-    });
-
-    nextSocket.on('presence:update', (payload: { userId: string; status: string }) => {
-      setServer((current) =>
-        current
-          ? {
-              ...current,
-              members: current.members.map((member) =>
-                member.user.id === payload.userId
-                  ? { ...member, user: { ...member.user, status: payload.status } }
-                  : member,
-              ),
-            }
-          : current,
-      );
-    });
-
-    nextSocket.on('voice:active', (activeCall: ActiveCallSummary) => {
-      setActiveCalls((current) => ({ ...current, [activeCall.channelId]: activeCall }));
-    });
-
-    nextSocket.on('voice:ended', (payload: { channelId: string }) => {
-      setActiveCalls((current) => {
-        const next = { ...current };
-        delete next[payload.channelId];
-        return next;
-      });
-    });
-
-    setSocket(nextSocket);
-    return () => {
-      nextSocket.disconnect();
-    };
-  }, [auth?.accessToken]);
+    if (auth) return;
+    clearDirectMessages();
+    clearChannelKeys();
+  }, [auth, clearChannelKeys, clearDirectMessages]);
 
   useEffect(() => {
     if (!channel || !auth) return;
@@ -460,16 +350,6 @@ export function AppShell() {
   const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
   const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
 
-  useEffect(() => {
-    if (!auth || !channel || activeDialog !== 'channel-settings') return;
-    void loadChannelOverrides(channel.id, auth.accessToken);
-  }, [activeDialog, channel?.id, auth?.accessToken]);
-
-  useEffect(() => {
-    if (!auth || !server || activeDialog !== 'server-settings') return;
-    void loadAuditLogs(server.id, auth.accessToken);
-  }, [activeDialog, server?.id, auth?.accessToken]);
-
   async function togglePinnedMessage(message: Message) {
     if (!auth) return;
     setPendingAction(`pin-${message.id}`);
@@ -488,88 +368,6 @@ export function AppShell() {
     }
   }
 
-  async function configureChannelEncryption(passphrase: string) {
-    if (!channel) return;
-    const trimmedPassphrase = passphrase.trim();
-    if (trimmedPassphrase.length < 8) {
-      setWorkspaceError('Use at least 8 characters for the encryption passphrase.');
-      return;
-    }
-
-    const key = await deriveChannelKey(channel.id, trimmedPassphrase);
-    const nextKeys = { ...channelKeysRef.current, [channel.id]: key };
-    channelKeysRef.current = nextKeys;
-    setChannelKeys(nextKeys);
-    setMessages(await Promise.all(messages.map((message) => decryptMessageForDisplay(message))));
-    setWorkspaceNotice('End-to-end encryption enabled for this channel on this device.');
-  }
-
-  function clearChannelEncryption() {
-    if (!channel) return;
-    const nextKeys = { ...channelKeysRef.current };
-    delete nextKeys[channel.id];
-    channelKeysRef.current = nextKeys;
-    setChannelKeys(nextKeys);
-    setMessages((current) =>
-      current.map((message) =>
-        message.isEncrypted
-          ? {
-              ...message,
-              content: 'Encrypted message',
-              decryptionFailed: true,
-            }
-          : message,
-      ),
-    );
-  }
-
-  async function decryptMessagesForDisplay(nextMessages: Message[]) {
-    return Promise.all(nextMessages.map((message) => decryptMessageForDisplay(message)));
-  }
-
-  async function decryptMessageForDisplay(message: Message): Promise<Message> {
-    const encryptedContent = message.encryptedContent ?? message.content;
-    const replyToMessage = message.replyToMessage
-      ? await decryptMessageForDisplay(message.replyToMessage)
-      : message.replyToMessage;
-
-    if (!isEncryptedMessage(encryptedContent)) {
-      return { ...message, replyToMessage };
-    }
-
-    const key = channelKeysRef.current[message.channelId];
-    if (!key) {
-      return {
-        ...message,
-        content: 'Encrypted message',
-        encryptedContent,
-        isEncrypted: true,
-        decryptionFailed: true,
-        replyToMessage,
-      };
-    }
-
-    try {
-      return {
-        ...message,
-        content: await decryptChannelMessage(key, encryptedContent),
-        encryptedContent,
-        isEncrypted: true,
-        decryptionFailed: false,
-        replyToMessage,
-      };
-    } catch {
-      return {
-        ...message,
-        content: 'Encrypted message',
-        encryptedContent,
-        isEncrypted: true,
-        decryptionFailed: true,
-        replyToMessage,
-      };
-    }
-  }
-
   async function loadServers(token: string) {
     setIsLoadingServers(true);
     setWorkspaceError(null);
@@ -583,79 +381,6 @@ export function AppShell() {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot load servers');
     } finally {
       setIsLoadingServers(false);
-    }
-  }
-
-  async function loadFriends(token = auth?.accessToken) {
-    if (!token) return;
-    try {
-      const result = await apiRequest<FriendsSummary>('/friends', {}, token);
-      setFriendsSummary(result);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load friends');
-    }
-  }
-
-  async function loadDirectConversations(token = auth?.accessToken) {
-    if (!token) return;
-    try {
-      const result = await apiRequest<{ conversations: DirectConversation[] }>(
-        '/direct-conversations',
-        {},
-        token,
-      );
-      setDirectConversations(result.conversations);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load direct messages');
-    }
-  }
-
-  async function loadNotificationPreferences(token = auth?.accessToken) {
-    if (!token) return;
-    try {
-      const result = await apiRequest<{ preferences: NotificationPreference[] }>(
-        '/users/me/notification-preferences',
-        {},
-        token,
-      );
-      setNotificationPreferences(result.preferences);
-    } catch {
-      setNotificationPreferences([]);
-    }
-  }
-
-  async function updateNotificationPreference(
-    preference: Partial<NotificationPreference> & {
-      serverId?: string | null;
-      channelId?: string | null;
-    },
-  ) {
-    if (!auth) return;
-    setPendingAction('notification-preference');
-    try {
-      if (!preference.serverId && !preference.channelId && preference.desktopEnabled) {
-        await enablePushNotifications(auth.accessToken);
-      }
-      if (!preference.serverId && !preference.channelId && preference.desktopEnabled === false) {
-        await disablePushNotifications(auth.accessToken);
-      }
-
-      const result = await apiRequest<{ preference: NotificationPreference }>(
-        '/users/me/notification-preferences',
-        {
-          method: 'PATCH',
-          body: JSON.stringify(preference),
-        },
-        auth.accessToken,
-      );
-      setNotificationPreferences((current) => [
-        result.preference,
-        ...current.filter((item) => item.id !== result.preference.id),
-      ]);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update notifications');
-    } finally {
-      setPendingAction(null);
     }
   }
 
@@ -705,34 +430,6 @@ export function AppShell() {
     }
   }
 
-  async function loadChannelOverrides(channelId: string, token = auth?.accessToken) {
-    if (!token) return;
-    try {
-      const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
-        `/channels/${channelId}/overrides`,
-        {},
-        token,
-      );
-      setChannelOverrides(result.overrides);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load channel permissions');
-    }
-  }
-
-  async function loadAuditLogs(serverId: string, token = auth?.accessToken) {
-    if (!token) return;
-    try {
-      const result = await apiRequest<{ logs: AuditLogEntry[] }>(
-        `/servers/${serverId}/audit-logs`,
-        {},
-        token,
-      );
-      setAuditLogs(result.logs);
-    } catch {
-      setAuditLogs([]);
-    }
-  }
-
   async function openServer(
     serverId: string,
     token = auth?.accessToken,
@@ -754,58 +451,6 @@ export function AppShell() {
     setChannel(
       preferredChannel ?? result.server.channels.find((item) => item.type === 'TEXT') ?? null,
     );
-  }
-
-  async function submitAuth(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      email: String(form.get('email')),
-      username: String(form.get('username') || ''),
-      displayName: String(form.get('displayName') || ''),
-      password: String(form.get('password')),
-    };
-
-    try {
-      const result = await apiRequest<AuthState>(
-        mode === 'login' ? '/auth/login' : '/auth/register',
-        {
-          method: 'POST',
-          body: JSON.stringify(
-            mode === 'login' ? { email: payload.email, password: payload.password } : payload,
-          ),
-        },
-      );
-      if ('verificationRequired' in result) {
-        const verification = result as AuthState & { verificationToken?: string; message?: string };
-        setVerificationHint(verification.message || 'Check your email to verify this account.');
-        if (verification.verificationToken) {
-          setVerificationToken(verification.verificationToken);
-        }
-        setMode('login');
-        return;
-      }
-      setAuth(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
-    }
-  }
-
-  async function submitVerification(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    try {
-      const result = await apiRequest<AuthState>('/auth/verify-email', {
-        method: 'POST',
-        body: JSON.stringify({ token: verificationToken.trim() }),
-      });
-      setVerificationToken('');
-      setVerificationHint(null);
-      setAuth(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
-    }
   }
 
   async function createServer(event: FormEvent<HTMLFormElement>) {
@@ -951,119 +596,6 @@ export function AppShell() {
     }
   }
 
-  async function requestFriend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth) return;
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    setPendingAction('friend-request');
-    setWorkspaceError(null);
-    try {
-      await apiRequest(
-        '/friends/requests',
-        {
-          method: 'POST',
-          body: JSON.stringify({ usernameOrEmail: String(form.get('usernameOrEmail') || '') }),
-        },
-        auth.accessToken,
-      );
-      formElement.reset();
-      await loadFriends(auth.accessToken);
-      setWorkspaceNotice('Friend request sent.');
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send friend request');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function respondFriendRequest(
-    request: FriendRequestEntry,
-    status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED',
-  ) {
-    if (!auth) return;
-    setPendingAction(`friend-${request.id}`);
-    setWorkspaceError(null);
-    try {
-      await apiRequest(
-        `/friends/requests/${request.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ status }),
-        },
-        auth.accessToken,
-      );
-      await loadFriends(auth.accessToken);
-      setWorkspaceNotice(
-        status === 'ACCEPTED' ? 'Friend request accepted.' : 'Friend request updated.',
-      );
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update friend request');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function openDirectConversation(conversation: DirectConversation) {
-    if (!auth) return;
-    setActiveConversation(conversation);
-    setWorkspaceError(null);
-    try {
-      const result = await apiRequest<{ messages: DirectMessage[] }>(
-        `/direct-conversations/${conversation.id}/messages`,
-        {},
-        auth.accessToken,
-      );
-      setDirectMessages(result.messages);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot open conversation');
-    }
-  }
-
-  async function startDirectConversation(userId: string) {
-    if (!auth) return;
-    setPendingAction(`dm-${userId}`);
-    setWorkspaceError(null);
-    try {
-      const result = await apiRequest<{ conversation: DirectConversation }>(
-        `/friends/${userId}/dm`,
-        { method: 'POST' },
-        auth.accessToken,
-      );
-      await loadDirectConversations(auth.accessToken);
-      await openDirectConversation(result.conversation);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start direct message');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function sendDirectMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth || !activeConversation) return;
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const content = String(form.get('content') || '').trim();
-    if (!content) return;
-    setPendingAction('direct-message');
-    setWorkspaceError(null);
-    try {
-      const result = await apiRequest<{ message: DirectMessage }>(
-        `/direct-conversations/${activeConversation.id}/messages`,
-        { method: 'POST', body: JSON.stringify({ content }) },
-        auth.accessToken,
-      );
-      formElement.reset();
-      setDirectMessages((current) => [...current, result.message]);
-      await loadDirectConversations(auth.accessToken);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send direct message');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
   async function sendChatMessage(content: string, files: File[]) {
     if (!auth || !channel) return;
     if (!content && files.length === 0) return;
@@ -1149,83 +681,6 @@ export function AppShell() {
     setReplyingToMessage(null);
   }
 
-  async function startVoiceRecording() {
-    if (!auth || !channel) return;
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setWorkspaceError('Voice recording is not supported in this browser.');
-      return;
-    }
-
-    try {
-      setWorkspaceError(null);
-      cancelVoiceRecordingRef.current = false;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const supportedMimeType = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/mp4',
-        'audio/ogg;codecs=opus',
-      ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
-      const recorder = new MediaRecorder(
-        stream,
-        supportedMimeType ? { mimeType: supportedMimeType } : undefined,
-      );
-
-      voiceChunksRef.current = [];
-      voiceStreamRef.current = stream;
-      voiceRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          voiceChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const chunks = voiceChunksRef.current;
-        const recordedType = recorder.mimeType || supportedMimeType || 'audio/webm';
-        const uploadType = recordedType.split(';')[0] || 'audio/webm';
-        const blob = new Blob(chunks, { type: uploadType });
-        const shouldSend = !cancelVoiceRecordingRef.current && blob.size > 0;
-        voiceChunksRef.current = [];
-        voiceRecorderRef.current = null;
-        setIsRecordingVoice(false);
-        stream.getTracks().forEach((track) => track.stop());
-        voiceStreamRef.current = null;
-
-        if (!shouldSend) return;
-
-        const extension = uploadType.includes('mp4')
-          ? 'm4a'
-          : uploadType.includes('ogg')
-            ? 'ogg'
-            : 'webm';
-        const file = new File([blob], `voice-message-${Date.now()}.${extension}`, {
-          type: uploadType,
-        });
-        void sendChatMessage('', [file]);
-      };
-
-      recorder.onerror = () => {
-        setWorkspaceError('Voice recording failed. Check microphone permission and try again.');
-        cancelVoiceRecordingRef.current = true;
-        setIsRecordingVoice(false);
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      recorder.start();
-      setIsRecordingVoice(true);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start voice recording');
-    }
-  }
-
-  function stopVoiceRecording() {
-    const recorder = voiceRecorderRef.current;
-    if (!recorder || recorder.state === 'inactive') return;
-    recorder.stop();
-  }
-
   function handleComposerInput() {
     if (!channel || !socket?.connected) return;
     socket.emit('typing:start', { channelId: channel.id });
@@ -1235,166 +690,6 @@ export function AppShell() {
     typingTimeoutRef.current = window.setTimeout(() => {
       socket.emit('typing:stop', { channelId: channel.id });
     }, 1400);
-  }
-
-  function selectFiles(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    if (!files.length) return;
-    setSelectedFiles((current) => [...current, ...files].slice(0, 6));
-    event.target.value = '';
-  }
-
-  function removeSelectedFile(index: number) {
-    setSelectedFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
-  }
-
-  async function updateProfileAvatar(event: ChangeEvent<HTMLInputElement>) {
-    if (!auth) return;
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    setPendingAction('profile-avatar');
-    try {
-      const attachment = await uploadFile(file, auth.accessToken);
-      const result = await apiRequest<{ user: AuthState['user'] }>(
-        '/users/me',
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ avatarUrl: attachment.url }),
-        },
-        auth.accessToken,
-      );
-      setAuth({ ...auth, user: { ...auth.user, ...result.user } });
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update avatar');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function updateChannelAvatar(event: ChangeEvent<HTMLInputElement>) {
-    if (!auth || !channel || !server) return;
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    setPendingAction('channel-avatar');
-    try {
-      const attachment = await uploadFile(file, auth.accessToken);
-      const result = await apiRequest<{ channel: Channel }>(
-        `/channels/${channel.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ avatarUrl: attachment.url }),
-        },
-        auth.accessToken,
-      );
-      setChannel(result.channel);
-      setServer({
-        ...server,
-        channels: server.channels.map((item) =>
-          item.id === result.channel.id ? result.channel : item,
-        ),
-      });
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel avatar');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function updateProfile(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth) return;
-    const form = new FormData(event.currentTarget);
-    const nextTheme = String(form.get('uiTheme') || uiTheme) as UiTheme;
-    setPendingAction('profile-update');
-    setWorkspaceError(null);
-    try {
-      const result = await apiRequest<{ user: AuthState['user'] }>(
-        '/users/me',
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            displayName: String(form.get('displayName') || '').trim(),
-            bio: String(form.get('bio') || '').trim(),
-            status: String(form.get('status') || auth.user.status || 'ONLINE'),
-          }),
-        },
-        auth.accessToken,
-      );
-      setUiTheme(nextTheme);
-      setAuth({ ...auth, user: { ...auth.user, ...result.user } });
-      setServer((current) =>
-        current
-          ? {
-              ...current,
-              members: current.members.map((member) =>
-                member.user.id === auth.user.id
-                  ? { ...member, user: { ...member.user, ...result.user } }
-                  : member,
-              ),
-            }
-          : current,
-      );
-      setActiveDialog(null);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update profile');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function updateServerSettings(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth || !server) return;
-    const form = new FormData(event.currentTarget);
-    setPendingAction('server-update');
-    setWorkspaceError(null);
-    try {
-      const result = await apiRequest<{ server: ServerDetail }>(
-        `/servers/${server.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            name: String(form.get('name') || '').trim(),
-            description: String(form.get('description') || '').trim(),
-          }),
-        },
-        auth.accessToken,
-      );
-      setServer(result.server);
-      hydratePersistentChannelBadges(result.server);
-      setServers((current) =>
-        current.map((item) =>
-          item.id === result.server.id
-            ? {
-                ...item,
-                name: result.server.name,
-                description: result.server.description,
-                channels: result.server.channels,
-              }
-            : item,
-        ),
-      );
-      setActiveDialog(null);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update server');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  function hydratePersistentChannelBadges(nextServer: ServerDetail) {
-    const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>(
-      (current, item) => {
-        if (item.unreadCount) {
-          current[item.id] = { count: item.unreadCount, mentions: 0 };
-        }
-        return current;
-      },
-      {},
-    );
-    setChannelBadges((current) => ({ ...current, ...badges }));
   }
 
   async function markChannelRead(channelId: string, messageId?: string) {
@@ -1416,184 +711,6 @@ export function AppShell() {
       });
     } catch {
       // Read state is a convenience feature; avoid blocking chat if it fails.
-    }
-  }
-
-  async function updateChannelSettings(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth || !server || !channel) return;
-    const form = new FormData(event.currentTarget);
-    setPendingAction('channel-update');
-    setWorkspaceError(null);
-    try {
-      const positionValue = String(form.get('position') || '').trim();
-      const result = await apiRequest<{ channel: Channel }>(
-        `/channels/${channel.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            name: String(form.get('name') || '').trim(),
-            topic: String(form.get('topic') || '').trim(),
-            isPrivate: form.get('isPrivate') === 'on',
-            position: positionValue ? Number(positionValue) : undefined,
-          }),
-        },
-        auth.accessToken,
-      );
-      setChannel(result.channel);
-      setServer({
-        ...server,
-        channels: server.channels.map((item) =>
-          item.id === result.channel.id ? result.channel : item,
-        ),
-      });
-      setActiveDialog(null);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function toggleChannelRoleOverride(roleId: string, permission: string, enabled: boolean) {
-    if (!auth || !channel) return;
-    setPendingAction(`channel-override-${roleId}-${permission}`);
-    setWorkspaceError(null);
-    try {
-      const existing = channelOverrides.find((override) => override.roleId === roleId);
-      const nextOverride: ChannelPermissionOverride = {
-        id: existing?.id ?? `local-${roleId}`,
-        channelId: channel.id,
-        roleId,
-        memberId: null,
-        allow: enabled
-          ? Array.from(new Set([...(existing?.allow ?? []), permission]))
-          : (existing?.allow ?? []).filter((item) => item !== permission),
-        deny: (existing?.deny ?? []).filter((item) => item !== permission),
-      };
-      const nextOverrides = [
-        ...channelOverrides.filter((override) => override.roleId !== roleId),
-        nextOverride,
-      ].filter((override) => override.allow.length || override.deny.length);
-      const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
-        `/channels/${channel.id}/overrides`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            overrides: nextOverrides.map(({ roleId, memberId, allow, deny }) => ({
-              roleId,
-              memberId,
-              allow,
-              deny,
-            })),
-          }),
-        },
-        auth.accessToken,
-      );
-      setChannelOverrides(result.overrides);
-      await openServer(channel.serverId, auth.accessToken, channel.id);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel permission');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function reloadCurrentServer(preferredChannelId = channel?.id) {
-    if (!auth || !server) return;
-    await openServer(server.id, auth.accessToken, preferredChannelId);
-  }
-
-  async function createRole(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth || !server) return;
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    setPendingAction('role-create');
-    setWorkspaceError(null);
-    try {
-      await apiRequest<{ role: Role }>(
-        `/servers/${server.id}/roles`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            name: String(form.get('name') || '').trim(),
-            color: String(form.get('color') || '').trim() || undefined,
-            permissions: form.getAll('permissions').map(String),
-          }),
-        },
-        auth.accessToken,
-      );
-      formElement.reset();
-      await reloadCurrentServer();
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot create role');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function toggleRolePermission(role: Role, permission: string, enabled: boolean) {
-    if (!auth) return;
-    const permissions = enabled
-      ? [...new Set([...role.permissions, permission])]
-      : role.permissions.filter((item) => item !== permission);
-    setPendingAction(`role-${role.id}`);
-    setWorkspaceError(null);
-    try {
-      await apiRequest<{ role: Role }>(
-        `/roles/${role.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ permissions }),
-        },
-        auth.accessToken,
-      );
-      await reloadCurrentServer();
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update role');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function deleteRole(role: Role) {
-    if (!auth) return;
-    setPendingAction(`role-${role.id}`);
-    setWorkspaceError(null);
-    try {
-      await apiRequest<{ ok: true }>(
-        `/roles/${role.id}`,
-        {
-          method: 'DELETE',
-        },
-        auth.accessToken,
-      );
-      await reloadCurrentServer();
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot delete role');
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function toggleMemberRole(memberId: string, roleId: string, enabled: boolean) {
-    if (!auth || !server) return;
-    setPendingAction(`member-role-${memberId}-${roleId}`);
-    setWorkspaceError(null);
-    try {
-      await apiRequest<{ ok: true }>(
-        `/servers/${server.id}/members/${memberId}/roles/${roleId}`,
-        {
-          method: enabled ? 'POST' : 'DELETE',
-        },
-        auth.accessToken,
-      );
-      await reloadCurrentServer();
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update member roles');
-    } finally {
-      setPendingAction(null);
     }
   }
 
@@ -1686,38 +803,33 @@ export function AppShell() {
 
   function logout() {
     endCall();
-    localStorage.removeItem(AUTH_KEY);
-    setAuth(null);
-    setServers([]);
-    setServer(null);
-    setChannel(null);
-    setMessages([]);
-    setMessageCursor(null);
-    setActiveCalls({});
-    setChannelBadges({});
-    setFriendsSummary(null);
-    setDirectConversations([]);
-    setActiveConversation(null);
-    setDirectMessages([]);
+    clearAuth();
   }
 
   if (!auth) {
     return (
-      <AuthScreen
-        error={error}
-        mode={mode}
-        setMode={setMode}
-        submitAuth={submitAuth}
-        submitVerification={submitVerification}
-        verificationHint={verificationHint}
-        verificationToken={verificationToken}
-        setVerificationToken={setVerificationToken}
-      />
+      <AuthProvider auth={auth}>
+        <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
+          <AuthScreen
+            error={error}
+            mode={mode}
+            setMode={setMode}
+            submitAuth={submitAuth}
+            submitVerification={submitVerification}
+            verificationHint={verificationHint}
+            verificationToken={verificationToken}
+            setVerificationToken={setVerificationToken}
+          />
+        </ThemeProvider>
+      </AuthProvider>
     );
   }
 
   return (
-    <main className="app-shell">
+    <AuthProvider auth={auth}>
+      <SocketProvider socket={socket}>
+        <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
+          <main className="app-shell">
       <WorkspaceSidebar
         auth={auth}
         servers={servers}
@@ -1854,6 +966,9 @@ export function AppShell() {
         deleteRole={deleteRole}
         toggleMemberRole={toggleMemberRole}
       />
-    </main>
+          </main>
+        </ThemeProvider>
+      </SocketProvider>
+    </AuthProvider>
   );
 }

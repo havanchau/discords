@@ -38,6 +38,7 @@ const forbiddenPatterns = [
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
   .split(/\r?\n/)
   .filter(Boolean)
+  .filter((file) => file !== 'scripts/ui-static-scan.mjs')
   .filter((file) => scannedExtensions.has(extensionOf(file)))
   .filter((file) => !ignoredPathParts.some((part) => file.includes(part)));
 
