@@ -5,10 +5,19 @@
 1. **Always read `DISCORD_UI_SKILL.md`** at the project root before any frontend/UI/CSS work.
 2. **Always read `docs/design-rules.md`** for the complete design token reference.
 3. **Use the `ui-polish` skill** for all visual UI tasks.
+4. **Create a task checklist before implementation**. Use `- [ ]` for pending work and mark `- [x]` only after the item is genuinely complete and verified.
+
+## Checklist Truth Rule
+
+- Never check incomplete, partially done, blocked, untested, or assumed tasks.
+- Update checklist items as work progresses.
+- If the scope changes, revise the checklist so it remains accurate.
 
 ## UI Hard Rules (apply to EVERY frontend change)
 
 - This is a Discord clone. The UI MUST look like Discord's actual desktop app.
+- Prefer established UI/component/accessibility/icon libraries over raw CSS.
+- Avoid hand-written CSS except for minimal token-based adjustments, exact layout constraints, or targeted responsive fixes.
 - Use ONLY the color tokens from `DISCORD_UI_SKILL.md`. No exceptions.
 - **Forbidden**: neon cyan `#00e5ff`, neon pink `#ff1fb8`, neon lime `#00ff95`, `#8f78ff`, `#ffb000`, any `rgba(0, 229, 255, ...)`.
 - **Forbidden**: gradient backgrounds on panels, glowing box-shadows, decorative borders, border-radius on the app shell.

@@ -35,6 +35,16 @@ Build this project as a real-time Discord-like communication app with:
 6. Do not commit secrets, tokens, database URLs, private keys, generated build output, or local upload artifacts.
 7. Use clear domain names: `server`, `channel`, `member`, `role`, `message`, `conversation`, `presence`, `notification`.
 
+## Task Checklist Rules
+
+Before implementing any task, create a checklist of the concrete work items.
+
+- Use unchecked items (`- [ ]`) for work that has not been completed.
+- Mark an item checked (`- [x]`) only after that exact work is genuinely done and verified.
+- Never check a task that is still pending, partially complete, untested, blocked, or only assumed to work.
+- Update the checklist as implementation progresses instead of marking everything done at the end.
+- If scope changes, add or revise checklist items so the list stays truthful.
+
 ## Implementation Priorities
 
 - Correct permission checks before UI polish.
@@ -86,6 +96,8 @@ The app MUST look like Discord's real desktop client — a dense, warm-dark comm
 - **Shadows**: Subtle `rgba(0,0,0,...)` only. NO colored glows, NO `box-shadow` with cyan/pink/lime.
 - **Borders**: Minimal. Use background-color layering for panel separation, not decorative borders.
 - **App shell**: `border-radius: 0`. NO rounded corners on the outer shell. NO border on the shell.
+- **Libraries first**: For UI tasks, prefer established React UI, icon, accessibility, animation, and utility libraries already present in the project or approved for the task. Avoid hand-writing raw CSS unless it is necessary to connect the library output to the existing Discord tokens, layout constraints, or responsive fixes.
+- **CSS restraint**: When custom CSS is unavoidable, keep it minimal, token-based, component-scoped, and consistent with `apps/web/src/styles.css`.
 
 ### Layout:
 

@@ -10,6 +10,8 @@
 
 Use the **`ui-polish`** skill when asking Codex to make the interface look better.
 
+Before implementing UI work, create a checklist and keep it truthful: unfinished tasks stay unchecked, and completed tasks are checked only after verification.
+
 This skill is the right fit for:
 
 - Auditing screenshots and visible layout issues.
@@ -19,6 +21,8 @@ This skill is the right fit for:
 - **Fixing any neon/cyberpunk/gradient styling that does not match Discord's warm dark palette.**
 
 For Discord-like UI work, pair `ui-polish` with the rules in `DISCORD_UI_SKILL.md` and this file.
+
+Prefer established React UI, accessibility, icon, motion, and utility libraries over raw CSS. Custom CSS should be minimal, token-based, and used only when needed for Discord-specific layout, surfaces, or responsive polish.
 
 ---
 

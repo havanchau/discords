@@ -34,7 +34,42 @@ When to use it:
 
 ---
 
-## 2. Exact Color Tokens (MANDATORY — DO NOT INVENT COLORS)
+## 2. Implementation Checklist Requirement
+
+Before implementing any UI task, create a task checklist.
+
+- Start each not-yet-done item with `- [ ]`.
+- Change an item to `- [x]` only after the exact work is complete and verified.
+- Never check an item that is pending, partially done, blocked, untested, or only visually assumed.
+- Keep the checklist updated as work progresses.
+- Include verification tasks for screenshots, accessibility, lint/typecheck, or build when relevant.
+
+---
+
+## 3. Library-First UI Implementation
+
+UI work MUST prefer libraries over raw CSS.
+
+Use existing or task-approved libraries for:
+
+- Icons.
+- Accessible dialogs, menus, tooltips, tabs, toggles, and popovers.
+- Form controls.
+- Virtualized lists or complex scrolling behavior.
+- Motion primitives when animation is needed.
+- Date/time, markdown, upload, and media UI helpers.
+
+Rules:
+
+- Do not hand-roll complex UI behavior that a proven library already covers.
+- Do not create large blocks of raw CSS when a component, utility, or existing class pattern can do the job.
+- Custom CSS is allowed only when needed to apply Discord tokens, exact shell dimensions, responsive fixes, or component-specific polish.
+- Any custom CSS must be minimal, token-based, and scoped to the relevant component/surface.
+- If adding a new library, keep it narrow, maintained, and aligned with the existing React/Vite stack.
+
+---
+
+## 4. Exact Color Tokens (MANDATORY — DO NOT INVENT COLORS)
 
 Every UI surface MUST use these exact CSS custom properties. **Never hardcode hex values** outside this list. **Never use neon, cyan, lime, or pink accent colors.**
 
@@ -106,7 +141,7 @@ These colors MUST NOT appear anywhere in the CSS:
 
 ---
 
-## 3. App Shell Layout (EXACT DIMENSIONS)
+## 5. App Shell Layout (EXACT DIMENSIONS)
 
 The app uses a **4-column grid** on desktop. No decorative borders, no border-radius on the shell, no gradient backgrounds.
 
@@ -142,7 +177,7 @@ The app uses a **4-column grid** on desktop. No decorative borders, no border-ra
 
 ---
 
-## 4. Fixed Dimensions
+## 6. Fixed Dimensions
 
 | Element                | Value  |
 | ---------------------- | ------ |
@@ -155,7 +190,7 @@ The app uses a **4-column grid** on desktop. No decorative borders, no border-ra
 
 ---
 
-## 5. Typography
+## 7. Typography
 
 ```css
 font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -174,7 +209,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 6. Component Patterns
+## 8. Component Patterns
 
 ### Server Icons (Squircle → Circle on hover)
 
@@ -294,7 +329,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 7. Spacing (base-4 scale)
+## 9. Spacing (base-4 scale)
 
 ```
 4px | 8px | 12px | 16px | 20px | 24px | 32px | 40px
@@ -311,7 +346,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 8. Radius Tokens
+## 10. Radius Tokens
 
 | Component         | Radius |
 | ----------------- | ------ |
@@ -326,7 +361,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 9. Motion (SHORT and FUNCTIONAL only)
+## 11. Motion (SHORT and FUNCTIONAL only)
 
 | Transition              | Duration |
 | ----------------------- | -------- |
@@ -345,7 +380,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 10. Z-Index Scale (DO NOT INVENT VALUES)
+## 12. Z-Index Scale (DO NOT INVENT VALUES)
 
 ```css
 --z-message-toolbar: 1;
@@ -362,7 +397,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 11. Interaction States Checklist
+## 13. Interaction States Checklist
 
 Every interactive component MUST have these states:
 
@@ -375,7 +410,7 @@ Every interactive component MUST have these states:
 
 ---
 
-## 12. Anti-Patterns (INSTANT REJECTION)
+## 14. Anti-Patterns (INSTANT REJECTION)
 
 | ❌ DO NOT                                | ✅ DO INSTEAD                                        |
 | ---------------------------------------- | ---------------------------------------------------- |
@@ -391,10 +426,12 @@ Every interactive component MUST have these states:
 | Body/shell gradients                     | Solid `var(--background-tertiary)` on body           |
 | Decorative `::before`/`::after` overlays | Clean flat surfaces, no CSS art                      |
 | Marketing-style empty states             | Functional empty states with action buttons          |
+| Hand-rolled complex UI behavior          | Use proven React/accessibility/component libraries   |
+| Large raw CSS rewrites                   | Use existing component patterns and minimal CSS      |
 
 ---
 
-## 13. Responsive Rules
+## 15. Responsive Rules
 
 1. **Tablet**: Hide member sidebar first
 2. **Mobile**: Single-column, navigation via explicit controls
@@ -404,7 +441,7 @@ Every interactive component MUST have these states:
 
 ---
 
-## 14. Verification Workflow
+## 16. Verification Workflow
 
 After ANY UI change:
 
@@ -417,10 +454,11 @@ After ANY UI change:
 7. Check that **messages** are properly grouped with correct padding
 8. Verify at **desktop (1440px)** and **mobile (375px)** widths
 9. Run `npm run lint` and `npx tsc --noEmit`
+10. Confirm the implementation checklist is truthful: only completed work is checked
 
 ---
 
-## 15. File References
+## 17. File References
 
 - Canonical design rules: `docs/design-rules.md`
 - App shell component: `apps/web/src/AppShell.tsx`
