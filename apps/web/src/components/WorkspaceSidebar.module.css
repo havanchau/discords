@@ -19,6 +19,9 @@
   width: var(--size-server-icon);
   height: var(--size-server-icon);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: var(--radius-server-default);
   color: var(--interactive-normal);
