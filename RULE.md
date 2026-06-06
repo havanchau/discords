@@ -1,15 +1,15 @@
-# RULE.md
+# Product Rules
 
-## Product Rules
+These are repository-level product and engineering invariants. They should remain stable even when implementation details change.
 
-This project is a Discord clone focused on real-time team and community chat.
+## Domain Rules
 
 Core entities:
 
 - User: account identity.
 - Server: top-level community workspace.
 - Channel: scoped conversation inside a server.
-- Member: user's membership inside a server.
+- Member: a user's membership inside a server.
 - Role: permission bundle assigned to members.
 - Message: user-created content inside a channel or direct conversation.
 - Conversation: direct or group direct message thread.
@@ -20,7 +20,7 @@ Every protected operation must be checked server-side.
 
 Required baseline permissions:
 
-- `server.manage`: edit server settings and delete server.
+- `server.manage`: edit server settings and delete the server.
 - `channel.manage`: create, edit, delete, and reorder channels.
 - `role.manage`: create roles and assign permissions.
 - `member.manage`: kick, ban, timeout, and change nicknames.
@@ -28,7 +28,7 @@ Required baseline permissions:
 - `message.manage`: delete or moderate other users' messages.
 - `invite.create`: create server invites.
 
-Owners always have all permissions in their server. Admin roles bypass channel-level restrictions unless explicitly disabled by product requirements.
+Owners always have all permissions in their server. Admin roles bypass channel-level restrictions unless product requirements explicitly disable that behavior.
 
 ## Messaging Rules
 
@@ -36,9 +36,9 @@ Owners always have all permissions in their server. Admin roles bypass channel-l
 - Messages require membership in the target server or conversation.
 - Message content must be trimmed and validated before persistence.
 - Empty messages are allowed only when attachments exist.
-- Edited messages must retain `createdAt` and update `updatedAt`.
+- Edited messages must retain `createdAt` and update edit metadata.
 - Deleted messages should not break thread history or unread state.
-- Server-generated IDs must be used as the source of truth.
+- Server-generated IDs are the source of truth.
 
 ## Channel Rules
 
@@ -59,7 +59,7 @@ Owners always have all permissions in their server. Admin roles bypass channel-l
 
 - Never expose password hashes, provider tokens, refresh tokens, or session secrets to the client.
 - Store session secrets only in environment variables or a secret manager.
-- All API responses for unauthenticated requests must be explicit and consistent.
+- All unauthenticated API responses must be explicit and consistent.
 
 ## File Upload Rules
 
@@ -74,4 +74,4 @@ Owners always have all permissions in their server. Admin roles bypass channel-l
 - Keep business rules in shared services or server modules, not only in UI handlers.
 - Keep UI components presentational when possible.
 - Avoid hidden global state for auth, sockets, and permissions.
-- Add regression tests for every fixed bug.
+- Add regression tests for fixed bugs.

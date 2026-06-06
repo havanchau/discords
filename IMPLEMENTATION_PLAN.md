@@ -1,349 +1,235 @@
-# Discord Clone - Implementation Plan
+# Discord Clone Implementation Plan
 
-Plan này bám theo `AGENT.md`, `RULE.md`, `docs` và `discord-clone-feature-spec.md`. Mục tiêu là đi từ nền tảng kỹ thuật đến MVP demo được, sau đó mở rộng bằng permission, DM, voice/video và production polish.
+This plan turns the product rules, feature scope, and architecture documents into a delivery sequence. It is intentionally implementation-oriented; detailed product behavior lives in `discord-clone-feature-spec.md`, and UI rules live in `docs/design-rules.md`.
 
-## Quy Ước Chung
+## Delivery Principles
 
-Stack triển khai đề xuất:
+- Keep Sprint 1 through Sprint 3 as the mandatory MVP.
+- Treat backend permissions as the source of truth.
+- Persist state before emitting realtime events.
+- Prefer small vertical slices that work from UI to database.
+- Update documentation when setup, architecture, or product behavior changes.
 
-- Monorepo: `apps/web`, `apps/api`, `packages/shared`
-- Frontend: React + Vite + TypeScript + Tailwind CSS + TanStack Query + Zustand
-- Backend: NestJS + TypeScript + PostgreSQL + Prisma + Socket.IO + JWT
-- Infra: Docker Compose cho PostgreSQL, Redis, web, api
-- Realtime: Socket.IO rooms theo server, channel, conversation
-- Validation: Zod ở shared package, class-validator hoặc DTO validation ở NestJS
-- Test: unit test service quan trọng, integration test API, E2E cho core user flows
+## Technical Baseline
 
-## Sprint 0 - Foundation
+| Area         | Choice                                                            |
+| ------------ | ----------------------------------------------------------------- |
+| Repository   | npm workspaces with `apps/web`, `apps/api`, and `packages/shared` |
+| Web          | React, Vite, TypeScript, Socket.IO client                         |
+| API          | NestJS, TypeScript, Prisma, PostgreSQL, Socket.IO                 |
+| Shared code  | Types, schemas, permissions, realtime event contracts             |
+| Local infra  | Docker Compose for PostgreSQL and service dependencies            |
+| Auth         | JWT access tokens, refresh tokens, guarded private endpoints      |
+| Storage      | Local uploads for development, Cloudinary-ready hosted media      |
+| Verification | lint, typecheck, build, API tests, UI smoke tests                 |
 
-Thời lượng đề xuất: 2-3 ngày
+## Sprint 0: Foundation
 
-Mục tiêu:
-
-- Chốt cấu trúc monorepo.
-- Setup frontend, backend, shared package.
-- Setup Docker Compose cho PostgreSQL và Redis.
-- Setup Prisma, env validation, lint, format, typecheck.
-- Tạo health check API và trang web shell đầu tiên.
-
-Deliverables:
-
-- `apps/web` chạy được ở `http://localhost:5173`
-- `apps/api` chạy được ở `http://localhost:3000`
-- `GET /health` trả trạng thái API, database, redis
-- Prisma migrate chạy được
-- CI local scripts: lint, typecheck, test
-
-Acceptance criteria:
-
-- `npm run lint` pass.
-- `npm run typecheck` pass.
-- `docker compose up` khởi động PostgreSQL và Redis.
-- Health endpoint trả `ok`.
-
-Test link:
-
-- Web: `http://localhost:5173`
-- API health: `http://localhost:3000/health`
-
-## Sprint 1 - Auth + User Profile
-
-Thời lượng đề xuất: 5-7 ngày
-
-Mục tiêu:
-
-- Register, login, logout, refresh token.
-- Hash password bằng argon2 hoặc bcrypt.
-- JWT access token ngắn hạn, refresh token lưu hash trong database.
-- User profile cơ bản.
-- Protected API guard.
+Goal: establish the monorepo, local services, shared package, and health checks.
 
 Deliverables:
 
-- Auth pages: login, register.
-- API: `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me`.
-- User API: `/users/me`, `PATCH /users/me`.
-- Frontend session store và request interceptor.
-- Error/loading/unauthorized states.
+- Web app running at `http://localhost:5173`.
+- API running at `http://localhost:3000`.
+- `GET /health` returns API and database status.
+- Prisma schema and local database workflow are usable.
+- Root scripts cover lint, typecheck, build, and local development.
 
 Acceptance criteria:
 
-- Email và username không trùng.
-- Password không lưu plain text.
-- Refresh token bị revoke khi logout.
-- API private trả 401 khi không có token.
-- Người dùng đăng nhập xong vào được app shell.
+- `npm run lint` passes.
+- `npm run typecheck` passes.
+- `npm run build` passes.
+- Local environment starts without manual code edits.
 
-Test link:
+## Sprint 1: Auth and User Profile
 
-- Register: `http://localhost:5173/register`
-- Login: `http://localhost:5173/login`
-- Current user API: `http://localhost:3000/auth/me`
-
-## Sprint 2 - Server, Member, Channel Core
-
-Thời lượng đề xuất: 7-10 ngày
-
-Mục tiêu:
-
-- Tạo server.
-- Người tạo là owner.
-- Tạo role `@everyone`.
-- Tạo text channel mặc định `general`.
-- Sidebar server, channel sidebar, member list cơ bản.
-- Invite join server.
+Goal: support registration, login, current-user lookup, token refresh, logout, and basic profile editing.
 
 Deliverables:
 
-- API: `/servers`, `/servers/:serverId`, `/servers/:serverId/channels`.
-- API invite: tạo invite, xem invite, join bằng code.
-- Database models: server, member, role, channel, invite.
-- Web UI: create server modal, join server modal, server layout.
+- Auth pages for register and login.
+- API endpoints for register, login, refresh, logout, and current user.
+- Guarded private API routes.
+- User profile API for current-user updates.
+- Clear loading, error, and unauthorized states in the web app.
 
 Acceptance criteria:
 
-- User tạo server được và tự động thành owner.
-- Server mới luôn có ít nhất một text channel.
-- User không phải member không xem được server private data.
-- Join invite idempotent nếu user đã là member.
-- Channel name được normalize lowercase, URL-safe.
+- Email and username uniqueness is enforced.
+- Passwords are never stored in plain text.
+- Refresh tokens can be revoked.
+- Private endpoints return consistent `401` responses without credentials.
+- Successful login enters the app shell.
 
-Test link:
+## Sprint 2: Servers, Members, and Channels
 
-- App shell: `http://localhost:5173/app`
-- Server detail: `http://localhost:5173/servers/:serverId`
-- Invite join: `http://localhost:5173/invite/:code`
-
-## Sprint 3 - Realtime Text Chat MVP
-
-Thời lượng đề xuất: 7-10 ngày
-
-Mục tiêu:
-
-- Socket auth.
-- Join/leave channel room.
-- Send realtime message.
-- Load message history bằng cursor pagination.
-- Edit/delete own message.
-- Typing indicator.
+Goal: create the core Discord-like workspace model.
 
 Deliverables:
 
-- API: `GET /channels/:channelId/messages`, `POST /channels/:channelId/messages`, `PATCH /messages/:messageId`, `DELETE /messages/:messageId`.
-- Socket events: `message:create`, `message:created`, `message:update`, `message:updated`, `message:delete`, `message:deleted`, `typing:start`, `typing:stop`.
-- UI: chat panel, message list, composer, edit/delete actions.
+- Server CRUD foundation.
+- Server owner membership creation.
+- Default `@everyone` role.
+- Default `general` text channel.
+- Invite creation and invite join flow.
+- Server rail, channel sidebar, chat area, and member sidebar shell.
 
 Acceptance criteria:
 
-- Server persist message trước, emit sau.
-- Chỉ member có quyền mới gửi/xem message.
-- Message mới xuất hiện realtime ở hai browser tabs.
-- Edit giữ nguyên `createdAt` và cập nhật `editedAt`.
-- Delete dùng soft delete và không phá lịch sử chat.
-- Infinite scroll không load toàn bộ message cùng lúc.
+- Creating a server is transactional.
+- A server always has at least one text channel.
+- Non-members cannot read private server data.
+- Joining an invite is idempotent for existing members.
+- Channel names are normalized and safe for URLs.
 
-Test link:
+## Sprint 3: Realtime Text Chat MVP
 
-- Channel chat: `http://localhost:5173/servers/:serverId/channels/:channelId`
-- Message API: `http://localhost:3000/channels/:channelId/messages`
+Goal: deliver persistent realtime text chat.
 
-## Sprint 4 - Role & Permission System
+Deliverables:
 
-Thời lượng đề xuất: 7-10 ngày
+- Socket authentication.
+- Authorized channel-room join and leave.
+- Cursor-paginated message history.
+- Message create, edit, and soft delete.
+- Typing indicators.
+- Chat timeline and composer UI.
 
-Mục tiêu:
+Acceptance criteria:
 
-- Permission backend là source of truth.
+- Messages are persisted before realtime emission.
+- Only authorized members can read or send in a channel.
+- New messages appear in multiple browser sessions without refresh.
+- Edits keep `createdAt` and update edit metadata.
+- Soft deletes preserve conversation history.
+- Pagination avoids loading the full channel history at once.
+
+## Sprint 4: Roles and Permissions
+
+Goal: make permissions explicit, reusable, and testable.
+
+Deliverables:
+
+- Permission constants in `packages/shared`.
+- Permission service in the API.
 - Role CRUD.
-- Assign/remove role cho member.
-- Permission guard cho server, channel, message, invite.
-- Basic moderation: delete message người khác, kick member.
-
-Deliverables:
-
-- Permission constants trong `packages/shared`.
-- API role: `/servers/:serverId/roles`, `/roles/:roleId`.
-- API member role: add/remove member role.
-- Permission service và guard testable.
-- UI: role settings, member management cơ bản.
+- Member role assignment and removal.
+- Guards for server, channel, message, invite, and moderation actions.
+- Basic role and member management UI.
 
 Acceptance criteria:
 
-- Owner có toàn quyền.
-- User không có `channel.manage` không tạo/xóa channel được.
-- User không có `message.manage` không xóa message người khác được.
-- Không kick owner.
-- Permission check có unit test.
+- Owners have all permissions.
+- Users without `channel.manage` cannot create, edit, or delete channels.
+- Users without `message.manage` cannot moderate other users' messages.
+- Owners cannot be kicked by non-owners.
+- Permission behavior has focused automated tests.
 
-Test link:
+## Sprint 5: Better Chat
 
-- Server settings: `http://localhost:5173/servers/:serverId/settings`
-- Role settings: `http://localhost:5173/servers/:serverId/settings/roles`
-- Member settings: `http://localhost:5173/servers/:serverId/settings/members`
-
-## Sprint 5 - Better Chat: Upload, Reply, Reaction, Mention, Unread
-
-Thời lượng đề xuất: 7-10 ngày
-
-Mục tiêu:
-
-- File upload trong message.
-- Image preview và file download có permission check.
-- Reply message.
-- Reaction emoji.
-- Mention user/role/everyone.
-- Unread count và mention badge.
+Goal: make chat feel closer to a production communication app.
 
 Deliverables:
 
-- Upload module local storage dev.
-- Database: attachments, reactions, read states, notifications.
-- Parser mention.
-- UI: file preview, reply preview, reaction bar, unread badges.
+- Message attachments with server-side validation.
+- Image, video, audio, and file preview states.
+- Replies.
+- Reactions.
+- Mentions.
+- Unread counts and mention badges.
+- Pinned messages.
 
 Acceptance criteria:
 
-- File type và size được validate server-side.
-- Private channel file không tải được nếu không có quyền.
-- Mention tạo notification đúng người.
-- Reaction add/remove idempotent.
-- Unread count cập nhật khi đọc channel.
+- File type and size are validated server-side.
+- Private channel attachments require authorization.
+- Mentions notify the correct users.
+- Reaction add/remove is idempotent.
+- Read state updates when a channel is viewed.
 
-Test link:
+## Sprint 6: Direct Messages, Friends, and Presence
 
-- Upload trong chat: `http://localhost:5173/servers/:serverId/channels/:channelId`
-- Notifications: `http://localhost:5173/notifications`
+Goal: add user-to-user communication and social state.
 
-## Sprint 6 - DM + Friends + Presence
+Deliverables:
 
-Thời lượng đề xuất: 7-10 ngày
-
-Mục tiêu:
-
-- Friend request.
+- Friend request, accept, decline, and block flows.
 - Friend list.
-- DM 1-1 realtime.
-- Block user.
-- Presence online/offline/idle/dnd/invisible.
-
-Deliverables:
-
-- API friends: request, accept, decline, block.
-- API DM: create conversation, list conversations, messages.
-- Socket rooms cho conversation.
-- Presence service dùng Redis hoặc in-memory cho dev.
-- UI: friends page, DM list, DM chat.
+- One-to-one direct message conversations.
+- Presence states: online, idle, do-not-disturb, invisible, offline.
+- DM list and DM chat UI.
 
 Acceptance criteria:
 
-- Chỉ participants đọc được DM.
-- User bị block không gửi DM/friend request.
-- Presence broadcast tới friend/server members hợp lệ.
-- Reconnect refetch state từ API.
+- Only conversation participants can read DMs.
+- Blocked users cannot send DMs or friend requests.
+- Presence is only broadcast to authorized viewers.
+- Reconnect flows refetch missed state from the API.
 
-Test link:
+## Sprint 7: Voice, Video, and Screen Share
 
-- Friends: `http://localhost:5173/friends`
-- DM: `http://localhost:5173/dm/:conversationId`
-
-## Sprint 7 - Voice, Video, Screen Share
-
-Thời lượng đề xuất: 10-14 ngày
-
-Mục tiêu:
-
-- Voice channel join/leave.
-- WebRTC signaling bằng Socket.IO.
-- DM video call 1-1.
-- Screen sharing.
-- Call log.
+Goal: build the WebRTC foundation for voice and video communication.
 
 Deliverables:
 
-- Socket events: `voice:join`, `voice:leave`, `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`, `call:start`, `call:accept`, `call:end`.
-- Voice state model.
-- Call log model.
-- UI: voice controls, incoming call modal, video call screen.
-- STUN config dev, TURN config production-ready.
+- Voice channel join and leave.
+- WebRTC signaling over Socket.IO.
+- Mute, deafen, and active speaker states.
+- One-to-one video call foundation.
+- Screen-share start and stop.
+- Call UI surfaces.
 
 Acceptance criteria:
 
-- Chỉ user có `CONNECT_VOICE` join voice được.
-- Signaling chỉ gửi tới participant hợp lệ.
-- Mute/deafen state broadcast realtime.
-- Video call 1-1 hoạt động giữa hai browser profiles.
-- Screen share start/stop rõ ràng.
+- Only users with voice permission can join voice channels.
+- Signaling events are sent only to authorized participants.
+- Mute and deafen states broadcast in realtime.
+- Two browser profiles can complete a basic call.
+- Screen share state is visible and recoverable.
 
-Test link:
+## Sprint 8: Production and Portfolio Polish
 
-- Voice channel: `http://localhost:5173/servers/:serverId/channels/:voiceChannelId`
-- Video call: `http://localhost:5173/dm/:conversationId/call`
-
-## Sprint 8 - Production, Testing, Portfolio Polish
-
-Thời lượng đề xuất: 7-10 ngày
-
-Mục tiêu:
-
-- Docker production.
-- CI/CD.
-- Rate limiting.
-- Logging, global error handling.
-- Seed demo data.
-- README portfolio, screenshots, architecture diagram.
-- E2E test core flows.
+Goal: make the project deployable, demonstrable, and maintainable.
 
 Deliverables:
 
-- Dockerfile web/api.
-- `docker-compose.yml` production-like.
-- GitHub Actions: lint, typecheck, test, build.
-- Seed script với demo account.
-- README có demo URL, account demo, screenshots.
-- E2E: register/login, create server, send realtime message.
+- Production Dockerfiles and deployment docs.
+- GitHub Actions for lint, typecheck, build, and deploy.
+- Rate limiting, CORS, Helmet, and global error handling.
+- Demo seed data.
+- README with local setup, production setup, demo account, and feature summary.
+- UI smoke checks for core flows.
 
 Acceptance criteria:
 
-- Demo online chạy được.
-- Demo account dùng được.
-- CI pass trên GitHub.
-- Local seed tạo đủ dữ liệu demo.
-- README đủ hướng dẫn chạy local và production.
+- Demo environment is reachable.
+- Demo account works.
+- CI passes on GitHub.
+- Local seed creates enough data for a realistic demo.
+- Documentation reflects the actual setup.
 
-Test link:
+## MVP Demo Flow
 
-- Local web: `http://localhost:5173`
-- Local API: `http://localhost:3000`
-- Production demo: `https://your-demo-domain.example`
+The first public MVP should be cut after Sprint 3.
 
-## Milestone Demo
-
-MVP demo đầu tiên nên chốt sau Sprint 3.
-
-Demo flow:
-
-1. Register 2 tài khoản.
-2. Login ở 2 browser khác nhau.
-3. Tài khoản A tạo server.
-4. A tạo invite.
-5. B join server bằng invite.
-6. A và B gửi message realtime trong `#general`.
-7. A edit message của mình.
-8. A delete message của mình.
-9. Reload app và thấy message history vẫn còn đúng.
-
-Link demo local cho MVP:
-
-- Browser A: `http://localhost:5173/login`
-- Browser B hoặc incognito: `http://localhost:5173/login`
+1. Register two accounts.
+2. Log in from two different browser contexts.
+3. Account A creates a server.
+4. Account A creates an invite.
+5. Account B joins through the invite.
+6. Both accounts send realtime messages in `#general`.
+7. Account A edits one own message.
+8. Account A deletes one own message.
+9. Refresh both browsers and verify message history remains correct.
 
 ## Test Strategy
 
 Backend unit tests:
 
-- Auth service: hash password, login, refresh, revoke.
-- Permission service: owner/admin/member/no-access cases.
-- Message service: create/edit/delete, membership required.
+- Auth service: password hashing, login, refresh, revoke.
+- Permission service: owner, admin, member, and no-access cases.
+- Message service: create, edit, delete, membership required.
 - Invite service: expired invite, max uses, already joined.
 
 Backend integration tests:
@@ -356,41 +242,35 @@ Backend integration tests:
 Socket tests:
 
 - Authenticated connection.
-- Unauthorized connection rejected.
-- Channel room join validates membership.
-- Message emit broadcasts only to authorized room members.
+- Unauthorized connection rejection.
+- Channel room join membership checks.
+- Message broadcasts only to authorized room members.
 
-Frontend tests:
+Frontend and smoke tests:
 
 - Auth form validation.
-- Server/channel empty states.
-- Chat composer disabled states.
-- Message action visibility based on permission.
-
-E2E tests:
-
-- Register/login.
-- Create server.
-- Join invite.
-- Realtime message in two browser contexts.
-- Permission denial for restricted action.
+- Server and channel empty states.
+- Chat composer disabled and pending states.
+- Message action visibility by permission.
+- Realtime message delivery in two browser contexts.
 
 ## Risk Register
 
-- Scope quá lớn: giữ Sprint 1-3 là MVP bắt buộc, các sprint sau là nâng cấp.
-- Permission phức tạp: viết permission service sớm và test kỹ.
-- Realtime race condition: persist trước, emit sau, client reconcile theo server IDs.
-- WebRTC khó debug: làm voice signaling sau khi chat realtime đã ổn định.
-- Deploy trễ: Docker Compose nên có từ Sprint 0 để giảm rủi ro production.
+| Risk                            | Mitigation                                                          |
+| ------------------------------- | ------------------------------------------------------------------- |
+| Scope grows beyond MVP          | Keep Sprint 1-3 mandatory and later sprints optional.               |
+| Permissions become inconsistent | Centralize permission checks in the API and test them early.        |
+| Realtime race conditions        | Persist first, emit second, reconcile by server IDs.                |
+| WebRTC debugging consumes time  | Start voice/video only after text realtime is stable.               |
+| Deployment slips late           | Keep Docker and deployment docs current from the foundation sprint. |
 
-## Definition Of Done
+## Definition of Done
 
-Một sprint chỉ được coi là xong khi:
+A sprint is complete only when:
 
-- Feature chính chạy được từ UI.
-- API có validation và error states rõ.
-- Permission backend đã được kiểm tra.
-- Realtime event không leak data cho user không có quyền.
-- Typecheck và lint pass.
-- Test quan trọng của sprint pass.
-- README hoặc docs được cập nhật nếu có thay đổi setup.
+- The main feature works from the UI.
+- API input validation and error states are present.
+- Backend permissions are checked.
+- Realtime events do not leak data to unauthorized users.
+- Typecheck, lint, and relevant tests pass.
+- Documentation is updated when setup or behavior changes.

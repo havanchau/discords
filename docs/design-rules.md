@@ -1,357 +1,322 @@
-# Discord UI Design Rules
-> Tài liệu tham chiếu thiết kế UI theo chuẩn Discord (2025). AI phải tuân thủ 100% các quy tắc này khi tạo giao diện Discord-like.
+# Discord Clone UI Design Rules
+
+> Product UI reference for Codex and contributors. These rules keep the web client aligned with the app architecture in `docs/architecture.md` and the current React component split under `apps/web/src`.
 
 ---
 
-## 1. TRIẾT LÝ THIẾT KẾ
+## 1. Recommended Codex Skill
 
-Discord UI được xây dựng trên các nguyên tắc cốt lõi:
+Use the **`ui-polish`** skill when asking Codex to make the interface look better.
 
-- **Dark-first**: Mặc định là dark theme. Light theme là ngoại lệ.
-- **Warm dark, not cold black**: Màu tối dùng warm gray (#313338), không dùng pure black (#000000).
-- **Layered depth**: Các panel có độ tối khác nhau, tạo chiều sâu bằng màu sắc, không phải shadow.
-- **Compact density**: Thông tin dày đặc nhưng có hệ thống, không lãng phí không gian.
-- **Rounded corners everywhere**: Border radius nhất quán trên toàn bộ UI.
-- **Gaming roots, mainstream reach**: Vừa đủ playful cho gamer, vừa đủ clean cho dân văn phòng.
+This skill is the right fit for:
 
----
+- Auditing screenshots and visible layout issues.
+- Improving spacing, hierarchy, density, empty states, loading states, and responsive behavior.
+- Keeping the UI consistent with the existing app shell instead of producing a generic landing-page look.
+- Verifying desktop and mobile views with browser screenshots after meaningful frontend changes.
 
-## 2. LAYOUT ARCHITECTURE
-
-### 2.1 Layout 4 cột (Desktop)
-
-```
-┌──────┬──────────────┬─────────────────────────┬──────────────┐
-│ Rail │ Channel List │     Chat Area            │ Member List  │
-│  72px│    240px     │      flex: 1             │   240px      │
-└──────┴──────────────┴─────────────────────────┴──────────────┘
-```
-
-| Panel | Width | Background |
-|---|---|---|
-| Server Rail (icon bar) | `72px` | `#1E1F22` |
-| Channel Sidebar | `240px` | `#2B2D31` |
-| Chat Area | `flex: 1` (min `460px`) | `#313338` |
-| Member List | `240px` | `#2B2D31` |
-
-### 2.2 Chiều cao các thanh cố định
-
-| Element | Height |
-|---|---|
-| Title Bar (header) | `48px` |
-| Chat Input Box | `44px` min, tự co giãn |
-| Channel Item row | `34px` (Default density) |
-| Member row | `42px` |
-| Message toolbar hover | `32px` |
-
-### 2.3 UI Density Settings
-
-Discord hỗ trợ 3 mức density (Settings → Appearance → Message Display):
-
-| Mode | Message spacing | Font size |
-|---|---|---|
-| Compact | `0px` giữa các message | `15px` |
-| Default (Cozy) | `17px` giữa các message | `16px` |
-| Spacious | `24px` giữa các message | `16px` |
+For Discord-like UI work, pair `ui-polish` with the rules in this file.
 
 ---
 
-## 3. COLOR SYSTEM
+## 2. Product Direction
 
-### 3.1 Brand Colors
+The goal is not to create a decorative "AI-looking" interface. The goal is a dense, real product UI that feels like a Discord-class chat application.
 
-| Token | Hex | Dùng ở đâu |
-|---|---|---|
-| **Blurple** | `#5865F2` | Nút primary, link active, selected state, brand identity |
-| **Green** | `#57F287` | Online status, success, voice connected |
-| **Yellow** | `#FEE75C` | Idle status, warning |
-| **Red** | `#ED4245` | Do Not Disturb, error, danger button, delete |
-| **Fuchsia** | `#EB459E` | Partner/special badge |
-| **White** | `#FFFFFF` | Text trên màu nền tối |
+Core principles:
 
-### 3.2 Dark Theme — Background Layers
+- **Dark-first**: dark theme is the default experience. Light theme is optional.
+- **Warm dark surfaces**: use Discord-like warm grays instead of pure black for normal panels.
+- **Layered depth by color**: separate app regions with background layers, not heavy shadows or borders.
+- **Utility before decoration**: every visible element should support navigation, communication, moderation, calling, settings, or feedback.
+- **Dense but scannable**: reduce wasted space while preserving clear grouping and readable rows.
+- **Real app shell**: the first screen should be the usable chat experience, not a marketing page.
 
-Discord dùng hệ thống background layering theo độ tối tăng dần:
+Avoid:
 
-```css
-/* Từ sáng nhất đến tối nhất trong Dark theme */
---background-floating:      #18191C; /* Tooltip, dropdown nổi trên cùng */
---background-tertiary:      #1E1F22; /* Server rail */
---background-secondary-alt: #232428; /* Các section sidebar đặc biệt */
---background-secondary:     #2B2D31; /* Channel sidebar, member list */
---background-primary:       #313338; /* Chat area - màu chính */
---background-accent:        #4E5058; /* Scrollbar, divider */
-```
-
-### 3.3 Dark Theme — Text Colors
-
-```css
---text-normal:    #DBDEE1; /* Text thông thường trong chat */
---text-muted:     #80848E; /* Placeholder, timestamp, muted */
---text-link:      #00A8FC; /* Link trong chat */
---header-primary: #F2F3F5; /* Header, title, username đậm */
---header-secondary: #B5BAC1; /* Subheader, channel name */
---interactive-normal:  #B5BAC1; /* Icon/text idle state */
---interactive-hover:   #DBDEE1; /* Icon/text khi hover */
---interactive-active:  #FFFFFF; /* Icon/text khi selected */
---interactive-muted:   #4E5058; /* Disabled state */
-```
-
-### 3.4 Dark Theme — Status Colors
-
-```css
---status-online:  #23A55A; /* Chấm xanh lá */
---status-idle:    #F0B232; /* Chấm vàng */
---status-dnd:     #F23F43; /* Chấm đỏ */
---status-offline: #80848E; /* Chấm xám */
---status-streaming: #593695; /* Chấm tím khi stream */
-```
-
-### 3.5 Dark Theme — Semantic Colors
-
-```css
---background-message-hover:    rgba(2, 2, 2, 0.06);  /* Row highlight khi hover message */
---background-modifier-selected: rgba(79, 84, 92, 0.32); /* Selected channel/item */
---background-modifier-hover:    rgba(79, 84, 92, 0.16); /* Hover channel/item */
---background-modifier-active:   rgba(79, 84, 92, 0.24); /* Click state */
-
---mention-foreground: #C9CDFB;      /* Text trong mention */
---mention-background: rgba(88, 101, 242, 0.30); /* Background mention highlight */
-
---input-background:   #1E1F22;  /* Textbox, search field background */
---input-placeholder:  #87898C;  /* Placeholder text */
---input-border:       transparent; /* Thường không có border */
-```
-
-### 3.6 Onyx & Ash Theme (2025)
-
-| Theme | Primary BG | Secondary BG | Rail |
-|---|---|---|---|
-| Dark | `#313338` | `#2B2D31` | `#1E1F22` |
-| Ash | `#383A40` | `#313338` | `#232428` |
-| Onyx | `#1A1A1D` | `#111214` | `#0D0D0F` |
-| Light | `#FFFFFF` | `#F2F3F5` | `#E3E5E8` |
+- Oversized hero sections inside the app.
+- Fake analytics cards, decorative KPI widgets, or empty marketing blocks.
+- Glassmorphism, neumorphism, excessive gradients, and single-hue palettes.
+- Large blank spaces where Discord would show channels, members, messages, presence, or controls.
 
 ---
 
-## 4. TYPOGRAPHY
+## 3. Architecture Mapping
 
-### 4.1 Font Stack
+The UI should follow the same layered model as the system architecture: client shell, realtime interaction, service-backed data, and user-facing state.
 
-```css
-/* UI Font - gg sans (custom, giả lập bằng font gần nhất) */
-font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-
-/* Code / Monospace */
-font-family: "gg mono", "Consolas", "Andale Mono WT", "Andale Mono",
-             "Lucida Console", monospace;
-```
-
-> **Lưu ý**: `gg sans` là font độc quyền của Discord, không public. Khi không có, dùng **Noto Sans** hoặc **Manrope** làm fallback gần nhất về style.
-
-### 4.2 Type Scale (3-tier system, 2025)
-
-| Role | Size | Weight | Line Height | Dùng ở đâu |
-|---|---|---|---|---|
-| `display-xxl` | `40px` | 700 | `1.25` | Hero marketing |
-| `display-xl` | `32px` | 700 | `1.25` | Modal title lớn |
-| `display-lg` | `24px` | 700 | `1.25` | Section header |
-| `display-md` | `20px` | 600 | `1.3` | Panel title |
-| `display-sm` | `16px` | 600 | `1.375` | Channel name, card title |
-| `text-lg` | `16px` | 400 | `1.375` | Message body (cozy mode) |
-| `text-md` | `14px` | 400 | `1.357` | UI label, tooltip |
-| `text-sm` | `12px` | 400 | `1.333` | Timestamp, category label |
-| `text-xs` | `10px` | 400 | `1.3` | Badge, status text tiny |
-| `code` | `14.4px` (0.875em) | 400 | `1.375` | Inline code |
-
-### 4.3 Typography Rules
-
-- **Username trong chat**: `font-weight: 500`, màu role color hoặc `--header-primary`.
-- **Timestamp**: `font-size: 11px`, `color: --text-muted`, xuất hiện khi hover hoặc góc phải.
-- **Channel category (section header)**: `font-size: 11px`, `font-weight: 600`, `text-transform: uppercase`, `letter-spacing: 0.02em`.
-- **Channel name**: `font-size: 15px` (Default), `font-weight: 500`.
-- **Markdown bold**: `font-weight: 700`.
-- **Markdown italic**: `font-style: italic`.
-- **Inline code**: background `rgba(30,31,34,0.48)`, padding `0 4px`, border-radius `3px`.
+| Architecture Area        | UI Surface                      | Primary Code Area                                           | Design Responsibility                                                                                |
+| ------------------------ | ------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Client Layer             | App shell                       | `apps/web/src/AppShell.tsx`                                 | Compose the rail, channels, chat, members, modals, and responsive layout.                            |
+| Workspace Navigation     | Server rail and channel sidebar | `components/WorkspaceSidebar.tsx`                           | Show servers, channels, voice occupancy, unread badges, active states, and channel actions.          |
+| Realtime Messaging       | Chat timeline and composer      | `components/ChatPanel.tsx`                                  | Show messages, typing, replies, reactions, attachments, pins, voice messages, and realtime feedback. |
+| Presence and Members     | Member sidebar                  | `components/MemberSidebar.tsx`                              | Show online state, profile affordances, role chips, and member context.                              |
+| Calls and Media          | Voice/video surfaces            | `hooks/useChannelCall.ts`, `components/RemoteVideoTile.tsx` | Keep call controls stable, compact, and visually clear.                                              |
+| Settings and Account     | Modals and profile controls     | `components/SettingsModal.tsx`                              | Use focused modal flows with clear save, pending, success, and error states.                         |
+| API and Realtime Gateway | Async UI states                 | `apps/web/src/api.ts`, Socket.IO usage                      | Reflect loading, pending, optimistic update, retry, and error states.                                |
 
 ---
 
-## 5. SPACING SYSTEM
+## 4. App Shell Layout
 
-Discord dùng base-4 spacing system:
+Desktop layout uses four persistent regions:
 
-```
-4px  — Micro: padding icon, gap nhỏ nhất
-8px  — XS: padding text element, gap compact
-12px — SM: padding bên trong button nhỏ, list item inner gap
-16px — MD: padding panel, khoảng cách giữa element quan trọng
-20px — LG: section margin
-24px — XL: block spacing lớn
-32px — 2XL: section separator
-40px — 3XL: modal padding
+```text
++-------------+------------------+--------------------------+----------------+
+| Server Rail | Channel Sidebar  | Chat Area                | Member Sidebar |
+| 72px        | 240px            | flex: 1, min 460px       | 240px          |
++-------------+------------------+--------------------------+----------------+
 ```
 
-### 5.1 Spacing cụ thể
+| Region          |     Width | Background | Notes                                                         |
+| --------------- | --------: | ---------- | ------------------------------------------------------------- |
+| Server rail     |    `72px` | `#1E1F22`  | Icon-only navigation with active indicators and tooltips.     |
+| Channel sidebar |   `240px` | `#2B2D31`  | Server header, channel groups, voice occupancy, unread state. |
+| Chat area       | `flex: 1` | `#313338`  | Header, message timeline, composer, call banner, overlays.    |
+| Member sidebar  |   `240px` | `#2B2D31`  | Presence groups and member profile affordances.               |
 
-| Element | Spacing |
-|---|---|
-| Channel item padding | `0 8px` |
-| Channel item inner padding | `0 8px` (text trong item) |
-| Message padding (cozy) | `2px 16px 2px 72px` |
-| Message first-in-group | `16px 16px 0 72px` |
-| Chat input padding | `0 16px` |
-| Sidebar padding top | `8px` |
-| Server icon margin | `8px auto` |
-| Modal padding | `16px 0` (header), `16px 20px` (body) |
-| Tooltip padding | `8px 12px` |
+Fixed heights:
+
+| Element                 | Height |
+| ----------------------- | -----: |
+| Top channel header      | `48px` |
+| Channel row             | `34px` |
+| Member row              | `42px` |
+| Composer minimum height | `44px` |
+| Hover message toolbar   | `32px` |
+
+Responsive behavior:
+
+- On tablet widths, hide or collapse the member sidebar first.
+- On mobile widths, use a single primary content column and reveal navigation through explicit controls.
+- Never let fixed sidebars compress the chat timeline below readable message width.
+- Text in buttons, chips, and rows must wrap or truncate cleanly without overlapping icons.
 
 ---
 
-## 6. BORDER RADIUS
+## 5. Color System
 
-Discord 2025 dùng rounded corners nhất quán:
+### 5.1 Core Brand Colors
+
+| Token   | Hex       | Usage                                           |
+| ------- | --------- | ----------------------------------------------- |
+| Blurple | `#5865F2` | Primary actions, selected state, brand accents. |
+| Green   | `#57F287` | Success, online state, connected voice.         |
+| Yellow  | `#FEE75C` | Warning and idle state.                         |
+| Red     | `#ED4245` | Error, danger, delete, do-not-disturb.          |
+| Fuchsia | `#EB459E` | Special badges or rare accents.                 |
+| White   | `#FFFFFF` | Text on strong colored backgrounds.             |
+
+### 5.2 Dark Theme Layers
 
 ```css
---radius-xs:  2px;   /* Tag, badge nhỏ */
---radius-sm:  4px;   /* Code block, input border, notification dot */
---radius-md:  8px;   /* Button, card nhỏ, context menu item */
---radius-lg:  16px;  /* Modal, panel nổi, attachment preview */
---radius-xl:  24px;  /* Chip, pill button */
---radius-full: 50%;  /* Avatar, status dot, server icon */
---radius-round: 9999px; /* Pill shape buttons, toggle */
+:root {
+  --background-floating: #111214;
+  --background-tertiary: #1e1f22;
+  --background-secondary-alt: #232428;
+  --background-secondary: #2b2d31;
+  --background-primary: #313338;
+  --background-accent: #4e5058;
+
+  --text-normal: #dbdee1;
+  --text-muted: #80848e;
+  --text-link: #00a8fc;
+  --header-primary: #f2f3f5;
+  --header-secondary: #b5bac1;
+
+  --interactive-normal: #b5bac1;
+  --interactive-hover: #dbdee1;
+  --interactive-active: #ffffff;
+  --interactive-muted: #4e5058;
+
+  --brand-color: #5865f2;
+  --brand-hover: #4752c4;
+  --brand-active: #3c45a5;
+
+  --status-online: #23a55a;
+  --status-idle: #f0b232;
+  --status-dnd: #f23f43;
+  --status-offline: #80848e;
+
+  --background-modifier-hover: rgba(79, 84, 92, 0.16);
+  --background-modifier-active: rgba(79, 84, 92, 0.24);
+  --background-modifier-selected: rgba(79, 84, 92, 0.32);
+  --background-message-hover: rgba(2, 2, 2, 0.06);
+
+  --input-background: #1e1f22;
+  --input-placeholder: #87898c;
+  --mention-foreground: #c9cdfb;
+  --mention-background: rgba(88, 101, 242, 0.3);
+}
 ```
 
-### 6.1 Component border-radius cụ thể
-
-| Component | Radius |
-|---|---|
-| Server icon (idle) | `16px` (squircle effect) |
-| Server icon (hover/active) | `50%` |
-| Channel item hover | `4px` |
-| Avatar | `50%` |
-| Button primary | `3px` |
-| Input / Textbox | `8px` |
-| Context Menu | `4px` |
-| Modal | `8px` |
-| Embed | `4px` |
-| Code block | `4px` |
-| Attachment image | `4px` |
-| Tooltip | `5px` |
-| Badge (notification) | `8px` (pill) |
+Theme variants may adjust surface values, but must preserve contrast, readable text, and clear region separation.
 
 ---
 
-## 7. COMPONENTS
+## 6. Typography
 
-### 7.1 Buttons
-
-Discord có 5 kiểu button:
+Preferred font stack:
 
 ```css
-/* PRIMARY — Blurple, action chính */
+font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+```
+
+Monospace stack:
+
+```css
+font-family: 'gg mono', 'Consolas', 'Andale Mono WT', 'Andale Mono', 'Lucida Console', monospace;
+```
+
+Type scale:
+
+| Role         |   Size | Weight | Line Height | Usage                                             |
+| ------------ | -----: | -----: | ----------: | ------------------------------------------------- |
+| `display-lg` | `24px` |    700 |      `1.25` | Modal titles and major settings headings.         |
+| `display-md` | `20px` |    600 |       `1.3` | Panel titles.                                     |
+| `display-sm` | `16px` |    600 |     `1.375` | Channel names, card titles, important row labels. |
+| `text-lg`    | `16px` |    400 |     `1.375` | Chat messages in cozy mode.                       |
+| `text-md`    | `14px` |    400 |     `1.357` | UI labels, menus, tooltips.                       |
+| `text-sm`    | `12px` |    400 |     `1.333` | Timestamps, metadata, category labels.            |
+| `text-xs`    | `10px` |    600 |       `1.3` | Badges and tiny status labels.                    |
+| `code`       | `14px` |    400 |     `1.375` | Inline code and code blocks.                      |
+
+Rules:
+
+- Usernames use `font-weight: 500` and either role color or `--header-primary`.
+- Channel categories use uppercase `11px`, `font-weight: 600`, and slight positive letter spacing.
+- Message timestamps use muted color and should not dominate the timeline.
+- Do not scale font size with viewport width.
+- Keep letter spacing at `0` except tiny uppercase category labels.
+
+---
+
+## 7. Spacing and Radius
+
+Spacing uses a base-4 scale:
+
+```text
+4px, 8px, 12px, 16px, 20px, 24px, 32px, 40px
+```
+
+Common spacing:
+
+| Element                    | Spacing             |
+| -------------------------- | ------------------- |
+| Channel row padding        | `0 8px`             |
+| Message padding            | `2px 16px 2px 72px` |
+| First message in group     | `16px 16px 0 72px`  |
+| Chat composer outer margin | `0 16px 24px`       |
+| Sidebar top padding        | `8px`               |
+| Server icon margin         | `4px auto`          |
+| Modal body padding         | `16px 20px`         |
+| Tooltip padding            | `8px 12px`          |
+
+Radius tokens:
+
+```css
+--radius-xs: 2px;
+--radius-sm: 4px;
+--radius-md: 8px;
+--radius-lg: 16px;
+--radius-xl: 24px;
+--radius-full: 50%;
+--radius-round: 9999px;
+```
+
+Component radius:
+
+| Component                   |         Radius |
+| --------------------------- | -------------: |
+| Channel row                 |          `4px` |
+| Button                      | `3px` to `4px` |
+| Input and composer          |          `8px` |
+| Avatar                      |          `50%` |
+| Server icon idle            |         `16px` |
+| Server icon hover or active |          `50%` |
+| Context menu                |          `4px` |
+| Modal                       |          `8px` |
+| Attachment preview          |          `4px` |
+
+---
+
+## 8. Component Rules
+
+### 8.1 Buttons
+
+Buttons must be visually stable and action-specific.
+
+```css
 .btn-primary {
-  background: #5865F2;
-  color: #FFFFFF;
-  border: none;
+  background: #5865f2;
+  color: #ffffff;
+  border: 0;
   border-radius: 3px;
+  min-height: 38px;
   padding: 2px 16px;
-  height: 38px;
   font-size: 14px;
   font-weight: 500;
 }
-.btn-primary:hover { background: #4752C4; }
-.btn-primary:active { background: #3C45A5; }
 
-/* SECONDARY — Background modifier, action phụ */
-.btn-secondary {
-  background: #4E5058;
-  color: #FFFFFF;
-  border-radius: 3px;
-  height: 38px;
+.btn-primary:hover {
+  background: #4752c4;
 }
-.btn-secondary:hover { background: #6D6F78; }
+.btn-primary:active {
+  background: #3c45a5;
+}
 
-/* DANGER — Đỏ, hành động nguy hiểm */
 .btn-danger {
-  background: #DA373C;
-  color: #FFFFFF;
-  border-radius: 3px;
-  height: 38px;
+  background: #da373c;
+  color: #ffffff;
 }
-.btn-danger:hover { background: #A12828; }
 
-/* GHOST / LINK — Không có background */
 .btn-ghost {
   background: transparent;
-  color: #DBDEE1;
-  border-radius: 3px;
-  height: 38px;
-}
-.btn-ghost:hover {
-  background: rgba(79,84,92,0.16);
-  color: #FFFFFF;
+  color: #dbdee1;
 }
 
-/* OUTLINE */
-.btn-outline {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.16);
-  color: #DBDEE1;
-  border-radius: 3px;
-  height: 38px;
+.btn-ghost:hover {
+  background: rgba(79, 84, 92, 0.16);
+  color: #ffffff;
 }
 ```
 
-### 7.2 Input / Text Field
+Use icon buttons for obvious toolbar actions such as pin, search, call, upload, settings, close, mute, and more options. Every icon button needs a `title` or accessible label.
+
+### 8.2 Inputs and Composer
 
 ```css
 .input {
-  background: #1E1F22;
-  border: none;
+  background: #1e1f22;
+  border: 0;
   border-radius: 4px;
-  color: #DBDEE1;
-  font-size: 16px;
+  color: #dbdee1;
+  min-height: 40px;
   padding: 10px;
-  height: 40px;
-  width: 100%;
   outline: none;
 }
-.input::placeholder { color: #87898C; }
-.input:focus {
-  outline: 2px solid #5865F2;
-  outline-offset: -2px;
+
+.input::placeholder {
+  color: #87898c;
 }
-```
 
-### 7.3 Chat Input Box
-
-```css
 .chat-input {
-  background: #383A40;
+  background: #383a40;
   border-radius: 8px;
-  margin: 0 16px 24px;
-  padding: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
 }
-.chat-input-text {
-  flex: 1;
-  padding: 11px 16px;
-  color: #DBDEE1;
-  font-size: 16px;
-  line-height: 22px;
-  max-height: 50vh;
-  overflow-y: auto;
-}
-.chat-input-text[data-empty]:before {
-  content: attr(placeholder);
-  color: #87898C;
-  pointer-events: none;
-}
 ```
 
-### 7.4 Channel Item
+Composer rules:
+
+- Keep upload, emoji, voice, and send controls visually anchored.
+- Show disabled, pending, and error states when API or upload actions are unavailable.
+- Preserve message text when upload or send fails.
+- Keep the composer reachable on mobile without covering the latest message.
+
+### 8.3 Channel Rows
 
 ```css
 .channel-item {
@@ -361,582 +326,240 @@ Discord có 5 kiểu button:
   margin: 1px 8px;
   padding: 0 8px;
   border-radius: 4px;
-  cursor: pointer;
   gap: 6px;
-  color: #80848E; /* muted default */
+  color: #80848e;
 }
+
 .channel-item:hover {
-  background: rgba(79,84,92,0.16);
-  color: #DBDEE1;
+  background: rgba(79, 84, 92, 0.16);
+  color: #dbdee1;
 }
+
 .channel-item.active {
-  background: rgba(79,84,92,0.32);
-  color: #F2F3F5;
-}
-.channel-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  opacity: 0.75;
+  background: rgba(79, 84, 92, 0.32);
+  color: #f2f3f5;
 }
 ```
 
-### 7.5 Server Icon
+Channel rows should support:
+
+- Active state.
+- Unread state.
+- Mention badge.
+- Private or locked channel marker.
+- Voice occupancy for voice channels.
+- Inline actions without shifting row height.
+
+### 8.4 Messages
 
 ```css
-.server-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px; /* squircle shape idle */
-  margin: 4px auto;
-  cursor: pointer;
-  background: #2B2D31;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  transition: border-radius 0.15s ease;
-}
-.server-icon:hover,
-.server-icon.active {
-  border-radius: 50%;
-}
-/* Pill indicator bên trái khi active */
-.server-icon.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 4px;
-  height: 40px;
-  background: #FFFFFF;
-  border-radius: 0 4px 4px 0;
-}
-```
-
-### 7.6 Avatar
-
-```css
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-/* Avatar nhỏ trong message */
-.avatar-sm { width: 32px; height: 32px; }
-/* Avatar lớn profile */
-.avatar-xl { width: 80px; height: 80px; }
-
-/* Status dot */
-.avatar-wrapper {
-  position: relative;
-  display: inline-block;
-}
-.status-dot {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid var(--background-panel); /* cắt bằng border cùng màu nền */
-}
-.status-online  { background: #23A55A; }
-.status-idle    { background: #F0B232; }
-.status-dnd     { background: #F23F43; }
-.status-offline { background: #80848E; }
-```
-
-### 7.7 Message Layout
-
-```css
-/* Grouped message (cùng user, <5 phút) */
 .message {
-  padding: 2px 16px 2px 72px; /* 72px = 16px margin + 40px avatar + 16px gap */
-  min-height: 22px;
   position: relative;
+  min-height: 22px;
+  padding: 2px 16px 2px 72px;
 }
-/* First message in group (có avatar + username) */
+
 .message.first-in-group {
-  margin-top: 17px; /* cozy spacing */
+  margin-top: 17px;
   padding-top: 2px;
 }
-.message-avatar {
-  position: absolute;
-  left: 16px;
-  top: 2px;
-}
-.message-username {
-  font-weight: 500;
-  color: var(--header-primary);
-  font-size: 16px;
-  cursor: pointer;
-}
-.message-username:hover { text-decoration: underline; }
-.message-timestamp {
-  font-size: 11px;
-  color: #80848E;
-  margin-left: 8px;
-  font-weight: 400;
-}
-/* Timestamp khi hover grouped message (bên trái) */
-.message:hover .hover-timestamp {
-  display: block;
-  position: absolute;
-  left: 0;
-  width: 56px;
-  text-align: right;
-  font-size: 10px;
-  color: #80848E;
-}
-.message:hover { background: rgba(2,2,2,0.06); }
-```
 
-### 7.8 Embed
-
-```css
-.embed {
-  background: #2B2D31;
-  border-left: 4px solid #5865F2; /* màu thay đổi theo bot/content */
-  border-radius: 0 4px 4px 0;
-  padding: 12px 12px 12px 8px;
-  margin: 4px 0;
-  max-width: 520px;
-}
-.embed-title {
-  color: #F2F3F5;
-  font-size: 15px;
-  font-weight: 600;
-}
-.embed-description {
-  color: #DBDEE1;
-  font-size: 14px;
-  margin-top: 8px;
+.message:hover {
+  background: rgba(2, 2, 2, 0.06);
 }
 ```
 
-### 7.9 Context Menu
+Message rows should support:
 
-```css
-.context-menu {
-  background: #111214;
-  border-radius: 4px;
-  padding: 6px 8px;
-  min-width: 188px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.24);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-.context-menu-item {
-  border-radius: 2px;
-  padding: 6px 8px;
-  font-size: 14px;
-  color: #DBDEE1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.context-menu-item:hover {
-  background: #5865F2;
-  color: #FFFFFF;
-}
-.context-menu-item.danger { color: #ED4245; }
-.context-menu-item.danger:hover {
-  background: #ED4245;
-  color: #FFFFFF;
-}
-.context-menu-separator {
-  height: 1px;
-  background: rgba(255,255,255,0.06);
-  margin: 4px 0;
-}
-```
+- Grouping by author and time proximity.
+- Reply previews.
+- Reactions.
+- Edited and deleted states.
+- Pinned state.
+- Attachment previews.
+- Link previews.
+- Voice message cards.
+- E2EE ciphertext fallback states when content cannot be decrypted.
 
-### 7.10 Modal
+### 8.5 Members and Presence
+
+Member rows should be compact, stable, and grouped by presence or role.
+
+Required states:
+
+- Online, idle, do-not-disturb, offline.
+- Hover profile card.
+- Role chips in profile surfaces.
+- Current user distinction when relevant.
+- Loading skeleton for member list hydration.
+
+### 8.6 Modals and Menus
+
+Use modals for focused account, server, channel, role, invite, and settings flows.
 
 ```css
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
+
 .modal {
   background: #313338;
   border-radius: 8px;
-  min-width: 440px;
   max-width: 560px;
-  width: 100%;
+  width: min(100%, 560px);
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.54);
-}
-.modal-header {
-  padding: 16px 16px 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #F2F3F5;
-}
-.modal-body {
-  padding: 16px;
-  color: #DBDEE1;
-  font-size: 16px;
-  line-height: 1.5;
-}
-.modal-footer {
-  background: #2B2D31;
-  padding: 16px;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.54);
 }
 ```
 
-### 7.11 Tooltip
-
-```css
-.tooltip {
-  background: #0D0D0F;
-  color: #DBDEE1;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 8px 12px;
-  border-radius: 5px;
-  pointer-events: none;
-  max-width: 200px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-```
-
-### 7.12 Badge / Notification Pill
-
-```css
-.badge {
-  background: #ED4245;
-  color: #FFFFFF;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 8px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--background-panel);
-}
-```
-
-### 7.13 Toggle / Switch
-
-```css
-.toggle {
-  width: 40px;
-  height: 24px;
-  border-radius: 9999px;
-  background: #4E5058; /* off state */
-  position: relative;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.toggle.on { background: #23A55A; }
-.toggle-knob {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #FFFFFF;
-  top: 3px;
-  left: 3px;
-  transition: transform 0.15s ease;
-}
-.toggle.on .toggle-knob { transform: translateX(16px); }
-```
-
-### 7.14 Scrollbar
-
-```css
-/* Discord custom scrollbar */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb {
-  background: #1A1B1E;
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-  min-height: 40px;
-}
-::-webkit-scrollbar-thumb:hover { background: #232428; }
-```
+Menus should use the floating background, compact rows, separators, and red danger styling only for destructive actions.
 
 ---
 
-## 8. ICONOGRAPHY
+## 9. Interaction, Motion, and Feedback
 
-### 8.1 Nguồn Icon
+Motion should be short and functional:
 
-Discord dùng icon custom, nhưng style rất gần với:
-- **Phosphor Icons** (bold/fill variant) — khuyến nghị dùng khi code clone
-- **Feather Icons** — fallback nhẹ
-- **Tabler Icons** — gần nhất về stroke weight
+| Action                        | Duration |
+| ----------------------------- | -------: |
+| Hover color or opacity        |  `100ms` |
+| Server icon radius transition |  `150ms` |
+| Context menu appear           |  `100ms` |
+| Modal fade and scale          |  `200ms` |
+| Sidebar expand or collapse    |  `300ms` |
+| Toast slide                   |  `250ms` |
 
-### 8.2 Kích thước Icon
+Rules:
 
-| Context | Size |
-|---|---|
-| Inline message icon | `16px` |
-| Channel list icon | `20px` |
-| Toolbar icon (header) | `24px` |
-| Server rail icon | `24px–28px` |
-| Action button icon | `20px` |
-| Emoji / Reaction | `24px–32px` |
-
-### 8.3 Icon Color Rules
-
-- **Default**: `--interactive-normal` (`#B5BAC1`)
-- **Hover**: `--interactive-hover` (`#DBDEE1`)
-- **Active/Selected**: `--interactive-active` (`#FFFFFF`)
-- **Danger**: `#ED4245`
-- **Blurple action**: `#5865F2`
+- Keep hover transitions below `200ms`.
+- Do not animate large layout changes during typing, scrolling, or message streaming.
+- Use subtle fade and scale for modal entry.
+- Use local UI updates after successful CRUD responses.
+- Show pending states for saves, uploads, reactions, pins, and call actions.
+- Show recoverable error messages near the failed control.
 
 ---
 
-## 9. SHADOWS & ELEVATION
-
-Discord không dùng shadow nhiều trong UI phẳng, chỉ dùng cho **floating elements**:
+## 10. Accessibility
 
 ```css
-/* Level 1 - Tooltip, small dropdown */
-box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-
-/* Level 2 - Context menu, popout panel */
-box-shadow: 0 8px 16px rgba(0,0,0,0.24);
-
-/* Level 3 - Modal, large panel */
-box-shadow: 0 24px 64px rgba(0,0,0,0.54);
-
-/* Level 4 - Full overlay modal */
-box-shadow: 0 32px 96px rgba(0,0,0,0.7);
-```
-
-Separation giữa các panel dùng **màu sắc** (độ tối khác nhau), không phải shadow hay border.
-
----
-
-## 10. MOTION & ANIMATION
-
-### 10.1 Easing
-
-```css
---ease-discord: cubic-bezier(0.4, 0, 0.2, 1); /* Material-like, Discord dùng phổ biến */
---ease-spring:  cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Server icon pill */
---ease-out:     cubic-bezier(0, 0, 0.2, 1);
-```
-
-### 10.2 Duration chuẩn
-
-| Action | Duration |
-|---|---|
-| Hover color/opacity | `100ms` |
-| Border radius transition (server icon) | `150ms` |
-| Context menu appear | `100ms` |
-| Modal fade-in | `200ms` |
-| Sidebar collapse/expand | `300ms` |
-| Toast notification slide | `250ms` |
-
-### 10.3 Quy tắc Animation
-
-- **Không dùng animation** cho các state thay đổi nhanh (typing, scroll).
-- **Fade + scale** cho modal: `opacity 0→1`, `scale 0.95→1`.
-- **Slide up** cho toast notification.
-- **Server icon pill**: chiều cao grow từ `8px → 40px`.
-- **Tất cả hover transition** phải dưới `200ms`.
-
----
-
-## 11. MENTIONS & HIGHLIGHTS
-
-```css
-/* @user mention */
-.mention {
-  background: rgba(88, 101, 242, 0.30);
-  color: #C9CDFB;
-  border-radius: 3px;
-  padding: 0 2px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.mention:hover {
-  background: rgba(88, 101, 242, 0.60);
-  color: #FFFFFF;
-}
-
-/* Message được mention (highlight cả row) */
-.message.mentioned {
-  background: rgba(88, 101, 242, 0.08);
-  border-left: 2px solid #5865F2;
-  padding-left: 70px; /* bù 2px border */
-}
-.message.mentioned:hover {
-  background: rgba(88, 101, 242, 0.12);
-}
-```
-
----
-
-## 12. MARKDOWN RENDERING
-
-Discord hỗ trợ markdown subset:
-
-| Syntax | Render |
-|---|---|
-| `**bold**` | `font-weight: 700` |
-| `*italic*` hoặc `_italic_` | `font-style: italic` |
-| `__underline__` | `text-decoration: underline` |
-| `~~strikethrough~~` | `text-decoration: line-through` |
-| `` `code` `` | inline code — mono font, bg tối |
-| ` ```code block``` ` | block code — `background: #2B2D31`, full width |
-| `> quote` | border-left blurple, padding-left |
-| `# Heading` | H1–H3 với font-size tăng dần |
-| `[text](url)` | màu `--text-link: #00A8FC` |
-| `||spoiler||` | background blur-màu, click to reveal |
-
----
-
-## 13. ACCESSIBILITY & FOCUS
-
-```css
-/* Discord dùng outline focus cho keyboard navigation */
 :focus-visible {
-  outline: 2px solid #5865F2;
+  outline: 2px solid #5865f2;
   outline-offset: 2px;
 }
 
-/* Không dùng :focus (vì trigger cả click), chỉ dùng :focus-visible */
-:focus:not(:focus-visible) { outline: none; }
-```
-
-- Minimum touch target: `32px × 32px`
-- Contrast ratio text thường ≥ 4.5:1 (WCAG AA)
-- Tất cả icon phải có `aria-label` hoặc `title`
-
----
-
-## 14. Z-INDEX HIERARCHY
-
-```css
---z-message-toolbar:   1;    /* Toolbar hover trên message */
---z-sidebar:          10;    /* Sidebar panel */
---z-header:           20;    /* Top header bar */
---z-dropdown:        100;    /* Channel dropdown, select */
---z-tooltip:         200;    /* Tooltip */
---z-context-menu:    300;    /* Right-click menu */
---z-popout:          400;    /* User profile popout */
---z-modal:           500;    /* Modal dialog */
---z-notification:    600;    /* Toast notification */
---z-overlay:        1000;    /* Full screen overlay */
-```
-
----
-
-## 15. CSS VARIABLES CHEAT SHEET (Dark Theme)
-
-```css
-:root {
-  /* Backgrounds */
-  --background-primary:       #313338;
-  --background-secondary:     #2B2D31;
-  --background-secondary-alt: #232428;
-  --background-tertiary:      #1E1F22;
-  --background-floating:      #111214;
-  --background-accent:        #4E5058;
-
-  /* Text */
-  --text-normal:              #DBDEE1;
-  --text-muted:               #80848E;
-  --text-link:                #00A8FC;
-  --header-primary:           #F2F3F5;
-  --header-secondary:         #B5BAC1;
-
-  /* Interactive */
-  --interactive-normal:       #B5BAC1;
-  --interactive-hover:        #DBDEE1;
-  --interactive-active:       #FFFFFF;
-  --interactive-muted:        #4E5058;
-
-  /* Brand */
-  --brand-color:              #5865F2;
-  --brand-hover:              #4752C4;
-  --brand-active:             #3C45A5;
-
-  /* Status */
-  --status-online:            #23A55A;
-  --status-idle:              #F0B232;
-  --status-dnd:               #F23F43;
-  --status-offline:           #80848E;
-
-  /* Semantic */
-  --color-danger:             #ED4245;
-  --color-success:            #57F287;
-  --color-warning:            #FEE75C;
-
-  /* Modifiers */
-  --background-modifier-hover:    rgba(79,84,92,0.16);
-  --background-modifier-active:   rgba(79,84,92,0.24);
-  --background-modifier-selected: rgba(79,84,92,0.32);
-
-  /* Input */
-  --input-background:         #1E1F22;
-  --input-placeholder:        #87898C;
-
-  /* Mention */
-  --mention-foreground:       #C9CDFB;
-  --mention-background:       rgba(88,101,242,0.30);
+:focus:not(:focus-visible) {
+  outline: none;
 }
 ```
 
----
+Requirements:
 
-## 16. ANTI-PATTERNS — TUYỆT ĐỐI KHÔNG LÀM
-
-| ❌ Sai | ✅ Đúng |
-|---|---|
-| Dùng `#000000` cho background | Dùng `#1E1F22` hoặc `#111214` |
-| Dùng `border` để phân chia panel | Dùng màu background khác nhau |
-| Box shadow trên channel list | Không shadow, chỉ dùng màu |
-| Border radius `0` cho button | Minimum `3px` |
-| Font-size dưới `10px` cho UI | Tối thiểu `10px` |
-| `cursor: pointer` trên text thường | Chỉ dùng cho element clickable |
-| Màu tím `#7289DA` (Blurple cũ) | Dùng `#5865F2` (Blurple 2021+) |
-| Animate toàn bộ layout | Chỉ animate floating element |
-| Pure white `#FFFFFF` cho background | Dùng `#F2F3F5` cho light theme |
-| Đặt element quan trọng cạnh cạnh phải | Sidebar luôn bên trái, panel phụ bên phải |
-| Dùng font `Inter`, `Roboto`, `Arial` | Dùng `gg sans` / `Noto Sans` |
+- Normal text contrast should meet WCAG AA where practical.
+- Interactive targets should be at least `32px` by `32px`.
+- Icon-only controls need accessible labels.
+- Keyboard focus must be visible in sidebars, message actions, menus, modals, and settings.
+- Dialogs should trap focus while open and restore focus when closed.
+- Loading states should not cause large layout jumps.
 
 ---
 
-## 17. CHECKLIST TRƯỚC KHI SHIP
+## 11. Z-Index Scale
 
-- [ ] Đúng 4 background color layers (rail < sidebar < chat < floating)
-- [ ] Blurple `#5865F2` cho tất cả primary action
-- [ ] Font stack có `gg sans` làm first choice
-- [ ] Server icon dùng squircle → circle transition khi hover
-- [ ] Avatar tất cả là hình tròn (`border-radius: 50%`)
-- [ ] Status dot dùng đúng màu + border cut technique
-- [ ] Channel category UPPERCASE, `11px`, `font-weight: 600`
-- [ ] Message spacing đúng theo density setting
-- [ ] Context menu có separator, danger item màu đỏ
-- [ ] Modal có background overlay `rgba(0,0,0,0.85)`
-- [ ] Focus state dùng `outline: 2px solid #5865F2`
-- [ ] Hover state dùng `rgba(79,84,92,0.16)` không phải màu solid
-- [ ] Scrollbar custom (width 8px, radius 4px, transparent track)
-- [ ] Tất cả animation dưới 300ms
+```css
+--z-message-toolbar: 1;
+--z-sidebar: 10;
+--z-header: 20;
+--z-dropdown: 100;
+--z-tooltip: 200;
+--z-context-menu: 300;
+--z-popout: 400;
+--z-modal: 500;
+--z-notification: 600;
+--z-overlay: 1000;
+```
+
+Do not invent one-off z-index values unless a new layer is added to this scale.
 
 ---
 
-*Last updated: 2025 — Discord UI v2025 March refresh + Onyx/Ash themes*
+## 12. Markdown Rendering
+
+The chat renderer should support the expected Discord-style subset:
+
+| Syntax                   | Rendering                                       |
+| ------------------------ | ----------------------------------------------- | ------- | --- | --- | ------------------------------ |
+| `**bold**`               | `font-weight: 700`                              |
+| `*italic*` or `_italic_` | `font-style: italic`                            |
+| `__underline__`          | `text-decoration: underline`                    |
+| `~~strikethrough~~`      | `text-decoration: line-through`                 |
+| `` `code` ``             | Inline code with mono font and dark background. |
+| Code block               | Full-width block code with dark background.     |
+| `> quote`                | Left accent border and padded quote content.    |
+| `[text](url)`            | Link color `#00A8FC`.                           |
+| `                        |                                                 | spoiler |     | `   | Hidden content until revealed. |
+
+---
+
+## 13. Anti-Patterns
+
+| Do Not                                         | Use Instead                                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| Pure black `#000000` for normal backgrounds.   | Warm dark surfaces such as `#1E1F22`, `#2B2D31`, and `#313338`.              |
+| Heavy borders between all panels.              | Background layering and occasional subtle dividers.                          |
+| Decorative cards inside other cards.           | Flat app regions and cards only for repeated items, modals, or framed tools. |
+| Old Discord blurple `#7289DA`.                 | Current blurple `#5865F2`.                                                   |
+| Hero-scale headings inside compact app panels. | Smaller dense headings matched to the surface.                               |
+| Animation on every layout change.              | Short transitions for hover, modal, menu, and toast states.                  |
+| Text-only toolbar buttons for obvious icons.   | Icon buttons with accessible labels.                                         |
+| Fake dashboard or marketing blocks.            | Real channels, messages, members, calls, settings, and feedback.             |
+
+---
+
+## 14. Implementation Checklist
+
+### Completed Documentation Tasks
+
+- [x] Selected **`ui-polish`** as the recommended Codex skill for beautiful UI work.
+- [x] Converted this design-rules document to English.
+- [x] Reworked the Markdown structure to align with the repo architecture and component layout.
+- [x] Added architecture-to-UI mapping for the current React/NestJS monorepo.
+- [x] Added completed and pending checklist sections.
+
+### Pending UI Implementation Tasks
+
+- [ ] Audit the current web UI with desktop and mobile screenshots.
+- [ ] Verify the four-region app shell: server rail, channel sidebar, chat area, and member sidebar.
+- [ ] Check that the active channel, unread channel, mention badge, and voice occupancy states are visually distinct.
+- [ ] Verify chat timeline states: loading skeleton, empty channel, grouped messages, hover actions, replies, reactions, pins, edits, deletes, and attachments.
+- [ ] Verify composer states: empty, typing, upload pending, upload error, send pending, disabled, and E2EE locked or unavailable.
+- [ ] Verify member sidebar states: loading, online, idle, do-not-disturb, offline, hover card, and role chips.
+- [ ] Verify modal flows for settings, server actions, channel actions, invites, and role management.
+- [ ] Confirm all icon-only buttons have accessible labels or titles.
+- [ ] Confirm keyboard focus is visible and modal focus behavior is correct.
+- [ ] Run lint, typecheck, build, and UI smoke checks after visual changes.
+
+### Pre-Ship Visual Checklist
+
+- [ ] Background layers match the shell hierarchy.
+- [ ] Primary actions use `#5865F2`.
+- [ ] Text contrast is readable on all theme surfaces.
+- [ ] Font stack starts with `gg sans` and has safe fallbacks.
+- [ ] Server icons use squircle-to-circle hover or active transitions.
+- [ ] Avatars are circular and status dots use the correct semantic colors.
+- [ ] Channel categories are uppercase, compact, and muted.
+- [ ] Message spacing matches the selected density.
+- [ ] Hover states use modifier backgrounds instead of random solid colors.
+- [ ] Scrollbars, menus, modals, and tooltips use the defined layer colors.
+- [ ] Animations stay under `300ms`.
+- [ ] Mobile layout has no overlapping text, hidden controls, or unreachable composer.
+
+---
+
+_Last updated: 2026-06-06._
