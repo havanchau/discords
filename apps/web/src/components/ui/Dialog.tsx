@@ -15,9 +15,17 @@ export type DialogContentProps = ComponentPropsWithoutRef<typeof RadixDialog.Con
   title: ReactNode;
   description?: ReactNode;
   children: ReactNode;
+  bodyClassName?: string;
 };
 
-export function DialogContent({ className, title, description, children, ...props }: DialogContentProps) {
+export function DialogContent({
+  className,
+  bodyClassName,
+  title,
+  description,
+  children,
+  ...props
+}: DialogContentProps) {
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay className={styles.overlay} />
@@ -26,7 +34,9 @@ export function DialogContent({ className, title, description, children, ...prop
           <div>
             <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
             {description ? (
-              <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>
+              <RadixDialog.Description className={styles.description}>
+                {description}
+              </RadixDialog.Description>
             ) : null}
           </div>
           <RadixDialog.Close asChild>
@@ -35,7 +45,7 @@ export function DialogContent({ className, title, description, children, ...prop
             </IconButton>
           </RadixDialog.Close>
         </div>
-        <div className={styles.body}>{children}</div>
+        <div className={cn(styles.body, bodyClassName)}>{children}</div>
       </RadixDialog.Content>
     </RadixDialog.Portal>
   );

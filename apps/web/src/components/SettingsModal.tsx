@@ -1,5 +1,5 @@
-import { Hash, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
-import { FormEvent, RefObject } from 'react';
+import { Check, ChevronDown, Hash, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { FormEvent, RefObject, useState } from 'react';
 import {
   assetUrl,
   AuditLogEntry,
@@ -12,6 +12,84 @@ import {
 } from '../api';
 import { accentClass, initials, PERMISSION_OPTIONS } from '../helpers';
 import { ActiveDialog } from './ChatPanel';
+import {
+  Button,
+  DialogContent,
+  DialogRoot,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  TextArea,
+  TextField,
+} from './ui';
+
+interface SettingsSelectOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+interface SettingsSelectProps<T extends string> {
+  name: string;
+  label: string;
+  defaultValue: T;
+  options: SettingsSelectOption<T>[];
+  onValueChange?: (value: T) => void;
+}
+
+function SettingsSelect<T extends string>({
+  name,
+  label,
+  defaultValue,
+  options,
+  onValueChange,
+}: SettingsSelectProps<T>) {
+  const [value, setValue] = useState(defaultValue);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <label className="settings-field">
+      <span>{label}</span>
+      <input type="hidden" name={name} value={value} />
+      <DropdownMenuRoot>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="settings-select-trigger" aria-label={label}>
+            <span>{selected?.label}</span>
+            <ChevronDown size={16} aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="settings-select-menu">
+          {options.map((option) => (
+            <DropdownMenuItem
+              key={option.value}
+              onSelect={() => {
+                setValue(option.value);
+                onValueChange?.(option.value);
+              }}
+            >
+              <span>{option.label}</span>
+              {option.value === value ? <Check size={14} aria-hidden="true" /> : null}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenuRoot>
+    </label>
+  );
+}
+
+const STATUS_OPTIONS: SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBLE'>[] = [
+  { value: 'ONLINE', label: 'Online' },
+  { value: 'IDLE', label: 'Idle' },
+  { value: 'DND', label: 'Do Not Disturb' },
+  { value: 'INVISIBLE', label: 'Invisible' },
+];
+
+const THEME_OPTIONS: SettingsSelectOption<'dark' | 'midnight' | 'slate' | 'oled'>[] = [
+  { value: 'dark', label: 'Discord dark' },
+  { value: 'midnight', label: 'Midnight' },
+  { value: 'slate', label: 'Slate' },
+  { value: 'oled', label: 'OLED' },
+];
 
 interface SettingsModalProps {
   activeDialog: ActiveDialog;
@@ -73,37 +151,31 @@ export function SettingsModal({
   toggleMemberRole,
   setUiTheme,
 }: SettingsModalProps) {
-  if (!activeDialog) return null;
-
   const globalNotificationPreference = notificationPreferences.find(
     (preference) => !preference.serverId && !preference.channelId,
   );
+  const title =
+    activeDialog === 'profile'
+      ? 'Edit profile'
+      : activeDialog === 'server-settings'
+        ? 'Server settings'
+        : activeDialog === 'channel-settings'
+          ? 'Channel settings'
+          : activeDialog === 'roles'
+            ? 'Roles'
+            : 'Member roles';
 
   return (
-    <div className="modal-overlay" role="presentation" onMouseDown={() => setActiveDialog(null)}>
-      <section
+    <DialogRoot
+      open={Boolean(activeDialog)}
+      onOpenChange={(open) => !open && setActiveDialog(null)}
+    >
+      <DialogContent
+        title={title}
+        description="Tune profile, server, channel, role, and notification preferences."
         className={`settings-modal ${activeDialog === 'roles' ? 'roles-modal' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        onMouseDown={(event) => event.stopPropagation()}
+        bodyClassName="settings-modal-body"
       >
-        <header className="settings-modal-header">
-          <strong>
-            {activeDialog === 'profile'
-              ? 'Edit profile'
-              : activeDialog === 'server-settings'
-                ? 'Server settings'
-                : activeDialog === 'channel-settings'
-                  ? 'Channel settings'
-                  : activeDialog === 'roles'
-                    ? 'Roles'
-                    : 'Member roles'}
-          </strong>
-          <button type="button" title="Close" onClick={() => setActiveDialog(null)}>
-            <X size={18} />
-          </button>
-        </header>
-
         {activeDialog === 'profile' ? (
           <form className="settings-form" onSubmit={updateProfile}>
             <section className="settings-section">
@@ -133,24 +205,20 @@ export function SettingsModal({
                   Change avatar
                 </button>
               </div>
-              <label>
-                Display name
-                <input
-                  name="displayName"
-                  defaultValue={auth.user.displayName}
-                  maxLength={64}
-                  required
-                />
-              </label>
-              <label>
-                Bio
-                <textarea
-                  name="bio"
-                  defaultValue={auth.user.bio ?? ''}
-                  maxLength={280}
-                  placeholder="Short profile note"
-                />
-              </label>
+              <TextField
+                label="Display name"
+                name="displayName"
+                defaultValue={auth.user.displayName}
+                maxLength={64}
+                required
+              />
+              <TextArea
+                label="Bio"
+                name="bio"
+                defaultValue={auth.user.bio ?? ''}
+                maxLength={280}
+                placeholder="Short profile note"
+              />
             </section>
 
             <section className="settings-section">
@@ -159,39 +227,32 @@ export function SettingsModal({
                 <span>Identity and presence controls.</span>
               </div>
               <div className="settings-grid">
-                <label>
-                  Username
-                  <input value={auth.user.username} readOnly className="readonly-input" />
-                </label>
-                <label>
-                  Email
-                  <input value={auth.user.email} readOnly className="readonly-input" />
-                </label>
+                <TextField
+                  label="Username"
+                  value={auth.user.username}
+                  readOnly
+                  className="readonly-input"
+                />
+                <TextField
+                  label="Email"
+                  value={auth.user.email}
+                  readOnly
+                  className="readonly-input"
+                />
               </div>
-              <label>
-                Status
-                <select name="status" defaultValue={auth.user.status ?? 'ONLINE'}>
-                  <option value="ONLINE">Online</option>
-                  <option value="IDLE">Idle</option>
-                  <option value="DND">Do Not Disturb</option>
-                  <option value="INVISIBLE">Invisible</option>
-                </select>
-              </label>
-              <label>
-                App theme
-                <select
-                  name="uiTheme"
-                  defaultValue={uiTheme}
-                  onChange={(event) =>
-                    setUiTheme(event.target.value as 'dark' | 'midnight' | 'slate' | 'oled')
-                  }
-                >
-                  <option value="dark">Discord dark</option>
-                  <option value="midnight">Midnight</option>
-                  <option value="slate">Slate</option>
-                  <option value="oled">OLED</option>
-                </select>
-              </label>
+              <SettingsSelect
+                name="status"
+                label="Status"
+                defaultValue={auth.user.status ?? 'ONLINE'}
+                options={STATUS_OPTIONS}
+              />
+              <SettingsSelect
+                name="uiTheme"
+                label="App theme"
+                defaultValue={uiTheme}
+                options={THEME_OPTIONS}
+                onValueChange={setUiTheme}
+              />
               <div className="profile-preview">
                 <div className={`avatar small ${accentClass(auth.user.id)}`}>
                   {auth.user.avatarUrl ? (
@@ -274,9 +335,9 @@ export function SettingsModal({
               </label>
             </section>
             <footer className="settings-modal-footer">
-              <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
+              <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
-              </button>
+              </Button>
               <button
                 className="primary compact-primary"
                 disabled={pendingAction === 'profile-update'}
@@ -296,18 +357,24 @@ export function SettingsModal({
             >
               Manage roles and permissions
             </button>
-            <label>
-              Server name
-              <input name="name" defaultValue={server.name} minLength={2} maxLength={80} required />
-            </label>
-            <label>
-              Description
-              <input name="description" defaultValue={server.description ?? ''} maxLength={200} />
-            </label>
+            <TextField
+              label="Server name"
+              name="name"
+              defaultValue={server.name}
+              minLength={2}
+              maxLength={80}
+              required
+            />
+            <TextField
+              label="Description"
+              name="description"
+              defaultValue={server.description ?? ''}
+              maxLength={200}
+            />
             <footer className="settings-modal-footer">
-              <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
+              <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
-              </button>
+              </Button>
               <button
                 className="primary compact-primary"
                 disabled={pendingAction === 'server-update'}
@@ -367,24 +434,27 @@ export function SettingsModal({
                 </button>
               </div>
               <div className="settings-grid">
-                <label>
-                  Channel name
-                  <input name="name" defaultValue={channel.name} maxLength={80} required />
-                </label>
-                <label>
-                  Position
-                  <input
-                    name="position"
-                    type="number"
-                    min={0}
-                    defaultValue={channel.position ?? 0}
-                  />
-                </label>
+                <TextField
+                  label="Channel name"
+                  name="name"
+                  defaultValue={channel.name}
+                  maxLength={80}
+                  required
+                />
+                <TextField
+                  label="Position"
+                  name="position"
+                  type="number"
+                  min={0}
+                  defaultValue={channel.position ?? 0}
+                />
               </div>
-              <label>
-                Topic
-                <textarea name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
-              </label>
+              <TextArea
+                label="Topic"
+                name="topic"
+                defaultValue={channel.topic ?? ''}
+                maxLength={200}
+              />
             </section>
 
             <section className="settings-section">
@@ -403,14 +473,12 @@ export function SettingsModal({
                   defaultChecked={Boolean(channel.isPrivate)}
                 />
               </label>
-              <label>
-                Channel type
-                <input
-                  value={channel.type === 'VOICE' ? 'Voice channel' : 'Text channel'}
-                  readOnly
-                  className="readonly-input"
-                />
-              </label>
+              <TextField
+                label="Channel type"
+                value={channel.type === 'VOICE' ? 'Voice channel' : 'Text channel'}
+                readOnly
+                className="readonly-input"
+              />
             </section>
 
             {server ? (
@@ -467,9 +535,9 @@ export function SettingsModal({
               </section>
             ) : null}
             <footer className="settings-modal-footer">
-              <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
+              <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
                 Cancel
-              </button>
+              </Button>
               <button
                 className="primary compact-primary"
                 disabled={pendingAction === 'channel-update'}
@@ -640,13 +708,13 @@ export function SettingsModal({
               })}
             </div>
             <footer className="settings-modal-footer">
-              <button type="button" className="ghost" onClick={() => setActiveDialog(null)}>
+              <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
                 Done
-              </button>
+              </Button>
             </footer>
           </div>
         ) : null}
-      </section>
-    </div>
+      </DialogContent>
+    </DialogRoot>
   );
 }
