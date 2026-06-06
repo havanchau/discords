@@ -202,16 +202,16 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 
 ### Phase 4: Home And Direct Messages
 
-- [ ] Split `HomePanel.tsx` into focused components:
-  - `FriendsList`
-  - `FriendRequestList`
-  - `ConversationList`
-  - `DirectMessageTimeline`
-  - `DirectMessageComposer`
-- [ ] Rebuild Home/DM view with shared list rows, avatars, buttons, text fields, banners, and composer.
-- [ ] Use consistent empty/loading/error states from Phase 1 primitives.
-- [ ] Add keyboard navigation for friends and conversation rows.
-- [ ] Keep direct message behavior and existing handlers unchanged.
+- [x] Split `HomePanel.tsx` into focused components:
+  - [x] `FriendsList`
+  - [x] `FriendRequestList`
+  - [x] `ConversationList`
+  - [x] `DirectMessageTimeline`
+  - [x] `DirectMessageComposer`
+- [x] Rebuild Home/DM view with shared list rows, avatars, buttons, text fields, banners, and composer.
+- [x] Use consistent empty/loading/error states from Phase 1 primitives.
+- [x] Add keyboard navigation for friends and conversation rows.
+- [x] Keep direct message behavior and existing handlers unchanged.
 - [ ] Run minimum merge checks. Compare after screenshots with before.
 
 ---
