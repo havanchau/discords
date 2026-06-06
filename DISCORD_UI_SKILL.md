@@ -69,7 +69,19 @@ Rules:
 
 ---
 
-## 4. Exact Color Tokens (MANDATORY — DO NOT INVENT COLORS)
+## 4. File Size Limit
+
+No source or documentation file may exceed **1000 lines** after a UI refactor.
+
+Rules:
+
+- If a component, stylesheet, hook, or document would exceed 1000 lines, split it into focused modules before continuing.
+- Existing oversized files must be reduced when a substantial UI refactor touches them.
+- `AppShell.tsx`, `ChatPanel.tsx`, `SettingsModal.tsx`, `WorkspaceSidebar.tsx`, and `styles.css` are known refactor targets and must be split below the limit during the UI redesign.
+
+---
+
+## 5. Exact Color Tokens (MANDATORY — DO NOT INVENT COLORS)
 
 Every UI surface MUST use these exact CSS custom properties. **Never hardcode hex values** outside this list. **Never use neon, cyan, lime, or pink accent colors.**
 
@@ -141,7 +153,7 @@ These colors MUST NOT appear anywhere in the CSS:
 
 ---
 
-## 5. App Shell Layout (EXACT DIMENSIONS)
+## 6. App Shell Layout (EXACT DIMENSIONS)
 
 The app uses a **4-column grid** on desktop. No decorative borders, no border-radius on the shell, no gradient backgrounds.
 
@@ -177,7 +189,7 @@ The app uses a **4-column grid** on desktop. No decorative borders, no border-ra
 
 ---
 
-## 6. Fixed Dimensions
+## 7. Fixed Dimensions
 
 | Element                | Value  |
 | ---------------------- | ------ |
@@ -190,7 +202,7 @@ The app uses a **4-column grid** on desktop. No decorative borders, no border-ra
 
 ---
 
-## 7. Typography
+## 8. Typography
 
 ```css
 font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -209,7 +221,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 8. Component Patterns
+## 9. Component Patterns
 
 ### Server Icons (Squircle → Circle on hover)
 
@@ -329,7 +341,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 9. Spacing (base-4 scale)
+## 10. Spacing (base-4 scale)
 
 ```
 4px | 8px | 12px | 16px | 20px | 24px | 32px | 40px
@@ -346,7 +358,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 10. Radius Tokens
+## 11. Radius Tokens
 
 | Component         | Radius |
 | ----------------- | ------ |
@@ -361,7 +373,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 11. Motion (SHORT and FUNCTIONAL only)
+## 12. Motion (SHORT and FUNCTIONAL only)
 
 | Transition              | Duration |
 | ----------------------- | -------- |
@@ -380,7 +392,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 12. Z-Index Scale (DO NOT INVENT VALUES)
+## 13. Z-Index Scale (DO NOT INVENT VALUES)
 
 ```css
 --z-message-toolbar: 1;
@@ -397,7 +409,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 ---
 
-## 13. Interaction States Checklist
+## 14. Interaction States Checklist
 
 Every interactive component MUST have these states:
 
@@ -410,7 +422,7 @@ Every interactive component MUST have these states:
 
 ---
 
-## 14. Anti-Patterns (INSTANT REJECTION)
+## 15. Anti-Patterns (INSTANT REJECTION)
 
 | ❌ DO NOT                                | ✅ DO INSTEAD                                        |
 | ---------------------------------------- | ---------------------------------------------------- |
@@ -431,7 +443,7 @@ Every interactive component MUST have these states:
 
 ---
 
-## 15. Responsive Rules
+## 16. Responsive Rules
 
 1. **Tablet**: Hide member sidebar first
 2. **Mobile**: Single-column, navigation via explicit controls
@@ -441,7 +453,7 @@ Every interactive component MUST have these states:
 
 ---
 
-## 16. Verification Workflow
+## 17. Verification Workflow
 
 After ANY UI change:
 
@@ -458,7 +470,7 @@ After ANY UI change:
 
 ---
 
-## 17. File References
+## 18. File References
 
 - Canonical design rules: `docs/design-rules.md`
 - App shell component: `apps/web/src/AppShell.tsx`

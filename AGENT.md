@@ -45,6 +45,12 @@ Before implementing any task, create a checklist of the concrete work items.
 - Update the checklist as implementation progresses instead of marking everything done at the end.
 - If scope changes, add or revise checklist items so the list stays truthful.
 
+## File Size Rules
+
+- No source or documentation file should exceed 1000 lines.
+- If a file would exceed 1000 lines, split it into focused modules or documents before continuing.
+- Existing files over 1000 lines must be reduced as part of any substantial refactor that touches them.
+
 ## Implementation Priorities
 
 - Correct permission checks before UI polish.

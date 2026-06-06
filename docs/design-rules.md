@@ -24,6 +24,8 @@ For Discord-like UI work, pair `ui-polish` with the rules in `DISCORD_UI_SKILL.m
 
 Use established React UI, accessibility, icon, motion, and utility libraries first for UI work. Raw CSS is forbidden unless it is strictly required for Discord-specific tokens, exact app-shell layout constraints, or targeted responsive fixes. Any unavoidable custom CSS must be minimal, token-based, scoped, and justified by the implementation context.
 
+No source or documentation file should exceed **1000 lines**. If a file would exceed 1000 lines, split it into focused modules or documents before continuing; existing oversized files must be reduced as part of any substantial refactor that touches them.
+
 ---
 
 ## 2. Product Direction

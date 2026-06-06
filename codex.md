@@ -8,6 +8,10 @@
 
 Before implementing any task, create a checklist of concrete work items. Use `- [ ]` for unfinished work and mark `- [x]` only when that item is actually complete and verified. Never check pending, partial, blocked, untested, or assumed work.
 
+## File Size Rule
+
+No source or documentation file should exceed 1000 lines. If a file would exceed 1000 lines, split it into focused modules or documents before continuing. Existing oversized files must be reduced as part of any substantial refactor that touches them.
+
 ## Required Reading (before any frontend task)
 
 1. `DISCORD_UI_SKILL.md` — mandatory color tokens, component patterns, anti-patterns

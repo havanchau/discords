@@ -13,6 +13,12 @@
 - Update checklist items as work progresses.
 - If the scope changes, revise the checklist so it remains accurate.
 
+## File Size Rule
+
+- No source or documentation file should exceed 1000 lines.
+- If a file would exceed 1000 lines, split it into focused modules or documents before continuing.
+- Existing files over 1000 lines must be reduced as part of any substantial refactor that touches them.
+
 ## UI Hard Rules (apply to EVERY frontend change)
 
 - This is a Discord clone. The UI MUST look like Discord's actual desktop app.
