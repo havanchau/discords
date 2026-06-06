@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { ChannelsService } from '../channels/channels.service';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from '../push/push.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -13,6 +14,7 @@ export class MessagesService {
     private readonly prisma: PrismaService,
     private readonly channels: ChannelsService,
     private readonly permissions: PermissionsService,
+    private readonly push: PushService,
   ) {}
 
   async listMessages(userId: string, channelId: string, cursor?: string, search?: string) {
@@ -141,11 +143,7 @@ export class MessagesService {
 
   async createMessage(userId: string, channelId: string, dto: CreateMessageDto) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
-    await this.permissions.requireChannelPermission(
-      userId,
-      channel.id,
-      Permission.SendMessages,
-    );
+    await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
     const content = dto.content.trim();
     const attachments = dto.attachments ?? [];
 
@@ -215,6 +213,15 @@ export class MessagesService {
           },
         })
       : null;
+
+    await this.notifyMentionedUsers({
+      authorId: userId,
+      authorUsername: message.author.username,
+      serverId: channel.serverId,
+      channelId: channel.id,
+      channelName: channel.name,
+      content,
+    });
 
     return {
       message: this.formatMessage(
@@ -403,6 +410,47 @@ export class MessagesService {
     );
   }
 
+  private async notifyMentionedUsers(input: {
+    authorId: string;
+    authorUsername: string;
+    serverId: string;
+    channelId: string;
+    channelName: string;
+    content: string;
+  }) {
+    const mentionedUsernames = [...new Set(parseMentions(input.content))];
+    if (!mentionedUsernames.length) return;
+
+    const mentionedUsers = await this.prisma.user.findMany({
+      where: {
+        username: { in: mentionedUsernames, mode: 'insensitive' },
+        memberships: { some: { serverId: input.serverId } },
+      },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      mentionedUsers.map(async (user) => {
+        const canViewChannel = await this.permissions.hasChannelPermission(
+          user.id,
+          input.channelId,
+          Permission.ViewChannel,
+        );
+        if (!canViewChannel) return;
+
+        await this.push.sendMentionPush({
+          toUserId: user.id,
+          fromUserId: input.authorId,
+          fromUsername: input.authorUsername,
+          serverId: input.serverId,
+          channelId: input.channelId,
+          channelName: input.channelName,
+          content: input.content,
+        });
+      }),
+    );
+  }
+
   private formatMessage(message: MessageWithDetails, userId: string, replyToMessage?: unknown) {
     const reactionMap = new Map<string, { emoji: string; count: number; me: boolean }>();
 
@@ -453,3 +501,7 @@ type MessageWithDetails = Prisma.MessageGetPayload<{
     reactions: true;
   };
 }>;
+
+function parseMentions(content: string) {
+  return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);
+}

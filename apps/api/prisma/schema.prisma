@@ -33,29 +33,31 @@ enum FriendStatus {
 }
 
 model User {
-  id                      String                     @id @default(cuid())
-  email                   String                     @unique
-  username                String                     @unique
-  displayName             String
-  passwordHash            String
-  avatarUrl               String?
-  bio                     String?
-  status                  UserStatus                 @default(OFFLINE)
-  emailVerifiedAt         DateTime?
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
-  sessions                Session[]
-  emailVerificationTokens EmailVerificationToken[]
-  memberships             ServerMember[]
-  messages                Message[]
-  messagePins             MessagePin[]               @relation("MessagePins")
-  readStates              ReadState[]
-  notificationPreferences NotificationPreference[]
-  auditLogs               AuditLog[]                 @relation("AuditActor")
-  createdServers          Server[]                   @relation("ServerOwner")
-  sentFriendRequests      FriendRequest[]            @relation("FriendRequester")
-  receivedFriendRequests  FriendRequest[]            @relation("FriendReceiver")
-  conversations           DirectConversationMember[]
+  id                        String                     @id @default(cuid())
+  email                     String                     @unique
+  username                  String                     @unique
+  displayName               String
+  passwordHash              String
+  avatarUrl                 String?
+  bio                       String?
+  status                    UserStatus                 @default(OFFLINE)
+  emailVerifiedAt           DateTime?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  sessions                  Session[]
+  emailVerificationTokens   EmailVerificationToken[]
+  memberships               ServerMember[]
+  messages                  Message[]
+  messagePins               MessagePin[]               @relation("MessagePins")
+  readStates                ReadState[]
+  notificationPreferences   NotificationPreference[]
+  pushSubscriptions         PushSubscription[]
+  pushNotificationThrottles PushNotificationThrottle[]
+  auditLogs                 AuditLog[]                 @relation("AuditActor")
+  createdServers            Server[]                   @relation("ServerOwner")
+  sentFriendRequests        FriendRequest[]            @relation("FriendRequester")
+  receivedFriendRequests    FriendRequest[]            @relation("FriendReceiver")
+  conversations             DirectConversationMember[]
 }
 
 model EmailVerificationToken {
@@ -82,49 +84,49 @@ model Session {
 }
 
 model Server {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  avatarUrl   String?
-  ownerId     String
-  deletedAt   DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  owner       User           @relation("ServerOwner", fields: [ownerId], references: [id])
-  members     ServerMember[]
-  roles       Role[]
-  channels    Channel[]
-  invites     Invite[]
+  id                      String                   @id @default(cuid())
+  name                    String
+  description             String?
+  avatarUrl               String?
+  ownerId                 String
+  deletedAt               DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  owner                   User                     @relation("ServerOwner", fields: [ownerId], references: [id])
+  members                 ServerMember[]
+  roles                   Role[]
+  channels                Channel[]
+  invites                 Invite[]
   notificationPreferences NotificationPreference[]
-  auditLogs   AuditLog[]
+  auditLogs               AuditLog[]
 }
 
 model ServerMember {
-  id       String       @id @default(cuid())
-  userId   String
-  serverId String
-  kind     MemberKind   @default(MEMBER)
-  nickname String?
-  joinedAt DateTime     @default(now())
-  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  server   Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  roles    MemberRole[]
+  id                  String                      @id @default(cuid())
+  userId              String
+  serverId            String
+  kind                MemberKind                  @default(MEMBER)
+  nickname            String?
+  joinedAt            DateTime                    @default(now())
+  user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server              Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  roles               MemberRole[]
   permissionOverrides ChannelPermissionOverride[]
 
   @@unique([userId, serverId])
 }
 
 model Role {
-  id          String       @id @default(cuid())
-  serverId    String
-  name        String
-  color       String?
-  position    Int          @default(0)
-  permissions String[]     @default([])
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  server      Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  members     MemberRole[]
+  id                  String                      @id @default(cuid())
+  serverId            String
+  name                String
+  color               String?
+  position            Int                         @default(0)
+  permissions         String[]                    @default([])
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  server              Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members             MemberRole[]
   permissionOverrides ChannelPermissionOverride[]
 
   @@unique([serverId, name])
@@ -140,22 +142,23 @@ model MemberRole {
 }
 
 model Channel {
-  id        String       @id @default(cuid())
-  serverId  String
-  name      String
-  type      ChannelType  @default(TEXT)
-  topic     String?
-  avatarUrl String?
-  position  Int          @default(0)
-  isPrivate Boolean      @default(false)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  server    Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  messages  Message[]
-  pins      MessagePin[]
-  permissionOverrides ChannelPermissionOverride[]
-  readStates ReadState[]
-  notificationPreferences NotificationPreference[]
+  id                        String                      @id @default(cuid())
+  serverId                  String
+  name                      String
+  type                      ChannelType                 @default(TEXT)
+  topic                     String?
+  avatarUrl                 String?
+  position                  Int                         @default(0)
+  isPrivate                 Boolean                     @default(false)
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  server                    Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages                  Message[]
+  pins                      MessagePin[]
+  permissionOverrides       ChannelPermissionOverride[]
+  readStates                ReadState[]
+  notificationPreferences   NotificationPreference[]
+  pushNotificationThrottles PushNotificationThrottle[]
 
   @@unique([serverId, name])
 }
@@ -244,21 +247,47 @@ model ReadState {
 }
 
 model NotificationPreference {
-  id                 String   @id @default(cuid())
-  userId             String
-  serverId           String?
-  channelId          String?
-  muted              Boolean  @default(false)
-  mentionOnly        Boolean  @default(false)
-  desktopEnabled     Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  server             Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  channel            Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String
+  serverId       String?
+  channelId      String?
+  muted          Boolean  @default(false)
+  mentionOnly    Boolean  @default(false)
+  desktopEnabled Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server         Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel        Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@index([userId, serverId])
   @@index([userId, channelId])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  deviceName String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PushNotificationThrottle {
+  id         String   @id @default(cuid())
+  userId     String
+  channelId  String
+  lastSentAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@index([channelId])
 }
 
 model AuditLog {

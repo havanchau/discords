@@ -33,6 +33,8 @@ import {
   isEncryptedMessage,
 } from './e2ee';
 import { ActiveCallSummary, AUTH_KEY, SOCKET_URL } from './helpers';
+import { updateFaviconBadge } from './utils/faviconBadge';
+import { disablePushNotifications, enablePushNotifications } from './utils/pushNotifications';
 
 type UiTheme = 'dark' | 'midnight' | 'slate' | 'oled';
 
@@ -203,6 +205,45 @@ export function AppShell() {
       auth: { token: auth.accessToken },
     });
 
+    nextSocket.on('connect', () => {
+      nextSocket.emit('unread:get', (result?: { counts?: Record<string, number> }) => {
+        setChannelBadges((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            Object.entries(result?.counts ?? {}).map(([channelId, count]) => [
+              channelId,
+              { count, mentions: current[channelId]?.mentions ?? 0 },
+            ]),
+          ),
+        }));
+      });
+    });
+
+    nextSocket.on(
+      'unread:updated',
+      (payload: { channelId: string; count: number; mentions: number }) => {
+        if (payload.channelId === activeChannelIdRef.current) return;
+        setChannelBadges((current) => {
+          const currentBadge = current[payload.channelId] ?? { count: 0, mentions: 0 };
+          return {
+            ...current,
+            [payload.channelId]: {
+              count: currentBadge.count + payload.count,
+              mentions: currentBadge.mentions + payload.mentions,
+            },
+          };
+        });
+      },
+    );
+
+    nextSocket.on('unread:cleared', (payload: { channelId: string }) => {
+      setChannelBadges((current) => {
+        const next = { ...current };
+        delete next[payload.channelId];
+        return next;
+      });
+    });
+
     nextSocket.on('message:created', async (message: Message) => {
       const displayMessage = await decryptMessageForDisplay(message);
       if (message.channelId === activeChannelIdRef.current) {
@@ -212,20 +253,7 @@ export function AppShell() {
             : [...current, displayMessage],
         );
         void markChannelRead(message.channelId, message.id);
-        return;
       }
-
-      setChannelBadges((current) => {
-        const currentBadge = current[message.channelId] ?? { count: 0, mentions: 0 };
-        const mentionsMe = messageMentionsUser(message, auth.user);
-        return {
-          ...current,
-          [message.channelId]: {
-            count: currentBadge.count + 1,
-            mentions: currentBadge.mentions + (mentionsMe ? 1 : 0),
-          },
-        };
-      });
     });
 
     nextSocket.on('reaction:updated', async (payload: { message: Message }) => {
@@ -359,6 +387,33 @@ export function AppShell() {
 
     return () => window.clearTimeout(timeout);
   }, [searchQuery, channel?.id, auth?.accessToken]);
+
+  useEffect(() => {
+    const totalUnread = Object.values(channelBadges).reduce(
+      (total, badge) => total + badge.count,
+      0,
+    );
+    updateFaviconBadge(totalUnread);
+  }, [channelBadges]);
+
+  useEffect(() => {
+    if (!auth) return;
+    const handler = (event: MessageEvent<{ type?: string; url?: string }>) => {
+      if (event.data?.type === 'NAVIGATE' && event.data.url) {
+        void navigateToNotificationUrl(event.data.url);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, [auth?.accessToken, servers]);
+
+  useEffect(() => {
+    if (!auth || !servers.length) return;
+    if (window.location.pathname.startsWith('/channels/')) {
+      void navigateToNotificationUrl(window.location.pathname);
+      window.history.replaceState({}, '', '/');
+    }
+  }, [auth?.accessToken, servers.length]);
 
   useEffect(() => {
     if (callState && channel?.id !== callState.channelId) {
@@ -578,6 +633,13 @@ export function AppShell() {
     if (!auth) return;
     setPendingAction('notification-preference');
     try {
+      if (!preference.serverId && !preference.channelId && preference.desktopEnabled) {
+        await enablePushNotifications(auth.accessToken);
+      }
+      if (!preference.serverId && !preference.channelId && preference.desktopEnabled === false) {
+        await disablePushNotifications(auth.accessToken);
+      }
+
       const result = await apiRequest<{ preference: NotificationPreference }>(
         '/users/me/notification-preferences',
         {
@@ -595,6 +657,20 @@ export function AppShell() {
     } finally {
       setPendingAction(null);
     }
+  }
+
+  async function navigateToNotificationUrl(url: string) {
+    if (!auth) return;
+    const channelId = url.match(/\/channels\/([^/?#]+)/)?.[1];
+    if (!channelId) return;
+    const serverWithChannel = servers.find((item) =>
+      item.channels.some((serverChannel) => serverChannel.id === channelId),
+    );
+    if (serverWithChannel) {
+      await openServer(serverWithChannel.id, auth.accessToken, channelId);
+      return;
+    }
+    await loadServers(auth.accessToken);
   }
 
   function openHome() {
@@ -1286,8 +1362,8 @@ export function AppShell() {
         },
         auth.accessToken,
       );
-    setServer(result.server);
-    hydratePersistentChannelBadges(result.server);
+      setServer(result.server);
+      hydratePersistentChannelBadges(result.server);
       setServers((current) =>
         current.map((item) =>
           item.id === result.server.id
@@ -1309,12 +1385,15 @@ export function AppShell() {
   }
 
   function hydratePersistentChannelBadges(nextServer: ServerDetail) {
-    const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>((current, item) => {
-      if (item.unreadCount) {
-        current[item.id] = { count: item.unreadCount, mentions: 0 };
-      }
-      return current;
-    }, {});
+    const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>(
+      (current, item) => {
+        if (item.unreadCount) {
+          current[item.id] = { count: item.unreadCount, mentions: 0 };
+        }
+        return current;
+      },
+      {},
+    );
     setChannelBadges((current) => ({ ...current, ...badges }));
   }
 
@@ -1329,6 +1408,7 @@ export function AppShell() {
         },
         auth.accessToken,
       );
+      socket?.emit('unread:clear', { channelId });
       setChannelBadges((current) => {
         const next = { ...current };
         delete next[channelId];
@@ -1776,10 +1856,4 @@ export function AppShell() {
       />
     </main>
   );
-}
-
-function messageMentionsUser(message: Message, user: AuthState['user']) {
-  const content = message.content.toLowerCase();
-  const handles = [`@${user.username.toLowerCase()}`, `@${user.displayName.toLowerCase()}`];
-  return handles.some((handle) => content.includes(handle));
 }
