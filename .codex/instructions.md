@@ -16,8 +16,9 @@
 ## UI Hard Rules (apply to EVERY frontend change)
 
 - This is a Discord clone. The UI MUST look like Discord's actual desktop app.
-- Prefer established UI/component/accessibility/icon libraries over raw CSS.
-- Avoid hand-written CSS except for minimal token-based adjustments, exact layout constraints, or targeted responsive fixes.
+- Use established UI/component/accessibility/icon libraries first for every UI task.
+- Do not write raw CSS for UI work unless it is strictly required for Discord tokens, exact app-shell layout constraints, or targeted responsive fixes.
+- Any unavoidable custom CSS must be minimal, token-based, scoped, and justified by the implementation context.
 - Use ONLY the color tokens from `DISCORD_UI_SKILL.md`. No exceptions.
 - **Forbidden**: neon cyan `#00e5ff`, neon pink `#ff1fb8`, neon lime `#00ff95`, `#8f78ff`, `#ffb000`, any `rgba(0, 229, 255, ...)`.
 - **Forbidden**: gradient backgrounds on panels, glowing box-shadows, decorative borders, border-radius on the app shell.

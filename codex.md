@@ -18,4 +18,4 @@ Before implementing any task, create a checklist of concrete work items. Use `- 
 
 This project is a Discord clone. Every UI change MUST produce output that looks like Discord's real desktop app — warm dark backgrounds, flat solid panels, Discord Blurple (#5865F2) for primary actions. No neon colors, no gradients on panels, no glowing effects, no decorative borders. Read `DISCORD_UI_SKILL.md` for the complete enforced ruleset.
 
-UI implementation must be library-first. Prefer established React UI, accessibility, icon, motion, and utility libraries over raw CSS. Use custom CSS only for minimal token-based styling, exact Discord layout constraints, or targeted responsive fixes.
+UI implementation must be library-first. Use established React UI, accessibility, icon, motion, and utility libraries before writing custom styles. Raw CSS is forbidden unless it is strictly required for minimal token-based styling, exact Discord layout constraints, or targeted responsive fixes; any unavoidable custom CSS must be scoped and justified by the implementation context.

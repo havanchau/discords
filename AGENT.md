@@ -96,8 +96,8 @@ The app MUST look like Discord's real desktop client — a dense, warm-dark comm
 - **Shadows**: Subtle `rgba(0,0,0,...)` only. NO colored glows, NO `box-shadow` with cyan/pink/lime.
 - **Borders**: Minimal. Use background-color layering for panel separation, not decorative borders.
 - **App shell**: `border-radius: 0`. NO rounded corners on the outer shell. NO border on the shell.
-- **Libraries first**: For UI tasks, prefer established React UI, icon, accessibility, animation, and utility libraries already present in the project or approved for the task. Avoid hand-writing raw CSS unless it is necessary to connect the library output to the existing Discord tokens, layout constraints, or responsive fixes.
-- **CSS restraint**: When custom CSS is unavoidable, keep it minimal, token-based, component-scoped, and consistent with `apps/web/src/styles.css`.
+- **Libraries first**: For UI tasks, use established React UI, icon, accessibility, animation, and utility libraries already present in the project or approved for the task before writing custom styles.
+- **Raw CSS restriction**: Do not write raw CSS for UI work unless it is strictly required to connect library output to existing Discord tokens, exact layout constraints, or targeted responsive fixes. Any unavoidable custom CSS must be minimal, token-based, component-scoped, and justified by the implementation context.
 
 ### Layout:
 

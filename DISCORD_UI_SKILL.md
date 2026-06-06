@@ -48,7 +48,7 @@ Before implementing any UI task, create a task checklist.
 
 ## 3. Library-First UI Implementation
 
-UI work MUST prefer libraries over raw CSS.
+UI work MUST be library-first. Raw CSS is forbidden unless it is strictly required for Discord tokens, exact app-shell layout constraints, or targeted responsive fixes.
 
 Use existing or task-approved libraries for:
 
@@ -62,9 +62,9 @@ Use existing or task-approved libraries for:
 Rules:
 
 - Do not hand-roll complex UI behavior that a proven library already covers.
-- Do not create large blocks of raw CSS when a component, utility, or existing class pattern can do the job.
-- Custom CSS is allowed only when needed to apply Discord tokens, exact shell dimensions, responsive fixes, or component-specific polish.
-- Any custom CSS must be minimal, token-based, and scoped to the relevant component/surface.
+- Do not create raw CSS for UI behavior or styling when a component, utility, or existing class pattern can do the job.
+- Custom CSS is allowed only when needed to apply Discord tokens, exact shell dimensions, targeted responsive fixes, or narrowly scoped component polish.
+- Any custom CSS must be minimal, token-based, scoped to the relevant component/surface, and justified by the implementation context.
 - If adding a new library, keep it narrow, maintained, and aligned with the existing React/Vite stack.
 
 ---

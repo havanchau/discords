@@ -22,7 +22,7 @@ This skill is the right fit for:
 
 For Discord-like UI work, pair `ui-polish` with the rules in `DISCORD_UI_SKILL.md` and this file.
 
-Prefer established React UI, accessibility, icon, motion, and utility libraries over raw CSS. Custom CSS should be minimal, token-based, and used only when needed for Discord-specific layout, surfaces, or responsive polish.
+Use established React UI, accessibility, icon, motion, and utility libraries first for UI work. Raw CSS is forbidden unless it is strictly required for Discord-specific tokens, exact app-shell layout constraints, or targeted responsive fixes. Any unavoidable custom CSS must be minimal, token-based, scoped, and justified by the implementation context.
 
 ---
 
