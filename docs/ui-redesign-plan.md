@@ -160,13 +160,13 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 
 ### Phase 2: App Shell And Navigation
 
-- [ ] Rebuild server rail: 72px width, `--color-bg-rail` background, circular icons, active pill indicator, using shared `Tooltip`, `IconButton`, `Avatar`.
-- [ ] Rebuild server menu using Radix `DropdownMenu`.
-- [ ] Rebuild channel sidebar: `--color-bg-sidebar` background, compact `--height-channel-row` rows, muted text, hover states.
-- [ ] Replace create/join server modal with Radix `Dialog`.
-- [ ] Replace create channel modal with Radix `Dialog`.
-- [ ] Add keyboard navigation for server rail and channel rows.
-- [ ] Verify desktop shell grid remains exactly: `72px / 240px / minmax(0, 1fr) / 240px`.
+- [x] Rebuild server rail: 72px width, `--color-bg-rail` background, circular icons, active pill indicator, using shared `Tooltip`, `IconButton`, `Avatar`.
+- [x] Rebuild server menu using Radix `DropdownMenu`.
+- [x] Rebuild channel sidebar: `--color-bg-sidebar` background, compact `--height-channel-row` rows, muted text, hover states.
+- [x] Replace create/join server modal with Radix `Dialog`.
+- [x] Replace create channel modal with Radix `Dialog`.
+- [x] Add keyboard navigation for server rail and channel rows.
+- [x] Verify desktop shell grid remains exactly: `72px / 240px / minmax(0, 1fr) / 240px`.
 - [ ] Delete or prefix legacy sidebar styles after migration.
 - [ ] Run minimum merge checks. Capture after screenshots and compare with before.
 

@@ -10,12 +10,26 @@ import {
   Settings,
   UserPlus,
   Volume2,
-  X,
 } from 'lucide-react';
-import { ChangeEvent, FormEvent, RefObject, useState } from 'react';
+import { ChangeEvent, FormEvent, RefObject, type ReactNode, useState } from 'react';
 import { assetUrl, AuthState, Channel, ServerDetail, ServerSummary } from '../api';
 import { accentClass, ActiveCallSummary, initials } from '../helpers';
+import { cn } from '../utils/cn';
 import { ActiveDialog } from './ChatPanel';
+import styles from './WorkspaceSidebar.module.css';
+import {
+  Button,
+  DialogContent,
+  DialogRoot,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  IconButton,
+  TextField,
+  Tooltip,
+} from './ui';
 
 export interface ChannelBadgeState {
   count: number;
@@ -77,7 +91,6 @@ export function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
   const [serverAction, setServerAction] = useState<'create' | 'join' | null>(null);
   const [channelCreateType, setChannelCreateType] = useState<'TEXT' | 'VOICE' | null>(null);
-  const [serverMenuOpen, setServerMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   async function submitCreateServer(event: FormEvent<HTMLFormElement>) {
@@ -97,215 +110,176 @@ export function WorkspaceSidebar({
 
   return (
     <>
-      <aside className="server-rail">
-        <button
-          type="button"
-          className={`server-orb home ${!server ? 'active' : ''}`}
-          title="Direct Messages"
-          onClick={openHome}
-        >
-          <MessageSquare size={20} />
-          <span className="server-tooltip">Direct Messages</span>
-        </button>
-        <div className="rail-divider" />
-        {servers.map((item, index) => (
+      <aside className={styles.serverRail} aria-label="Servers">
+        <Tooltip content="Direct Messages" side="right">
           <button
-            key={item.id}
-            className={`server-orb ${accentClass(index)} ${server?.id === item.id ? 'active' : ''}`}
-            title={item.name}
-            onClick={() => void openServer(item.id)}
+            type="button"
+            className={cn(styles.serverButton, styles.serverHome, !server && styles.serverButtonActive)}
+            aria-current={!server ? 'page' : undefined}
+            onClick={openHome}
           >
-            {initials(item.name)}
-            <span className="server-tooltip">{item.name}</span>
+            <MessageSquare size={20} aria-hidden="true" />
           </button>
+        </Tooltip>
+        <div className={styles.railDivider} />
+        {servers.map((item) => (
+          <Tooltip key={item.id} content={item.name} side="right">
+            <button
+              type="button"
+              className={cn(styles.serverButton, server?.id === item.id && styles.serverButtonActive)}
+              aria-label={item.name}
+              aria-current={server?.id === item.id ? 'page' : undefined}
+              onClick={() => void openServer(item.id)}
+            >
+              {initials(item.name)}
+            </button>
+          </Tooltip>
         ))}
-        <button
-          type="button"
-          className="server-orb add-server"
-          title="Add a Server"
-          onClick={() => setServerAction('create')}
-        >
-          <Plus size={24} />
-          <span className="server-tooltip">Add a Server</span>
-        </button>
+        <Tooltip content="Add a Server" side="right">
+          <button
+            type="button"
+            className={cn(styles.serverButton, styles.serverAdd)}
+            aria-label="Add a Server"
+            onClick={() => setServerAction('create')}
+          >
+            <Plus size={24} aria-hidden="true" />
+          </button>
+        </Tooltip>
       </aside>
 
-      <aside className={`channel-sidebar ${server ? '' : 'home-mode'}`}>
-        <div className="server-header">
+      <aside
+        className={cn(styles.channelSidebar, !server && styles.homeMode)}
+        aria-label={server ? `${server.name} channels` : 'Direct Messages'}
+      >
+        <div className={styles.serverHeader}>
           {server ? (
-            <button
-              type="button"
-              className={`server-dropdown-button ${serverMenuOpen ? 'menu-open' : ''}`}
-              onClick={() => setServerMenuOpen((current) => !current)}
-              title="Open server menu"
-              aria-expanded={serverMenuOpen}
-            >
-              <strong>{server.name}</strong>
-              <span className="server-dropdown-indicator" aria-hidden="true">
-                <ChevronDown size={15} />
-              </span>
-            </button>
+            <DropdownMenuRoot>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className={styles.serverDropdownButton}>
+                  <strong>{server.name}</strong>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="bottom">
+                <DropdownMenuItem onSelect={() => setActiveDialog('server-settings')}>
+                  <Settings size={16} aria-hidden="true" />
+                  Server Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={pendingAction === 'create-invite'}
+                  onSelect={() => void createInvite()}
+                >
+                  {pendingAction === 'create-invite' ? (
+                    <Loader2 className="spin" size={16} aria-hidden="true" />
+                  ) : (
+                    <UserPlus size={16} aria-hidden="true" />
+                  )}
+                  Invite People
+                </DropdownMenuItem>
+                {inviteCode ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <span className={styles.menuHint}>Invite is ready to paste</span>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenuRoot>
           ) : (
-            <button
-              type="button"
-              className="server-dropdown-button home-title"
-              onClick={openHome}
-              title="Direct Messages"
-            >
-              <MessageSquare size={18} />
+            <button type="button" className={styles.homeButton} onClick={openHome}>
+              <MessageSquare size={18} aria-hidden="true" />
               <strong>Direct Messages</strong>
             </button>
           )}
-          {serverMenuOpen && server ? (
-            <div className="server-menu">
-              <button
-                type="button"
-                onClick={() => {
-                  setServerMenuOpen(false);
-                  setActiveDialog('server-settings');
-                }}
-              >
-                <Settings size={16} />
-                Server Settings
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setServerMenuOpen(false);
-                  void createInvite();
-                }}
-                disabled={pendingAction === 'create-invite'}
-              >
-                {pendingAction === 'create-invite' ? (
-                  <Loader2 className="spin" size={16} />
-                ) : (
-                  <UserPlus size={16} />
-                )}
-                Invite People
-              </button>
-              {inviteCode ? (
-                <span className="server-menu-hint">Invite is ready to paste</span>
-              ) : null}
-            </div>
-          ) : null}
           {isLoadingServers ? (
-            <Loader2 className="spin" size={16} />
+            <Loader2 className="spin" size={16} aria-hidden="true" />
           ) : server ? (
-            <button
-              type="button"
-              className={`server-search-button ${isSearchOpen ? 'selected' : ''}`}
-              title="Search channels"
+            <IconButton
+              className={styles.headerAction}
+              label="Search channels"
+              aria-pressed={isSearchOpen}
               onClick={() => setIsSearchOpen((current) => !current)}
             >
-              <Search size={16} />
-            </button>
+              <Search size={16} aria-hidden="true" />
+            </IconButton>
           ) : null}
         </div>
 
-        <div className="sidebar-scroll">
+        <div className={styles.sidebarScroll}>
           {server ? (
             <>
-              <div className={`channel-search ${isSearchOpen ? 'open' : ''}`}>
-                <Search size={14} />
+              <div className={cn(styles.channelSearch, isSearchOpen && styles.channelSearchOpen)}>
+                <Search size={14} aria-hidden="true" />
                 <input
                   value={channelQuery}
                   onChange={(event) => setChannelQuery(event.target.value)}
                   placeholder="Find channel"
+                  aria-label="Find channel"
                 />
               </div>
-              <section className="sidebar-card">
-                <div className="section-title">
-                  Text Channels
-                  <button
-                    type="button"
-                    title="Create text channel"
-                    onClick={() => setChannelCreateType('TEXT')}
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-                <div className="channel-list">
-                  {visibleTextChannels.map((item) => (
-                    <button
-                      key={item.id}
-                      className={channel?.id === item.id ? 'selected' : ''}
-                      onClick={() => setChannel(item)}
-                    >
-                      <Hash size={16} />
-                      <span>{item.name}</span>
-                      {activeCalls[item.id] ? (
-                        <span className="channel-live-badge">
-                          {activeCalls[item.id].mode === 'screen' ? 'Live' : 'Call'}
-                        </span>
-                      ) : null}
-                      {channelBadges[item.id]?.mentions ? (
-                        <span className="channel-mention-badge">
-                          {channelBadges[item.id].mentions}
-                        </span>
-                      ) : channelBadges[item.id]?.count ? (
-                        <span className="channel-unread-dot" />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              </section>
 
-              <section className="sidebar-card">
-                <div className="section-title">
-                  Voice Channels
-                  <button
-                    type="button"
-                    title="Create voice channel"
-                    onClick={() => setChannelCreateType('VOICE')}
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-                <div className="channel-list muted-list">
-                  {visibleVoiceChannels.length ? (
-                    visibleVoiceChannels.map((item) => (
-                      <div className="voice-channel-block" key={item.id}>
-                        <button type="button">
-                          <Volume2 size={16} />
-                          <span>{item.name}</span>
-                          {activeCalls[item.id]?.participants.length ? (
-                            <span className="channel-live-badge">
-                              {activeCalls[item.id].participants.length}
+              <ChannelGroup
+                title="Text Channels"
+                createLabel="Create text channel"
+                onCreate={() => setChannelCreateType('TEXT')}
+              >
+                {visibleTextChannels.map((item) => (
+                  <ChannelRow
+                    key={item.id}
+                    channel={item}
+                    icon={<Hash size={16} aria-hidden="true" />}
+                    active={channel?.id === item.id}
+                    badge={channelBadges[item.id]}
+                    activeCall={activeCalls[item.id]}
+                    onClick={() => setChannel(item)}
+                  />
+                ))}
+              </ChannelGroup>
+
+              <ChannelGroup
+                title="Voice Channels"
+                createLabel="Create voice channel"
+                onCreate={() => setChannelCreateType('VOICE')}
+              >
+                {visibleVoiceChannels.length ? (
+                  visibleVoiceChannels.map((item) => (
+                    <div className={styles.voiceBlock} key={item.id}>
+                      <ChannelRow
+                        channel={item}
+                        icon={<Volume2 size={16} aria-hidden="true" />}
+                        muted
+                        activeCall={activeCalls[item.id]}
+                      />
+                      {activeCalls[item.id]?.participants.length ? (
+                        <div className={styles.voiceOccupants}>
+                          {activeCalls[item.id].participants.map((participant) => (
+                            <span key={participant.socketId}>
+                              {participant.displayName}
+                              {participant.isMuted ? ' muted' : ''}
                             </span>
-                          ) : null}
-                        </button>
-                        {activeCalls[item.id]?.participants.length ? (
-                          <div className="voice-occupants">
-                            {activeCalls[item.id].participants.map((participant) => (
-                              <span key={participant.socketId}>
-                                {participant.displayName}
-                                {participant.isMuted ? ' muted' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="empty-note">No voice channels yet.</p>
-                  )}
-                </div>
-              </section>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyNote}>No voice channels yet.</p>
+                )}
+              </ChannelGroup>
             </>
           ) : null}
         </div>
 
-        <div className="user-strip">
+        <div className={styles.userStrip}>
           <input
             ref={profileAvatarInputRef}
-            className="file-input"
+            className={styles.hiddenFileInput}
             type="file"
             accept="image/*"
             onChange={updateProfileAvatar}
           />
           <button
             type="button"
-            className="avatar-button"
+            className={styles.avatarButton}
             onClick={() => profileAvatarInputRef.current?.click()}
             title="Change profile avatar"
             disabled={pendingAction === 'profile-avatar'}
@@ -322,133 +296,160 @@ export function WorkspaceSidebar({
             <strong>{auth.user.displayName}</strong>
             <span>@{auth.user.username}</span>
           </div>
-          <button type="button" onClick={() => setActiveDialog('profile')} title="Edit profile">
-            <Edit3 size={16} />
-          </button>
-          <button onClick={logout} title="Logout">
-            <LogOut size={16} />
-          </button>
+          <IconButton label="Edit profile" onClick={() => setActiveDialog('profile')}>
+            <Edit3 size={16} aria-hidden="true" />
+          </IconButton>
+          <IconButton label="Logout" onClick={logout}>
+            <LogOut size={16} aria-hidden="true" />
+          </IconButton>
         </div>
       </aside>
 
-      {serverAction ? (
-        <div className="server-add-modal" onClick={() => setServerAction(null)}>
-          <div className="server-add-card" onClick={(event) => event.stopPropagation()}>
-            <div className="server-add-header">
-              <strong>{serverAction === 'create' ? 'Create a server' : 'Join a server'}</strong>
-              <button type="button" onClick={() => setServerAction(null)} title="Close">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="server-action-tabs">
-              <button
-                type="button"
-                className={serverAction === 'create' ? 'active' : ''}
-                onClick={() => setServerAction('create')}
-              >
-                <Plus size={16} />
-                Create
-              </button>
-              <button
-                type="button"
-                className={serverAction === 'join' ? 'active' : ''}
-                onClick={() => setServerAction('join')}
-              >
-                <UserPlus size={16} />
-                Join
-              </button>
-            </div>
-            {serverAction === 'create' ? (
-              <form onSubmit={submitCreateServer} className="modal-form">
-                <label>
-                  Server name
-                  <input name="name" placeholder="New server" required />
-                </label>
-                <label>
-                  Description
-                  <input name="description" placeholder="Optional description" />
-                </label>
-                <button
-                  className="primary"
-                  data-testid="create-server-button"
-                  disabled={pendingAction === 'create-server'}
-                >
-                  {pendingAction === 'create-server' ? (
-                    <Loader2 className="spin" size={16} />
-                  ) : (
-                    'Create Server'
-                  )}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={submitJoinInvite} className="modal-form">
-                <label>
-                  Invite code
-                  <input
-                    name="code"
-                    placeholder="Paste invite code"
-                    aria-label="Invite code"
-                    required
-                  />
-                </label>
-                <button
-                  className="primary"
-                  data-testid="join-invite-button"
-                  disabled={pendingAction === 'join-invite'}
-                >
-                  {pendingAction === 'join-invite' ? (
-                    <Loader2 className="spin" size={16} />
-                  ) : (
-                    'Join Server'
-                  )}
-                </button>
-              </form>
-            )}
+      <DialogRoot open={Boolean(serverAction)} onOpenChange={(open) => !open && setServerAction(null)}>
+        <DialogContent title={serverAction === 'join' ? 'Join a server' : 'Create a server'}>
+          <div className={styles.dialogTabs}>
+            <Button
+              variant={serverAction === 'create' ? 'primary' : 'secondary'}
+              onClick={() => setServerAction('create')}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Create
+            </Button>
+            <Button
+              variant={serverAction === 'join' ? 'primary' : 'secondary'}
+              onClick={() => setServerAction('join')}
+            >
+              <UserPlus size={16} aria-hidden="true" />
+              Join
+            </Button>
           </div>
-        </div>
-      ) : null}
-
-      {channelCreateType ? (
-        <div className="channel-create-modal" onClick={() => setChannelCreateType(null)}>
-          <form
-            className="channel-create-card"
-            onSubmit={submitCreateChannel}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="server-add-header">
-              <strong>Create {channelCreateType === 'TEXT' ? 'text' : 'voice'} channel</strong>
-              <button type="button" onClick={() => setChannelCreateType(null)} title="Close">
-                <X size={18} />
-              </button>
-            </div>
-            <label>
-              Channel name
-              <input
-                data-testid={
-                  channelCreateType === 'TEXT' ? 'create-channel-input' : 'create-voice-input'
-                }
-                name="name"
-                placeholder={channelCreateType === 'TEXT' ? 'new-channel' : 'New voice'}
+          {serverAction === 'join' ? (
+            <form onSubmit={submitJoinInvite} className={styles.dialogForm}>
+              <TextField
+                name="code"
+                label="Invite code"
+                placeholder="Paste invite code"
+                aria-label="Invite code"
                 required
               />
-            </label>
-            <input name="type" type="hidden" value={channelCreateType} readOnly />
-            <button
-              className="primary"
+              <Button type="submit" fullWidth data-testid="join-invite-button" disabled={pendingAction === 'join-invite'}>
+                {pendingAction === 'join-invite' ? <Loader2 className="spin" size={16} aria-hidden="true" /> : 'Join Server'}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={submitCreateServer} className={styles.dialogForm}>
+              <TextField name="name" label="Server name" placeholder="New server" required />
+              <TextField name="description" label="Description" placeholder="Optional description" />
+              <Button
+                type="submit"
+                fullWidth
+                data-testid="create-server-button"
+                disabled={pendingAction === 'create-server'}
+              >
+                {pendingAction === 'create-server' ? (
+                  <Loader2 className="spin" size={16} aria-hidden="true" />
+                ) : (
+                  'Create Server'
+                )}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </DialogRoot>
+
+      <DialogRoot
+        open={Boolean(channelCreateType)}
+        onOpenChange={(open) => !open && setChannelCreateType(null)}
+      >
+        <DialogContent
+          title={`Create ${channelCreateType === 'VOICE' ? 'voice' : 'text'} channel`}
+        >
+          <form onSubmit={submitCreateChannel} className={styles.dialogForm}>
+            <TextField
               data-testid={
-                channelCreateType === 'TEXT' ? 'create-channel-button' : 'create-voice-button'
+                channelCreateType === 'VOICE' ? 'create-voice-input' : 'create-channel-input'
+              }
+              name="name"
+              label="Channel name"
+              placeholder={channelCreateType === 'VOICE' ? 'New voice' : 'new-channel'}
+              required
+            />
+            <input name="type" type="hidden" value={channelCreateType ?? 'TEXT'} readOnly />
+            <Button
+              type="submit"
+              fullWidth
+              data-testid={
+                channelCreateType === 'VOICE' ? 'create-voice-button' : 'create-channel-button'
               }
               disabled={pendingAction === 'create-channel'}
             >
               {pendingAction === 'create-channel' ? (
-                <Loader2 className="spin" size={16} />
+                <Loader2 className="spin" size={16} aria-hidden="true" />
               ) : (
                 'Create Channel'
               )}
-            </button>
+            </Button>
           </form>
-        </div>
-      ) : null}
+        </DialogContent>
+      </DialogRoot>
     </>
+  );
+}
+
+type ChannelGroupProps = {
+  title: string;
+  createLabel: string;
+  onCreate: () => void;
+  children: ReactNode;
+};
+
+function ChannelGroup({ title, createLabel, onCreate, children }: ChannelGroupProps) {
+  return (
+    <section className={styles.channelGroup}>
+      <div className={styles.sectionTitle}>
+        {title}
+        <IconButton label={createLabel} size="sm" onClick={onCreate}>
+          <Plus size={16} aria-hidden="true" />
+        </IconButton>
+      </div>
+      <div className={styles.channelList}>{children}</div>
+    </section>
+  );
+}
+
+type ChannelRowProps = {
+  channel: Channel;
+  icon: ReactNode;
+  active?: boolean;
+  muted?: boolean;
+  badge?: ChannelBadgeState;
+  activeCall?: ActiveCallSummary;
+  onClick?: () => void;
+};
+
+function ChannelRow({ channel, icon, active, muted, badge, activeCall, onClick }: ChannelRowProps) {
+  const callLabel = activeCall
+    ? activeCall.mode === 'screen'
+      ? 'Live'
+      : activeCall.participants.length || 'Call'
+    : null;
+
+  return (
+    <button
+      type="button"
+      className={cn(styles.channelRow, active && styles.channelRowActive, muted && styles.channelRowMuted)}
+      aria-current={active ? 'page' : undefined}
+      aria-disabled={!onClick && muted ? true : undefined}
+      onClick={onClick}
+    >
+      {icon}
+      <span>{channel.name}</span>
+      {callLabel ? <span className={styles.liveBadge}>{callLabel}</span> : null}
+      {badge?.mentions ? (
+        <span className={styles.mentionBadge}>{badge.mentions}</span>
+      ) : badge?.count ? (
+        <span className={styles.unreadDot} aria-label={`${badge.count} unread messages`} />
+      ) : null}
+    </button>
   );
 }
