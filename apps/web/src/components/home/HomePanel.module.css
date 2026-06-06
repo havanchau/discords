@@ -1,0 +1,287 @@
+.panel {
+  grid-column: 3 / -1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.sidebar {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 14px;
+  border-right: 1px solid var(--background-modifier-accent);
+  background: var(--bg-secondary);
+  overflow-y: auto;
+}
+
+.sidebarHeader {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.sidebarTitle {
+  color: var(--header-primary);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.sidebarKicker,
+.sectionTitle {
+  margin: 8px 0 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.addFriendForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.addFriendInput,
+.composerInput {
+  min-width: 0;
+  border-radius: 8px;
+}
+
+.addFriendInput {
+  height: 38px;
+}
+
+.addFriendButton {
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+.list {
+  display: grid;
+  gap: 4px;
+}
+
+.rowButton {
+  width: 100%;
+  min-height: 46px;
+  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--interactive-normal);
+  text-align: left;
+}
+
+.rowButton:hover,
+.rowButtonSelected {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.rowButton:focus-visible {
+  background: var(--bg-modifier-selected);
+}
+
+.rowText,
+.headerText {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.rowTitle,
+.rowMeta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowTitle {
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rowMeta {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.emptyBanner {
+  justify-content: center;
+  padding: 10px;
+  text-align: center;
+}
+
+.requestCard {
+  display: grid;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg-modifier-hover);
+}
+
+.requestName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--header-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestActions {
+  display: flex;
+  gap: 6px;
+}
+
+.requestButton {
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.chat {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 56px minmax(0, 1fr) auto;
+  background: var(--bg-primary);
+}
+
+.chatEmpty {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  box-shadow: var(--elevation-low);
+}
+
+.headerName,
+.headerHandle {
+  display: block;
+}
+
+.headerName {
+  color: var(--header-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.headerHandle {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.messageList {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.message {
+  max-width: min(680px, 80%);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  animation: message-in 0.16s ease-out both;
+}
+
+.messageMine {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--brand-500), var(--bg-secondary) 74%);
+}
+
+.messageAuthor,
+.messageTime {
+  display: block;
+}
+
+.messageAuthor {
+  color: var(--header-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.messageBody {
+  margin: 4px 0;
+  color: var(--text-normal);
+}
+
+.messageTime {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.composerInput {
+  height: 44px;
+}
+
+.statePanel {
+  min-height: 200px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--text-muted);
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  animation: fade-in 0.2s ease-out both;
+}
+
+.statePanelTitle {
+  color: var(--header-primary);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.statePanelCopy {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .statePanel {
+    min-height: 160px;
+    font-size: 14px;
+  }
+}
