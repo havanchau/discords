@@ -1,5 +1,7 @@
 # Agent Guide
 
+> **⚠️ BEFORE ANY TASK**: If this task touches frontend code, CSS, UI components, or styles — you MUST first read `DISCORD_UI_SKILL.md` and `docs/design-rules.md` in full. Use the **`ui-polish`** skill. These are non-negotiable constraints, not suggestions.
+
 This file gives implementation guidance for AI or human coding agents working in this repository. Product rules live in `RULE.md`; architecture details live in `docs/architecture.md`.
 
 ## Project Context
@@ -70,20 +72,34 @@ Events that mutate or reveal state must be authorized on the server. The client 
 - Soft-delete user-generated content when auditability matters.
 - Keep browser-only encryption secrets out of API logs and persistence.
 
-## UI Guidance
+## UI Guidance — CRITICAL
 
-The app should feel like a dense communication tool, not a landing page.
+> **READ `DISCORD_UI_SKILL.md` BEFORE ANY UI WORK.** It is the mandatory rulebook.
 
-Prefer:
+The app MUST look like Discord's real desktop client — a dense, warm-dark communication tool.
 
-- Server rail.
-- Channel list grouped by category.
-- Main message timeline.
-- Member list on wider screens.
-- Compact composer with upload, voice, and message controls.
-- Context menus for message and channel actions.
+### Mandatory visual rules:
 
-Canonical UI implementation rules live in `docs/design-rules.md`.
+- **Colors**: Use ONLY the CSS custom properties from `DISCORD_UI_SKILL.md`. NEVER use neon cyan (`#00e5ff`), neon pink (`#ff1fb8`), neon lime (`#00ff95`), or any glowing/gradient effects.
+- **Backgrounds**: Flat solid warm-dark grays (`#1e1f22`, `#2b2d31`, `#313338`). NO gradients on panels. NO `linear-gradient()` or `radial-gradient()` on the app shell, server rail, channel sidebar, chat area, or member sidebar.
+- **Brand color**: Discord Blurple `#5865f2` for primary actions. NOT cyan, NOT old blurple `#7289DA`.
+- **Shadows**: Subtle `rgba(0,0,0,...)` only. NO colored glows, NO `box-shadow` with cyan/pink/lime.
+- **Borders**: Minimal. Use background-color layering for panel separation, not decorative borders.
+- **App shell**: `border-radius: 0`. NO rounded corners on the outer shell. NO border on the shell.
+
+### Layout:
+
+- Server rail (72px) → Channel sidebar (240px) → Chat area (flex) → Member sidebar (240px)
+- Channel list grouped by category
+- Main message timeline with proper grouping
+- Compact composer with upload, voice, and message controls
+- Context menus for message and channel actions
+
+### Canonical references:
+
+- **Mandatory skill file**: `DISCORD_UI_SKILL.md`
+- **Design tokens and rules**: `docs/design-rules.md`
+- **UX spec**: `docs/ui-design-spec.md`
 
 ## Verification Checklist
 

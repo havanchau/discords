@@ -6,6 +6,8 @@
 
 ## 1. Recommended Codex Skill
 
+> **MANDATORY**: Read `DISCORD_UI_SKILL.md` at the project root BEFORE starting any UI work. That file contains the enforced color tokens, layout rules, and anti-patterns.
+
 Use the **`ui-polish`** skill when asking Codex to make the interface look better.
 
 This skill is the right fit for:
@@ -14,8 +16,9 @@ This skill is the right fit for:
 - Improving spacing, hierarchy, density, empty states, loading states, and responsive behavior.
 - Keeping the UI consistent with the existing app shell instead of producing a generic landing-page look.
 - Verifying desktop and mobile views with browser screenshots after meaningful frontend changes.
+- **Fixing any neon/cyberpunk/gradient styling that does not match Discord's warm dark palette.**
 
-For Discord-like UI work, pair `ui-polish` with the rules in this file.
+For Discord-like UI work, pair `ui-polish` with the rules in `DISCORD_UI_SKILL.md` and this file.
 
 ---
 
