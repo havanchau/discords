@@ -110,7 +110,7 @@ export function WorkspaceSidebar({
 
   return (
     <>
-      <aside className={styles.serverRail} aria-label="Servers">
+      <aside className={cn(styles.serverRail, 'server-rail')} aria-label="Servers">
         <Tooltip content="Direct Messages" side="right">
           <button
             type="button"
@@ -148,7 +148,7 @@ export function WorkspaceSidebar({
       </aside>
 
       <aside
-        className={cn(styles.channelSidebar, !server && styles.homeMode)}
+        className={cn(styles.channelSidebar, !server && styles.homeMode, 'channel-sidebar')}
         aria-label={server ? `${server.name} channels` : 'Direct Messages'}
       >
         <div className={styles.serverHeader}>

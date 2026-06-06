@@ -167,8 +167,8 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 - [x] Replace create channel modal with Radix `Dialog`.
 - [x] Add keyboard navigation for server rail and channel rows.
 - [x] Verify desktop shell grid remains exactly: `72px / 240px / minmax(0, 1fr) / 240px`.
-- [ ] Delete or prefix legacy sidebar styles after migration.
-- [ ] Run minimum merge checks. Capture after screenshots and compare with before.
+- [x] Delete or prefix legacy sidebar styles after migration.
+- [x] Run minimum merge checks. Capture after screenshots and compare with before.
 
 ---
 
