@@ -1,0 +1,199 @@
+.memberSidebar {
+  min-width: 240px;
+  width: 240px;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--color-bg-sidebar);
+}
+
+.memberGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.memberTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 8px 8px 16px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: default;
+  user-select: none;
+}
+
+.memberList {
+  display: grid;
+  gap: 2px;
+  padding: 0 8px;
+}
+
+.member {
+  min-height: var(--height-member-row);
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-interactive-normal);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  width: 100%;
+}
+
+.member:hover {
+  background: var(--background-modifier-hover);
+  color: var(--color-interactive-hover);
+}
+
+.member:focus-visible {
+  outline: 2px solid var(--color-accent-blurple);
+  outline-offset: -2px;
+}
+
+.avatarWrap {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.statusDot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-bg-sidebar);
+  border-radius: var(--radius-full);
+}
+
+.statusDot.online {
+  background: var(--color-status-online);
+}
+
+.statusDot.idle {
+  background: var(--color-status-idle);
+}
+
+.statusDot.dnd {
+  background: var(--color-status-dnd);
+}
+
+.statusDot.offline {
+  background: var(--color-status-offline);
+}
+
+.memberInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.memberInfo strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-ui);
+  color: var(--color-interactive-normal);
+}
+
+.member:hover strong {
+  color: var(--color-interactive-hover);
+}
+
+.memberInfo span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popoverContent {
+  width: 260px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  box-shadow: var(--elevation-high);
+  border: 1px solid var(--border-subtle);
+  padding: 0;
+}
+
+.popoverBanner {
+  height: 64px;
+  background: var(--color-accent-blurple);
+}
+
+.popoverBody {
+  display: grid;
+  gap: 6px;
+  padding: 0 14px 14px;
+}
+
+.profileCardAvatar {
+  width: 64px;
+  height: 64px;
+  margin-top: -32px;
+  border: 6px solid var(--color-bg-elevated);
+  font-size: 20px;
+}
+
+.popoverBody strong {
+  margin-top: 2px;
+  color: var(--header-primary);
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+}
+
+.popoverBody span {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.popoverBody p {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  margin: 4px 0 0;
+  line-height: 1.35;
+}
+
+.roleChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.roleChip {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-round);
+  padding: 0 8px;
+  color: var(--header-secondary);
+  background: var(--background-modifier-hover);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+}
+
+.emptyNote {
+  margin: 0;
+  padding: 16px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-ui);
+  text-align: center;
+}

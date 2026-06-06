@@ -1,0 +1,166 @@
+.activeCallBanner {
+  grid-row: 2;
+  min-width: 0;
+  margin: var(--spacing-2) var(--spacing-4) 0;
+  padding: var(--spacing-3);
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--spacing-3);
+  border-radius: var(--radius-md);
+  background: var(--background-secondary);
+  border: 1px solid rgba(35, 165, 90, 0.28);
+  animation: panelRiseIn 0.18s ease-out both;
+}
+
+@keyframes panelRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.activeCallIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--interactive-active);
+  background: var(--status-online);
+}
+
+.activeCallCopy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.activeCallCopy strong,
+.activeCallCopy span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeCallCopy strong {
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+}
+
+.activeCallCopy span {
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+}
+
+.activeCallJoin {
+  height: 36px;
+  padding: 0 var(--spacing-3);
+  white-space: nowrap;
+}
+
+.callStage {
+  grid-row: 2;
+  min-width: 0;
+  margin: var(--spacing-2) var(--spacing-4) 0;
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  background: var(--background-secondary);
+  animation: panelRiseIn 0.18s ease-out both;
+}
+
+.callStageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
+.callStageHeader strong,
+.callStageHeader span {
+  display: block;
+}
+
+.callStageHeader strong {
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--header-primary);
+}
+
+.callStageHeader span {
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+}
+
+.callControls {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.callGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-2);
+}
+
+.callTile {
+  position: relative;
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-rail);
+}
+
+.callTile video {
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  object-fit: cover;
+}
+
+.callTileLocal video {
+  transform: scaleX(-1);
+}
+
+.callAvatar {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.callLabel {
+  position: absolute;
+  left: var(--spacing-2);
+  right: var(--spacing-2);
+  bottom: var(--spacing-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.6);
+  font-size: var(--font-size-label);
+}
+
+.callLabel strong,
+.callLabel span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+}

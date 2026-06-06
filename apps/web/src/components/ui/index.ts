@@ -7,3 +7,4 @@ export { DialogClose, DialogContent, DialogRoot, DialogTrigger, type DialogConte
 export { DropdownMenuContent, DropdownMenuItem, DropdownMenuRoot, DropdownMenuSeparator, DropdownMenuTrigger } from './DropdownMenu';
 export { Toast, ToastProvider, ToastViewport, type ToastMessage } from './Toast';
 export { Tooltip, TooltipProvider, type TooltipProps } from './Tooltip';
+export { PopoverContent, PopoverRoot, PopoverTrigger, PopoverClose } from './Popover';

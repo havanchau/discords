@@ -174,8 +174,8 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 
 ### Phase 3: Chat Surface And Member Sidebar
 
-- [ ] Before splitting `ChatPanel.tsx`, capture before screenshots of the full chat surface.
-- [ ] Split `ChatPanel.tsx` into focused components:
+- [x] Before splitting `ChatPanel.tsx`, capture before screenshots of the full chat surface.
+- [x] Split `ChatPanel.tsx` into focused components:
   - `ChatHeader`
   - `UtilityPanel`
   - `CallStage`
@@ -184,18 +184,19 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
   - `MessageActions`
   - `MessageComposer`
   - `AttachmentPreviewDialog`
-- [ ] Reduce `ChatPanel.tsx` below 1000 lines.
-- [ ] Chat area uses `--color-bg-chat` background with dense message rows and subtle hover toolbar matching Discord proportions.
-- [ ] Replace toolbar buttons with shared `IconButton` + `Tooltip`.
-- [ ] Replace message quick reactions with Radix `Popover` only if a popover is still needed; otherwise use inline Discord-style reaction buttons.
-- [ ] Replace media preview overlay with Radix `Dialog`.
-- [ ] Add Radix `ContextMenu` for messages with reply, edit, delete, pin, copy, and react actions.
-- [ ] Rebuild member sidebar in the same phase: `--color-bg-sidebar` background, role grouping, small status indicators.
-- [ ] Replace hover-only member profile card with Radix `Popover`.
-- [ ] Add member context menu for manage roles and direct message entry points.
-- [ ] Add `aria-live` for new message and typing updates.
-- [ ] Keep message grouping, hover toolbar, timestamp behavior, and composer density close to Discord.
-- [ ] Run minimum merge checks. Compare after screenshots with before for desktop and mobile.
+- [x] Reduce `ChatPanel.tsx` below 1000 lines.
+- [x] Chat area uses `--color-bg-chat` background with dense message rows and subtle hover toolbar matching Discord proportions.
+- [x] Replace toolbar buttons with shared `IconButton` + `Tooltip`.
+- [x] Replace message quick reactions with Radix `Popover` only if a popover is still needed; otherwise use inline Discord-style reaction buttons.
+- [x] Replace media preview overlay with Radix `Dialog`.
+- [x] Add Radix `ContextMenu` for messages with reply, edit, delete, pin, copy, and react actions.
+- [x] Rebuild member sidebar in the same phase: `--color-bg-sidebar` background, role grouping, small status indicators.
+- [x] Replace hover-only member profile card with Radix `Popover`.
+- [x] Add member context menu for manage roles and direct message entry points.
+- [x] Add `aria-live` for new message and typing updates.
+- [x] Keep message grouping, hover toolbar, timestamp behavior, and composer density close to Discord.
+- [x] Run minimum merge checks. Compare after screenshots with before for desktop and mobile.
+
 
 ---
 

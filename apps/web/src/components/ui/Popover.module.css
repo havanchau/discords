@@ -1,0 +1,21 @@
+.content {
+  z-index: var(--z-dropdown);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--text-normal);
+  padding: var(--spacing-2);
+  box-shadow: var(--elevation-high);
+  border: 1px solid var(--border-subtle);
+  animation: popoverIn var(--motion-menu) ease;
+}
+
+.content:focus {
+  outline: none;
+}
+
+@keyframes popoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

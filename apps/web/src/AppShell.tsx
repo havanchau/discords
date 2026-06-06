@@ -925,6 +925,10 @@ export function AppShell() {
                       setSelectedMemberId(memberId);
                       setActiveDialog('member-roles');
                     }}
+                    onDirectMessage={async (userId) => {
+                      openHome();
+                      await startDirectConversation(userId);
+                    }}
                   />
                 </>
               ) : (
