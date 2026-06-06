@@ -205,6 +205,45 @@ export function AppShell() {
       auth: { token: auth.accessToken },
     });
 
+    nextSocket.on('connect', () => {
+      nextSocket.emit('unread:get', (result?: { counts?: Record<string, number> }) => {
+        setChannelBadges((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            Object.entries(result?.counts ?? {}).map(([channelId, count]) => [
+              channelId,
+              { count, mentions: current[channelId]?.mentions ?? 0 },
+            ]),
+          ),
+        }));
+      });
+    });
+
+    nextSocket.on(
+      'unread:updated',
+      (payload: { channelId: string; count: number; mentions: number }) => {
+        if (payload.channelId === activeChannelIdRef.current) return;
+        setChannelBadges((current) => {
+          const currentBadge = current[payload.channelId] ?? { count: 0, mentions: 0 };
+          return {
+            ...current,
+            [payload.channelId]: {
+              count: currentBadge.count + payload.count,
+              mentions: currentBadge.mentions + payload.mentions,
+            },
+          };
+        });
+      },
+    );
+
+    nextSocket.on('unread:cleared', (payload: { channelId: string }) => {
+      setChannelBadges((current) => {
+        const next = { ...current };
+        delete next[payload.channelId];
+        return next;
+      });
+    });
+
     nextSocket.on('message:created', async (message: Message) => {
       const displayMessage = await decryptMessageForDisplay(message);
       if (message.channelId === activeChannelIdRef.current) {
@@ -214,20 +253,7 @@ export function AppShell() {
             : [...current, displayMessage],
         );
         void markChannelRead(message.channelId, message.id);
-        return;
       }
-
-      setChannelBadges((current) => {
-        const currentBadge = current[message.channelId] ?? { count: 0, mentions: 0 };
-        const mentionsMe = messageMentionsUser(message, auth.user);
-        return {
-          ...current,
-          [message.channelId]: {
-            count: currentBadge.count + 1,
-            mentions: currentBadge.mentions + (mentionsMe ? 1 : 0),
-          },
-        };
-      });
     });
 
     nextSocket.on('reaction:updated', async (payload: { message: Message }) => {
@@ -1382,6 +1408,7 @@ export function AppShell() {
         },
         auth.accessToken,
       );
+      socket?.emit('unread:clear', { channelId });
       setChannelBadges((current) => {
         const next = { ...current };
         delete next[channelId];
@@ -1829,10 +1856,4 @@ export function AppShell() {
       />
     </main>
   );
-}
-
-function messageMentionsUser(message: Message, user: AuthState['user']) {
-  const content = message.content.toLowerCase();
-  const handles = [`@${user.username.toLowerCase()}`, `@${user.displayName.toLowerCase()}`];
-  return handles.some((handle) => content.includes(handle));
 }

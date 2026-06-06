@@ -66,6 +66,7 @@ export class RealtimeGateway implements OnGatewayConnection {
   async handleConnection(client: Socket) {
     try {
       client.data.user = await this.authenticate(client);
+      await client.join(this.userRoom(client.data.user.id));
       await this.prisma.user.update({
         where: { id: client.data.user.id },
         data: { status: 'ONLINE' },
@@ -125,7 +126,22 @@ export class RealtimeGateway implements OnGatewayConnection {
       attachments: body.attachments,
     });
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
+    await this.emitUnreadUpdated(result.message);
     return result;
+  }
+
+  @SubscribeMessage('unread:get')
+  async getUnreadCounts(@ConnectedSocket() client: Socket) {
+    const user = this.getUser(client);
+    return { counts: await this.countUnreadByChannel(user.id) };
+  }
+
+  @SubscribeMessage('unread:clear')
+  async clearUnread(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    const user = this.getUser(client);
+    await this.messages.markChannelRead(user.id, body.channelId);
+    this.server.to(this.userRoom(user.id)).emit('unread:cleared', { channelId: body.channelId });
+    return { ok: true };
   }
 
   @SubscribeMessage('reaction:toggle')
@@ -353,6 +369,10 @@ export class RealtimeGateway implements OnGatewayConnection {
     return `server:${serverId}`;
   }
 
+  private userRoom(userId: string) {
+    return `user:${userId}`;
+  }
+
   private callRoom(channelId: string) {
     return `call:${channelId}`;
   }
@@ -429,6 +449,74 @@ export class RealtimeGateway implements OnGatewayConnection {
     this.server.to(this.channelRoom(channelId)).emit('voice:ended', { channelId });
   }
 
+  private async emitUnreadUpdated(message: {
+    authorId: string;
+    channelId: string;
+    serverId: string;
+    content: string;
+  }) {
+    const members = await this.prisma.serverMember.findMany({
+      where: { serverId: message.serverId, userId: { not: message.authorId } },
+      include: { user: { select: { username: true } } },
+    });
+
+    await Promise.all(
+      members.map(async (member) => {
+        const canView = await this.permissions.hasChannelPermission(
+          member.userId,
+          message.channelId,
+          Permission.ViewChannel,
+        );
+        if (!canView) return;
+
+        this.server.to(this.userRoom(member.userId)).emit('unread:updated', {
+          channelId: message.channelId,
+          count: 1,
+          mentions: messageMentionsUsername(message.content, member.user.username) ? 1 : 0,
+        });
+      }),
+    );
+  }
+
+  private async countUnreadByChannel(userId: string) {
+    const memberships = await this.prisma.serverMember.findMany({
+      where: { userId },
+      select: { serverId: true },
+    });
+    const serverIds = memberships.map((membership) => membership.serverId);
+    if (!serverIds.length) return {};
+
+    const channels = await this.prisma.channel.findMany({
+      where: { serverId: { in: serverIds }, type: 'TEXT' },
+      include: { readStates: { where: { userId }, take: 1 } },
+    });
+    const counts: Record<string, number> = {};
+
+    await Promise.all(
+      channels.map(async (channel) => {
+        const canView = await this.permissions.hasChannelPermission(
+          userId,
+          channel.id,
+          Permission.ViewChannel,
+        );
+        if (!canView) return;
+
+        const readState = channel.readStates[0];
+        const count = await this.prisma.message.count({
+          where: {
+            channelId: channel.id,
+            deletedAt: null,
+            authorId: { not: userId },
+            ...(readState ? { createdAt: { gt: readState.lastReadAt } } : {}),
+          },
+        });
+        if (count > 0) counts[channel.id] = count;
+      }),
+    );
+
+    return counts;
+  }
+
   private assertSocketRateLimit(client: Socket, event: string, limit: number, windowMs: number) {
     const now = Date.now();
     const key = `${client.id}:${event}`;
@@ -469,4 +557,10 @@ export class RealtimeGateway implements OnGatewayConnection {
       });
     });
   }
+}
+
+function messageMentionsUsername(content: string, username: string) {
+  return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].some(
+    (match) => match[1].toLowerCase() === username.toLowerCase(),
+  );
 }

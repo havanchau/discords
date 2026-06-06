@@ -60,12 +60,12 @@ export class PushService {
   async sendMentionPush(input: SendMentionPushInput) {
     if (input.toUserId === input.fromUserId) return;
     if (!(await this.shouldSendPush(input.toUserId, input.serverId, input.channelId))) return;
-    if (!(await this.reserveRateLimit(input.toUserId, input.channelId))) return;
 
     const subscriptions = await this.prisma.pushSubscription.findMany({
       where: { userId: input.toUserId },
     });
     if (!subscriptions.length) return;
+    if (!(await this.reserveRateLimit(input.toUserId, input.channelId))) return;
 
     const payload = JSON.stringify({
       title: `#${input.channelName}`,

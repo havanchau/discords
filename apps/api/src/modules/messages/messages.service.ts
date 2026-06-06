@@ -430,8 +430,15 @@ export class MessagesService {
     });
 
     await Promise.all(
-      mentionedUsers.map((user) =>
-        this.push.sendMentionPush({
+      mentionedUsers.map(async (user) => {
+        const canViewChannel = await this.permissions.hasChannelPermission(
+          user.id,
+          input.channelId,
+          Permission.ViewChannel,
+        );
+        if (!canViewChannel) return;
+
+        await this.push.sendMentionPush({
           toUserId: user.id,
           fromUserId: input.authorId,
           fromUsername: input.authorUsername,
@@ -439,8 +446,8 @@ export class MessagesService {
           channelId: input.channelId,
           channelName: input.channelName,
           content: input.content,
-        }),
-      ),
+        });
+      }),
     );
   }
 
