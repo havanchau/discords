@@ -1,0 +1,369 @@
+/* ===== Chat Panel ===== */
+
+.chat-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 48px auto minmax(0, 1fr) auto auto;
+  background: var(--bg-primary);
+}
+
+.chat-header {
+  grid-row: 1;
+  height: 48px;
+}
+
+.chat-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-title svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.channel-avatar-button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  color: var(--interactive-normal);
+  background: transparent;
+}
+
+.channel-avatar-button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.toolbar {
+  display: flex;
+  gap: 0;
+}
+
+.toolbar button {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  margin: 0 8px;
+  display: grid;
+  place-items: center;
+  color: var(--interactive-normal);
+  border-radius: 4px;
+  background: transparent;
+}
+
+.toolbar button:hover {
+  color: var(--interactive-hover);
+  background: transparent;
+}
+
+.toolbar button.selected {
+  color: var(--brand-500);
+  background: transparent;
+  filter: none;
+}
+
+/* ===== Voice / Video Call Stage ===== */
+
+.active-call-banner {
+  grid-row: 2;
+  min-width: 0;
+  margin: 8px 16px 0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(35, 165, 90, 0.28);
+  animation: panel-rise-in 0.18s ease-out both;
+}
+
+.active-call-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--green-360);
+}
+
+.active-call-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.active-call-copy strong,
+.active-call-copy span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-call-copy strong {
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.active-call-copy span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.active-call-join {
+  height: 36px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+
+.call-stage {
+  grid-row: 2;
+  min-width: 0;
+  margin: 8px 16px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: none;
+  animation: panel-rise-in 0.18s ease-out both;
+}
+
+.call-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.call-stage-header strong,
+.call-stage-header span {
+  display: block;
+}
+
+.call-stage-header strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--header-primary);
+}
+
+.call-stage-header span,
+.call-label span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.call-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.call-controls button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-normal);
+  background: var(--bg-modifier-hover);
+}
+
+.call-controls button:hover {
+  background: var(--bg-modifier-active);
+  transform: translateY(-1px);
+}
+
+.call-controls button:active {
+  transform: scale(0.94);
+}
+
+.call-controls .danger {
+  background: var(--status-danger);
+  color: #fff;
+}
+
+.call-controls .danger:hover {
+  background: #d83c3e;
+}
+
+.call-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.call-tile {
+  position: relative;
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+}
+
+.call-tile video {
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  object-fit: cover;
+}
+
+.call-tile.local video {
+  transform: scaleX(-1);
+}
+
+.call-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  font-size: 24px;
+}
+
+.call-label {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+}
+
+.call-label strong,
+.call-label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== Utility Panel (Search / Notifications overlay) ===== */
+
+.utility-panel {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 5;
+  width: min(340px, calc(100% - 32px));
+  display: none;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--bg-floating);
+  box-shadow: var(--elevation-high);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.utility-panel.open {
+  display: block;
+  animation: panel-drop-in 0.16s ease-out both;
+}
+
+.utility-panel label {
+  text-transform: uppercase;
+}
+
+.notification-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.notification-panel > strong {
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.notification-panel button {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  padding: 8px;
+  color: var(--text-normal);
+  background: var(--bg-secondary);
+  text-align: left;
+}
+
+.notification-panel button:hover {
+  background: var(--bg-modifier-hover);
+}
+
+.notification-panel button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 8px 0;
+}
+
+.encryption-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.encryption-panel strong {
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.encryption-panel span {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.encryption-panel input {
+  height: 36px;
+  font-size: 14px;
+}
+
+.encryption-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.encryption-actions > button:not(.primary) {
+  height: 36px;
+  border: 0;
+  border-radius: 4px;
+  padding: 0 12px;
+  color: var(--interactive-normal);
+  background: var(--bg-modifier-hover);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.encryption-actions > button:not(.primary):hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-active);
+}

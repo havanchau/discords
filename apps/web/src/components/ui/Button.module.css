@@ -1,0 +1,98 @@
+.button {
+  min-width: var(--size-interactive-min);
+  min-height: var(--size-interactive-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-4);
+  color: var(--interactive-active);
+  font-size: var(--font-size-ui);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-menu) ease,
+    color var(--motion-menu) ease,
+    opacity var(--motion-menu) ease;
+}
+
+.button:focus-visible {
+  outline: var(--focus-outline-width) solid var(--brand-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.primary {
+  background: var(--brand-color);
+}
+
+.primary:hover {
+  background: var(--brand-hover);
+}
+
+.primary:active {
+  background: var(--brand-active);
+}
+
+.secondary {
+  background: var(--background-accent);
+  color: var(--text-normal);
+}
+
+.secondary:hover {
+  background: var(--background-modifier-selected);
+  color: var(--interactive-active);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--interactive-normal);
+}
+
+.ghost:hover {
+  background: var(--background-modifier-hover);
+  color: var(--interactive-hover);
+}
+
+.danger {
+  background: var(--button-danger-background);
+}
+
+.danger:hover {
+  background: var(--status-danger);
+}
+
+.sm {
+  min-height: var(--size-interactive-min);
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-label);
+}
+
+.md {
+  min-height: var(--height-button-md);
+}
+
+.lg {
+  min-height: var(--height-message-composer);
+  padding-inline: var(--spacing-5);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.iconButton {
+  width: var(--size-interactive-min);
+  height: var(--size-interactive-min);
+  padding: 0;
+  border-radius: var(--radius-sm);
+}

@@ -1,0 +1,65 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  background: var(--modal-overlay-background);
+  animation: fadeIn var(--motion-modal) ease;
+}
+
+.content {
+  width: min(100% - var(--spacing-8), var(--width-dialog));
+  max-height: calc(100vh - var(--spacing-10));
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--background-primary);
+  box-shadow: var(--elevation-high);
+  color: var(--text-normal);
+  animation: contentIn var(--motion-modal) ease;
+}
+
+.content:focus-visible {
+  outline: var(--focus-outline-width) solid var(--brand-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+}
+
+.title {
+  margin: 0;
+  color: var(--header-primary);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-title);
+}
+
+.description {
+  margin: 0;
+  color: var(--header-secondary);
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-ui);
+}
+
+.body {
+  padding: 0 var(--spacing-5) var(--spacing-5);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes contentIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}

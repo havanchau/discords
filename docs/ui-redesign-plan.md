@@ -133,11 +133,11 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 
 ### Phase 1: Design System Foundation
 
-- [ ] Define all Discord-like design tokens in `styles.css` (see token list above).
-- [ ] Create `apps/web/src/components/ui`.
-- [ ] Add `clsx`, Dialog, Tooltip, Toast, and ContextMenu dependencies.
-- [ ] Add a shared `cn()` helper.
-- [ ] Create reusable primitives:
+- [x] Define all Discord-like design tokens in `styles.css` (see token list above).
+- [x] Create `apps/web/src/components/ui`.
+- [x] Add `clsx`, Dialog, Tooltip, Toast, and ContextMenu dependencies.
+- [x] Add a shared `cn()` helper.
+- [x] Create reusable primitives:
   - `Button`, `IconButton`
   - `TextField`, `TextArea`
   - `Dialog`
@@ -145,15 +145,15 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
   - `ContextMenu`
   - `Toast`
   - `Avatar`, `Badge`, `Skeleton`, `Banner`
-- [ ] All primitives must consume design tokens — no hardcoded values.
+- [x] All primitives must consume design tokens — no hardcoded values.
 - [ ] Move component-specific styles into CSS Modules.
 - [ ] Keep `styles.css` only for root tokens, reset/base rules, app-shell layout, and global browser defaults.
-- [ ] Define motion tokens: `--motion-menu: 100ms`, `--motion-server-icon: 150ms`, `--motion-modal: 200ms`, `--motion-sidebar: 300ms`.
-- [ ] Add `prefers-reduced-motion` support.
-- [ ] Add `focus-visible` styling to every primitive.
-- [ ] Verify all interactive primitives meet minimum 32×32px target size.
-- [ ] Add basic render tests (vitest + @testing-library/react) for each primitive.
-- [ ] Reduce `styles.css` below 1000 lines.
+- [x] Define motion tokens: `--motion-menu: 100ms`, `--motion-server-icon: 150ms`, `--motion-modal: 200ms`, `--motion-sidebar: 300ms`.
+- [x] Add `prefers-reduced-motion` support.
+- [x] Add `focus-visible` styling to every primitive.
+- [x] Verify all interactive primitives meet minimum 32×32px target size.
+- [x] Add basic render tests (vitest + @testing-library/react) for each primitive.
+- [x] Reduce `styles.css` below 1000 lines.
 - [ ] Run minimum merge checks. Capture after screenshots and compare with before.
 
 ---

@@ -1,0 +1,399 @@
+/* ===== Media Preview ===== */
+
+.media-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.78);
+  animation: fade-in 0.16s ease-out both;
+}
+
+.media-preview {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 64px);
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-floating);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.58);
+  animation: modal-pop-in 0.18s ease-out both;
+}
+
+.media-preview-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--background-modifier-accent);
+}
+
+.media-preview-header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.media-preview-header button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: transparent;
+}
+
+.media-preview-header button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.media-preview img,
+.media-preview video {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  background: var(--bg-floating);
+}
+
+/* ===== Discord-style Creation Modals ===== */
+
+.server-add-modal,
+.channel-create-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 720;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.64);
+  animation: fade-in 0.16s ease-out both;
+}
+
+.server-add-card,
+.channel-create-card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 8px;
+  background: var(--bg-primary-solid);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.56);
+  animation: modal-pop-in 0.18s ease-out both;
+}
+
+.server-add-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-add-header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--header-primary);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.server-add-header button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: transparent;
+}
+
+.server-add-header button:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.server-action-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.server-action-tabs button {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.server-action-tabs button:hover,
+.server-action-tabs button.active {
+  color: var(--interactive-active);
+  background: var(--bg-modifier-selected);
+}
+
+.modal-form {
+  display: grid;
+  gap: 14px;
+}
+
+/* ===== Edit Row ===== */
+
+.edit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.edit-row input {
+  height: 36px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.edit-row button {
+  padding: 0 12px;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.edit-row button:first-of-type {
+  background: var(--brand-500);
+  color: #fff;
+}
+
+.edit-row button:first-of-type:hover {
+  background: var(--brand-560);
+}
+
+.edit-row .ghost {
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.edit-row .ghost:hover {
+  text-decoration: underline;
+}
+
+/* ===== Typing Indicator ===== */
+
+.typing-indicator {
+  grid-row: 4;
+  min-height: 24px;
+  padding: 0 16px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  background: transparent;
+  display: flex;
+  align-items: center;
+}
+
+/* ===== Composer ===== */
+
+.composer {
+  grid-row: 5;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px 24px;
+  border-top: none;
+  background: transparent;
+}
+
+.pending-attachments {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.pending-attachments::-webkit-scrollbar {
+  display: none;
+}
+
+.composer-reply {
+  grid-column: 1 / -1;
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  color: var(--text-muted);
+  background: var(--channeltextarea-background);
+  font-size: 13px;
+  animation: composer-item-in 0.16s ease-out both;
+}
+
+.composer-reply strong {
+  color: var(--header-primary);
+  font-weight: 500;
+}
+
+.composer-reply button {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  color: var(--interactive-normal);
+}
+
+.composer-reply button:hover {
+  color: var(--interactive-hover);
+}
+
+.pending-file {
+  width: auto !important;
+  max-width: 200px;
+  height: 32px !important;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: var(--text-normal);
+  background: var(--bg-secondary) !important;
+  border-radius: 4px;
+  font-size: 13px;
+  animation: composer-item-in 0.16s ease-out both;
+}
+
+.pending-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-file small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.file-input {
+  display: none;
+}
+
+/* Composer input — mimic Discord's embedded input bar */
+.composer input[data-testid='composer-input'] {
+  min-width: 0;
+  height: 44px;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-inline: 0;
+  border-radius: 0;
+  padding: 0 0 0 4px;
+  background: var(--channeltextarea-background);
+  color: var(--text-normal);
+  font-size: 1rem;
+}
+
+.composer input[data-testid='composer-input']::placeholder {
+  color: var(--text-muted);
+}
+
+/* Wrap all three composer elements in a unified bar */
+.composer .attach-button {
+  height: 44px;
+  width: 44px;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  background: var(--channeltextarea-background) !important;
+  color: var(--interactive-normal);
+  display: grid;
+  place-items: center;
+}
+
+.composer .attach-button:hover {
+  color: var(--interactive-hover);
+  background: var(--channeltextarea-background) !important;
+  transform: translateY(-1px);
+}
+
+.composer .voice-record-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-inline: 0;
+  border-radius: 0;
+  background: var(--channeltextarea-background);
+  color: var(--interactive-normal);
+  display: grid;
+  place-items: center;
+}
+
+.composer .voice-record-button svg {
+  grid-area: 1 / 1;
+  justify-self: center;
+  align-self: center;
+}
+
+.composer .voice-record-button:hover {
+  color: var(--interactive-hover);
+  transform: translateY(-1px);
+}
+
+.composer .voice-record-button.recording {
+  color: var(--status-danger);
+}
+
+.composer .voice-record-button.recording::after {
+  content: '';
+  position: absolute;
+  right: 9px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+.composer > button:last-of-type {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: var(--channeltextarea-background);
+  color: var(--interactive-normal);
+}
+
+.composer > button:last-of-type:hover {
+  color: var(--brand-500);
+  transform: translateY(-1px);
+}
+
+.composer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

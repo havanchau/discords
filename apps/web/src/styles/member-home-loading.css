@@ -1,0 +1,488 @@
+/* ===== Member List ===== */
+
+.member-list {
+  display: grid;
+  gap: 2px;
+  padding: 0 8px;
+}
+
+.member-group:first-child .member-title {
+  padding-top: 16px;
+}
+
+.member-empty {
+  padding: 16px;
+}
+
+.member {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--interactive-normal);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+}
+
+.member:hover {
+  background: var(--bg-modifier-hover);
+  color: var(--interactive-hover);
+  transform: translateX(1px);
+}
+
+.member strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--interactive-normal);
+}
+
+.member:hover strong {
+  color: var(--interactive-hover);
+}
+
+.member span {
+  font-size: 12px;
+}
+
+.member-popover {
+  pointer-events: none;
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 0;
+  z-index: 40;
+  width: 260px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-floating);
+  box-shadow: var(--elevation-high);
+  opacity: 0;
+  transform: translateX(8px) scale(0.98);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.member:hover .member-popover,
+.member:focus-visible .member-popover {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.member-popover-banner {
+  height: 64px;
+  background: var(--brand-500);
+}
+
+.member-popover-body {
+  display: grid;
+  gap: 6px;
+  padding: 0 14px 14px;
+}
+
+.profile-card-avatar {
+  width: 64px;
+  height: 64px;
+  margin-top: -32px;
+  border: 6px solid var(--bg-floating);
+  font-size: 20px;
+}
+
+.member-popover-body > strong {
+  margin-top: 2px;
+  color: var(--header-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.member-popover-body > span,
+.member-popover-body p {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.member-popover-body p {
+  margin: 4px 0 0;
+  line-height: 1.35;
+}
+
+.member-role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.member-role-chips small {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--header-secondary);
+  background: var(--bg-modifier-hover);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ===== Home / Direct Messages ===== */
+
+.home-panel {
+  grid-column: 3 / -1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.home-sidebar {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 14px;
+  border-right: 1px solid var(--background-modifier-accent);
+  background: var(--bg-secondary);
+  overflow-y: auto;
+}
+
+.home-sidebar header {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.home-sidebar header strong {
+  color: var(--header-primary);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.home-sidebar header span,
+.home-section-title {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.home-add-friend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.home-add-friend button {
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+.home-add-friend input,
+.dm-composer input {
+  min-width: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--text-normal);
+  background: var(--input-background);
+}
+
+.home-add-friend input {
+  height: 38px;
+}
+
+.home-list {
+  display: grid;
+  gap: 4px;
+}
+
+.home-person {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--interactive-normal);
+  background: transparent;
+  text-align: left;
+}
+
+.home-person:hover,
+.home-person.selected {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
+.home-person strong,
+.home-person small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-person strong {
+  color: var(--header-primary);
+  font-size: 14px;
+}
+
+.home-person small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.home-request {
+  display: grid;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg-modifier-hover);
+}
+
+.home-request div {
+  display: flex;
+  gap: 6px;
+}
+
+.home-request button {
+  min-height: 26px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0 8px;
+  color: var(--interactive-normal);
+  background: var(--bg-modifier-active);
+  font-size: 12px;
+}
+
+.dm-chat {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 56px minmax(0, 1fr) auto;
+  background: var(--bg-primary);
+}
+
+.dm-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  box-shadow: var(--elevation-low);
+}
+
+.dm-chat-header strong,
+.dm-chat-header span {
+  display: block;
+}
+
+.dm-chat-header strong {
+  color: var(--header-primary);
+  font-size: 16px;
+}
+
+.dm-chat-header span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dm-message-list {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.dm-message {
+  max-width: min(680px, 80%);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  animation: message-in 0.16s ease-out both;
+}
+
+.dm-message.mine {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--brand-500), var(--bg-secondary) 74%);
+}
+
+.dm-message strong,
+.dm-message span {
+  display: block;
+}
+
+.dm-message strong {
+  color: var(--header-primary);
+  font-size: 13px;
+}
+
+.dm-message p {
+  margin: 4px 0;
+  color: var(--text-normal);
+}
+
+.dm-message span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.dm-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.dm-composer input {
+  height: 44px;
+}
+
+/* ===== Loading Spinner ===== */
+
+.spin {
+  animation: spin 0.78s linear infinite;
+}
+
+@keyframes auth-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+
+  100% {
+    background-position: -80% 0;
+  }
+}
+
+@keyframes panel-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes banner-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes composer-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

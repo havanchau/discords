@@ -1,0 +1,96 @@
+/* ===== Responsive ===== */
+
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 72px 240px minmax(0, 1fr);
+  }
+
+  .member-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-screen::before {
+    opacity: 0.14;
+  }
+
+  .auth-screen::after {
+    display: none;
+  }
+
+  .app-shell {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .channel-sidebar {
+    display: none;
+  }
+
+  .chat-header {
+    padding: 0 12px;
+  }
+
+  .chat-title strong {
+    font-size: 16px;
+  }
+
+  .toolbar {
+    max-width: 180px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .call-stage {
+    margin: 8px;
+  }
+
+  .call-stage-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .call-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .message {
+    padding: 2px 16px 2px 52px;
+  }
+
+  .message .avatar {
+    position: absolute;
+    left: 8px;
+  }
+
+  .state-panel {
+    min-height: 160px;
+    font-size: 14px;
+  }
+
+  .composer {
+    padding: 0 8px 16px;
+  }
+
+  .attachment,
+  .link-preview {
+    width: 100%;
+  }
+
+  .role-create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .role-create-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .permission-grid,
+  .compact-permissions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,54 @@
+.badge {
+  min-width: var(--size-badge-min);
+  min-height: var(--size-badge-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-round);
+  background: var(--status-danger);
+  color: var(--interactive-active);
+  font-size: var(--font-size-badge);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  padding: 0 var(--spacing-1);
+}
+
+.badgeNeutral {
+  background: var(--background-accent);
+  color: var(--text-normal);
+}
+
+.badgeSuccess {
+  background: var(--status-online);
+}
+
+.skeleton {
+  display: block;
+  min-height: var(--size-interactive-min);
+  border-radius: var(--radius-sm);
+  background: var(--background-modifier-active);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  border-radius: var(--radius-sm);
+  background: var(--background-secondary-alt);
+  color: var(--text-normal);
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-ui);
+  padding: var(--spacing-3) var(--spacing-4);
+}
+
+.bannerInfo {
+  border-left: var(--spacing-1) solid var(--brand-color);
+}
+
+.bannerSuccess {
+  border-left: var(--spacing-1) solid var(--status-online);
+}
+
+.bannerDanger {
+  border-left: var(--spacing-1) solid var(--status-danger);
+}
