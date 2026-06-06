@@ -1,81 +1,80 @@
-/* ===== Neon UI design tokens ===== */
+/* ===== Discord UI design tokens ===== */
 :root {
   color-scheme: dark;
-  --bg-tertiary: #05070d;
-  --bg-secondary: #0b1018;
-  --bg-secondary-solid: #101725;
-  --bg-primary: #080d15;
-  --bg-primary-solid: #0b111b;
-  --bg-secondary-alt: #080c13;
-  --bg-floating: #03050a;
-  --bg-accent: #1c2738;
-  --bg-modifier-hover: rgba(0, 229, 255, 0.1);
-  --bg-modifier-active: rgba(0, 229, 255, 0.16);
-  --bg-modifier-selected: rgba(22, 33, 52, 0.92);
-  --header-primary: #f2f7ff;
-  --header-secondary: #a8b6ca;
-  --text-normal: #d6e2f1;
-  --text-muted: #7f8da3;
-  --text-link: #00e5ff;
-  --interactive-normal: #8fa0b8;
-  --interactive-hover: #d4e3f7;
-  --interactive-active: #00e5ff;
-  --interactive-muted: #3b485d;
-  --brand-500: #00e5ff;
-  --brand-560: #00b8d4;
-  --brand-600: #008ba3;
-  --accent-pink: #ff1fb8;
-  --accent-violet: #8f78ff;
-  --accent-lime: #00ff95;
-  --green-360: #00ff95;
-  --green: #3cffb0;
-  --yellow-300: #ffb000;
-  --red-400: #ff3d6e;
-  --status-danger: #ff1fb8;
-  --input-background: #090e16;
-  --channeltextarea-background: #101826;
+  --bg-tertiary: #1e1f22;
+  --bg-secondary: #2b2d31;
+  --bg-secondary-solid: #2b2d31;
+  --bg-primary: #313338;
+  --bg-primary-solid: #313338;
+  --bg-secondary-alt: #232428;
+  --bg-floating: #111214;
+  --bg-accent: #4e5058;
+  --bg-modifier-hover: rgba(79, 84, 92, 0.16);
+  --bg-modifier-active: rgba(79, 84, 92, 0.24);
+  --bg-modifier-selected: rgba(79, 84, 92, 0.32);
+  --header-primary: #f2f3f5;
+  --header-secondary: #b5bac1;
+  --text-normal: #dbdee1;
+  --text-muted: #80848e;
+  --text-link: #00a8fc;
+  --interactive-normal: #b5bac1;
+  --interactive-hover: #dbdee1;
+  --interactive-active: #ffffff;
+  --interactive-muted: #4e5058;
+  --brand-500: #5865f2;
+  --brand-560: #4752c4;
+  --brand-600: #3c45a5;
+  --accent-pink: #eb459e;
+  --accent-violet: #5865f2;
+  --accent-lime: #23a55a;
+  --green-360: #23a55a;
+  --green: #57f287;
+  --yellow-300: #f0b232;
+  --red-400: #ed4245;
+  --status-danger: #ed4245;
+  --input-background: #1e1f22;
+  --channeltextarea-background: #383a40;
   --background-modifier-accent: rgba(97, 129, 166, 0.22);
-  --deprecated-card-bg: #0e1521;
-  --border-subtle: #1b2a3f;
-  --scrollbar-thin-thumb: #172235;
+  --deprecated-card-bg: #2b2d31;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --scrollbar-thin-thumb: #1a1b1e;
   --scrollbar-thin-track: transparent;
-  --elevation-low:
-    0 1px 0 rgba(20, 38, 62, 0.75), 0 0 0 1px rgba(4, 9, 17, 0.72), 0 8px 22px rgba(0, 0, 0, 0.22);
-  --elevation-high: 0 20px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(0, 229, 255, 0.1);
+  --elevation-low: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --elevation-high: 0 24px 64px rgba(0, 0, 0, 0.54);
 }
 
 body[data-theme='midnight'] {
-  --bg-tertiary: #111318;
-  --bg-secondary: #191c24;
-  --bg-secondary-solid: #191c24;
-  --bg-primary: #20242d;
-  --bg-primary-solid: #20242d;
-  --bg-secondary-alt: #151821;
-  --bg-floating: #0c0e13;
-  --channeltextarea-background: #2a2f3a;
-  --brand-500: #6c7cff;
+  --bg-tertiary: #1e1f22;
+  --bg-secondary: #2b2d31;
+  --bg-secondary-solid: #2b2d31;
+  --bg-primary: #313338;
+  --bg-primary-solid: #313338;
+  --bg-secondary-alt: #232428;
+  --bg-floating: #111214;
+  --channeltextarea-background: #383a40;
+  --brand-500: #5865f2;
 }
 
 body[data-theme='slate'] {
-  --bg-tertiary: #202427;
-  --bg-secondary: #293036;
-  --bg-secondary-solid: #293036;
-  --bg-primary: #333a40;
-  --bg-primary-solid: #333a40;
-  --bg-secondary-alt: #242a2f;
-  --bg-floating: #171b1f;
-  --channeltextarea-background: #3d454b;
-  --brand-500: #4fb3d9;
+  --bg-tertiary: #232428;
+  --bg-secondary: #313338;
+  --bg-secondary-solid: #313338;
+  --bg-primary: #383a40;
+  --bg-primary-solid: #383a40;
+  --bg-secondary-alt: #2b2d31;
+  --bg-floating: #1e1f22;
+  --channeltextarea-background: #4e5058;
+  --brand-500: #5865f2;
 }
 
 body[data-theme='oled'] {
-  --bg-tertiary: #050505;
+  --bg-tertiary: #0d0d0f;
   --bg-secondary: #0d0d0f;
   --bg-secondary-solid: #101012;
   --bg-primary: #121214;
   --bg-primary-solid: #121214;
   --bg-secondary-alt: #08080a;
-  --bg-floating: #000;
+  --bg-floating: #0d0d0f;
   --channeltextarea-background: #1b1b1f;
   --bg-modifier-hover: rgba(255, 255, 255, 0.08);
   --bg-modifier-active: rgba(255, 255, 255, 0.13);
@@ -96,10 +95,7 @@ body {
   margin: 0;
   font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 16px;
-  background:
-    radial-gradient(circle at 18% 0%, rgba(0, 229, 255, 0.09), transparent 34%),
-    radial-gradient(circle at 86% 20%, rgba(255, 31, 184, 0.08), transparent 32%),
-    var(--bg-tertiary);
+  background: var(--bg-tertiary);
   color: var(--text-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -189,58 +185,15 @@ textarea:disabled {
   justify-content: center;
   padding: 20px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(35, 37, 42, 0.86), rgba(25, 26, 30, 1)), var(--bg-tertiary);
+  background: var(--bg-tertiary);
 }
 
 .auth-screen::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.22;
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 72px);
+  content: none;
 }
 
 .auth-screen::after {
-  content: '';
-  position: absolute;
-  right: max(40px, 7vw);
-  top: 50%;
-  width: min(420px, 28vw);
-  height: min(620px, 72vh);
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.055);
-  border-radius: 18px;
-  opacity: 0.3;
-  transform: translateY(-50%) rotate(-2deg);
-  background:
-    linear-gradient(90deg, rgba(88, 101, 242, 0.32) 0 58px, transparent 58px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0 50px, transparent 50px),
-    linear-gradient(
-      90deg,
-      transparent 84px,
-      rgba(255, 255, 255, 0.06) 84px 210px,
-      transparent 210px
-    ),
-    linear-gradient(
-      90deg,
-      transparent 84px,
-      rgba(255, 255, 255, 0.04) 84px 310px,
-      transparent 310px
-    ),
-    repeating-linear-gradient(
-      180deg,
-      transparent 0 82px,
-      rgba(255, 255, 255, 0.06) 82px 118px,
-      transparent 118px 142px
-    ),
-    var(--bg-secondary);
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  content: none;
 }
 
 .auth-panel {
@@ -476,12 +429,10 @@ input:focus {
   display: grid;
   grid-template-columns: 72px 240px minmax(0, 1fr) 240px;
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  background:
-    linear-gradient(90deg, rgba(0, 229, 255, 0.04), transparent 18%, transparent 80%, rgba(255, 31, 184, 0.035)),
-    var(--bg-tertiary);
-  box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.035);
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-tertiary);
+  box-shadow: none;
 }
 
 /* ===== Server Rail (Guild sidebar) ===== */
@@ -493,7 +444,7 @@ input:focus {
   gap: 8px;
   padding: 8px 0 12px;
   border-right: 1px solid var(--border-subtle);
-  background: linear-gradient(180deg, #070b13 0%, var(--bg-tertiary) 62%);
+  background: var(--bg-tertiary);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
@@ -513,7 +464,7 @@ input:focus {
   border: 1px solid rgba(143, 160, 184, 0.16);
   border-radius: 16px;
   color: var(--interactive-normal);
-  background: linear-gradient(145deg, rgba(22, 33, 52, 0.96), rgba(11, 16, 24, 0.96));
+  background: var(--bg-secondary);
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -530,8 +481,8 @@ input:focus {
   border-radius: 50%;
   color: var(--brand-500);
   border-color: var(--brand-500);
-  background: rgba(0, 229, 255, 0.1);
-  box-shadow: 0 0 24px rgba(0, 229, 255, 0.18);
+  background: rgba(88, 101, 242, 0.16);
+  box-shadow: none;
 }
 
 .server-orb:active {
@@ -542,8 +493,8 @@ input:focus {
   border-radius: 50%;
   color: var(--brand-500);
   border-color: var(--brand-500);
-  background: rgba(0, 229, 255, 0.12);
-  box-shadow: 0 0 28px rgba(0, 229, 255, 0.2), inset 0 0 0 1px rgba(0, 229, 255, 0.12);
+  background: rgba(88, 101, 242, 0.2);
+  box-shadow: none;
 }
 
 /* Active indicator pill on the left */
@@ -567,14 +518,14 @@ input:focus {
 }
 
 .server-orb.home {
-  background: rgba(0, 229, 255, 0.08);
+  background: rgba(88, 101, 242, 0.1);
   color: var(--brand-500);
   border-color: var(--brand-500);
 }
 
 .server-orb.home:hover,
 .server-orb.home.active {
-  background: rgba(0, 229, 255, 0.12);
+  background: rgba(88, 101, 242, 0.2);
   color: var(--brand-500);
 }
 
@@ -587,7 +538,7 @@ input:focus {
 .server-orb.add-server:hover {
   color: var(--accent-lime);
   border-color: var(--accent-lime);
-  background: rgba(0, 255, 149, 0.1);
+  background: rgba(35, 165, 90, 0.16);
 }
 
 .server-tooltip {
@@ -631,34 +582,34 @@ input:focus {
 }
 
 .accent-0 {
-  --avatar-bg: rgba(0, 229, 255, 0.08);
-  --avatar-text: #00e5ff;
-  --avatar-ring: #00e5ff;
+  --avatar-bg: rgba(88, 101, 242, 0.1);
+  --avatar-text: #5865f2;
+  --avatar-ring: #5865f2;
 }
 .accent-1 {
-  --avatar-bg: rgba(255, 31, 184, 0.08);
-  --avatar-text: #ff1fb8;
-  --avatar-ring: #ff1fb8;
+  --avatar-bg: rgba(237, 66, 69, 0.1);
+  --avatar-text: #ed4245;
+  --avatar-ring: #ed4245;
 }
 .accent-2 {
-  --avatar-bg: rgba(0, 255, 149, 0.08);
-  --avatar-text: #3cffb0;
-  --avatar-ring: #00ff95;
+  --avatar-bg: rgba(35, 165, 90, 0.12);
+  --avatar-text: #57f287;
+  --avatar-ring: #23a55a;
 }
 .accent-3 {
-  --avatar-bg: rgba(255, 176, 0, 0.08);
-  --avatar-text: #ffb000;
-  --avatar-ring: #ffb000;
+  --avatar-bg: rgba(240, 178, 50, 0.14);
+  --avatar-text: #f0b232;
+  --avatar-ring: #f0b232;
 }
 .accent-4 {
-  --avatar-bg: rgba(143, 120, 255, 0.1);
-  --avatar-text: #b5a6ff;
-  --avatar-ring: #8f78ff;
+  --avatar-bg: rgba(88, 101, 242, 0.16);
+  --avatar-text: #c9cdfb;
+  --avatar-ring: #5865f2;
 }
 .accent-5 {
   --avatar-bg: rgba(255, 61, 110, 0.08);
-  --avatar-text: #ff6f93;
-  --avatar-ring: #ff3d6e;
+  --avatar-text: #f23f43;
+  --avatar-ring: #ed4245;
 }
 
 .rail-divider {
@@ -675,7 +626,7 @@ input:focus {
 .member-sidebar {
   min-width: 0;
   min-height: 0;
-  background: linear-gradient(180deg, rgba(12, 18, 28, 0.98), rgba(7, 11, 18, 0.98));
+  background: var(--bg-secondary);
 }
 
 .channel-sidebar {
@@ -695,7 +646,7 @@ input:focus {
 .member-sidebar {
   padding: 0;
   border-left: 1px solid var(--border-subtle);
-  background: linear-gradient(180deg, #05070d 0%, #080c13 100%);
+  background: var(--bg-secondary);
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -1165,7 +1116,7 @@ input:focus {
   place-items: center;
   color: #fff;
   background: var(--accent-pink);
-  box-shadow: 0 0 14px rgba(255, 31, 184, 0.38);
+  box-shadow: none;
 }
 
 .channel-unread-dot {
@@ -1185,7 +1136,9 @@ input:focus {
 .channel-list button.selected {
   color: var(--interactive-active);
   background: var(--bg-modifier-selected);
-  box-shadow: inset 3px 0 0 var(--brand-500), inset 0 0 0 1px rgba(0, 229, 255, 0.04);
+  box-shadow:
+    inset 3px 0 0 var(--brand-500),
+    inset 0 0 0 1px rgba(79, 84, 92, 0.16);
 }
 
 .channel-list button.selected svg {
@@ -1270,9 +1223,7 @@ input:focus {
   height: 100%;
   display: grid;
   grid-template-rows: 48px auto minmax(0, 1fr) auto auto;
-  background:
-    radial-gradient(circle at 28% 0%, rgba(0, 229, 255, 0.055), transparent 38%),
-    linear-gradient(180deg, #09101a 0%, var(--bg-primary) 44%);
+  background: var(--bg-primary);
 }
 
 .chat-header {
@@ -1335,7 +1286,7 @@ input:focus {
 .toolbar button.selected {
   color: var(--brand-500);
   background: transparent;
-  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.3));
+  filter: none;
 }
 
 /* ===== Voice / Video Call Stage ===== */
@@ -1350,7 +1301,7 @@ input:focus {
   align-items: center;
   gap: 12px;
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(35, 165, 90, 0.16), rgba(88, 101, 242, 0.14));
+  background: var(--bg-secondary);
   border: 1px solid rgba(35, 165, 90, 0.28);
   animation: panel-rise-in 0.18s ease-out both;
 }
@@ -1984,7 +1935,7 @@ input:focus {
   height: 20px;
   border-radius: 50%;
   background: var(--brand-500);
-  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.18);
+  outline: 3px solid rgba(88, 101, 242, 0.18);
 }
 
 .role-permission-palette {
@@ -2306,14 +2257,7 @@ input:focus {
 .message-skeleton b {
   display: block;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--bg-secondary) 0%,
-    var(--bg-modifier-active) 45%,
-    var(--bg-secondary) 100%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.15s ease-in-out infinite;
+  background: var(--bg-modifier-active);
 }
 
 .message-skeleton span {
@@ -2411,7 +2355,7 @@ input:focus {
 }
 
 .message:hover {
-  background: rgba(0, 229, 255, 0.035);
+  background: rgba(2, 2, 2, 0.06);
 }
 
 .avatar {
@@ -2421,14 +2365,14 @@ input:focus {
   place-items: center;
   border: 2px solid var(--avatar-ring, var(--brand-500));
   border-radius: 50%;
-  background: var(--avatar-bg, rgba(0, 229, 255, 0.08));
+  background: var(--avatar-bg, rgba(88, 101, 242, 0.1));
   color: var(--avatar-text, var(--brand-500));
   font-weight: 700;
   font-size: 16px;
   flex-shrink: 0;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 0 18px color-mix(in srgb, var(--avatar-ring, var(--brand-500)), transparent 72%);
+  box-shadow: none;
 }
 
 .avatar-wrap {
@@ -2539,7 +2483,7 @@ input:focus {
   padding: 0 3px;
   border-radius: 4px;
   color: var(--brand-500);
-  background: rgba(0, 229, 255, 0.16);
+  background: rgba(88, 101, 242, 0.3);
   font-weight: 700;
   cursor: pointer;
 }
@@ -2607,7 +2551,7 @@ input:focus {
   gap: 8px;
   margin-top: 4px;
   padding: 8px 12px;
-  border: 1px solid rgba(0, 229, 255, 0.28);
+  border: 1px solid rgba(88, 101, 242, 0.32);
   border-left: 4px solid var(--brand-500);
   border-radius: 6px;
   color: var(--text-link);
@@ -2670,7 +2614,7 @@ input:focus {
   width: 100%;
   max-height: 350px;
   border-radius: 4px;
-  background: #000;
+  background: var(--bg-floating);
 }
 
 .video-attachment span {
@@ -2703,8 +2647,7 @@ input:focus {
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--bg-modifier-active);
-  background:
-    linear-gradient(135deg, rgba(88, 101, 242, 0.16), rgba(35, 165, 90, 0.08)), var(--bg-secondary);
+  background: var(--bg-secondary);
 }
 
 .audio-attachment-header {
@@ -2999,7 +2942,7 @@ input:focus {
   height: 100%;
   min-height: 0;
   object-fit: contain;
-  background: #000;
+  background: var(--bg-floating);
 }
 
 /* ===== Discord-style Creation Modals ===== */
@@ -3182,7 +3125,7 @@ input:focus {
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  border: 1px solid rgba(0, 229, 255, 0.22);
+  border: 1px solid rgba(88, 101, 242, 0.3);
   border-bottom: 0;
   border-radius: 8px 8px 0 0;
   color: var(--text-muted);
@@ -3242,7 +3185,7 @@ input:focus {
 .composer input[data-testid='composer-input'] {
   min-width: 0;
   height: 44px;
-  border: 1px solid rgba(0, 229, 255, 0.22);
+  border: 1px solid rgba(88, 101, 242, 0.3);
   border-inline: 0;
   border-radius: 0;
   padding: 0 0 0 4px;
@@ -3259,7 +3202,7 @@ input:focus {
 .composer .attach-button {
   height: 44px;
   width: 44px;
-  border: 1px solid rgba(0, 229, 255, 0.22);
+  border: 1px solid rgba(88, 101, 242, 0.3);
   border-right: 0;
   border-radius: 8px 0 0 8px;
   background: var(--channeltextarea-background) !important;
@@ -3278,7 +3221,7 @@ input:focus {
   position: relative;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(0, 229, 255, 0.22);
+  border: 1px solid rgba(88, 101, 242, 0.3);
   border-inline: 0;
   border-radius: 0;
   background: var(--channeltextarea-background);
@@ -3317,7 +3260,7 @@ input:focus {
 .composer > button:last-of-type {
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(0, 229, 255, 0.22);
+  border: 1px solid rgba(88, 101, 242, 0.3);
   border-left: 0;
   border-radius: 0 8px 8px 0;
   background: var(--channeltextarea-background);
@@ -3416,9 +3359,7 @@ input:focus {
 
 .member-popover-banner {
   height: 64px;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(255, 31, 184, 0.68), transparent 42%),
-    linear-gradient(135deg, var(--brand-500), var(--accent-violet));
+  background: var(--brand-500);
 }
 
 .member-popover-body {
