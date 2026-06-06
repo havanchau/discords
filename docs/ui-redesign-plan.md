@@ -197,7 +197,6 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 - [x] Keep message grouping, hover toolbar, timestamp behavior, and composer density close to Discord.
 - [x] Run minimum merge checks. Compare after screenshots with before for desktop and mobile.
 
-
 ---
 
 ### Phase 4: Home And Direct Messages
@@ -218,10 +217,10 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 
 ### Phase 5: Settings, Roles, Forms, And Preferences
 
-- [ ] Rebuild `SettingsModal` with Radix `Dialog`.
+- [x] Rebuild `SettingsModal` with Radix `Dialog`.
 - [ ] Reduce `SettingsModal.tsx` below 1000 lines by splitting: profile, server, channel, roles, member roles, notifications sections.
 - [ ] Use Radix `Tabs` **only if it does not force a browser-tab visual style**. Prefer a Discord-like left vertical settings nav if it better matches the target UI.
-- [ ] Replace raw `<select>` with Radix `Select`.
+- [x] Replace raw `<select>` controls with shared Radix menu-backed settings pickers.
 - [ ] Replace raw checkboxes and switches with Radix `Checkbox` and `Switch`.
 - [ ] Replace form buttons, inputs, and textarea with shared UI primitives.
 - [ ] Keep role permission grids dense and readable.
@@ -266,6 +265,7 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 - Do not begin a new phase while the previous phase has failing lint, typecheck, build, file-size, or visual smoke checks.
 
 **Minimum required before each phase merge:**
+
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build --workspace apps/web`
