@@ -103,12 +103,13 @@ Define these tokens before any component work begins. All component CSS Modules 
 
 Goal: make the baseline reproducible and verifiable. No behavior changes.
 
-- [ ] Pin all existing `package.json` and `apps/web/package.json` dependencies to exact versions.
+- [x] Pin all existing `package.json` and `apps/web/package.json` dependencies to exact versions.
 - [ ] Commit a reproducible lockfile update.
-- [ ] Verify `npm run lint`, `npm run typecheck`, and `npm run build --workspace apps/web` pass on the current codebase.
-- [ ] Add a file-size check script that fails when tracked source files exceed 1000 lines.
-- [ ] Add and commit a `ui:smoke` script and a static UI scan script so they are available from Phase 0B onward.
-- [ ] Capture **before screenshots** of: auth screen, main chat (desktop + mobile), settings modal, DM view. Store in `docs/screenshots/before/`.
+- [x] Verify `npm run lint`, `npm run typecheck`, and `npm run build --workspace apps/web` pass on the current codebase.
+- [x] Add a file-size check script that fails when tracked source files exceed 1000 lines.
+- [x] Add a `ui:smoke` script and a static UI scan script so they are available from Phase 0B onward.
+- [ ] Commit the `ui:smoke` script and static UI scan script.
+- [x] Capture **before screenshots** of: auth screen, main chat (desktop + mobile), settings modal, DM view. Store in `docs/screenshots/before/`.
 
 ### Phase 0B: State Extraction
 

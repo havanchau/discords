@@ -16,6 +16,8 @@
     "typecheck": "npm run typecheck --workspaces",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:file-size": "node scripts/check-file-size.mjs",
+    "ui:scan": "node scripts/ui-static-scan.mjs",
     "ui:smoke": "node scripts/ui-smoke.mjs",
     "db:generate": "npm run db:generate --workspace apps/api",
     "db:push": "npm run db:push --workspace apps/api",
@@ -23,13 +25,13 @@
     "db:seed": "npm run db:seed --workspace apps/api"
   },
   "devDependencies": {
-    "@eslint/js": "latest",
-    "concurrently": "latest",
-    "eslint": "latest",
-    "globals": "latest",
-    "prettier": "latest",
-    "puppeteer-core": "^25.1.0",
-    "typescript": "latest",
-    "typescript-eslint": "latest"
+    "@eslint/js": "10.0.1",
+    "concurrently": "10.0.0",
+    "eslint": "10.4.1",
+    "globals": "17.6.0",
+    "prettier": "3.8.3",
+    "puppeteer-core": "25.1.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.60.0"
   }
 }

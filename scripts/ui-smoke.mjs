@@ -49,6 +49,8 @@ try {
   await page.waitForSelector('[data-testid="composer-input"]', { timeout: 10000 });
 
   const channelName = `ui-${Date.now().toString().slice(-6)}`;
+  await page.click('button[title="Create text channel"]');
+  await page.waitForSelector('[data-testid="create-channel-input"]', { timeout: 5000 });
   await page.type('[data-testid="create-channel-input"]', channelName);
   await page.click('[data-testid="create-channel-button"]');
   await page.waitForFunction(
