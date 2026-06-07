@@ -96,11 +96,15 @@ export function MessageComposer({
         name="content"
         className={styles.composerInput}
         data-testid="composer-input"
+        value={composer.draft}
         placeholder={
           channel ? `Message #${channel.name}, paste a link, or attach media` : 'Select a channel'
         }
         disabled={!channel || isMessageSending}
-        onChange={composer.handleInput}
+        onChange={(event) => {
+          composer.setDraft(event.target.value);
+          composer.handleInput();
+        }}
         autoComplete="off"
       />
 

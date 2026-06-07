@@ -11,16 +11,20 @@ type HomeDirectMessageViewProps = {
   auth: AuthState;
   activeConversation: DirectConversation | null;
   directMessages: DirectMessage[];
+  directMessageDraft: string;
   pendingAction: string | null;
   onSendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onDirectMessageDraftChange: (value: string) => void;
 };
 
 export function HomeDirectMessageView({
   auth,
   activeConversation,
   directMessages,
+  directMessageDraft,
   pendingAction,
   onSendDirectMessage,
+  onDirectMessageDraftChange,
 }: HomeDirectMessageViewProps) {
   const dmPartner = activeConversation?.members[0]?.user;
 
@@ -38,8 +42,10 @@ export function HomeDirectMessageView({
           <DirectMessageTimeline auth={auth} dmPartner={dmPartner} directMessages={directMessages} />
           <DirectMessageComposer
             username={dmPartner.username}
+            draft={directMessageDraft}
             pendingAction={pendingAction}
             onSendDirectMessage={onSendDirectMessage}
+            onDraftChange={onDirectMessageDraftChange}
           />
         </>
       ) : (

@@ -23,8 +23,10 @@ export function HomePanel({
         auth={home.auth}
         activeConversation={home.activeConversation}
         directMessages={home.directMessages}
+        directMessageDraft={home.directMessageDraft}
         pendingAction={home.pendingAction}
         onSendDirectMessage={actions.sendDirectMessage}
+        onDirectMessageDraftChange={actions.setDirectMessageDraft}
       />
     </section>
   );

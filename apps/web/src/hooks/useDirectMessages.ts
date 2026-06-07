@@ -7,6 +7,7 @@ import {
   FriendRequestEntry,
   FriendsSummary,
 } from '../api';
+import { usePersistentDrafts } from './usePersistentDrafts';
 
 interface UseDirectMessagesOptions {
   auth: AuthState | null;
@@ -25,6 +26,9 @@ export function useDirectMessages({
   const [directConversations, setDirectConversations] = useState<DirectConversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<DirectConversation | null>(null);
   const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
+  const directDrafts = usePersistentDrafts({ storageKey: 'discord-clone-direct-drafts' });
+  const activeDraftKey = activeConversation ? `conversation:${activeConversation.id}` : null;
+  const directMessageDraft = directDrafts.getDraft(activeDraftKey);
 
   const clearDirectMessages = useCallback(() => {
     setFriendsSummary(null);
@@ -148,9 +152,7 @@ export function useDirectMessages({
   async function sendDirectMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!auth || !activeConversation) return;
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const content = String(form.get('content') || '').trim();
+    const content = directMessageDraft.trim();
     if (!content) return;
     setPendingAction('direct-message');
     setWorkspaceError(null);
@@ -160,7 +162,7 @@ export function useDirectMessages({
         { method: 'POST', body: JSON.stringify({ content }) },
         auth.accessToken,
       );
-      formElement.reset();
+      directDrafts.clearDraft(activeDraftKey);
       setDirectMessages((current) => [...current, result.message]);
       await loadDirectConversations(auth.accessToken);
     } catch (err) {
@@ -175,8 +177,10 @@ export function useDirectMessages({
     directConversations,
     activeConversation,
     directMessages,
+    directMessageDraft,
     setActiveConversation,
     setDirectMessages,
+    setDirectMessageDraft: (value: string) => directDrafts.updateDraft(activeDraftKey, value),
     clearDirectMessages,
     loadFriends,
     loadDirectConversations,

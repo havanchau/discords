@@ -78,8 +78,10 @@ export interface ChatPanelComposer {
   selectedFiles: File[];
   isRecordingVoice: boolean;
   pendingAction: string | null;
+  draft: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  setDraft: (value: string) => void;
   startVoiceRecording: () => Promise<void>;
   stopVoiceRecording: () => void;
   removeSelectedFile: (index: number) => void;

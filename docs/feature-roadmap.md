@@ -12,17 +12,17 @@ This checklist captures product features that would make the app feel closer to 
 
 ## 1. Message Drafts Per Channel And DM
 
-- [ ] Define draft storage ownership and key format.
-- [ ] Store one draft per text channel.
-- [ ] Store one draft per direct message conversation.
-- [ ] Restore the draft when switching back to a channel or DM.
-- [ ] Clear the draft after a successful send.
-- [ ] Preserve the draft when send fails.
-- [ ] Preserve the draft when upload fails.
+- [x] Define draft storage ownership and key format.
+- [x] Store one draft per text channel.
+- [x] Store one draft per direct message conversation.
+- [x] Restore the draft when switching back to a channel or DM.
+- [x] Clear the draft after a successful send.
+- [x] Preserve the draft when send fails.
+- [x] Preserve the draft when upload fails.
 - [ ] Keep reply target handling explicit so stale reply context does not surprise users.
 - [ ] Add tests for channel draft restore and clear-on-send.
 - [ ] Add tests for DM draft restore and clear-on-send.
-- [ ] Verify localStorage migration/fallback behavior.
+- [x] Verify localStorage migration/fallback behavior.
 - [ ] Verify mobile composer remains reachable with restored draft text.
 
 ## 2. Threaded Replies

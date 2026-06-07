@@ -4,7 +4,7 @@ import { AuthState, Channel } from '../api';
 interface UseComposerAttachmentsOptions {
   auth: AuthState | null;
   channel: Channel | null;
-  sendChatMessage: (content: string, files: File[]) => Promise<void>;
+  sendChatMessage: (content: string, files: File[]) => Promise<unknown>;
   setWorkspaceError: (message: string | null) => void;
 }
 
