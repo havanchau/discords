@@ -1,6 +1,7 @@
 import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
 import type { AuthState, Channel, Message } from '../../api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
+import type { ParsedMessageSearch } from '../../utils/messageSearch';
 
 export type ActivePanel = 'notifications' | 'search' | 'encryption' | null;
 export type ActiveDialog =
@@ -26,6 +27,7 @@ export interface ChatPanelMessages {
   pinned: Message[];
   pinnedIds: string[];
   searchQuery: string;
+  parsedSearch: ParsedMessageSearch;
   loadMore: () => Promise<void>;
 }
 

@@ -44,6 +44,41 @@
   font-size: 14px;
 }
 
+.searchPanel {
+  display: grid;
+  gap: var(--spacing-3);
+}
+
+.searchFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.searchFilter {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 0 var(--spacing-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-normal);
+  background: var(--background-secondary);
+  font-size: 12px;
+}
+
+.searchFilter strong {
+  color: var(--text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
+.searchInvalid {
+  color: var(--status-danger);
+  font-size: 12px;
+  line-height: var(--line-height-normal);
+}
+
 .notificationPanel {
   display: grid;
   gap: var(--spacing-2);

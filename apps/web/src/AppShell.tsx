@@ -19,6 +19,7 @@ import { useTheme } from './hooks/useTheme';
 import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
+import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
 
@@ -251,14 +252,23 @@ export function AppShell() {
   useEffect(() => {
     if (!auth || !channel) return;
     const query = searchQuery.trim();
-    if (query.length < 2) {
+    const { parsed, params } = buildMessageSearchParams(query);
+    const hasFilters =
+      Boolean(parsed.from || parsed.in || parsed.before || parsed.after) || parsed.has.length > 0;
+
+    if (parsed.invalid.length > 0) {
+      setSearchResults([]);
+      return;
+    }
+
+    if (query.length < 2 && !hasFilters) {
       setSearchResults(null);
       return;
     }
 
     const timeout = window.setTimeout(() => {
       void apiRequest<{ messages: Message[] }>(
-        `/channels/${channel.id}/messages?search=${encodeURIComponent(query)}`,
+        `/channels/${channel.id}/messages?${params.toString()}`,
         {},
         auth.accessToken,
       )
@@ -325,6 +335,8 @@ export function AppShell() {
     if (!query) return voiceChannels;
     return voiceChannels.filter((item) => item.name.toLowerCase().includes(query));
   }, [channelQuery, voiceChannels]);
+
+  const parsedSearch = useMemo(() => parseMessageSearchQuery(searchQuery), [searchQuery]);
 
   const visibleMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -397,6 +409,7 @@ export function AppShell() {
     setChannel(null);
     setMessages([]);
     setMessageCursor(null);
+    setReplyingToMessage(null);
     setActiveDialog(null);
     setActivePanel(null);
     if (auth) {
@@ -868,6 +881,7 @@ export function AppShell() {
                       pinned: pinnedMessages,
                       pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
                       searchQuery,
+                      parsedSearch,
                       loadMore: loadMoreMessages,
                     }}
                     alerts={{

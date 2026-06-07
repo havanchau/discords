@@ -19,11 +19,11 @@ This checklist captures product features that would make the app feel closer to 
 - [x] Clear the draft after a successful send.
 - [x] Preserve the draft when send fails.
 - [x] Preserve the draft when upload fails.
-- [ ] Keep reply target handling explicit so stale reply context does not surprise users.
-- [ ] Add tests for channel draft restore and clear-on-send.
-- [ ] Add tests for DM draft restore and clear-on-send.
+- [x] Keep reply target handling explicit so stale reply context does not surprise users.
+- [x] Add tests for channel draft restore and clear-on-send.
+- [x] Add tests for DM draft restore and clear-on-send.
 - [x] Verify localStorage migration/fallback behavior.
-- [ ] Verify mobile composer remains reachable with restored draft text.
+- [x] Verify mobile composer remains reachable with restored draft text.
 
 ## 2. Threaded Replies
 
@@ -44,16 +44,16 @@ This checklist captures product features that would make the app feel closer to 
 
 ## 3. Advanced Message Search
 
-- [ ] Define supported query operators: `from:`, `in:`, `has:link`, `has:file`, `before:`, `after:`.
-- [ ] Add a parser for search input with clear fallback behavior.
-- [ ] Extend API search parameters without breaking existing search.
+- [x] Define supported query operators: `from:`, `in:`, `has:link`, `has:file`, `before:`, `after:`.
+- [x] Add a parser for search input with clear fallback behavior.
+- [x] Extend API search parameters without breaking existing search.
 - [ ] Add indexed database query support for author, channel, date, attachments, and links.
-- [ ] Show parsed filters in the search panel.
-- [ ] Add empty state text for no results and invalid filters.
+- [x] Show parsed filters in the search panel.
+- [x] Add empty state text for no results and invalid filters.
 - [ ] Add result snippets with channel, author, timestamp, and match context.
 - [ ] Add keyboard navigation across results.
 - [ ] Add click-to-jump behavior with scroll anchoring.
-- [ ] Add tests for parser edge cases.
+- [x] Add tests for parser edge cases.
 - [ ] Add API tests for filter combinations.
 - [ ] Add UI smoke coverage for `has:link` and `from:` searches.
 
