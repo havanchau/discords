@@ -59,6 +59,7 @@ function MessageContent({ message }: { message: Message }) {
         <button
           type="button"
           className={styles.replyPreview}
+          data-testid="reply-preview"
           onClick={() => {
             document
               .querySelector(`[data-message-id="${message.replyToMessage?.id}"]`)
@@ -100,7 +101,7 @@ function MessageContent({ message }: { message: Message }) {
         </p>
       ) : null}
       {links.map((link) => (
-        <a key={link} className={styles.linkPreview} href={link} target="_blank" rel="noreferrer">
+        <a key={link} className={styles.linkPreview} href={link} target="_blank" rel="noreferrer" data-testid="link-preview">
           <LinkIcon size={18} aria-hidden="true" />
           <span>{link.replace(/^https?:\/\//i, '')}</span>
         </a>
@@ -306,7 +307,7 @@ export function MessageRow({
               )}
 
               {!message.deletedAt && (
-                <div className={styles.reactionRow}>
+                <div className={styles.reactionRow} data-testid="reaction-row">
                   {message.reactions.map((reaction) => (
                     <button
                       key={reaction.emoji}
@@ -346,6 +347,7 @@ export function MessageRow({
                       <button
                         key={emoji}
                         type="button"
+                        data-testid="quick-reaction"
                         onClick={() => void actions.toggleReaction(message, emoji)}
                       >
                         {emoji}

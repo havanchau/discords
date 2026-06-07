@@ -12,11 +12,24 @@
 }
 
 .root {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--spacing-3);
   border-radius: var(--radius-md);
   background: var(--background-floating);
   color: var(--text-normal);
   padding: var(--spacing-4);
   box-shadow: var(--elevation-high);
+}
+
+.viewport > .root:nth-last-child(n + 4) {
+  display: none;
+}
+
+.root[data-variant='error'] {
+  border-left: 3px solid var(--status-danger);
 }
 
 .root[data-state='open'] {
@@ -25,6 +38,10 @@
 
 .root[data-state='closed'] {
   animation: toastOut var(--motion-menu) ease;
+}
+
+.copy {
+  min-width: 0;
 }
 
 .title {
@@ -40,6 +57,29 @@
   color: var(--header-secondary);
   font-size: var(--font-size-ui);
   line-height: var(--line-height-ui);
+}
+
+.close {
+  width: var(--size-interactive-min);
+  height: var(--size-interactive-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  background: transparent;
+  color: var(--interactive-normal);
+}
+
+.close:hover {
+  background: var(--background-modifier-hover);
+  color: var(--interactive-hover);
+}
+
+.close:focus-visible {
+  outline: var(--focus-outline-width) solid var(--brand-color);
+  outline-offset: var(--focus-outline-offset);
 }
 
 @keyframes toastIn {

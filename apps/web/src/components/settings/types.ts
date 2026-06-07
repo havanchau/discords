@@ -49,6 +49,7 @@ export interface SettingsModalFields {
   toggleRolePermission: (role: Role, permission: string, enabled: boolean) => Promise<void>;
   deleteRole: (role: Role) => Promise<void>;
   toggleMemberRole: (memberId: string, roleId: string, enabled: boolean) => Promise<void>;
+  openMemberRoleEditor: (memberId: string) => void;
   setUiTheme: (theme: UiTheme) => void;
 }
 
@@ -79,5 +80,6 @@ export interface SettingsModalProps {
     | 'toggleRolePermission'
     | 'deleteRole'
     | 'toggleMemberRole'
+    | 'openMemberRoleEditor'
   >;
 }

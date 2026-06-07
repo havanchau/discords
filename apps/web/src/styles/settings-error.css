@@ -317,15 +317,15 @@
 .role-list {
   max-height: min(460px, 58vh);
   display: grid;
-  gap: 8px;
+  gap: 12px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .role-editor {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 12px;
+  padding: 16px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background: var(--bg-secondary);
@@ -357,6 +357,20 @@
   display: block;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.role-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.role-meta-badge {
+  min-height: 20px;
+  padding-inline: 8px;
+  font-size: 11px;
 }
 
 .danger-icon {
@@ -426,15 +440,48 @@
 }
 
 .role-assign-row {
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  padding: 8px 10px;
-  border-radius: 4px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-height: 52px;
+  padding: 12px;
+  border-radius: 8px;
   background: var(--bg-secondary);
 }
 
-.role-assign-row small {
+.role-assign-content {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-assign-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.role-assign-copy strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.role-assign-row small,
+.role-assign-copy small {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.role-assign-state {
+  flex-shrink: 0;
 }
 
 .permission-override-list,
@@ -477,10 +524,109 @@
 }
 
 .member-role-summary {
-  grid-template-columns: 40px minmax(0, 1fr);
-  padding: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
   border-radius: 8px;
   background: var(--bg-secondary);
+}
+
+.member-role-summaryText {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.member-role-summaryChips,
+.member-role-chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.member-role-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  max-width: 100%;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: var(--header-secondary);
+  background: var(--bg-primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.member-role-chipMuted {
+  color: var(--text-muted);
+}
+
+.role-members-section {
+  gap: 12px;
+}
+
+.member-role-entry-list {
+  display: grid;
+  gap: 10px;
+}
+
+.member-role-entry.member-role-entry {
+  min-height: 72px;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 8px;
+  color: var(--text-normal);
+  background: var(--bg-primary);
+}
+
+.member-role-entry.member-role-entry:hover {
+  background: var(--bg-modifier-hover);
+}
+
+.member-role-entryIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-role-entryText {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.member-role-entryText strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.member-role-entryText span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.member-role-entryMeta {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.member-role-entryAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--header-secondary);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* ===== Error Banner ===== */

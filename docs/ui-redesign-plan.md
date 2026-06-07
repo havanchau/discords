@@ -225,9 +225,9 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 - [x] Replace raw checkboxes and switches with Radix `Checkbox` and `Switch`.
 - [x] Replace form buttons, inputs, and textarea with shared UI primitives.
 - [x] Keep role permission grids dense and readable.
-- [ ] Add a clear member role update flow: from member context menu, open a member-role editor, toggle roles for the selected user, show pending/success/error states, and update the local member role list after the API succeeds.
-- [ ] Improve the existing roles list UI so current roles are easier to scan: larger role rows, clearer role name/color/permission count hierarchy, visible member assignment entry point, and responsive spacing that still fits the Discord-like modal.
-- [ ] Make assigned roles in the member-role editor visually prominent enough to read at a glance, including disabled/default `@everyone` handling and long role-name truncation.
+- [x] Add a clear member role update flow: from member context menu, open a member-role editor, toggle roles for the selected user, show pending/success/error states, and update the local member role list after the API succeeds.
+- [x] Improve the existing roles list UI so current roles are easier to scan: larger role rows, clearer role name/color/permission count hierarchy, visible member assignment entry point, and responsive spacing that still fits the Discord-like modal.
+- [x] Make assigned roles in the member-role editor visually prominent enough to read at a glance, including disabled/default `@everyone` handling and long role-name truncation.
 - [ ] Verify modal focus trap, escape close, overlay click behavior, and focus restore.
 - [x] Preserve all existing submit handlers and API behavior.
 - [ ] Run minimum merge checks. Compare after screenshots with before.
@@ -236,14 +236,15 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 
 ### Phase 6: Performance, Visual Polish, And Cleanup
 
-- [ ] Measure message list scroll performance with more than 500 visible messages.
-- [ ] Add `react-window` only if measured performance requires virtualization.
+- [ ] Measure message list scroll performance with more than 500 visible messages in a browser session.
+- [x] Add repeatable 600-message render performance smoke coverage.
+- [x] Defer `react-window` until browser scroll measurement shows virtualization is required.
 - [ ] If virtualization is added, preserve message grouping, scroll anchoring, hover actions, and day dividers.
-- [ ] Delete migrated legacy CSS and unused classes.
-- [ ] Ensure no source file exceeds 1000 lines.
-- [ ] Ensure long channel names, usernames, role names, and messages do not overflow.
+- [x] Delete migrated legacy CSS and unused classes.
+- [x] Ensure no source file exceeds 1000 lines.
+- [x] Ensure long channel names, usernames, role names, and messages do not overflow.
 - [ ] Ensure composer never overlaps or becomes unreachable.
-- [ ] Finalize toast: bottom-right, max 3 visible, 5s auto-dismiss for notices, manual dismiss for errors.
+- [x] Finalize toast: bottom-right, max 3 visible, 5s auto-dismiss for notices, manual dismiss for errors.
 - [ ] Verify all async actions have loading, disabled, success, and error states.
 - [ ] Run full static scan. Capture final after screenshots and compare against Phase 0A before screenshots.
 

@@ -56,40 +56,6 @@
   overflow-x: hidden;
 }
 
-.chat-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--elevation-low);
-  background: rgba(8, 13, 21, 0.94);
-  z-index: 1;
-  padding: 0 16px;
-}
-
-.chat-title strong {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--header-primary);
-}
-
-.chat-title span {
-  display: block;
-  max-width: min(520px, 45vw);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.2;
-}
-
 .member span {
   display: block;
   color: var(--text-muted);
@@ -114,58 +80,6 @@
 
 .member-title svg {
   display: none;
-}
-
-.composer button,
-.toolbar button,
-.wide-command,
-.message-actions button,
-.edit-row button {
-  border: 0;
-  border-radius: 4px;
-  color: var(--interactive-normal);
-  background: transparent;
-}
-
-.toolbar button,
-.message-actions button {
-  min-width: 32px;
-  min-height: 28px;
-  display: grid;
-  place-items: center;
-}
-
-.toolbar button:hover {
-  color: var(--interactive-hover);
-  background: var(--bg-modifier-hover);
-  transform: translateY(-1px);
-}
-
-.toolbar button:active,
-.wide-command:active,
-.message-actions button:active,
-.composer button:active {
-  transform: scale(0.96);
-}
-
-.wide-command {
-  width: 100%;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--interactive-normal);
-  margin: 2px 4px;
-  border-radius: 4px;
-}
-
-.wide-command:hover {
-  color: var(--interactive-hover);
-  background: var(--bg-modifier-hover);
-  transform: translateY(-1px);
 }
 
 .empty-note {

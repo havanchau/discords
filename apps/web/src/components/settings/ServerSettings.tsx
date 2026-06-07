@@ -18,7 +18,7 @@ export function ServerSettings({
   return (
     <form className="settings-form" onSubmit={updateServerSettings}>
       <Button type="button" variant="secondary" fullWidth onClick={() => setActiveDialog('roles')}>
-        Manage roles and permissions
+        Manage roles, permissions, and member assignments
       </Button>
       <TextField
         label="Server name"

@@ -341,6 +341,11 @@ export function AppShell() {
   const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
   const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
 
+  function openMemberRoleEditor(memberId: string) {
+    setSelectedMemberId(memberId);
+    setActiveDialog('member-roles');
+  }
+
   async function togglePinnedMessage(message: Message) {
     if (!auth) return;
     setPendingAction(`pin-${message.id}`);
@@ -930,10 +935,7 @@ export function AppShell() {
                   <MemberSidebar
                     assetUrl={assetUrl}
                     server={server}
-                    onManageMember={(memberId) => {
-                      setSelectedMemberId(memberId);
-                      setActiveDialog('member-roles');
-                    }}
+                    onManageMember={openMemberRoleEditor}
                     onDirectMessage={async (userId) => {
                       openHome();
                       await startDirectConversation(userId);
@@ -985,6 +987,7 @@ export function AppShell() {
                   toggleRolePermission,
                   deleteRole,
                   toggleMemberRole,
+                  openMemberRoleEditor,
                 }}
               />
             </main>
