@@ -1,47 +1,30 @@
-import { RefObject } from 'react';
 import { Mic, MicOff, MonitorUp, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
-import { AuthState, Channel } from '../../api';
-import { accentClass, ActiveCallSummary, CallState, initials, RemoteMedia } from '../../helpers';
-import { Avatar, Button, IconButton } from '../ui';
-import { RemoteVideoTile } from '../RemoteVideoTile';
-import styles from './CallStage.module.css';
+import { accentClass, initials } from '../../helpers';
 import { cn } from '../../utils/cn';
+import { RemoteVideoTile } from '../RemoteVideoTile';
+import { Avatar, Button, IconButton } from '../ui';
+import styles from './CallStage.module.css';
+import type { ChatPanelCall, ChatPanelSession } from './types';
 
 interface CallStageProps {
-  auth: AuthState;
-  channel: Channel | null;
-  activeCall: ActiveCallSummary | null;
-  callState: CallState | null;
-  remoteMedia: RemoteMedia[];
-  localVideoRef: RefObject<HTMLVideoElement | null>;
-  startCall: (mode: 'voice' | 'video' | 'screen', options?: { receiveOnly?: boolean }) => Promise<void>;
-  toggleMute: () => void;
-  toggleCamera: () => void;
-  endCall: () => void;
+  session: ChatPanelSession;
+  call: ChatPanelCall;
 }
 
-export function CallStage({
-  auth,
-  channel,
-  activeCall,
-  callState,
-  remoteMedia,
-  localVideoRef,
-  startCall,
-  toggleMute,
-  toggleCamera,
-  endCall,
-}: CallStageProps) {
-  if (!activeCall && !callState) return null;
+export function CallStage({ session, call }: CallStageProps) {
+  const { auth, channel } = session;
+  const { active, state, remoteMedia } = call;
+
+  if (!active && !state) return null;
 
   return (
     <>
-      {activeCall && !callState ? (
+      {active && !state ? (
         <section className={styles.activeCallBanner} data-testid="active-call-banner">
           <div className={styles.activeCallIcon}>
-            {activeCall.mode === 'screen' ? (
+            {active.mode === 'screen' ? (
               <MonitorUp size={18} aria-hidden="true" />
-            ) : activeCall.mode === 'video' ? (
+            ) : active.mode === 'video' ? (
               <Video size={18} aria-hidden="true" />
             ) : (
               <Phone size={18} aria-hidden="true" />
@@ -49,71 +32,67 @@ export function CallStage({
           </div>
           <div className={styles.activeCallCopy}>
             <strong>
-              {activeCall.mode === 'screen'
-                ? `${activeCall.screenSharer?.displayName ?? 'Someone'} is sharing screen`
-                : activeCall.mode === 'video'
+              {active.mode === 'screen'
+                ? `${active.screenSharer?.displayName ?? 'Someone'} is sharing screen`
+                : active.mode === 'video'
                   ? 'Video call is active'
                   : 'Voice call is active'}
             </strong>
             <span>
-              #{channel?.name} · {activeCall.participants.length} participant
-              {activeCall.participants.length === 1 ? '' : 's'}
+              #{channel?.name} - {active.participants.length} participant
+              {active.participants.length === 1 ? '' : 's'}
             </span>
           </div>
           <Button
             size="sm"
             className={styles.activeCallJoin}
-            onClick={() => void startCall('voice', { receiveOnly: true })}
+            onClick={() => void call.start('voice', { receiveOnly: true })}
           >
-            {activeCall.mode === 'screen' ? 'Join stream' : 'Join call'}
+            {active.mode === 'screen' ? 'Join stream' : 'Join call'}
           </Button>
         </section>
       ) : null}
 
-      {callState ? (
+      {state ? (
         <section className={styles.callStage} data-testid="call-stage">
           <div className={styles.callStageHeader}>
             <div>
               <strong>
-                {callState.isSharingScreen
+                {state.isSharingScreen
                   ? 'Screen share'
-                  : callState.mode === 'video'
+                  : state.mode === 'video'
                     ? 'Video call'
                     : 'Voice call'}
               </strong>
               <span>
-                #{channel?.name} · {remoteMedia.length + 1} participant
+                #{channel?.name} - {remoteMedia.length + 1} participant
                 {remoteMedia.length ? 's' : ''}
               </span>
             </div>
             <div className={styles.callControls}>
               <IconButton
-                label={callState.isMuted ? 'Unmute' : 'Mute'}
-                variant={callState.isMuted ? 'danger' : 'ghost'}
-                onClick={toggleMute}
+                label={state.isMuted ? 'Unmute' : 'Mute'}
+                variant={state.isMuted ? 'danger' : 'ghost'}
+                onClick={call.toggleMute}
               >
-                {callState.isMuted ? <MicOff size={17} aria-hidden="true" /> : <Mic size={17} aria-hidden="true" />}
+                {state.isMuted ? <MicOff size={17} aria-hidden="true" /> : <Mic size={17} aria-hidden="true" />}
               </IconButton>
               <IconButton
-                label={callState.isCameraOff ? 'Turn camera on' : 'Turn camera off'}
-                onClick={toggleCamera}
-                disabled={callState.mode === 'voice'}
+                label={state.isCameraOff ? 'Turn camera on' : 'Turn camera off'}
+                onClick={call.toggleCamera}
+                disabled={state.mode === 'voice'}
               >
-                {callState.isCameraOff ? <VideoOff size={17} aria-hidden="true" /> : <Video size={17} aria-hidden="true" />}
+                {state.isCameraOff ? <VideoOff size={17} aria-hidden="true" /> : <Video size={17} aria-hidden="true" />}
               </IconButton>
-              <IconButton
-                label="Leave call"
-                variant="danger"
-                onClick={endCall}
-              >
+              <IconButton label="Leave call" variant="danger" onClick={call.end}>
                 <PhoneOff size={17} aria-hidden="true" />
               </IconButton>
             </div>
           </div>
           <div className={styles.callGrid}>
             <div className={cn(styles.callTile, styles.callTileLocal)}>
-              {callState.mode !== 'voice' && !callState.isCameraOff ? (
-                <video ref={localVideoRef} autoPlay muted playsInline />
+              {state.mode !== 'voice' && !state.isCameraOff ? (
+                <video ref={call.localVideoRef} autoPlay muted playsInline />
               ) : (
                 <Avatar
                   alt={auth.user.displayName}
@@ -124,9 +103,9 @@ export function CallStage({
               <div className={styles.callLabel}>
                 <strong>{auth.user.displayName}</strong>
                 <span>
-                  {callState.isSharingScreen
+                  {state.isSharingScreen
                     ? 'Sharing screen'
-                    : callState.isMuted
+                    : state.isMuted
                       ? 'Muted'
                       : 'You'}
                 </span>

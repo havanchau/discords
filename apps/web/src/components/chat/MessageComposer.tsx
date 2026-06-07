@@ -1,72 +1,52 @@
-import { ChangeEvent, FormEvent, RefObject } from 'react';
 import { FileAudio2, FileText, Image, Loader2, Mic, Paperclip, Reply, Send, Square, X } from 'lucide-react';
-import { Channel, Message } from '../../api';
+import { Channel } from '../../api';
 import { formatBytes } from '../../helpers';
 import { Button, IconButton, TextField } from '../ui';
 import styles from './MessageComposer.module.css';
 import { cn } from '../../utils/cn';
+import type { ChatPanelComposer, ChatPanelMessageActions } from './types';
 
 interface MessageComposerProps {
   channel: Channel | null;
-  replyingToMessage: Message | null;
-  selectedFiles: File[];
-  isRecordingVoice: boolean;
-  pendingAction: string | null;
-  fileInputRef: RefObject<HTMLInputElement | null>;
-  setReplyingToMessage: (message: Message | null) => void;
-  removeSelectedFile: (index: number) => void;
-  selectFiles: (event: ChangeEvent<HTMLInputElement>) => void;
-  startVoiceRecording: () => Promise<void>;
-  stopVoiceRecording: () => void;
-  sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  handleComposerInput: () => void;
+  composer: ChatPanelComposer;
+  messageActions: Pick<ChatPanelMessageActions, 'setReplyingToMessage'>;
 }
 
 export function MessageComposer({
   channel,
-  replyingToMessage,
-  selectedFiles,
-  isRecordingVoice,
-  pendingAction,
-  fileInputRef,
-  setReplyingToMessage,
-  removeSelectedFile,
-  selectFiles,
-  startVoiceRecording,
-  stopVoiceRecording,
-  sendMessage,
-  handleComposerInput,
+  composer,
+  messageActions,
 }: MessageComposerProps) {
-  const isMessageSending = pendingAction === 'send-message';
+  const isMessageSending = composer.pendingAction === 'send-message';
 
   return (
-    <form onSubmit={sendMessage} className={styles.composer}>
-      {replyingToMessage && (
+    <form onSubmit={composer.sendMessage} className={styles.composer}>
+      {composer.replyingToMessage && (
         <div className={styles.composerReply}>
           <Reply size={14} aria-hidden="true" />
           <span>
-            Replying to <strong>{replyingToMessage.author.displayName}</strong>
+            Replying to <strong>{composer.replyingToMessage.author.displayName}</strong>
           </span>
           <IconButton
             label="Cancel reply"
             variant="ghost"
-            onClick={() => setReplyingToMessage(null)}
+            onClick={() => messageActions.setReplyingToMessage(null)}
           >
             <X size={14} aria-hidden="true" />
           </IconButton>
         </div>
       )}
 
-      {selectedFiles.length > 0 && (
+      {composer.selectedFiles.length > 0 && (
         <div className={styles.pendingAttachments}>
-          {selectedFiles.map((file, index) => {
+          {composer.selectedFiles.map((file, index) => {
             const isImage = file.type.startsWith('image/');
             const isAudio = file.type.startsWith('audio/');
             return (
               <Button
                 key={`${file.name}-${file.lastModified}-${index}`}
                 className={styles.pendingFile}
-                onClick={() => removeSelectedFile(index)}
+                onClick={() => composer.removeSelectedFile(index)}
                 title="Remove attachment"
               >
                 {isImage ? (
@@ -85,31 +65,31 @@ export function MessageComposer({
       )}
 
       <input
-        ref={fileInputRef}
+        ref={composer.fileInputRef}
         className={styles.fileInput}
         type="file"
         multiple
         accept="image/*,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm,application/pdf,text/plain,application/zip,.zip"
-        onChange={selectFiles}
+        onChange={composer.selectFiles}
         disabled={!channel || isMessageSending}
       />
 
       <IconButton
         label="Attach file"
         className={styles.attachButton}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => composer.fileInputRef.current?.click()}
         disabled={!channel || isMessageSending}
       >
         <Paperclip size={18} aria-hidden="true" />
       </IconButton>
 
       <IconButton
-        label={isRecordingVoice ? 'Stop voice message' : 'Record voice message'}
-        className={cn(styles.voiceRecordButton, isRecordingVoice && styles.recording)}
-        onClick={isRecordingVoice ? stopVoiceRecording : startVoiceRecording}
-        disabled={!channel || (isMessageSending && !isRecordingVoice)}
+        label={composer.isRecordingVoice ? 'Stop voice message' : 'Record voice message'}
+        className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
+        onClick={composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording}
+        disabled={!channel || (isMessageSending && !composer.isRecordingVoice)}
       >
-        {isRecordingVoice ? <Square size={15} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
+        {composer.isRecordingVoice ? <Square size={15} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
       </IconButton>
 
       <TextField
@@ -120,7 +100,7 @@ export function MessageComposer({
           channel ? `Message #${channel.name}, paste a link, or attach media` : 'Select a channel'
         }
         disabled={!channel || isMessageSending}
-        onChange={handleComposerInput}
+        onChange={composer.handleInput}
         autoComplete="off"
       />
 

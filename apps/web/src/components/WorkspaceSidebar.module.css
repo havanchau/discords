@@ -88,7 +88,7 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: var(--height-channel-header) minmax(0, 1fr) 52px;
+  grid-template-rows: var(--height-channel-header) 88px minmax(0, 1fr) 52px;
   background: var(--color-bg-sidebar);
 }
 
@@ -104,8 +104,79 @@
   gap: var(--spacing-2);
   padding: 0 var(--spacing-3);
   background: var(--color-bg-sidebar);
-  box-shadow: var(--elevation-low);
+  box-shadow: none;
   z-index: var(--z-header);
+}
+
+.serverBanner {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  align-content: start;
+  padding: var(--spacing-3);
+  color: var(--interactive-active);
+  background: var(--brand-color);
+}
+
+.serverBanner div {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.serverBanner strong {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serverBanner span {
+  width: max-content;
+  border-radius: var(--radius-round);
+  padding: 2px 8px;
+  color: var(--interactive-active);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+}
+
+.serverBanner i,
+.serverBanner b {
+  position: absolute;
+  display: block;
+  border-radius: var(--radius-full);
+}
+
+.serverBanner i {
+  width: 92px;
+  height: 92px;
+  right: 88px;
+  bottom: -28px;
+  background: var(--status-danger);
+}
+
+.serverBanner b {
+  width: 58px;
+  height: 58px;
+  right: 22px;
+  bottom: 10px;
+  background: var(--background-floating);
+}
+
+.serverBanner::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: 8px;
+  width: 62px;
+  height: 10px;
+  background: var(--status-idle);
 }
 
 .serverDropdownButton {
@@ -122,6 +193,10 @@
   color: var(--header-primary);
   background: transparent;
   text-align: left;
+}
+
+.serverDropdownButton.serverDropdownButton {
+  justify-content: stretch;
 }
 
 .serverDropdownButton:hover,
@@ -160,6 +235,10 @@
   text-align: left;
 }
 
+.homeButton.homeButton {
+  justify-content: stretch;
+}
+
 .homeButton:hover {
   color: var(--interactive-hover);
   background: var(--background-modifier-hover);
@@ -185,17 +264,21 @@
   padding: var(--spacing-2);
 }
 
+.channelSearchField {
+  margin: 0 0 var(--spacing-3);
+}
+
 .channelSearch {
-  display: none;
+  display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
   gap: var(--spacing-2);
-  height: 32px;
-  margin: 0 var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-sm);
+  height: 36px;
+  margin: 0;
+  border-radius: 0;
   padding: 0 var(--spacing-2);
   color: var(--interactive-muted);
-  background: var(--input-background);
+  background: var(--background-secondary-alt);
 }
 
 .channelSearchOpen {
@@ -223,8 +306,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-1);
-  min-height: 32px;
-  padding: var(--spacing-3) var(--spacing-2) var(--spacing-1) 2px;
+  min-height: 28px;
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-1) 2px;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: var(--font-weight-semibold);
@@ -250,9 +333,13 @@
   padding: var(--spacing-channel-row);
   color: var(--interactive-normal);
   background: transparent;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: var(--font-weight-medium);
   text-align: left;
+}
+
+.channelRow.channelRow {
+  justify-content: flex-start;
 }
 
 .channelRow:hover {

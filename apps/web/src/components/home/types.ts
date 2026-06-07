@@ -7,13 +7,16 @@ import type {
   FriendsSummary,
 } from '../../api';
 
-export interface HomePanelProps {
+export interface HomePanelState {
   auth: AuthState;
   friendsSummary: FriendsSummary | null;
   conversations: DirectConversation[];
   activeConversation: DirectConversation | null;
   directMessages: DirectMessage[];
   pendingAction: string | null;
+}
+
+export interface HomePanelActions {
   requestFriend: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   respondFriendRequest: (
     request: FriendRequestEntry,
@@ -22,4 +25,9 @@ export interface HomePanelProps {
   openDirectConversation: (conversation: DirectConversation) => Promise<void>;
   startDirectConversation: (userId: string) => Promise<void>;
   sendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+}
+
+export interface HomePanelProps {
+  home: HomePanelState;
+  actions: HomePanelActions;
 }

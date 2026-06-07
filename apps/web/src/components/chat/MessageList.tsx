@@ -59,6 +59,18 @@ export function MessageList({
         </div>
       ) : (
         <>
+          {!searchQuery.trim() ? (
+            <section className={styles.channelIntro}>
+              <div className={styles.channelIntroIcon}>
+                <Hash size={46} aria-hidden="true" />
+              </div>
+              <strong>Welcome to #{channel.name}!</strong>
+              <span>
+                {channel.topic ||
+                  `This is the start of the #${channel.name} channel. Use this space for updates, ideas, and conversation.`}
+              </span>
+            </section>
+          ) : null}
           {hasMoreMessages && !searchQuery.trim() && (
             <div className={styles.loadMoreRow}>
               <Button

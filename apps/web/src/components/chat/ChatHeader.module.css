@@ -5,9 +5,9 @@
   justify-content: space-between;
   gap: 6px;
   height: 48px;
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--elevation-low);
-  background: var(--color-bg-sidebar);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.24);
+  box-shadow: none;
+  background: var(--background-primary);
   z-index: var(--z-header);
   padding: 0 var(--spacing-3);
 }
@@ -17,6 +17,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  flex: 1 1 auto;
 }
 
 .chatTitle strong {
@@ -32,13 +33,23 @@
 
 .chatTitle span {
   display: block;
-  max-width: min(520px, 45vw);
+  max-width: min(720px, 48vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted);
   font-size: var(--font-size-label);
   line-height: var(--line-height-tight);
+}
+
+.chatTitle span::before {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--spacing-3) 0 var(--spacing-2);
+  vertical-align: middle;
+  background: var(--border-subtle);
 }
 
 .channelAvatarButton {
@@ -71,6 +82,39 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
+  flex-shrink: 0;
+}
+
+.headerSearch {
+  width: 144px;
+  height: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: var(--spacing-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--spacing-2);
+  color: var(--text-muted);
+  background: var(--input-background);
+  font-size: 13px;
+  text-align: left;
+}
+
+.headerSearch.headerSearch {
+  justify-content: stretch;
+}
+
+.headerSearch:hover,
+.headerSearch[aria-pressed='true'] {
+  color: var(--interactive-hover);
+  background: var(--background-secondary-alt);
+}
+
+.headerSearch span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fileInput {

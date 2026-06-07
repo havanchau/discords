@@ -1,52 +1,43 @@
-import { ChangeEvent, Dispatch, RefObject, SetStateAction } from 'react';
 import { Bell, Edit3, Hash, Lock, MonitorUp, Phone, Search, Unlock, Video } from 'lucide-react';
 import { assetUrl, Channel } from '../../api';
 import { CallMode, CallState } from '../../helpers';
 import { Avatar, Button, IconButton, Tooltip } from '../ui';
-import { ActiveDialog, ActivePanel } from '../ChatPanel';
+import type { ChatPanelChannelAvatar, ChatPanelPanels } from './types';
 import styles from './ChatHeader.module.css';
 
 interface ChatHeaderProps {
   channel: Channel | null;
   pendingAction: string | null;
   callState: CallState | null;
-  activeDialog: ActiveDialog;
-  activePanel: ActivePanel;
+  panels: ChatPanelPanels;
   isChannelEncrypted: boolean;
-  channelAvatarInputRef: RefObject<HTMLInputElement | null>;
-  updateChannelAvatar: (event: ChangeEvent<HTMLInputElement>) => void;
+  channelAvatar: ChatPanelChannelAvatar;
   startCall: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<void>;
-  setActiveDialog: (dialog: ActiveDialog) => void;
-  setActivePanel: Dispatch<SetStateAction<ActivePanel>>;
 }
 
 export function ChatHeader({
   channel,
   pendingAction,
   callState,
-  activeDialog,
-  activePanel,
+  panels,
   isChannelEncrypted,
-  channelAvatarInputRef,
-  updateChannelAvatar,
+  channelAvatar,
   startCall,
-  setActiveDialog,
-  setActivePanel,
 }: ChatHeaderProps) {
   return (
     <header className={styles.chatHeader}>
       <div className={styles.chatTitle}>
         <input
-          ref={channelAvatarInputRef}
+          ref={channelAvatar.inputRef}
           className={styles.fileInput}
           type="file"
           accept="image/*"
-          onChange={updateChannelAvatar}
+          onChange={channelAvatar.update}
         />
         <Button
           className={styles.channelAvatarButton}
           title="Change channel avatar"
-          onClick={() => channelAvatarInputRef.current?.click()}
+          onClick={() => channelAvatar.inputRef.current?.click()}
           disabled={!channel || pendingAction === 'channel-avatar'}
           variant="ghost"
         >
@@ -111,9 +102,9 @@ export function ChatHeader({
         <Tooltip content="Channel settings">
           <IconButton
             label="Channel settings"
-            onClick={() => setActiveDialog('channel-settings')}
+            onClick={() => panels.setActiveDialog('channel-settings')}
             disabled={!channel}
-            variant={activeDialog === 'channel-settings' ? 'primary' : 'ghost'}
+            variant={panels.activeDialog === 'channel-settings' ? 'primary' : 'ghost'}
             data-testid="channel-settings-button"
           >
             <Edit3 size={18} aria-hidden="true" />
@@ -124,9 +115,9 @@ export function ChatHeader({
           <IconButton
             label="Notifications"
             onClick={() =>
-              setActivePanel((current) => (current === 'notifications' ? null : 'notifications'))
+              panels.setActivePanel((current) => (current === 'notifications' ? null : 'notifications'))
             }
-            variant={activePanel === 'notifications' ? 'primary' : 'ghost'}
+            variant={panels.activePanel === 'notifications' ? 'primary' : 'ghost'}
             data-testid="notifications-button"
           >
             <Bell size={18} aria-hidden="true" />
@@ -137,10 +128,10 @@ export function ChatHeader({
           <IconButton
             label={isChannelEncrypted ? 'Encryption enabled' : 'Set encryption passphrase'}
             onClick={() =>
-              setActivePanel((current) => (current === 'encryption' ? null : 'encryption'))
+              panels.setActivePanel((current) => (current === 'encryption' ? null : 'encryption'))
             }
             disabled={!channel}
-            variant={activePanel === 'encryption' || isChannelEncrypted ? 'primary' : 'ghost'}
+            variant={panels.activePanel === 'encryption' || isChannelEncrypted ? 'primary' : 'ghost'}
             data-testid="encryption-button"
           >
             {isChannelEncrypted ? (
@@ -151,16 +142,17 @@ export function ChatHeader({
           </IconButton>
         </Tooltip>
 
-        <Tooltip content="Search">
-          <IconButton
-            label="Search"
-            onClick={() => setActivePanel((current) => (current === 'search' ? null : 'search'))}
-            variant={activePanel === 'search' ? 'primary' : 'ghost'}
-            data-testid="search-button"
-          >
-            <Search size={18} aria-hidden="true" />
-          </IconButton>
-        </Tooltip>
+        <Button
+          type="button"
+          className={styles.headerSearch}
+          variant="ghost"
+          onClick={() => panels.setActivePanel((current) => (current === 'search' ? null : 'search'))}
+          aria-pressed={panels.activePanel === 'search'}
+          data-testid="search-button"
+        >
+          <span>Search</span>
+          <Search size={14} aria-hidden="true" />
+        </Button>
       </div>
     </header>
   );

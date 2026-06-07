@@ -41,6 +41,7 @@ import {
   PopoverTrigger,
 } from '../ui';
 import styles from './MessageRow.module.css';
+import type { ChatPanelMessageActions } from './types';
 
 interface PreviewAttachment {
   url: string;
@@ -200,15 +201,7 @@ interface MessageRowProps {
   previousMessage?: Message;
   auth: AuthState;
   pinnedMessageIds: string[];
-  editingMessageId: string | null;
-  editingDraft: string;
-  setReplyingToMessage: (message: Message | null) => void;
-  setEditingMessageId: (messageId: string | null) => void;
-  setEditingDraft: (draft: string) => void;
-  saveMessageEdit: (messageId: string) => Promise<void>;
-  deleteMessage: (messageId: string) => Promise<void>;
-  toggleReaction: (message: Message, emoji: string) => Promise<void>;
-  togglePinnedMessage: (message: Message) => void;
+  actions: ChatPanelMessageActions;
   onPreviewAttachment: (attachment: PreviewAttachment) => void;
 }
 
@@ -217,15 +210,7 @@ export function MessageRow({
   previousMessage,
   auth,
   pinnedMessageIds,
-  editingMessageId,
-  editingDraft,
-  setReplyingToMessage,
-  setEditingMessageId,
-  setEditingDraft,
-  saveMessageEdit,
-  deleteMessage,
-  toggleReaction,
-  togglePinnedMessage,
+  actions,
   onPreviewAttachment,
 }: MessageRowProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -242,7 +227,7 @@ export function MessageRow({
     new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() > 7 * 60 * 1000;
   
   const canManage = message.authorId === auth.user.id && !message.deletedAt;
-  const isEditing = editingMessageId === message.id;
+  const isEditing = actions.editingMessageId === message.id;
   const isPinned = pinnedMessageIds.includes(message.id);
 
   function copyMessageContent() {
@@ -290,20 +275,20 @@ export function MessageRow({
               ) : isEditing ? (
                 <div className={styles.editRow}>
                   <TextField
-                    value={editingDraft}
-                    onChange={(event) => setEditingDraft(event.target.value)}
+                    value={actions.editingDraft}
+                    onChange={(event) => actions.setEditingDraft(event.target.value)}
                     autoFocus
                     className={styles.editInput}
                     aria-label="Edit message"
                     autoComplete="off"
                   />
-                  <Button size="sm" onClick={() => void saveMessageEdit(message.id)}>Save</Button>
+                  <Button size="sm" onClick={() => void actions.saveEdit(message.id)}>Save</Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      setEditingMessageId(null);
-                      setEditingDraft('');
+                      actions.setEditingMessageId(null);
+                      actions.setEditingDraft('');
                     }}
                   >
                     Cancel
@@ -327,7 +312,7 @@ export function MessageRow({
                       key={reaction.emoji}
                       type="button"
                       className={reaction.me ? styles.active : ''}
-                      onClick={() => void toggleReaction(message, reaction.emoji)}
+                      onClick={() => void actions.toggleReaction(message, reaction.emoji)}
                       title={`React ${reaction.emoji}`}
                     >
                       <span>{reaction.emoji}</span>
@@ -342,7 +327,7 @@ export function MessageRow({
                   <Tooltip content="Reply">
                     <IconButton
                       label="Reply"
-                      onClick={() => setReplyingToMessage(message)}
+                      onClick={() => actions.setReplyingToMessage(message)}
                     >
                       <Reply size={14} aria-hidden="true" />
                     </IconButton>
@@ -351,7 +336,7 @@ export function MessageRow({
                     <IconButton
                       label={isPinned ? 'Unpin message' : 'Pin message'}
                       className={isPinned ? styles.selected : ''}
-                      onClick={() => void togglePinnedMessage(message)}
+                      onClick={() => void actions.togglePinned(message)}
                     >
                       <Pin size={14} aria-hidden="true" />
                     </IconButton>
@@ -361,7 +346,7 @@ export function MessageRow({
                       <button
                         key={emoji}
                         type="button"
-                        onClick={() => void toggleReaction(message, emoji)}
+                        onClick={() => void actions.toggleReaction(message, emoji)}
                       >
                         {emoji}
                       </button>
@@ -380,7 +365,7 @@ export function MessageRow({
                               type="button"
                               onClick={() => {
                                 setIsEmojiOpen(false);
-                                void toggleReaction(message, emoji);
+                                void actions.toggleReaction(message, emoji);
                               }}
                             >
                               {emoji}
@@ -396,8 +381,8 @@ export function MessageRow({
                         <IconButton
                           label="Edit message"
                           onClick={() => {
-                            setEditingMessageId(message.id);
-                            setEditingDraft(message.content);
+                            actions.setEditingMessageId(message.id);
+                            actions.setEditingDraft(message.content);
                           }}
                         >
                           <Edit3 size={14} aria-hidden="true" />
@@ -407,7 +392,7 @@ export function MessageRow({
                         <IconButton
                           label="Delete message"
                           variant="danger"
-                          onClick={() => void deleteMessage(message.id)}
+                          onClick={() => void actions.delete(message.id)}
                         >
                           <Trash2 size={14} aria-hidden="true" />
                         </IconButton>
@@ -422,10 +407,10 @@ export function MessageRow({
 
         {!message.deletedAt && (
           <ContextMenuContent>
-            <ContextMenuItem onClick={() => setReplyingToMessage(message)}>
+            <ContextMenuItem onClick={() => actions.setReplyingToMessage(message)}>
               <Reply size={14} aria-hidden="true" /> Reply
             </ContextMenuItem>
-            <ContextMenuItem onClick={() => void togglePinnedMessage(message)}>
+            <ContextMenuItem onClick={() => void actions.togglePinned(message)}>
               <Pin size={14} aria-hidden="true" /> {isPinned ? 'Unpin Message' : 'Pin Message'}
             </ContextMenuItem>
             <ContextMenuItem onClick={copyMessageContent}>
@@ -436,13 +421,13 @@ export function MessageRow({
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   onClick={() => {
-                    setEditingMessageId(message.id);
-                    setEditingDraft(message.content);
+                    actions.setEditingMessageId(message.id);
+                    actions.setEditingDraft(message.content);
                   }}
                 >
                   <Edit3 size={14} aria-hidden="true" /> Edit Message
                 </ContextMenuItem>
-                <ContextMenuItem variant="danger" onClick={() => void deleteMessage(message.id)}>
+                <ContextMenuItem variant="danger" onClick={() => void actions.delete(message.id)}>
                   <Trash2 size={14} aria-hidden="true" /> Delete Message
                 </ContextMenuItem>
               </>

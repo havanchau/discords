@@ -7,6 +7,39 @@
   background: transparent;
 }
 
+.channelIntro {
+  display: grid;
+  gap: var(--spacing-2);
+  margin: 128px var(--spacing-4) var(--spacing-5);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--background-modifier-accent);
+  color: var(--text-muted);
+}
+
+.channelIntroIcon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--interactive-active);
+  background: var(--background-accent);
+}
+
+.channelIntro strong {
+  color: var(--header-primary);
+  font-size: 30px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.15;
+}
+
+.channelIntro span {
+  max-width: 900px;
+  color: var(--header-secondary);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
 .statePanel {
   min-height: 200px;
   display: grid;

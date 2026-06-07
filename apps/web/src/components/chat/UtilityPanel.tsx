@@ -3,7 +3,7 @@ import { Pin } from 'lucide-react';
 import { Message } from '../../api';
 import { previewText } from '../../helpers';
 import { Button, TextField } from '../ui';
-import { ActivePanel } from '../ChatPanel';
+import type { ActivePanel } from './types';
 import styles from './UtilityPanel.module.css';
 
 interface UtilityPanelProps {

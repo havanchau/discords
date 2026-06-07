@@ -4,7 +4,7 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  border-left: 1px solid var(--border-subtle);
+  border-left: 0;
   background: var(--color-bg-sidebar);
 }
 
@@ -17,7 +17,8 @@
 .memberTitle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 6px;
   padding: 20px 8px 8px 16px;
   color: var(--color-text-muted);
   font-size: var(--font-size-label);
@@ -26,6 +27,13 @@
   letter-spacing: 0.02em;
   cursor: default;
   user-select: none;
+}
+
+.roleMarker {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  border-radius: var(--radius-full);
 }
 
 .memberList {
@@ -39,7 +47,7 @@
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 4px 8px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -49,6 +57,10 @@
   text-align: left;
   position: relative;
   width: 100%;
+}
+
+.member.member {
+  justify-content: stretch;
 }
 
 .member:hover {

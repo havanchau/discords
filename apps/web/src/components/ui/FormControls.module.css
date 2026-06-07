@@ -23,6 +23,28 @@
   padding: var(--spacing-2) var(--spacing-3);
 }
 
+.controlShell {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--spacing-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+}
+
+.leadingIcon {
+  display: grid;
+  place-items: center;
+  color: var(--interactive-normal);
+}
+
+.controlWithIcon {
+  min-width: 0;
+  background: transparent;
+  padding-left: 0;
+}
+
 .control::placeholder {
   color: var(--input-placeholder);
 }

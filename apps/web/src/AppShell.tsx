@@ -15,18 +15,11 @@ import { useDirectMessages } from './hooks/useDirectMessages';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
 import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
-import {
-  apiRequest,
-  assetUrl,
-  Channel,
-  Message,
-  ServerDetail,
-  ServerSummary,
-  uploadFile,
-} from './api';
+import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
 import { updateFaviconBadge } from './utils/faviconBadge';
+import type { ActiveDialog, ActivePanel } from './components/chat/types';
 
 export function AppShell() {
   const [servers, setServers] = useState<ServerSummary[]>([]);
@@ -47,11 +40,8 @@ export function AppShell() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState('');
   const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
-  const [activePanel, setActivePanel] = useState<'notifications' | 'search' | 'encryption' | null>(
-    null,
-  );
-  const [activeDialog, setActiveDialog] =
-    useState<'profile' | 'server-settings' | 'channel-settings' | 'roles' | 'member-roles' | null>(null);
+  const [activePanel, setActivePanel] = useState<ActivePanel>(null);
+  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [channelQuery, setChannelQuery] = useState('');
@@ -833,89 +823,108 @@ export function AppShell() {
           <TooltipProvider>
             <main className="app-shell">
               <WorkspaceSidebar
-                auth={auth}
-                servers={servers}
-                server={server}
-                channel={channel}
-                visibleTextChannels={visibleTextChannels}
-                visibleVoiceChannels={visibleVoiceChannels}
-                channelQuery={channelQuery}
-                inviteCode={inviteCode}
-                isLoadingServers={isLoadingServers}
-                pendingAction={pendingAction}
-                activeCalls={activeCalls}
-                channelBadges={channelBadges}
+                workspace={{
+                  auth,
+                  servers,
+                  server,
+                  channel,
+                  visibleTextChannels,
+                  visibleVoiceChannels,
+                  channelQuery,
+                  inviteCode,
+                  isLoadingServers,
+                  pendingAction,
+                  activeCalls,
+                  channelBadges,
+                }}
                 profileAvatarInputRef={profileAvatarInputRef}
-                openHome={openHome}
-                openServer={openServer}
-                createServer={createServer}
-                joinInvite={joinInvite}
-                createChannel={createChannel}
-                createInvite={createInvite}
-                updateProfileAvatar={updateProfileAvatar}
-                logout={logout}
-                setChannel={setChannel}
-                setChannelQuery={setChannelQuery}
-                setActiveDialog={setActiveDialog}
+                actions={{
+                  openHome,
+                  openServer,
+                  createServer,
+                  joinInvite,
+                  createChannel,
+                  createInvite,
+                  updateProfileAvatar,
+                  logout,
+                  setChannel,
+                  setChannelQuery,
+                  setActiveDialog,
+                }}
               />
 
               {server ? (
                 <>
                   <ChatPanel
-                    auth={auth}
-                    channel={channel}
-                    messages={messages}
-                    visibleMessages={visibleMessages}
-                    isLoadingMessages={isLoadingMessages}
-                    isLoadingMoreMessages={isLoadingMoreMessages}
-                    hasMoreMessages={Boolean(messageCursor)}
-                    workspaceError={workspaceError}
-                    workspaceNotice={workspaceNotice}
-                    callState={callState}
-                    activeCall={activeCall}
-                    remoteMedia={remoteMedia}
-                    activePanel={activePanel}
-                    activeDialog={activeDialog}
-                    searchQuery={searchQuery}
-                    isChannelEncrypted={channel ? Boolean(channelKeys[channel.id]) : false}
-                    typingUsers={typingUsers}
-                    pinnedMessages={pinnedMessages}
-                    pinnedMessageIds={channel ? (pinnedMessageIds[channel.id] ?? []) : []}
-                    replyingToMessage={replyingToMessage}
-                    selectedFiles={selectedFiles}
-                    isRecordingVoice={isRecordingVoice}
-                    pendingAction={pendingAction}
-                    editingMessageId={editingMessageId}
-                    editingDraft={editingDraft}
-                    channelAvatarInputRef={channelAvatarInputRef}
-                    localVideoRef={localVideoRef}
-                    fileInputRef={fileInputRef}
-                    setActiveDialog={setActiveDialog}
-                    setActivePanel={setActivePanel}
-                    setSearchQuery={setSearchQuery}
-                    setWorkspaceError={setWorkspaceError}
-                    setWorkspaceNotice={setWorkspaceNotice}
-                    configureChannelEncryption={configureChannelEncryption}
-                    clearChannelEncryption={clearChannelEncryption}
-                    setReplyingToMessage={setReplyingToMessage}
-                    setEditingMessageId={setEditingMessageId}
-                    setEditingDraft={setEditingDraft}
-                    updateChannelAvatar={updateChannelAvatar}
-                    startCall={startCall}
-                    toggleMute={toggleMute}
-                    toggleCamera={toggleCamera}
-                    endCall={endCall}
-                    saveMessageEdit={saveMessageEdit}
-                    deleteMessage={deleteMessage}
-                    toggleReaction={toggleReaction}
-                    togglePinnedMessage={togglePinnedMessage}
-                    loadMoreMessages={loadMoreMessages}
-                    sendMessage={sendMessage}
-                    startVoiceRecording={startVoiceRecording}
-                    stopVoiceRecording={stopVoiceRecording}
-                    removeSelectedFile={removeSelectedFile}
-                    selectFiles={selectFiles}
-                    handleComposerInput={handleComposerInput}
+                    session={{ auth, channel }}
+                    messages={{
+                      all: messages,
+                      visible: visibleMessages,
+                      isLoading: isLoadingMessages,
+                      isLoadingMore: isLoadingMoreMessages,
+                      hasMore: Boolean(messageCursor),
+                      typingUsers,
+                      pinned: pinnedMessages,
+                      pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
+                      searchQuery,
+                      loadMore: loadMoreMessages,
+                    }}
+                    alerts={{
+                      error: workspaceError,
+                      notice: workspaceNotice,
+                      setError: setWorkspaceError,
+                      setNotice: setWorkspaceNotice,
+                    }}
+                    panels={{
+                      activePanel,
+                      activeDialog,
+                      setActivePanel,
+                      setActiveDialog,
+                      setSearchQuery,
+                    }}
+                    encryption={{
+                      isChannelEncrypted: channel ? Boolean(channelKeys[channel.id]) : false,
+                      configure: configureChannelEncryption,
+                      clear: clearChannelEncryption,
+                    }}
+                    call={{
+                      state: callState,
+                      active: activeCall,
+                      remoteMedia,
+                      localVideoRef,
+                      start: startCall,
+                      toggleMute,
+                      toggleCamera,
+                      end: endCall,
+                    }}
+                    messageActions={{
+                      editingMessageId,
+                      editingDraft,
+                      setReplyingToMessage,
+                      setEditingMessageId,
+                      setEditingDraft,
+                      saveEdit: saveMessageEdit,
+                      delete: deleteMessage,
+                      toggleReaction,
+                      togglePinned: togglePinnedMessage,
+                    }}
+                    composer={{
+                      replyingToMessage,
+                      selectedFiles,
+                      isRecordingVoice,
+                      pendingAction,
+                      fileInputRef,
+                      sendMessage,
+                      startVoiceRecording,
+                      stopVoiceRecording,
+                      removeSelectedFile,
+                      selectFiles,
+                      handleInput: handleComposerInput,
+                    }}
+                    channelAvatar={{
+                      inputRef: channelAvatarInputRef,
+                      update: updateChannelAvatar,
+                    }}
                   />
 
                   <MemberSidebar
@@ -933,44 +942,50 @@ export function AppShell() {
                 </>
               ) : (
                 <HomePanel
-                  auth={auth}
-                  friendsSummary={friendsSummary}
-                  conversations={directConversations}
-                  activeConversation={activeConversation}
-                  directMessages={directMessages}
-                  pendingAction={pendingAction}
-                  requestFriend={requestFriend}
-                  respondFriendRequest={respondFriendRequest}
-                  openDirectConversation={openDirectConversation}
-                  startDirectConversation={startDirectConversation}
-                  sendDirectMessage={sendDirectMessage}
+                  home={{
+                    auth,
+                    friendsSummary,
+                    conversations: directConversations,
+                    activeConversation,
+                    directMessages,
+                    pendingAction,
+                  }}
+                  actions={{
+                    requestFriend,
+                    respondFriendRequest,
+                    openDirectConversation,
+                    startDirectConversation,
+                    sendDirectMessage,
+                  }}
                 />
               )}
 
               <SettingsModal
-                activeDialog={activeDialog}
-                auth={auth}
-                server={server}
-                channel={channel}
-                selectedMember={selectedMember}
-                channelOverrides={channelOverrides}
-                auditLogs={auditLogs}
-                notificationPreferences={notificationPreferences}
-                pendingAction={pendingAction}
-                uiTheme={uiTheme}
-                profileAvatarInputRef={profileAvatarInputRef}
-                channelAvatarInputRef={channelAvatarInputRef}
-                setActiveDialog={setActiveDialog}
-                setUiTheme={setUiTheme}
-                updateProfile={updateProfile}
-                updateNotificationPreference={updateNotificationPreference}
-                updateServerSettings={updateServerSettings}
-                updateChannelSettings={updateChannelSettings}
-                toggleChannelRoleOverride={toggleChannelRoleOverride}
-                createRole={createRole}
-                toggleRolePermission={toggleRolePermission}
-                deleteRole={deleteRole}
-                toggleMemberRole={toggleMemberRole}
+                dialog={{ activeDialog, setActiveDialog }}
+                data={{
+                  auth,
+                  server,
+                  channel,
+                  selectedMember,
+                  channelOverrides,
+                  auditLogs,
+                  notificationPreferences,
+                  pendingAction,
+                }}
+                refs={{ profileAvatarInputRef, channelAvatarInputRef }}
+                theme={{ uiTheme }}
+                actions={{
+                  setUiTheme,
+                  updateProfile,
+                  updateNotificationPreference,
+                  updateServerSettings,
+                  updateChannelSettings,
+                  toggleChannelRoleOverride,
+                  createRole,
+                  toggleRolePermission,
+                  deleteRole,
+                  toggleMemberRole,
+                }}
               />
             </main>
           </TooltipProvider>

@@ -66,6 +66,7 @@ Define these tokens before any component work begins. All component CSS Modules 
 - Every implementation task must start with a truthful checklist.
 - No source file may exceed **1000 lines** after the refactor. If a file would exceed 1000 lines, split it into focused modules before continuing.
 - **Do not split files mechanically just to satisfy line limits.** Each extracted module must have a clear responsibility and must not create excessive prop drilling. If a split component would need more than 15 props, reconsider whether a hook, context, or composition pattern is more appropriate.
+- Component public props must stay at **10 props or fewer**. If a component needs more, group inputs by domain (`session`, `messages`, `actions`, `call`, `composer`) or move ownership into a focused child/hook instead of passing unrelated parent state downward.
 - `AppShell.tsx`, `ChatPanel.tsx`, `SettingsModal.tsx`, `WorkspaceSidebar.tsx`, and `styles.css` must all be reduced below 1000 lines.
 - Install UI dependencies per phase only when they are used in that phase.
 - Keep global CSS limited to tokens, base reset, app-shell grid, and shared browser defaults.
@@ -218,14 +219,14 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 ### Phase 5: Settings, Roles, Forms, And Preferences
 
 - [x] Rebuild `SettingsModal` with Radix `Dialog`.
-- [ ] Reduce `SettingsModal.tsx` below 1000 lines by splitting: profile, server, channel, roles, member roles, notifications sections.
+- [x] Reduce `SettingsModal.tsx` below 1000 lines by splitting: profile, server, channel, roles, member roles, notifications sections.
 - [ ] Use Radix `Tabs` **only if it does not force a browser-tab visual style**. Prefer a Discord-like left vertical settings nav if it better matches the target UI.
 - [x] Replace raw `<select>` controls with shared Radix menu-backed settings pickers.
-- [ ] Replace raw checkboxes and switches with Radix `Checkbox` and `Switch`.
-- [ ] Replace form buttons, inputs, and textarea with shared UI primitives.
-- [ ] Keep role permission grids dense and readable.
+- [x] Replace raw checkboxes and switches with Radix `Checkbox` and `Switch`.
+- [x] Replace form buttons, inputs, and textarea with shared UI primitives.
+- [x] Keep role permission grids dense and readable.
 - [ ] Verify modal focus trap, escape close, overlay click behavior, and focus restore.
-- [ ] Preserve all existing submit handlers and API behavior.
+- [x] Preserve all existing submit handlers and API behavior.
 - [ ] Run minimum merge checks. Compare after screenshots with before.
 
 ---

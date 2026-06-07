@@ -297,36 +297,247 @@ textarea:disabled {
 .auth-screen {
   position: relative;
   min-height: 100vh;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(420px, 0.85fr);
   align-items: center;
-  justify-content: center;
-  padding: 20px;
+  padding: 0;
   overflow: hidden;
-  background: var(--bg-tertiary);
+  background:
+    radial-gradient(circle at 18% 20%, rgba(0, 168, 252, 0.22), transparent 28%),
+    radial-gradient(circle at 42% 62%, rgba(88, 101, 242, 0.28), transparent 34%),
+    linear-gradient(120deg, #161138 0%, #190735 46%, #11001f 100%);
 }
 
 .auth-screen::before {
-  content: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.82) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.44) 0 1px, transparent 1.5px);
+  background-position:
+    0 0,
+    32px 44px;
+  background-size:
+    82px 82px,
+    126px 126px;
+  opacity: 0.56;
 }
 
 .auth-screen::after {
-  content: none;
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.28));
+}
+
+.auth-illustration {
+  position: relative;
+  min-height: 100vh;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.auth-logo {
+  position: absolute;
+  top: 36px;
+  left: 52px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  color: var(--interactive-active);
+}
+
+.auth-logo-mark {
+  width: 30px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 3px solid currentColor;
+  border-left: 0;
+  border-right: 0;
+  font-size: 0;
+  transform: skewX(-12deg);
+}
+
+.auth-logo strong,
+.auth-logo small {
+  display: block;
+  line-height: 1;
+}
+
+.auth-logo strong {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.auth-logo small {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+}
+
+.space-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.planet,
+.meteor,
+.star {
+  position: absolute;
+  display: block;
+}
+
+.planet-large {
+  width: 560px;
+  height: 560px;
+  left: -84px;
+  top: -132px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.22), transparent 0 16%, rgba(0, 168, 252, 0.35) 17% 36%, transparent 37%),
+    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.34), transparent 0 20%, rgba(0, 168, 252, 0.54) 21% 58%, rgba(88, 101, 242, 0.32) 59% 100%);
+  opacity: 0.95;
+}
+
+.planet-large::before,
+.planet-orbit::before {
+  content: '';
+  position: absolute;
+  inset: 16%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-18deg) scaleX(1.8);
+}
+
+.planet-small {
+  width: 178px;
+  height: 178px;
+  left: 58%;
+  top: 36%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 72% 76%, rgba(255, 255, 255, 0.24), transparent 0 18%, rgba(88, 101, 242, 0.34) 19% 38%, transparent 39%),
+    radial-gradient(circle at 38% 30%, rgba(255, 255, 255, 0.84), rgba(177, 142, 226, 0.8) 44%, rgba(88, 101, 242, 0.46) 100%);
+}
+
+.planet-orbit {
+  width: 250px;
+  height: 250px;
+  left: 5%;
+  bottom: 20%;
+  border-radius: 42%;
+  background:
+    radial-gradient(circle at 65% 32%, rgba(255, 255, 255, 0.18), transparent 0 24%, rgba(88, 101, 242, 0.24) 25% 54%, transparent 55%),
+    rgba(56, 18, 86, 0.62);
+}
+
+.meteor {
+  width: 2px;
+  height: 170px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), transparent);
+  opacity: 0.58;
+  transform: rotate(-39deg);
+}
+
+.meteor-one {
+  right: 12%;
+  top: 16%;
+}
+
+.meteor-two {
+  left: 48%;
+  bottom: 12%;
+  height: 128px;
+}
+
+.star {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--interactive-active);
+}
+
+.star::before,
+.star::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  background: linear-gradient(90deg, transparent 45%, currentColor 47% 53%, transparent 55%);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.star::after {
+  transform: rotate(90deg);
+}
+
+.star-one {
+  left: 15%;
+  bottom: 32%;
+}
+
+.star-two {
+  left: 76%;
+  top: 12%;
+}
+
+.star-three {
+  right: 18%;
+  bottom: 24%;
+}
+
+.auth-adventure-copy {
+  position: absolute;
+  left: 64px;
+  bottom: 52px;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  color: var(--interactive-active);
+  font-weight: 900;
+  line-height: 0.96;
+  letter-spacing: 0;
+}
+
+.auth-adventure-copy strong,
+.auth-adventure-copy span {
+  display: block;
+  font-size: clamp(34px, 4.2vw, 54px);
+}
+
+.auth-adventure-copy span {
+  color: var(--brand-500);
 }
 
 .auth-panel {
   position: relative;
   z-index: 1;
-  width: min(440px, 100%);
-  padding: 28px 30px 30px;
-  border-radius: 5px;
-  background: var(--bg-primary);
-  box-shadow: var(--elevation-high);
+  width: 100%;
+  min-height: 100vh;
+  justify-self: center;
+  display: grid;
+  align-content: center;
+  gap: 24px;
+  padding: 64px min(7vw, 68px);
+  border-radius: 0;
+  background: rgba(17, 0, 31, 0.9);
   animation: auth-panel-in 0.22s ease-out both;
 }
 
 .brand-lockup {
-  text-align: center;
-  margin-bottom: 2px;
+  text-align: left;
+  margin-bottom: 0;
 }
 
 .brand-mark {
@@ -335,19 +546,22 @@ textarea:disabled {
 
 .auth-panel h1 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--header-primary);
-  text-align: center;
-  line-height: 1.18;
+  color: var(--interactive-active);
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: left;
+  text-transform: uppercase;
 }
 
 .auth-panel p {
-  margin: 7px 0 0;
-  color: var(--header-secondary);
-  font-size: 14px;
+  margin: 28px 0 0;
+  color: var(--interactive-active);
+  font-size: 16px;
+  font-weight: 800;
   line-height: 1.35;
-  text-align: center;
+  text-align: left;
 }
 
 .form-hint,
@@ -368,31 +582,31 @@ textarea:disabled {
 
 .verify-box {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--background-modifier-accent);
+  gap: 12px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
-  margin: 18px 0;
+  gap: 8px;
+  margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 3px;
-  background: transparent;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .segmented button {
-  min-height: 36px;
+  min-height: 40px;
   border: 0;
-  border-radius: 3px;
-  color: var(--interactive-normal);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.72);
   background: transparent;
-  font-weight: 500;
-  font-size: 13px;
+  font-weight: 800;
+  font-size: 14px;
   position: relative;
 }
 
@@ -409,16 +623,16 @@ textarea:disabled {
 }
 
 .segmented button:hover {
-  color: var(--interactive-hover);
+  color: var(--interactive-active);
 }
 
 .segmented .active {
   color: var(--interactive-active);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .segmented .active::after {
-  background: var(--brand-500);
+  background: transparent;
 }
 
 .primary {
@@ -446,20 +660,43 @@ textarea:disabled {
 
 .stack {
   display: grid;
-  gap: 15px;
+  gap: 16px;
 }
 
-.auth-panel label {
-  gap: 7px;
-  font-size: 11px;
-  letter-spacing: 0.03em;
+.auth-field label {
+  gap: 10px;
+  color: var(--interactive-active);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.auth-input-shell {
+  height: 40px;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(64, 31, 103, 0.58);
+}
+
+.auth-input-shell:focus-within {
+  outline: 2px solid rgba(255, 255, 255, 0.24);
+  outline-offset: 2px;
 }
 
 .auth-panel input {
-  height: 36px;
-  padding: 8px 10px;
-  font-size: 13px;
-  font-weight: 500;
+  height: 34px;
+  padding: 0;
+  color: var(--interactive-active);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 20px;
 }
 
@@ -468,17 +705,82 @@ textarea:disabled {
 .auth-panel input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--text-normal);
   caret-color: var(--text-normal);
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: 0 0 0 1000px var(--input-background) inset;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 0 0 1000px rgb(49, 24, 80) inset;
   transition: background-color 9999s ease-out;
 }
 
-.auth-panel .primary {
+.auth-submit {
   min-height: 40px;
-  font-size: 14px;
-  font-weight: 600;
-  margin-top: 4px;
+  border-radius: 10px;
+  background: linear-gradient(100deg, var(--brand-560), rgba(0, 168, 252, 0.64));
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.auth-submit:hover {
+  background: linear-gradient(100deg, var(--brand-500), rgba(0, 168, 252, 0.74));
+}
+
+.auth-divider {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.auth-divider::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.social-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.social-row button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--interactive-active);
+  background: rgba(84, 50, 126, 0.72);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.social-row button:disabled {
+  opacity: 0.72;
+}
+
+.google-mark {
+  color: var(--text-link);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.facebook-mark {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--interactive-active);
+  background: var(--text-link);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 label {

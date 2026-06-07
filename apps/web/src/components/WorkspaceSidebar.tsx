@@ -36,7 +36,7 @@ export interface ChannelBadgeState {
   mentions: number;
 }
 
-interface WorkspaceSidebarProps {
+interface WorkspaceSidebarState {
   auth: AuthState;
   servers: ServerSummary[];
   server: ServerDetail | null;
@@ -49,7 +49,9 @@ interface WorkspaceSidebarProps {
   pendingAction: string | null;
   activeCalls: Record<string, ActiveCallSummary>;
   channelBadges: Record<string, ChannelBadgeState>;
-  profileAvatarInputRef: RefObject<HTMLInputElement | null>;
+}
+
+interface WorkspaceSidebarActions {
   openHome: () => void;
   openServer: (serverId: string) => Promise<void>;
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -63,20 +65,32 @@ interface WorkspaceSidebarProps {
   setActiveDialog: (dialog: ActiveDialog) => void;
 }
 
+interface WorkspaceSidebarProps {
+  workspace: WorkspaceSidebarState;
+  profileAvatarInputRef: RefObject<HTMLInputElement | null>;
+  actions: WorkspaceSidebarActions;
+}
+
 export function WorkspaceSidebar({
-  auth,
-  servers,
-  server,
-  channel,
-  visibleTextChannels,
-  visibleVoiceChannels,
-  channelQuery,
-  inviteCode,
-  isLoadingServers,
-  pendingAction,
-  activeCalls,
-  channelBadges,
+  workspace,
   profileAvatarInputRef,
+  actions,
+}: WorkspaceSidebarProps) {
+  const {
+    auth,
+    servers,
+    server,
+    channel,
+    visibleTextChannels,
+    visibleVoiceChannels,
+    channelQuery,
+    inviteCode,
+    isLoadingServers,
+    pendingAction,
+    activeCalls,
+    channelBadges,
+  } = workspace;
+  const {
   openHome,
   openServer,
   createServer,
@@ -88,7 +102,7 @@ export function WorkspaceSidebar({
   setChannel,
   setChannelQuery,
   setActiveDialog,
-}: WorkspaceSidebarProps) {
+  } = actions;
   const [serverAction, setServerAction] = useState<'create' | 'join' | null>(null);
   const [channelCreateType, setChannelCreateType] = useState<'TEXT' | 'VOICE' | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -112,19 +126,19 @@ export function WorkspaceSidebar({
     <>
       <aside className={cn(styles.serverRail, 'server-rail')} aria-label="Servers">
         <Tooltip content="Direct Messages" side="right">
-          <button
+          <Button
             type="button"
             className={cn(styles.serverButton, styles.serverHome, !server && styles.serverButtonActive)}
             aria-current={!server ? 'page' : undefined}
             onClick={openHome}
           >
             <MessageSquare size={20} aria-hidden="true" />
-          </button>
+          </Button>
         </Tooltip>
         <div className={styles.railDivider} />
         {servers.map((item) => (
           <Tooltip key={item.id} content={item.name} side="right">
-            <button
+            <Button
               type="button"
               className={cn(styles.serverButton, server?.id === item.id && styles.serverButtonActive)}
               aria-label={item.name}
@@ -132,18 +146,18 @@ export function WorkspaceSidebar({
               onClick={() => void openServer(item.id)}
             >
               {initials(item.name)}
-            </button>
+            </Button>
           </Tooltip>
         ))}
         <Tooltip content="Add a Server" side="right">
-          <button
+          <Button
             type="button"
             className={cn(styles.serverButton, styles.serverAdd)}
             aria-label="Add a Server"
             onClick={() => setServerAction('create')}
           >
             <Plus size={24} aria-hidden="true" />
-          </button>
+          </Button>
         </Tooltip>
       </aside>
 
@@ -155,10 +169,10 @@ export function WorkspaceSidebar({
           {server ? (
             <DropdownMenuRoot>
               <DropdownMenuTrigger asChild>
-                <button type="button" className={styles.serverDropdownButton}>
+                <Button type="button" variant="ghost" className={styles.serverDropdownButton}>
                   <strong>{server.name}</strong>
                   <ChevronDown size={16} aria-hidden="true" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="bottom">
                 <DropdownMenuItem onSelect={() => setActiveDialog('server-settings')}>
@@ -185,10 +199,10 @@ export function WorkspaceSidebar({
               </DropdownMenuContent>
             </DropdownMenuRoot>
           ) : (
-            <button type="button" className={styles.homeButton} onClick={openHome}>
+            <Button type="button" variant="ghost" className={styles.homeButton} onClick={openHome}>
               <MessageSquare size={18} aria-hidden="true" />
               <strong>Direct Messages</strong>
-            </button>
+            </Button>
           )}
           {isLoadingServers ? (
             <Loader2 className="spin" size={16} aria-hidden="true" />
@@ -204,18 +218,29 @@ export function WorkspaceSidebar({
           ) : null}
         </div>
 
+        {server ? (
+          <div className={styles.serverBanner} aria-hidden="true">
+            <div>
+              <strong>{server.name}</strong>
+              <span>Public</span>
+            </div>
+            <i />
+            <b />
+          </div>
+        ) : null}
+
         <div className={styles.sidebarScroll}>
           {server ? (
             <>
-              <div className={cn(styles.channelSearch, isSearchOpen && styles.channelSearchOpen)}>
-                <Search size={14} aria-hidden="true" />
-                <input
-                  value={channelQuery}
-                  onChange={(event) => setChannelQuery(event.target.value)}
-                  placeholder="Find channel"
-                  aria-label="Find channel"
-                />
-              </div>
+              <TextField
+                fieldClassName={styles.channelSearchField}
+                shellClassName={cn(styles.channelSearch, isSearchOpen && styles.channelSearchOpen)}
+                value={channelQuery}
+                onChange={(event) => setChannelQuery(event.target.value)}
+                placeholder="Browse Channels"
+                aria-label="Browse channels"
+                leadingIcon={<Search size={14} aria-hidden="true" />}
+              />
 
               <ChannelGroup
                 title="Text Channels"
@@ -277,7 +302,7 @@ export function WorkspaceSidebar({
             accept="image/*"
             onChange={updateProfileAvatar}
           />
-          <button
+          <Button
             type="button"
             className={styles.avatarButton}
             onClick={() => profileAvatarInputRef.current?.click()}
@@ -291,7 +316,7 @@ export function WorkspaceSidebar({
                 {initials(auth.user.displayName)}
               </span>
             )}
-          </button>
+          </Button>
           <div>
             <strong>{auth.user.displayName}</strong>
             <span>@{auth.user.username}</span>
@@ -435,7 +460,7 @@ function ChannelRow({ channel, icon, active, muted, badge, activeCall, onClick }
     : null;
 
   return (
-    <button
+    <Button
       type="button"
       className={cn(styles.channelRow, active && styles.channelRowActive, muted && styles.channelRowMuted)}
       aria-current={active ? 'page' : undefined}
@@ -450,6 +475,6 @@ function ChannelRow({ channel, icon, active, muted, badge, activeCall, onClick }
       ) : badge?.count ? (
         <span className={styles.unreadDot} aria-label={`${badge.count} unread messages`} />
       ) : null}
-    </button>
+    </Button>
   );
 }

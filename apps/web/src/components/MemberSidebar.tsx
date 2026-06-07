@@ -2,6 +2,7 @@ import { ServerDetail } from '../api';
 import { accentClass, initials } from '../helpers';
 import {
   Avatar,
+  Button,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuRoot,
@@ -24,7 +25,7 @@ interface MemberSidebarProps {
 export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, server }: MemberSidebarProps) {
   if (!server) {
     return (
-      <aside className={styles.memberSidebar}>
+      <aside className={cn(styles.memberSidebar, 'member-sidebar')}>
         <div className={styles.emptyNote}>No server selected.</div>
       </aside>
     );
@@ -70,11 +71,14 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
   ].filter((g) => g.members.length > 0);
 
   return (
-    <aside className={styles.memberSidebar}>
+    <aside className={cn(styles.memberSidebar, 'member-sidebar')}>
       {groups.map((group) => (
         <section key={group.label} className={styles.memberGroup}>
           <div className={styles.memberTitle}>
-            {group.label} — {group.members.length}
+            {'color' in group && group.color ? (
+              <span className={styles.roleMarker} style={{ backgroundColor: group.color }} />
+            ) : null}
+            <span>{group.label} - {group.members.length}</span>
           </div>
           <div className={styles.memberList}>
             {group.members.map((member) => {
@@ -86,8 +90,9 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
                   <ContextMenuTrigger>
                     <PopoverRoot>
                       <PopoverTrigger asChild>
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
                           className={styles.member}
                           title={`View profile of ${member.user.displayName}`}
                         >
@@ -114,7 +119,7 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
                               {member.kind === 'OWNER' ? 'Owner' : member.user.status || 'Member'}
                             </span>
                           </div>
-                        </button>
+                        </Button>
                       </PopoverTrigger>
                       <PopoverContent side="left" align="start" className={styles.popoverContent}>
                         <div className={styles.popoverBanner} />

@@ -8,3 +8,4 @@ export { DropdownMenuContent, DropdownMenuItem, DropdownMenuRoot, DropdownMenuSe
 export { Toast, ToastProvider, ToastViewport, type ToastMessage } from './Toast';
 export { Tooltip, TooltipProvider, type TooltipProps } from './Tooltip';
 export { PopoverContent, PopoverRoot, PopoverTrigger, PopoverClose } from './Popover';
+export { Checkbox, Switch } from './SelectionControls';

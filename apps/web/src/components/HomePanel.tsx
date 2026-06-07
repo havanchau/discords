@@ -4,36 +4,27 @@ import type { HomePanelProps } from './home/types';
 import styles from './home/HomePanel.module.css';
 
 export function HomePanel({
-  auth,
-  friendsSummary,
-  conversations,
-  activeConversation,
-  directMessages,
-  pendingAction,
-  requestFriend,
-  respondFriendRequest,
-  openDirectConversation,
-  startDirectConversation,
-  sendDirectMessage,
+  home,
+  actions,
 }: HomePanelProps) {
   return (
     <section className={styles.panel}>
       <HomeSidebar
-        friendsSummary={friendsSummary}
-        conversations={conversations}
-        activeConversationId={activeConversation?.id}
-        pendingAction={pendingAction}
-        onRequestFriend={requestFriend}
-        onRespondFriendRequest={respondFriendRequest}
-        onOpenDirectConversation={openDirectConversation}
-        onStartDirectConversation={startDirectConversation}
+        friendsSummary={home.friendsSummary}
+        conversations={home.conversations}
+        activeConversationId={home.activeConversation?.id}
+        pendingAction={home.pendingAction}
+        onRequestFriend={actions.requestFriend}
+        onRespondFriendRequest={actions.respondFriendRequest}
+        onOpenDirectConversation={actions.openDirectConversation}
+        onStartDirectConversation={actions.startDirectConversation}
       />
       <HomeDirectMessageView
-        auth={auth}
-        activeConversation={activeConversation}
-        directMessages={directMessages}
-        pendingAction={pendingAction}
-        onSendDirectMessage={sendDirectMessage}
+        auth={home.auth}
+        activeConversation={home.activeConversation}
+        directMessages={home.directMessages}
+        pendingAction={home.pendingAction}
+        onSendDirectMessage={actions.sendDirectMessage}
       />
     </section>
   );

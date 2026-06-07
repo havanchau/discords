@@ -1,6 +1,18 @@
 /* ===== Responsive ===== */
 
 @media (max-width: 1100px) {
+  .auth-screen {
+    grid-template-columns: minmax(0, 1fr) minmax(390px, 0.95fr);
+  }
+
+  .planet-large {
+    left: -170px;
+  }
+
+  .auth-adventure-copy {
+    left: 36px;
+  }
+
   .app-shell {
     grid-template-columns: 72px 240px minmax(0, 1fr);
   }
@@ -10,12 +22,175 @@
   }
 }
 
-@media (max-width: 720px) {
-  .auth-screen::before {
-    opacity: 0.14;
+@media (max-width: 900px) {
+  .auth-screen {
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+    padding: 0;
   }
 
-  .auth-screen::after {
+  .auth-illustration {
+    position: absolute;
+    inset: 0;
+    min-height: 100%;
+    opacity: 0.34;
+  }
+
+  .auth-logo,
+  .auth-adventure-copy,
+  .auth-divider,
+  .social-row {
+    display: none;
+  }
+
+  .planet-large {
+    width: 420px;
+    height: 420px;
+    left: -220px;
+    top: -118px;
+  }
+
+  .planet-small {
+    width: 150px;
+    height: 150px;
+    left: 62%;
+    top: 16%;
+  }
+
+  .planet-orbit {
+    width: 210px;
+    height: 210px;
+    left: 46%;
+    bottom: 6%;
+  }
+
+  .auth-panel {
+    width: 100%;
+    min-height: 100dvh;
+    align-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(17, 0, 31, 0.84);
+  }
+
+  .auth-panel p {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .segmented {
+    gap: 4px;
+    border-radius: 12px;
+  }
+
+  .segmented button {
+    min-height: 28px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+
+  .stack {
+    gap: 6px;
+  }
+
+  .auth-field label {
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .auth-input-shell {
+    height: 40px;
+    min-height: 40px;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: 7px;
+  }
+
+  .auth-input-shell svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .auth-panel input {
+    height: 34px;
+    font-size: 12px;
+  }
+
+  .form-hint,
+  .success-note,
+  .error {
+    margin: -2px 0 0;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .auth-submit {
+    min-height: 40px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-top: 0;
+  }
+
+  .verify-box {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-screen {
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  .auth-illustration {
+    position: absolute;
+    inset: 0;
+    min-height: 100%;
+    opacity: 0.38;
+  }
+
+  .auth-logo,
+  .auth-adventure-copy {
+    display: none;
+  }
+
+  .planet-large {
+    width: 430px;
+    height: 430px;
+    left: -210px;
+    top: -110px;
+  }
+
+  .planet-small {
+    left: 58%;
+    top: 14%;
+  }
+
+  .auth-panel {
+    width: 100%;
+    min-height: 100dvh;
+    padding: 12px 16px;
+    background: rgba(17, 0, 31, 0.86);
+  }
+
+  .auth-panel p {
+    margin-top: 6px;
+  }
+
+  .auth-input-shell {
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .auth-submit {
+    min-height: 40px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  .social-row {
     display: none;
   }
 

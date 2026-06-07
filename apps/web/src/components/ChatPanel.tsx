@@ -1,6 +1,4 @@
-import { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction, useEffect, useState } from 'react';
-import { AuthState, Channel, Message } from '../api';
-import { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../helpers';
+import { useEffect, useState } from 'react';
 import { ChatHeader } from './chat/ChatHeader';
 import { UtilityPanel } from './chat/UtilityPanel';
 import { CallStage } from './chat/CallStage';
@@ -9,253 +7,137 @@ import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { Button } from './ui';
-
-export type ActivePanel = 'notifications' | 'search' | 'encryption' | null;
-export type ActiveDialog =
-  | 'profile'
-  | 'server-settings'
-  | 'channel-settings'
-  | 'roles'
-  | 'member-roles'
-  | null;
+import type {
+  ActiveDialog,
+  ActivePanel,
+  ChatPanelAlerts,
+  ChatPanelCall,
+  ChatPanelChannelAvatar,
+  ChatPanelComposer,
+  ChatPanelEncryption,
+  ChatPanelMessageActions,
+  ChatPanelMessages,
+  ChatPanelPanels,
+  ChatPanelSession,
+} from './chat/types';
 
 export interface ChatPanelProps {
-  auth: AuthState;
-  channel: Channel | null;
-  messages: Message[];
-  visibleMessages: Message[];
-  isLoadingMessages: boolean;
-  isLoadingMoreMessages: boolean;
-  hasMoreMessages: boolean;
-  workspaceError: string | null;
-  workspaceNotice: string | null;
-  callState: CallState | null;
-  activeCall: ActiveCallSummary | null;
-  remoteMedia: RemoteMedia[];
-  activePanel: ActivePanel;
-  activeDialog: ActiveDialog;
-  searchQuery: string;
-  isChannelEncrypted: boolean;
-  typingUsers: Array<{ userId: string; displayName: string }>;
-  pinnedMessages: Message[];
-  pinnedMessageIds: string[];
-  replyingToMessage: Message | null;
-  selectedFiles: File[];
-  isRecordingVoice: boolean;
-  pendingAction: string | null;
-  editingMessageId: string | null;
-  editingDraft: string;
-  channelAvatarInputRef: RefObject<HTMLInputElement | null>;
-  localVideoRef: RefObject<HTMLVideoElement | null>;
-  fileInputRef: RefObject<HTMLInputElement | null>;
-  setActiveDialog: (dialog: ActiveDialog) => void;
-  setActivePanel: Dispatch<SetStateAction<ActivePanel>>;
-  setSearchQuery: (value: string) => void;
-  setWorkspaceError: (value: string | null) => void;
-  setWorkspaceNotice: (value: string | null) => void;
-  configureChannelEncryption: (passphrase: string) => Promise<void>;
-  clearChannelEncryption: () => void;
-  setReplyingToMessage: (message: Message | null) => void;
-  setEditingMessageId: (messageId: string | null) => void;
-  setEditingDraft: (draft: string) => void;
-  updateChannelAvatar: (event: ChangeEvent<HTMLInputElement>) => void;
-  startCall: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<void>;
-  toggleMute: () => void;
-  toggleCamera: () => void;
-  endCall: () => void;
-  saveMessageEdit: (messageId: string) => Promise<void>;
-  deleteMessage: (messageId: string) => Promise<void>;
-  toggleReaction: (message: Message, emoji: string) => Promise<void>;
-  togglePinnedMessage: (message: Message) => void;
-  loadMoreMessages: () => Promise<void>;
-  sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  startVoiceRecording: () => Promise<void>;
-  stopVoiceRecording: () => void;
-  removeSelectedFile: (index: number) => void;
-  selectFiles: (event: ChangeEvent<HTMLInputElement>) => void;
-  handleComposerInput: () => void;
+  session: ChatPanelSession;
+  messages: ChatPanelMessages;
+  alerts: ChatPanelAlerts;
+  panels: ChatPanelPanels;
+  encryption: ChatPanelEncryption;
+  call: ChatPanelCall;
+  messageActions: ChatPanelMessageActions;
+  composer: ChatPanelComposer;
+  channelAvatar: ChatPanelChannelAvatar;
 }
 
 export function ChatPanel({
-  auth,
-  channel,
+  session,
   messages,
-  visibleMessages,
-  isLoadingMessages,
-  isLoadingMoreMessages,
-  hasMoreMessages,
-  workspaceError,
-  workspaceNotice,
-  callState,
-  activeCall,
-  remoteMedia,
-  activePanel,
-  activeDialog,
-  searchQuery,
-  isChannelEncrypted,
-  typingUsers,
-  pinnedMessages,
-  pinnedMessageIds,
-  replyingToMessage,
-  selectedFiles,
-  isRecordingVoice,
-  pendingAction,
-  editingMessageId,
-  editingDraft,
-  channelAvatarInputRef,
-  localVideoRef,
-  fileInputRef,
-  setActiveDialog,
-  setActivePanel,
-  setSearchQuery,
-  setWorkspaceError,
-  setWorkspaceNotice,
-  configureChannelEncryption,
-  clearChannelEncryption,
-  setReplyingToMessage,
-  setEditingMessageId,
-  setEditingDraft,
-  updateChannelAvatar,
-  startCall,
-  toggleMute,
-  toggleCamera,
-  endCall,
-  saveMessageEdit,
-  deleteMessage,
-  toggleReaction,
-  togglePinnedMessage,
-  loadMoreMessages,
-  sendMessage,
-  startVoiceRecording,
-  stopVoiceRecording,
-  removeSelectedFile,
-  selectFiles,
-  handleComposerInput,
+  alerts,
+  panels,
+  encryption,
+  call,
+  messageActions,
+  composer,
+  channelAvatar,
 }: ChatPanelProps) {
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
   // Announce incoming messages to screen readers
-  const lastMessage = messages[messages.length - 1];
+  const lastMessage = messages.all[messages.all.length - 1];
   useEffect(() => {
-    if (lastMessage && !isLoadingMessages) {
+    if (lastMessage && !messages.isLoading) {
       setAnnouncement(
         `New message from ${lastMessage.author.displayName}: ${lastMessage.content || 'attachment'}`
       );
     }
-  }, [lastMessage?.id, isLoadingMessages]);
+  }, [lastMessage?.id, messages.isLoading]);
 
   return (
     <section className="chat-panel">
       <ChatHeader
-        channel={channel}
-        pendingAction={pendingAction}
-        callState={callState}
-        activeDialog={activeDialog}
-        activePanel={activePanel}
-        isChannelEncrypted={isChannelEncrypted}
-        channelAvatarInputRef={channelAvatarInputRef}
-        updateChannelAvatar={updateChannelAvatar}
-        startCall={startCall}
-        setActiveDialog={setActiveDialog}
-        setActivePanel={setActivePanel}
+        channel={session.channel}
+        pendingAction={composer.pendingAction}
+        callState={call.state}
+        panels={panels}
+        isChannelEncrypted={encryption.isChannelEncrypted}
+        channelAvatar={channelAvatar}
+        startCall={call.start}
       />
 
       <UtilityPanel
-        activePanel={activePanel}
-        searchQuery={searchQuery}
-        pinnedMessages={pinnedMessages}
-        isChannelEncrypted={isChannelEncrypted}
-        setSearchQuery={setSearchQuery}
-        configureChannelEncryption={configureChannelEncryption}
-        clearChannelEncryption={clearChannelEncryption}
+        activePanel={panels.activePanel}
+        searchQuery={messages.searchQuery}
+        pinnedMessages={messages.pinned}
+        isChannelEncrypted={encryption.isChannelEncrypted}
+        setSearchQuery={panels.setSearchQuery}
+        configureChannelEncryption={encryption.configure}
+        clearChannelEncryption={encryption.clear}
       />
 
-      {workspaceError && (
+      {alerts.error && (
         <div className="banner error-banner">
-          {workspaceError}
-          <Button variant="ghost" size="sm" onClick={() => setWorkspaceError(null)}>Dismiss</Button>
+          {alerts.error}
+          <Button variant="ghost" size="sm" onClick={() => alerts.setError(null)}>Dismiss</Button>
         </div>
       )}
 
-      {workspaceNotice && (
+      {alerts.notice && (
         <div className="banner notice-banner">
-          {workspaceNotice}
-          <Button variant="ghost" size="sm" onClick={() => setWorkspaceNotice(null)}>Dismiss</Button>
+          {alerts.notice}
+          <Button variant="ghost" size="sm" onClick={() => alerts.setNotice(null)}>Dismiss</Button>
         </div>
       )}
 
       <CallStage
-        auth={auth}
-        channel={channel}
-        activeCall={activeCall}
-        callState={callState}
-        remoteMedia={remoteMedia}
-        localVideoRef={localVideoRef}
-        startCall={startCall}
-        toggleMute={toggleMute}
-        toggleCamera={toggleCamera}
-        endCall={endCall}
+        session={session}
+        call={call}
       />
 
       <MessageList
-        channel={channel}
-        messages={messages}
-        visibleMessages={visibleMessages}
-        isLoadingMessages={isLoadingMessages}
-        isLoadingMoreMessages={isLoadingMoreMessages}
-        hasMoreMessages={hasMoreMessages}
-        searchQuery={searchQuery}
-        loadMoreMessages={loadMoreMessages}
+        channel={session.channel}
+        messages={messages.all}
+        visibleMessages={messages.visible}
+        isLoadingMessages={messages.isLoading}
+        isLoadingMoreMessages={messages.isLoadingMore}
+        hasMoreMessages={messages.hasMore}
+        searchQuery={messages.searchQuery}
+        loadMoreMessages={messages.loadMore}
       >
-        {visibleMessages.map((message, index) => (
+        {messages.visible.map((message, index) => (
           <MessageRow
             key={message.id}
             message={message}
-            previousMessage={visibleMessages[index - 1]}
-            auth={auth}
-            pinnedMessageIds={pinnedMessageIds}
-            editingMessageId={editingMessageId}
-            editingDraft={editingDraft}
-            setReplyingToMessage={setReplyingToMessage}
-            setEditingMessageId={setEditingMessageId}
-            setEditingDraft={setEditingDraft}
-            saveMessageEdit={saveMessageEdit}
-            deleteMessage={deleteMessage}
-            toggleReaction={toggleReaction}
-            togglePinnedMessage={togglePinnedMessage}
+            previousMessage={messages.visible[index - 1]}
+            auth={session.auth}
+            pinnedMessageIds={messages.pinnedIds}
+            actions={messageActions}
             onPreviewAttachment={setPreviewAttachment}
           />
         ))}
       </MessageList>
 
-      {typingUsers.length > 0 && (
+      {messages.typingUsers.length > 0 && (
         <div className="typing-indicator" aria-live="polite">
-          {typingUsers.length === 1
-            ? `${typingUsers[0].displayName} is typing...`
-            : `${typingUsers
+          {messages.typingUsers.length === 1
+            ? `${messages.typingUsers[0].displayName} is typing...`
+            : `${messages.typingUsers
                 .slice(0, 2)
                 .map((user) => user.displayName)
                 .join(
                   ', ',
-                )}${typingUsers.length > 2 ? ` and ${typingUsers.length - 2} more` : ''} are typing...`}
+                )}${messages.typingUsers.length > 2 ? ` and ${messages.typingUsers.length - 2} more` : ''} are typing...`}
         </div>
       )}
 
       <MessageComposer
-        channel={channel}
-        replyingToMessage={replyingToMessage}
-        selectedFiles={selectedFiles}
-        isRecordingVoice={isRecordingVoice}
-        pendingAction={pendingAction}
-        fileInputRef={fileInputRef}
-        setReplyingToMessage={setReplyingToMessage}
-        removeSelectedFile={removeSelectedFile}
-        selectFiles={selectFiles}
-        startVoiceRecording={startVoiceRecording}
-        stopVoiceRecording={stopVoiceRecording}
-        sendMessage={sendMessage}
-        handleComposerInput={handleComposerInput}
+        channel={session.channel}
+        messageActions={messageActions}
+        composer={composer}
       />
 
       <AttachmentPreviewDialog
@@ -281,3 +163,5 @@ export function ChatPanel({
     </section>
   );
 }
+
+export type { ActiveDialog, ActivePanel };
