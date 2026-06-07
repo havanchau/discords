@@ -225,6 +225,9 @@ Only begin after Phase 0A passes all checks. Goal: make `AppShell` manageable fo
 - [x] Replace raw checkboxes and switches with Radix `Checkbox` and `Switch`.
 - [x] Replace form buttons, inputs, and textarea with shared UI primitives.
 - [x] Keep role permission grids dense and readable.
+- [ ] Add a clear member role update flow: from member context menu, open a member-role editor, toggle roles for the selected user, show pending/success/error states, and update the local member role list after the API succeeds.
+- [ ] Improve the existing roles list UI so current roles are easier to scan: larger role rows, clearer role name/color/permission count hierarchy, visible member assignment entry point, and responsive spacing that still fits the Discord-like modal.
+- [ ] Make assigned roles in the member-role editor visually prominent enough to read at a glance, including disabled/default `@everyone` handling and long role-name truncation.
 - [ ] Verify modal focus trap, escape close, overlay click behavior, and focus restore.
 - [x] Preserve all existing submit handlers and API behavior.
 - [ ] Run minimum merge checks. Compare after screenshots with before.
