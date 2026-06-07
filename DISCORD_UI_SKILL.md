@@ -30,7 +30,7 @@ When to use it:
 - Fixing ugly or generic-looking components
 - Auditing screenshots for Discord accuracy
 - Fixing spacing, overflow, hierarchy, and responsive issues
-- After any frontend change, verify with desktop and mobile screenshots
+- For high-risk visual changes, optionally verify with desktop and mobile screenshots
 
 ---
 
@@ -42,7 +42,7 @@ Before implementing any UI task, create a task checklist.
 - Change an item to `- [x]` only after the exact work is complete and verified.
 - Never check an item that is pending, partially done, blocked, untested, or only visually assumed.
 - Keep the checklist updated as work progresses.
-- Include verification tasks for screenshots, accessibility, lint/typecheck, or build when relevant.
+- Include verification tasks for accessibility, lint/typecheck, build, and screenshots only when relevant.
 
 ---
 
@@ -464,7 +464,7 @@ After ANY UI change:
 5. Check that **server icons** use squircle→circle hover transition
 6. Check that **channel rows** are 34px with correct padding
 7. Check that **messages** are properly grouped with correct padding
-8. Verify at **desktop (1440px)** and **mobile (375px)** widths
+8. For layout-sensitive changes, verify desktop and mobile widths with the lightest reliable method available; screenshots are optional unless explicitly requested
 9. Run `npm run lint` and `npx tsc --noEmit`
 10. Confirm the implementation checklist is truthful: only completed work is checked
 

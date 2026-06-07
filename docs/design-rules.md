@@ -17,7 +17,7 @@ This skill is the right fit for:
 - Auditing screenshots and visible layout issues.
 - Improving spacing, hierarchy, density, empty states, loading states, and responsive behavior.
 - Keeping the UI consistent with the existing app shell instead of producing a generic landing-page look.
-- Verifying desktop and mobile views with browser screenshots after meaningful frontend changes.
+- Verifying desktop and mobile views when layout risk is high; browser screenshots are optional unless explicitly requested.
 - **Fixing any neon/cyberpunk/gradient styling that does not match Discord's warm dark palette.**
 
 For Discord-like UI work, pair `ui-polish` with the rules in `DISCORD_UI_SKILL.md` and this file.
@@ -543,7 +543,7 @@ The chat renderer should support the expected Discord-style subset:
 
 ### Pending UI Implementation Tasks
 
-- [ ] Audit the current web UI with desktop and mobile screenshots.
+- [ ] Audit the current web UI with desktop and mobile checks when layout risk is high.
 - [ ] Verify the four-region app shell: server rail, channel sidebar, chat area, and member sidebar.
 - [ ] Check that the active channel, unread channel, mention badge, and voice occupancy states are visually distinct.
 - [ ] Verify chat timeline states: loading skeleton, empty channel, grouped messages, hover actions, replies, reactions, pins, edits, deletes, and attachments.
@@ -552,7 +552,7 @@ The chat renderer should support the expected Discord-style subset:
 - [ ] Verify modal flows for settings, server actions, channel actions, invites, and role management.
 - [ ] Confirm all icon-only buttons have accessible labels or titles.
 - [ ] Confirm keyboard focus is visible and modal focus behavior is correct.
-- [ ] Run lint, typecheck, build, and UI smoke checks after visual changes.
+- [ ] Run lint, typecheck, build, and optional UI smoke checks when a visual change needs browser coverage.
 
 ### Pre-Ship Visual Checklist
 
