@@ -1,6 +1,6 @@
 # Discord Clone Feature Specification
 
-This document defines the product scope. It avoids implementation sequencing; delivery order lives in `IMPLEMENTATION_PLAN.md`.
+This document defines the product scope. It avoids implementation sequencing; delivery order lives in `implementation-plan.md`.
 
 ## Product Goal
 
@@ -155,7 +155,7 @@ Event names should be explicit and payloads should be typed in `packages/shared`
 
 ## UI Surfaces
 
-Detailed UI rules live in `docs/design-rules.md`.
+Detailed UI rules live in `design-rules.md`.
 
 - Auth screens.
 - Server rail.

@@ -1,4 +1,4 @@
-﻿# Agents Entry Point
+# Agents Entry Point
 
 Use `AGENT.md` as the canonical agent guide for this repository.
 

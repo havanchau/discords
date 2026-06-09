@@ -114,8 +114,8 @@ Current limits:
 
 - `RULE.md`: product invariants and backend rules.
 - `AGENT.md`: implementation guidance for AI or human coding agents.
-- `discord-clone-feature-spec.md`: product scope and feature checklist.
-- `IMPLEMENTATION_PLAN.md`: sprint plan and definition of done.
+- `docs/feature-spec.md`: product scope and feature checklist.
+- `docs/implementation-plan.md`: sprint plan and definition of done.
 - `docs/README.md`: documentation index.
 - `docs/architecture.md`: repository architecture and service boundaries.
 - `docs/security-check.md`: security checklist.
