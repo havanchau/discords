@@ -71,14 +71,14 @@ try {
     message
   );
   await page.waitForFunction(
-    () => document.body.innerText.includes('upload-smoke.txt') && document.querySelector('.link-preview'),
+    () => document.body.innerText.includes('upload-smoke.txt') && document.querySelector('[data-testid="link-preview"]'),
     { timeout: 10000 }
   );
   const firstMessage = await page.$('[data-testid="message"]');
   await firstMessage.hover();
-  await page.click('.quick-reactions button');
+  await page.click('[data-testid="quick-reaction"]');
   await page.waitForFunction(
-    () => [...document.querySelectorAll('.reaction-row button')].some((button) => button.textContent.includes('1')),
+    () => [...document.querySelectorAll('[data-testid="reaction-row"] button')].some((button) => button.textContent.includes('1')),
     { timeout: 10000 }
   );
   await firstMessage.hover();
@@ -88,7 +88,7 @@ try {
   await page.type('[data-testid="composer-input"]', replyMessage);
   await page.click('[data-testid="composer-send"]');
   await page.waitForFunction(
-    (text) => document.body.innerText.includes(text) && document.querySelector('.reply-preview'),
+    (text) => document.body.innerText.includes(text) && document.querySelector('[data-testid="reply-preview"]'),
     { timeout: 10000 },
     replyMessage
   );
@@ -96,7 +96,7 @@ try {
   await page.waitForSelector('[data-testid="call-stage"]', { timeout: 10000 });
 
   await page.click('[data-testid="search-button"]');
-  await page.waitForSelector('.utility-panel.open', { timeout: 5000 });
+  await page.waitForSelector('[data-testid="search-input"]', { timeout: 5000 });
   await page.screenshot({ path: path.join(screenshotDir, 'desktop-app.png'), fullPage: true });
 
   await page.setViewport({ width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 });

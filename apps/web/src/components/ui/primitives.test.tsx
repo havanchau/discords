@@ -91,6 +91,7 @@ describe('ui primitives', () => {
             </ContextMenuContent>
           </ContextMenuRoot>
           <Toast title="Saved" description="Your changes are live." />
+          <Toast title="Could not save" description="Try again." variant="error" />
           <ToastViewport />
         </ToastProvider>
       </TooltipProvider>
@@ -100,5 +101,6 @@ describe('ui primitives', () => {
     expect(screen.getByText('Body')).toBeInTheDocument();
     expect(screen.getByText('Message')).toBeInTheDocument();
     expect(screen.getByText('Saved')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dismiss notification', hidden: true })).toBeInTheDocument();
   });
 });

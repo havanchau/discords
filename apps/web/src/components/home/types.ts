@@ -13,6 +13,7 @@ export interface HomePanelState {
   conversations: DirectConversation[];
   activeConversation: DirectConversation | null;
   directMessages: DirectMessage[];
+  directMessageDraft: string;
   pendingAction: string | null;
 }
 
@@ -25,6 +26,7 @@ export interface HomePanelActions {
   openDirectConversation: (conversation: DirectConversation) => Promise<void>;
   startDirectConversation: (userId: string) => Promise<void>;
   sendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  setDirectMessageDraft: (value: string) => void;
 }
 
 export interface HomePanelProps {

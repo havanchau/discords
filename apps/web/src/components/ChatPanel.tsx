@@ -72,6 +72,7 @@ export function ChatPanel({
       <UtilityPanel
         activePanel={panels.activePanel}
         searchQuery={messages.searchQuery}
+        parsedSearch={messages.parsedSearch}
         pinnedMessages={messages.pinned}
         isChannelEncrypted={encryption.isChannelEncrypted}
         setSearchQuery={panels.setSearchQuery}

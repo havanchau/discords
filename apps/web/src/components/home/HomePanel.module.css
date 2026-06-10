@@ -284,4 +284,10 @@
     min-height: 160px;
     font-size: 14px;
   }
+
+  .composer {
+    grid-template-columns: minmax(0, 1fr) 72px;
+    gap: 8px;
+    padding: 10px 8px 16px;
+  }
 }

@@ -1,22 +1,37 @@
-import { Plus, ShieldCheck, Trash2 } from 'lucide-react';
-import { PERMISSION_OPTIONS } from '../../helpers';
-import { Button, IconButton, TextField } from '../ui';
+import { ChevronRight, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { assetUrl } from '../../api';
+import { accentClass, initials, PERMISSION_OPTIONS } from '../../helpers';
+import { Avatar, Badge, Button, IconButton, TextField } from '../ui';
 import { CheckRow } from './SettingsRows';
 import type { SettingsModalFields } from './types';
 
 type RolesSettingsProps = Pick<
   SettingsModalFields,
-  'createRole' | 'deleteRole' | 'pendingAction' | 'server' | 'toggleRolePermission'
+  | 'createRole'
+  | 'deleteRole'
+  | 'openMemberRoleEditor'
+  | 'pendingAction'
+  | 'selectedMember'
+  | 'server'
+  | 'toggleRolePermission'
 >;
 
 export function RolesSettings({
   createRole,
   deleteRole,
+  openMemberRoleEditor,
   pendingAction,
+  selectedMember,
   server,
   toggleRolePermission,
 }: RolesSettingsProps) {
   if (!server) return null;
+
+  const members = [...server.members].sort((left, right) => {
+    if (left.kind === 'OWNER' && right.kind !== 'OWNER') return -1;
+    if (left.kind !== 'OWNER' && right.kind === 'OWNER') return 1;
+    return left.user.displayName.localeCompare(right.user.displayName);
+  });
 
   return (
     <div className="settings-form roles-shell">
@@ -55,6 +70,9 @@ export function RolesSettings({
       <div className="role-list">
         {server.roles.map((role) => {
           const isEveryone = role.name === '@everyone';
+          const assignedMembers = server.members.filter((member) =>
+            member.roles?.some((item) => item.role.id === role.id),
+          );
           return (
             <section key={role.id} className="role-editor">
               <div className="role-editor-header">
@@ -67,9 +85,14 @@ export function RolesSettings({
                   </span>
                   <div>
                     <strong style={{ color: role.color || undefined }}>{role.name}</strong>
-                    <span>
-                      {isEveryone ? 'Default server role' : `${role.permissions.length} permissions`}
-                    </span>
+                    <div className="role-meta">
+                      <span>
+                        {isEveryone ? 'Default server role' : `${role.permissions.length} permissions`}
+                      </span>
+                      <Badge variant="neutral" className="role-meta-badge">
+                        {assignedMembers.length} member{assignedMembers.length === 1 ? '' : 's'}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 {!isEveryone ? (
@@ -104,6 +127,62 @@ export function RolesSettings({
           );
         })}
       </div>
+
+      <section className="settings-section role-members-section">
+        <div className="settings-section-heading">
+          <strong>Member role assignments</strong>
+          <span>Open a member editor to add or remove roles for specific users.</span>
+        </div>
+        <div className="member-role-entry-list">
+          {members.map((member) => {
+            const memberRoles = member.roles?.map(({ role }) => role).filter((role) => role.name !== '@everyone') ?? [];
+            const topRole = memberRoles.find((role) => role.color) ?? memberRoles[0];
+            const isSelected = selectedMember?.id === member.id;
+
+            return (
+              <Button
+                key={member.id}
+                variant={isSelected ? 'secondary' : 'ghost'}
+                className="member-role-entry"
+                onClick={() => openMemberRoleEditor(member.id)}
+              >
+                <div className="member-role-entryIdentity">
+                  <Avatar
+                    src={member.user.avatarUrl ? assetUrl(member.user.avatarUrl) : null}
+                    alt={member.user.displayName}
+                    fallback={initials(member.user.displayName)}
+                    size="md"
+                    className={accentClass(member.user.id)}
+                  />
+                  <div className="member-role-entryText">
+                    <strong style={topRole?.color ? { color: topRole.color } : undefined}>
+                      {member.user.displayName}
+                    </strong>
+                    <span>{member.kind === 'OWNER' ? 'Owner' : member.user.status || 'Member'}</span>
+                  </div>
+                </div>
+                <div className="member-role-entryMeta">
+                  <div className="member-role-chipRow">
+                    {memberRoles.length ? (
+                      memberRoles.slice(0, 3).map((role) => (
+                        <small key={role.id} className="member-role-chip" style={role.color ? { color: role.color } : undefined}>
+                          {role.name}
+                        </small>
+                      ))
+                    ) : (
+                      <small className="member-role-chip member-role-chipMuted">No extra roles</small>
+                    )}
+                  </div>
+                  <span className="member-role-entryAction">
+                    Edit roles
+                    <ChevronRight size={14} aria-hidden="true" />
+                  </span>
+                </div>
+              </Button>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

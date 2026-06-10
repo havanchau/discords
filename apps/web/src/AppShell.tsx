@@ -12,12 +12,14 @@ import { useChannelEncryption } from './hooks/useChannelEncryption';
 import { useChannelCall } from './hooks/useChannelCall';
 import { useComposerAttachments } from './hooks/useComposerAttachments';
 import { useDirectMessages } from './hooks/useDirectMessages';
+import { usePersistentDraft } from './hooks/usePersistentDrafts';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
 import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
 import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
+import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
 
@@ -27,9 +29,7 @@ export function AppShell() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
-  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>(
-    {},
-  );
+  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>({});
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isLoadingServers, setIsLoadingServers] = useState(false);
@@ -43,6 +43,7 @@ export function AppShell() {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const channelDraft = usePersistentDraft({ storageKey: 'discord-clone-channel-drafts', draftKey: channel ? `channel:${channel.id}` : null });
   const [searchQuery, setSearchQuery] = useState('');
   const [channelQuery, setChannelQuery] = useState('');
   const [typingUsers, setTypingUsers] = useState<{ userId: string; displayName: string }[]>([]);
@@ -79,6 +80,7 @@ export function AppShell() {
     directConversations,
     activeConversation,
     directMessages,
+    directMessageDraft,
     setActiveConversation,
     setDirectMessages,
     clearDirectMessages,
@@ -89,6 +91,7 @@ export function AppShell() {
     openDirectConversation,
     startDirectConversation,
     sendDirectMessage,
+    setDirectMessageDraft,
   } = useDirectMessages({
     auth,
     setPendingAction,
@@ -249,14 +252,23 @@ export function AppShell() {
   useEffect(() => {
     if (!auth || !channel) return;
     const query = searchQuery.trim();
-    if (query.length < 2) {
+    const { parsed, params } = buildMessageSearchParams(query);
+    const hasFilters =
+      Boolean(parsed.from || parsed.in || parsed.before || parsed.after) || parsed.has.length > 0;
+
+    if (parsed.invalid.length > 0) {
+      setSearchResults([]);
+      return;
+    }
+
+    if (query.length < 2 && !hasFilters) {
       setSearchResults(null);
       return;
     }
 
     const timeout = window.setTimeout(() => {
       void apiRequest<{ messages: Message[] }>(
-        `/channels/${channel.id}/messages?search=${encodeURIComponent(query)}`,
+        `/channels/${channel.id}/messages?${params.toString()}`,
         {},
         auth.accessToken,
       )
@@ -324,6 +336,8 @@ export function AppShell() {
     return voiceChannels.filter((item) => item.name.toLowerCase().includes(query));
   }, [channelQuery, voiceChannels]);
 
+  const parsedSearch = useMemo(() => parseMessageSearchQuery(searchQuery), [searchQuery]);
+
   const visibleMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (query.length >= 2 && searchResults) return searchResults;
@@ -333,13 +347,14 @@ export function AppShell() {
     );
   }, [messages, searchQuery, searchResults]);
 
-  const selectedMember = useMemo(
-    () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
-    [server?.members, selectedMemberId],
-  );
+  const selectedMember = useMemo(() => server?.members.find((member) => member.id === selectedMemberId) ?? null, [server?.members, selectedMemberId]);
 
-  const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
-  const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
+  const activeCall = channel ? (activeCalls[channel.id] ?? null) : null; const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
+
+  function openMemberRoleEditor(memberId: string) {
+    setSelectedMemberId(memberId);
+    setActiveDialog('member-roles');
+  }
 
   async function togglePinnedMessage(message: Message) {
     if (!auth) return;
@@ -394,6 +409,7 @@ export function AppShell() {
     setChannel(null);
     setMessages([]);
     setMessageCursor(null);
+    setReplyingToMessage(null);
     setActiveDialog(null);
     setActivePanel(null);
     if (auth) {
@@ -588,12 +604,11 @@ export function AppShell() {
   }
 
   async function sendChatMessage(content: string, files: File[]) {
-    if (!auth || !channel) return;
+    if (!auth || !channel) return false;
     if (!content && files.length === 0) return;
 
     setPendingAction('send-message');
     setWorkspaceError(null);
-
     try {
       const attachments = await Promise.all(
         files.map((file) => uploadFile(file, auth.accessToken)),
@@ -601,7 +616,6 @@ export function AppShell() {
       const channelKey = channelKeysRef.current[channel.id];
       const messageContent =
         content && channelKey ? await encryptChannelMessage(channelKey, content) : content;
-
       const payload = {
         channelId: channel.id,
         content: messageContent,
@@ -609,9 +623,8 @@ export function AppShell() {
         replyToMessageId: replyingToMessage?.id,
       };
       socket?.emit('typing:stop', { channelId: channel.id });
-
       if (socket?.connected) {
-        await new Promise<void>((resolve) => {
+        const acknowledged = await new Promise<boolean>((resolve) => {
           socket
             .timeout(5000)
             .emit(
@@ -620,7 +633,7 @@ export function AppShell() {
               async (err: Error | null, result?: { message: Message }) => {
                 if (err || !result?.message) {
                   setWorkspaceError('Message was not acknowledged. Try again.');
-                  resolve();
+                  resolve(false);
                   return;
                 }
                 const displayMessage = await decryptMessageForDisplay(result.message);
@@ -629,11 +642,11 @@ export function AppShell() {
                     ? current
                     : [...current, displayMessage],
                 );
-                resolve();
+                resolve(true);
               },
             );
         });
-        return;
+        return acknowledged;
       }
 
       const result = await apiRequest<{ message: Message }>(
@@ -650,9 +663,10 @@ export function AppShell() {
       );
       const displayMessage = await decryptMessageForDisplay(result.message);
       setMessages((current) => [...current, displayMessage]);
-      setReplyingToMessage(null);
+      return true;
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot send message');
+      return false;
     } finally {
       setPendingAction(null);
     }
@@ -660,14 +674,14 @@ export function AppShell() {
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const content = String(form.get('content') || '').trim();
+    const content = channelDraft.value.trim();
     const files = selectedFiles;
     if (!content && files.length === 0) return;
 
-    await sendChatMessage(content, files);
-    formElement.reset();
+    const sent = await sendChatMessage(content, files);
+    if (!sent) return;
+
+    channelDraft.clear();
     setSelectedFiles([]);
     setReplyingToMessage(null);
   }
@@ -867,6 +881,7 @@ export function AppShell() {
                       pinned: pinnedMessages,
                       pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
                       searchQuery,
+                      parsedSearch,
                       loadMore: loadMoreMessages,
                     }}
                     alerts={{
@@ -911,10 +926,12 @@ export function AppShell() {
                     composer={{
                       replyingToMessage,
                       selectedFiles,
+                      draft: channelDraft.value,
                       isRecordingVoice,
                       pendingAction,
                       fileInputRef,
                       sendMessage,
+                      setDraft: channelDraft.setValue,
                       startVoiceRecording,
                       stopVoiceRecording,
                       removeSelectedFile,
@@ -930,10 +947,7 @@ export function AppShell() {
                   <MemberSidebar
                     assetUrl={assetUrl}
                     server={server}
-                    onManageMember={(memberId) => {
-                      setSelectedMemberId(memberId);
-                      setActiveDialog('member-roles');
-                    }}
+                    onManageMember={openMemberRoleEditor}
                     onDirectMessage={async (userId) => {
                       openHome();
                       await startDirectConversation(userId);
@@ -948,6 +962,7 @@ export function AppShell() {
                     conversations: directConversations,
                     activeConversation,
                     directMessages,
+                    directMessageDraft,
                     pendingAction,
                   }}
                   actions={{
@@ -956,6 +971,7 @@ export function AppShell() {
                     openDirectConversation,
                     startDirectConversation,
                     sendDirectMessage,
+                    setDirectMessageDraft,
                   }}
                 />
               )}
@@ -985,6 +1001,7 @@ export function AppShell() {
                   toggleRolePermission,
                   deleteRole,
                   toggleMemberRole,
+                  openMemberRoleEditor,
                 }}
               />
             </main>

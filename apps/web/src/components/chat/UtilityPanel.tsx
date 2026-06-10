@@ -4,11 +4,13 @@ import { Message } from '../../api';
 import { previewText } from '../../helpers';
 import { Button, TextField } from '../ui';
 import type { ActivePanel } from './types';
+import type { ParsedMessageSearch } from '../../utils/messageSearch';
 import styles from './UtilityPanel.module.css';
 
 interface UtilityPanelProps {
   activePanel: ActivePanel;
   searchQuery: string;
+  parsedSearch: ParsedMessageSearch;
   pinnedMessages: Message[];
   isChannelEncrypted: boolean;
   setSearchQuery: (value: string) => void;
@@ -19,6 +21,7 @@ interface UtilityPanelProps {
 export function UtilityPanel({
   activePanel,
   searchQuery,
+  parsedSearch,
   pinnedMessages,
   isChannelEncrypted,
   setSearchQuery,
@@ -37,13 +40,30 @@ export function UtilityPanel({
   return (
     <div className={`${styles.utilityPanel} ${styles.utilityPanelOpen}`}>
       {activePanel === 'search' && (
-        <TextField
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          label="Search messages"
-          placeholder="Keyword in current channel"
-          data-testid="search-input"
-        />
+        <div className={styles.searchPanel}>
+          <TextField
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            label="Search messages"
+            placeholder="from:chau has:link before:2026-06-01"
+            data-testid="search-input"
+          />
+          {parsedSearch.tokens.length > 0 && (
+            <div className={styles.searchFilters} aria-label="Parsed search filters">
+              {parsedSearch.tokens.map((token) => (
+                <span key={`${token.label}:${token.value}`} className={styles.searchFilter}>
+                  <strong>{token.label}</strong>
+                  {token.value}
+                </span>
+              ))}
+            </div>
+          )}
+          {parsedSearch.invalid.length > 0 && (
+            <div className={styles.searchInvalid} role="status">
+              {parsedSearch.invalid.join('. ')}
+            </div>
+          )}
+        </div>
       )}
 
       {activePanel === 'notifications' && (

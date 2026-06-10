@@ -29,8 +29,22 @@ export class MessagesController {
     @Param('channelId') channelId: string,
     @Query('cursor') cursor?: string,
     @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('in') inChannel?: string,
+    @Query('hasLink') hasLink?: string,
+    @Query('hasFile') hasFile?: string,
+    @Query('before') before?: string,
+    @Query('after') after?: string,
   ) {
-    return this.messages.listMessages(user.id, channelId, cursor, search);
+    return this.messages.listMessages(user.id, channelId, cursor, {
+      search,
+      from,
+      inChannel,
+      hasLink: hasLink === 'true',
+      hasFile: hasFile === 'true',
+      before,
+      after,
+    });
   }
 
   @Get('channels/:channelId/pins')
