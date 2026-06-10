@@ -502,17 +502,17 @@ Do not invent one-off z-index values unless a new layer is added to this scale.
 
 The chat renderer should support the expected Discord-style subset:
 
-| Syntax                   | Rendering                                       |
-| ------------------------ | ----------------------------------------------- | ------- | --- | --- | ------------------------------ |
-| `**bold**`               | `font-weight: 700`                              |
-| `*italic*` or `_italic_` | `font-style: italic`                            |
-| `__underline__`          | `text-decoration: underline`                    |
-| `~~strikethrough~~`      | `text-decoration: line-through`                 |
-| `` `code` ``             | Inline code with mono font and dark background. |
-| Code block               | Full-width block code with dark background.     |
-| `> quote`                | Left accent border and padded quote content.    |
-| `[text](url)`            | Link color `#00A8FC`.                           |
-| `                        |                                                 | spoiler |     | `   | Hidden content until revealed. |
+| Syntax                       | Rendering                                       |
+| ---------------------------- | ----------------------------------------------- |
+| `**bold**`                   | `font-weight: 700`                              |
+| `*italic*` or `_italic_`     | `font-style: italic`                            |
+| `__underline__`              | `text-decoration: underline`                    |
+| `~~strikethrough~~`          | `text-decoration: line-through`                 |
+| `` `code` ``                 | Inline code with mono font and dark background. |
+| Code block                   | Full-width block code with dark background.     |
+| `> quote`                    | Left accent border and padded quote content.    |
+| <code>[text](url)</code>     | Link color `#00A8FC`.                           |
+| <code>\|\|spoiler\|\|</code> | Hidden content until revealed.                  |
 
 ---
 

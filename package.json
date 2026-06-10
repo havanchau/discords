@@ -17,6 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:file-size": "node scripts/check-file-size.mjs",
+    "docs:check": "node scripts/check-markdown-structure.mjs",
     "ui:scan": "node scripts/ui-static-scan.mjs",
     "ui:smoke": "node scripts/ui-smoke.mjs",
     "db:generate": "npm run db:generate --workspace apps/api",

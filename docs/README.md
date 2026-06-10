@@ -11,6 +11,7 @@ This folder contains focused project documentation. Keep each file responsible f
 | `design-rules.md`           | Canonical UI implementation rules for Discord-like product surfaces.                      |
 | `feature-spec.md`           | Product scope, feature areas, API surfaces, realtime events, and completion checklist.    |
 | `implementation-plan.md`    | Sprint plan, delivery sequence, test strategy, risks, and definition of done.             |
+| `markdown-structure.md`     | Markdown ownership, structure rules, and automated documentation validation.              |
 | `security-check.md`         | Security checklist for auth, permissions, realtime, uploads, secrets, and abuse controls. |
 | `ui-design-spec.md`         | Short product-facing UI summary that points to `design-rules.md`.                         |
 | `ui-event-ownership-map.md` | Realtime/UI side-effect ownership map for focused hooks and providers.                    |
@@ -34,5 +35,6 @@ This folder contains focused project documentation. Keep each file responsible f
 - Keep UI tokens and component rules only in `design-rules.md`.
 - Keep product scope in `feature-spec.md`.
 - Keep sprint sequencing in `implementation-plan.md`.
+- Keep Markdown structure rules and docs validation in `markdown-structure.md`.
 - Keep root Markdown limited to repository entry points, agent instructions, and tool configuration.
 - Prefer links over duplicated paragraphs.

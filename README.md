@@ -65,6 +65,8 @@ npm run typecheck
 npm run build
 npm run format
 npm run format:check
+npm run check:file-size
+npm run docs:check
 npm run ui:smoke
 npm run db:generate
 npm run db:push
@@ -116,6 +118,7 @@ Current limits:
 - `AGENT.md`: implementation guidance for AI or human coding agents.
 - `docs/feature-spec.md`: product scope and feature checklist.
 - `docs/implementation-plan.md`: sprint plan and definition of done.
+- `docs/markdown-structure.md`: Markdown structure rules and docs validation.
 - `docs/README.md`: documentation index.
 - `docs/architecture.md`: repository architecture and service boundaries.
 - `docs/security-check.md`: security checklist.
