@@ -10,6 +10,79 @@ This checklist captures product features that would make the app feel closer to 
 - [ ] Preserve existing event names, DTOs, localStorage keys, upload fields, and permission behavior unless a feature explicitly requires a new contract.
 - [ ] Run lint, typecheck, build, and focused tests for each completed feature slice.
 
+## Feature Delivery Checklist
+
+Use this checklist before adding any roadmap item or new product feature. It keeps scoping, implementation, verification, and release work close to the existing feature backlog.
+
+### Scope And Product Fit
+
+- [ ] Name the feature and the user problem it solves.
+- [ ] Confirm the owning product area: servers, channels, direct messages, members, roles, messages, presence, notifications, media, voice, video, or screen sharing.
+- [ ] Check `feature-spec.md`, `implementation-plan.md`, and this roadmap for overlapping or prerequisite work.
+- [ ] Define the smallest shippable slice that is useful without hidden follow-up work.
+- [ ] List explicit out-of-scope behavior so the first slice stays focused.
+- [ ] Identify whether the feature changes permissions, private data visibility, realtime events, persisted data, uploads, or notifications.
+
+### Data And API Design
+
+- [ ] Identify the owning domain model and existing Prisma relations to reuse.
+- [ ] Decide whether a Prisma migration is required or existing fields are enough.
+- [ ] Define request and response DTOs with validation at every API boundary.
+- [ ] Add or update shared TypeScript contracts in `packages/shared` when client and API both use the shape.
+- [ ] Define pagination, sorting, filtering, and retention behavior for list endpoints.
+- [ ] Ensure empty, invalid, unauthorized, forbidden, and missing-resource states return explicit errors.
+
+### Permissions And Security
+
+- [ ] Check server membership before reading server, channel, member, role, message, invite, or audit data.
+- [ ] Check role permissions before write, moderation, invite, upload, or settings operations.
+- [ ] Confirm owners retain required administrative access.
+- [ ] Prevent clients from trusting optimistic UI for authorization decisions.
+- [ ] Add rate limiting when the feature can spam messages, invites, uploads, notifications, or auth-related actions.
+- [ ] Avoid logging secrets, tokens, private message content, encryption keys, or upload credentials.
+
+### Realtime And State Synchronization
+
+- [ ] Decide whether the feature needs Socket.IO events or can use existing REST refresh behavior.
+- [ ] Define explicit event names and typed payloads in `packages/shared` before wiring client handlers.
+- [ ] Authorize every event that mutates or reveals state on the server.
+- [ ] Persist state before emitting realtime events.
+- [ ] Define optimistic UI reconciliation for success, failure, duplicate delivery, and stale payloads.
+- [ ] Confirm reconnect behavior restores the correct feature state.
+
+### Web Client Implementation
+
+- [ ] Find the existing surface that should own the feature state before adding new global state.
+- [ ] Keep loading, empty, error, unauthorized, and offline states explicit.
+- [ ] Preserve drafts, composer text, selected channel, selected DM, and open modals unless the feature intentionally resets them.
+- [ ] Add accessible labels for icon-only controls, menus, dialogs, tabs, and keyboard shortcuts.
+- [ ] Ensure keyboard navigation works for interactive lists, command palettes, popovers, and dialogs.
+- [ ] Verify desktop layout at 1440x900 and 1366x768.
+- [ ] Verify mobile layout at 390x844 without hidden primary controls.
+- [ ] Follow Discord UI rules from `DISCORD_UI_SKILL.md` and `design-rules.md` for any UI work.
+
+### Media, Uploads, And External Services
+
+- [ ] Validate file type, file size, and ownership before upload persistence.
+- [ ] Keep local upload behavior and Cloudinary-ready behavior aligned.
+- [ ] Add safe previews for images, video, audio, generic files, and failed uploads where relevant.
+- [ ] Avoid storing generated files, local upload artifacts, or external credentials in git.
+- [ ] Define cleanup behavior for orphaned uploads after failed sends or deleted messages.
+- [ ] Confirm links, embeds, and attachments do not bypass channel visibility rules.
+
+### Testing And Documentation
+
+- [ ] Add unit tests for pure helpers, reducers, parsers, permission aggregation, and payload transforms.
+- [ ] Add API tests for auth, permission, validation, persistence, and error paths.
+- [ ] Add Socket.IO tests for authorized delivery and blocked delivery when realtime behavior changes.
+- [ ] Add web component or hook tests for client state that can regress.
+- [ ] Add UI smoke coverage for the main happy path and one failure or empty state when practical.
+- [ ] Run lint, typecheck, build, and focused tests for touched workspaces.
+- [ ] Run `npm run docs:check` when documentation changes.
+- [ ] Run `npm run ui:scan` when UI, CSS, or visual tokens change.
+- [ ] Update README, architecture, feature spec, security, deployment, or UI planning docs when their owned topics change.
+- [ ] Record known limitations and follow-up work as unchecked items, not completed tasks.
+
 ## 1. Message Drafts Per Channel And DM
 
 - [x] Define draft storage ownership and key format.

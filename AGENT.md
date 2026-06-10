@@ -34,6 +34,7 @@ Build this project as a real-time Discord-like communication app with:
 5. Add tests for behavior that can regress, especially permissions, auth, message delivery, and persistence.
 6. Do not commit secrets, tokens, database URLs, private keys, generated build output, or local upload artifacts.
 7. Use clear domain names: `server`, `channel`, `member`, `role`, `message`, `conversation`, `presence`, `notification`.
+8. Do not create new Markdown files by default; reuse and extend the existing canonical Markdown owner when the topic already fits an existing document.
 
 ## Task Checklist Rules
 
