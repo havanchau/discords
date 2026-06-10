@@ -34,6 +34,7 @@ This folder contains focused project documentation. Keep each file responsible f
 - Keep setup commands in `README.md` and deployment commands in `deployment.md`.
 - Keep UI tokens and component rules only in `design-rules.md`.
 - Keep product scope in `feature-spec.md`.
+- Reuse existing Markdown owners for new feature notes, checklists, and planning content before adding another `.md` file.
 - Keep sprint sequencing in `implementation-plan.md`.
 - Keep Markdown structure rules and docs validation in `markdown-structure.md`.
 - Keep root Markdown limited to repository entry points, agent instructions, and tool configuration.

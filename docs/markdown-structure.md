@@ -19,6 +19,7 @@ Every Markdown file should follow this baseline:
 4. Keep fenced code blocks balanced.
 5. Keep local Markdown links relative and valid.
 6. Keep files under the 1000-line documentation limit from `AGENT.md`.
+7. Do not create a new Markdown file when an existing Markdown owner can reasonably be reused.
 
 ## Documentation Ownership
 
@@ -29,7 +30,9 @@ Every Markdown file should follow this baseline:
 | `docs/*.md`      | Focused guides for architecture, deployment, security, UI, and feature scope. |
 | Root guides      | Agent instructions, product rules, Codex configuration, and UI skill rules.   |
 
-When a new document is added, link it from the nearest index instead of duplicating its content elsewhere.
+Before adding a new document, first check the ownership table and existing docs index. If the requested content fits an existing owner, extend that file instead of creating another `.md` file. Only add a new Markdown file when the content has a distinct long-term owner, would make the existing file too broad, or would push the existing file over the 1000-line documentation limit.
+
+When a new document is genuinely required, link it from the nearest index instead of duplicating its content elsewhere.
 
 ## Automated Check
 
@@ -58,3 +61,4 @@ Use `MAX_MARKDOWN_LINES=1200 npm run docs:check` only when auditing a legacy fil
 - [ ] Commands are fenced and copyable.
 - [ ] Local links resolve from the file location.
 - [ ] Setup details are not duplicated outside `README.md` or `docs/deployment.md`.
+- [ ] New feature, checklist, and planning notes were added to an existing owner doc when possible instead of creating a new `.md` file.
