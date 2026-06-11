@@ -148,9 +148,9 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 - [ ] Add indexed database query support for author, channel, date, attachments, and links.
 - [x] Show parsed filters in the search panel.
 - [x] Add empty state text for no results and invalid filters.
-- [ ] Add result snippets with channel, author, timestamp, and match context.
-- [ ] Add keyboard navigation across results.
-- [ ] Add click-to-jump behavior with scroll anchoring.
+- [x] Add result snippets with channel, author, timestamp, and match context.
+- [x] Add keyboard navigation across results.
+- [x] Add click-to-jump behavior with scroll anchoring.
 - [x] Add tests for parser edge cases.
 - [ ] Add API tests for filter combinations.
 - [ ] Add UI smoke coverage for `has:link` and `from:` searches.

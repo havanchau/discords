@@ -362,9 +362,15 @@
   opacity: 0.68;
 }
 
-.audioWaveform i:nth-child(3n + 1) { height: 20px; }
-.audioWaveform i:nth-child(4n + 2) { height: 28px; }
-.audioWaveform i:nth-child(5n) { height: 16px; }
+.audioWaveform i:nth-child(3n + 1) {
+  height: 20px;
+}
+.audioWaveform i:nth-child(4n + 2) {
+  height: 28px;
+}
+.audioWaveform i:nth-child(5n) {
+  height: 16px;
+}
 
 .fileAttachment {
   min-height: 56px;
@@ -557,4 +563,13 @@
     opacity: 0;
     transform: translateY(4px);
   }
+}
+
+.message:focus-visible {
+  outline: 2px solid var(--brand-color);
+  outline-offset: -2px;
+}
+
+.message[data-jump-highlight='true'] {
+  background: var(--background-modifier-selected);
 }

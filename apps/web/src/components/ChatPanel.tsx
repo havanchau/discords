@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ChatHeader } from './chat/ChatHeader';
 import { UtilityPanel } from './chat/UtilityPanel';
 import { CallStage } from './chat/CallStage';
@@ -47,12 +47,23 @@ export function ChatPanel({
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
+  const jumpToMessage = useCallback((messageId: string) => {
+    const target = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus({ preventScroll: true });
+    target.dataset.jumpHighlight = 'true';
+    window.setTimeout(() => {
+      delete target.dataset.jumpHighlight;
+    }, 1400);
+  }, []);
+
   // Announce incoming messages to screen readers
   const lastMessage = messages.all[messages.all.length - 1];
   useEffect(() => {
     if (lastMessage && !messages.isLoading) {
       setAnnouncement(
-        `New message from ${lastMessage.author.displayName}: ${lastMessage.content || 'attachment'}`
+        `New message from ${lastMessage.author.displayName}: ${lastMessage.content || 'attachment'}`,
       );
     }
   }, [lastMessage?.id, messages.isLoading]);
@@ -71,11 +82,14 @@ export function ChatPanel({
 
       <UtilityPanel
         activePanel={panels.activePanel}
+        channel={session.channel}
         searchQuery={messages.searchQuery}
         parsedSearch={messages.parsedSearch}
+        searchResults={messages.visible}
         pinnedMessages={messages.pinned}
         isChannelEncrypted={encryption.isChannelEncrypted}
         setSearchQuery={panels.setSearchQuery}
+        onJumpToMessage={jumpToMessage}
         configureChannelEncryption={encryption.configure}
         clearChannelEncryption={encryption.clear}
       />
@@ -83,21 +97,22 @@ export function ChatPanel({
       {alerts.error && (
         <div className="banner error-banner">
           {alerts.error}
-          <Button variant="ghost" size="sm" onClick={() => alerts.setError(null)}>Dismiss</Button>
+          <Button variant="ghost" size="sm" onClick={() => alerts.setError(null)}>
+            Dismiss
+          </Button>
         </div>
       )}
 
       {alerts.notice && (
         <div className="banner notice-banner">
           {alerts.notice}
-          <Button variant="ghost" size="sm" onClick={() => alerts.setNotice(null)}>Dismiss</Button>
+          <Button variant="ghost" size="sm" onClick={() => alerts.setNotice(null)}>
+            Dismiss
+          </Button>
         </div>
       )}
 
-      <CallStage
-        session={session}
-        call={call}
-      />
+      <CallStage session={session} call={call} />
 
       <MessageList
         channel={session.channel}
