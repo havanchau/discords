@@ -5,9 +5,34 @@ import puppeteer from 'puppeteer-core';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const screenshotDir = path.join(rootDir, 'artifacts', 'ui');
-const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const appUrl = process.env.WEB_URL || 'http://localhost:5173';
 const apiUrl = process.env.API_URL || 'http://localhost:3000';
+
+const chromeCandidates = [
+  process.env.PUPPETEER_EXECUTABLE_PATH,
+  process.env.CHROME_PATH,
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/chromium',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+].filter(Boolean);
+
+async function resolveChromePath() {
+  for (const candidate of chromeCandidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // Try the next known executable path.
+    }
+  }
+
+  throw new Error(
+    'Chrome executable not found. Set PUPPETEER_EXECUTABLE_PATH or CHROME_PATH before running npm run ui:smoke.'
+  );
+}
 
 await fs.mkdir(screenshotDir, { recursive: true });
 const uploadFixturePath = path.join(screenshotDir, 'upload-smoke.txt');
@@ -28,13 +53,15 @@ if (!loginResponse.ok) {
 
 const auth = await loginResponse.json();
 const browser = await puppeteer.launch({
-  executablePath: chromePath,
+  executablePath: await resolveChromePath(),
   headless: true,
   args: [
     '--no-first-run',
     '--no-default-browser-check',
     '--use-fake-device-for-media-stream',
-    '--use-fake-ui-for-media-stream'
+    '--use-fake-ui-for-media-stream',
+    '--no-sandbox',
+    '--disable-setuid-sandbox'
   ]
 });
 
