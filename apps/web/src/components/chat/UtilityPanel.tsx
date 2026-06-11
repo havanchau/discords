@@ -1,6 +1,6 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
-import { FileText, Pin } from 'lucide-react';
-import { Channel, Message } from '../../api';
+import { Bell, CheckCheck, FileText, Pin } from 'lucide-react';
+import { Channel, Message, NotificationItem } from '../../api';
 import { formatDate, previewText } from '../../helpers';
 import { buildMessageSearchSnippet } from '../../utils/messageSearch';
 import { Button, TextField } from '../ui';
@@ -15,8 +15,14 @@ interface UtilityPanelProps {
   parsedSearch: ParsedMessageSearch;
   searchResults: Message[];
   pinnedMessages: Message[];
+  notifications: NotificationItem[];
+  notificationUnreadCount: number;
+  isLoadingNotifications: boolean;
   isChannelEncrypted: boolean;
   setSearchQuery: (value: string) => void;
+  loadNotifications: () => Promise<void>;
+  markNotificationRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
   onJumpToMessage: (messageId: string) => void;
   configureChannelEncryption: (passphrase: string) => Promise<void>;
   clearChannelEncryption: () => void;
@@ -29,8 +35,14 @@ export function UtilityPanel({
   parsedSearch,
   searchResults,
   pinnedMessages,
+  notifications,
+  notificationUnreadCount,
+  isLoadingNotifications,
   isChannelEncrypted,
   setSearchQuery,
+  loadNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
   onJumpToMessage,
   configureChannelEncryption,
   clearChannelEncryption,
@@ -46,6 +58,12 @@ export function UtilityPanel({
       canShowSearchResults && parsedSearch.invalid.length === 0 ? searchResults.slice(0, 8) : [],
     [canShowSearchResults, parsedSearch.invalid.length, searchResults],
   );
+
+  useEffect(() => {
+    if (activePanel === 'notifications') {
+      void loadNotifications();
+    }
+  }, [activePanel, loadNotifications]);
 
   useEffect(() => {
     setActiveResultIndex((index) => Math.min(index, Math.max(0, renderedSearchResults.length - 1)));
@@ -185,22 +203,67 @@ export function UtilityPanel({
 
       {activePanel === 'notifications' && (
         <div className={styles.notificationPanel}>
-          <strong>Pinned messages</strong>
-          {pinnedMessages.length ? (
-            pinnedMessages.map((message) => (
-              <Button
-                variant="ghost"
-                key={message.id}
-                className={styles.pinButton}
-                onClick={() => onJumpToMessage(message.id)}
-              >
-                <Pin size={13} aria-hidden="true" />
-                <span>{previewText(message)}</span>
-              </Button>
-            ))
+          <div className={styles.notificationHeader}>
+            <div>
+              <strong>Notifications</strong>
+              <span>{notificationUnreadCount} unread inbox item{notificationUnreadCount === 1 ? '' : 's'}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void markAllNotificationsRead()}
+              disabled={!notificationUnreadCount}
+            >
+              <CheckCheck size={14} aria-hidden="true" />
+              Mark all read
+            </Button>
+          </div>
+
+          {isLoadingNotifications ? (
+            <div className={styles.notificationEmpty}>Loading notifications…</div>
+          ) : notifications.length ? (
+            <div className={styles.notificationList} role="list" aria-label="Recent notifications">
+              {notifications.map((notification) => (
+                <button
+                  type="button"
+                  key={notification.id}
+                  className={`${styles.notificationItem} ${notification.readAt ? '' : styles.notificationItemUnread}`}
+                  onClick={() => {
+                    void markNotificationRead(notification.id);
+                    if (notification.messageId) onJumpToMessage(notification.messageId);
+                  }}
+                >
+                  <Bell size={14} aria-hidden="true" />
+                  <span className={styles.notificationText}>
+                    <strong>{notification.title}</strong>
+                    {notification.body && <span>{notification.body}</span>}
+                    <time dateTime={notification.createdAt}>{formatDate(notification.createdAt)}</time>
+                  </span>
+                </button>
+              ))}
+            </div>
           ) : (
-            <div className={styles.notificationEmpty}>No pinned messages in this channel.</div>
+            <div className={styles.notificationEmpty}>No notifications yet.</div>
           )}
+
+          <div className={styles.pinnedSection}>
+            <strong>Pinned messages</strong>
+            {pinnedMessages.length ? (
+              pinnedMessages.map((message) => (
+                <Button
+                  variant="ghost"
+                  key={message.id}
+                  className={styles.pinButton}
+                  onClick={() => onJumpToMessage(message.id)}
+                >
+                  <Pin size={13} aria-hidden="true" />
+                  <span>{previewText(message)}</span>
+                </Button>
+              ))
+            ) : (
+              <div className={styles.notificationEmpty}>No pinned messages in this channel.</div>
+            )}
+          </div>
         </div>
       )}
 

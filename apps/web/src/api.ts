@@ -171,6 +171,21 @@ export interface DirectConversation {
   members: Array<{ user: User }>;
   messages: DirectMessage[];
   updatedAt?: string;
+  unreadCount?: number;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  actorId?: string | null;
+  actor?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'> | null;
+  channelId?: string | null;
+  messageId?: string | null;
+  conversationId?: string | null;
+  readAt?: string | null;
+  createdAt: string;
 }
 
 export interface DirectMessage {

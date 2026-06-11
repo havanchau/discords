@@ -8,6 +8,7 @@ import { DirectMessagesModule } from './modules/direct-messages/direct-messages.
 import { FriendsModule } from './modules/friends/friends.module';
 import { HealthModule } from './modules/health/health.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { PushModule } from './modules/push/push.module';
@@ -29,6 +30,7 @@ import { UsersModule } from './modules/users/users.module';
     ServersModule,
     ChannelsModule,
     MessagesModule,
+    NotificationsModule,
     PermissionsModule,
     RolesModule,
     UploadsModule,

@@ -7,6 +7,7 @@ import styles from './ChatHeader.module.css';
 
 interface ChatHeaderProps {
   channel: Channel | null;
+  notificationUnreadCount: number;
   pendingAction: string | null;
   callState: CallState | null;
   panels: ChatPanelPanels;
@@ -17,6 +18,7 @@ interface ChatHeaderProps {
 
 export function ChatHeader({
   channel,
+  notificationUnreadCount,
   pendingAction,
   callState,
   panels,
@@ -120,7 +122,14 @@ export function ChatHeader({
             variant={panels.activePanel === 'notifications' ? 'primary' : 'ghost'}
             data-testid="notifications-button"
           >
-            <Bell size={18} aria-hidden="true" />
+            <span className={styles.notificationIconWrap}>
+              <Bell size={18} aria-hidden="true" />
+              {notificationUnreadCount > 0 && (
+                <span className={styles.notificationBadge} aria-label={`${notificationUnreadCount} unread notifications`}>
+                  {notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}
+                </span>
+              )}
+            </span>
           </IconButton>
         </Tooltip>
 

@@ -61,6 +61,9 @@ model User {
   directMessages            DirectMessage[]
   createdThreads            Thread[]                   @relation("ThreadCreator")
   threadParticipants        ThreadParticipant[]
+  directReadStates          DirectReadState[]
+  notifications             Notification[]              @relation("NotificationUser")
+  actedNotifications        Notification[]              @relation("NotificationActor")
 }
 
 model EmailVerificationToken {
@@ -372,11 +375,12 @@ model FriendRequest {
 }
 
 model DirectConversation {
-  id        String                     @id @default(cuid())
-  createdAt DateTime                   @default(now())
-  updatedAt DateTime                   @updatedAt
-  members   DirectConversationMember[]
-  messages  DirectMessage[]
+  id         String                     @id @default(cuid())
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
+  members    DirectConversationMember[]
+  messages   DirectMessage[]
+  readStates DirectReadState[]
 }
 
 model DirectConversationMember {
@@ -400,4 +404,39 @@ model DirectMessage {
   author         User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
+  @@index([conversationId, createdAt])
+}
+
+model DirectReadState {
+  id                String             @id @default(cuid())
+  userId            String
+  conversationId    String
+  lastReadMessageId String?
+  lastReadAt        DateTime           @default(now())
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation      DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([conversationId, lastReadAt])
+}
+
+model Notification {
+  id             String              @id @default(cuid())
+  userId         String
+  type           String
+  title          String
+  body           String?
+  actorId        String?
+  channelId      String?
+  messageId      String?
+  conversationId String?
+  readAt         DateTime?
+  createdAt      DateTime            @default(now())
+  user           User                @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor          User?               @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt, createdAt])
+  @@index([conversationId])
+  @@index([channelId])
+  @@index([messageId])
 }

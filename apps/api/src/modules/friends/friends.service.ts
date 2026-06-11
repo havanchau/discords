@@ -5,12 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
 import { RespondFriendRequestDto } from './dto/respond-friend-request.dto';
 
 @Injectable()
 export class FriendsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly realtime: RealtimePublisher,
+  ) {}
 
   async list(userId: string) {
     const requests = await this.prisma.friendRequest.findMany({
@@ -44,12 +50,15 @@ export class FriendsService {
 
   async request(userId: string, dto: CreateFriendRequestDto) {
     const query = dto.usernameOrEmail.trim();
-    const target = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ username: query }, { email: query.toLowerCase() }],
-      },
-      select: this.userSelect,
-    });
+    const [target, requester] = await Promise.all([
+      this.prisma.user.findFirst({
+        where: {
+          OR: [{ username: query }, { email: query.toLowerCase() }],
+        },
+        select: this.userSelect,
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: this.userSelect }),
+    ]);
 
     if (!target) throw new NotFoundException('User not found');
     if (target.id === userId) throw new BadRequestException('Cannot add yourself');
@@ -60,6 +69,10 @@ export class FriendsService {
           { requesterId: userId, receiverId: target.id },
           { requesterId: target.id, receiverId: userId },
         ],
+      },
+      include: {
+        requester: { select: this.userSelect },
+        receiver: { select: this.userSelect },
       },
     });
 
@@ -72,7 +85,23 @@ export class FriendsService {
 
     const request = await this.prisma.friendRequest.create({
       data: { requesterId: userId, receiverId: target.id },
+      include: {
+        requester: { select: this.userSelect },
+        receiver: { select: this.userSelect },
+      },
     });
+
+    this.realtime.emitToRoom(this.realtime.userRoom(target.id), 'friend:request', {
+      request,
+    });
+    await this.notifications.create({
+      userId: target.id,
+      actorId: userId,
+      type: 'FRIEND_REQUEST',
+      title: 'New friend request',
+      body: `${requester?.displayName ?? 'Someone'} sent you a friend request.`,
+    });
+
     return { request };
   }
 
@@ -90,7 +119,28 @@ export class FriendsService {
     const updated = await this.prisma.friendRequest.update({
       where: { id: requestId },
       data: { status: dto.status },
+      include: {
+        requester: { select: this.userSelect },
+        receiver: { select: this.userSelect },
+      },
     });
+
+    this.realtime.emitToRooms(
+      [this.realtime.userRoom(updated.requesterId), this.realtime.userRoom(updated.receiverId)],
+      'friend:updated',
+      { request: updated },
+    );
+
+    const recipientId = userId === updated.requesterId ? updated.receiverId : updated.requesterId;
+    const actor = userId === updated.requesterId ? updated.requester : updated.receiver;
+    await this.notifications.create({
+      userId: recipientId,
+      actorId: userId,
+      type: 'FRIEND_UPDATED',
+      title: 'Friend request updated',
+      body: `${actor.displayName} marked your friend request as ${updated.status.toLowerCase()}.`,
+    });
+
     return { request: updated };
   }
 
@@ -142,6 +192,7 @@ export class FriendsService {
     return {
       members: { include: { user: { select: this.userSelect } } },
       messages: { orderBy: { createdAt: 'desc' as const }, take: 1 },
+      readStates: true,
     };
   }
 }

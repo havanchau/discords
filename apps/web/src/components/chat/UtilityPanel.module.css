@@ -247,3 +247,77 @@
   color: var(--text-muted);
   font-size: 13px;
 }
+
+.notificationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.notificationHeader > div {
+  display: grid;
+  gap: 2px;
+}
+
+.notificationHeader span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.notificationList {
+  display: grid;
+  gap: var(--spacing-1);
+}
+
+.notificationItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2);
+  color: var(--interactive-normal);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notificationItem:hover,
+.notificationItem:focus-visible {
+  color: var(--interactive-hover);
+  background: var(--background-modifier-hover);
+  outline: none;
+}
+
+.notificationItemUnread {
+  background: var(--background-modifier-selected);
+}
+
+.notificationText {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.notificationText strong {
+  color: var(--header-primary);
+  font-size: 13px;
+}
+
+.notificationText span,
+.notificationText time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.pinnedSection {
+  display: grid;
+  gap: var(--spacing-1);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--spacing-3);
+}
