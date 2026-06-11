@@ -46,6 +46,15 @@ Before implementing any task, create a checklist of the concrete work items.
 - Update the checklist as implementation progresses instead of marking everything done at the end.
 - If scope changes, add or revise checklist items so the list stays truthful.
 
+## Feature Completion Flow
+
+Work through all features one by one. After completing each feature:
+
+1. Confirm it is done.
+2. Move immediately to the next feature.
+3. Do not stop or wait for user input between features.
+4. Only stop when every feature is implemented.
+
 ## File Size Rules
 
 - No source or documentation file should exceed 1000 lines.
