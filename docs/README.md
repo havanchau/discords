@@ -19,20 +19,20 @@ This folder contains focused project documentation. Keep each file responsible f
 
 ## Root Documents
 
-| File                  | Purpose                                           |
-| --------------------- | ------------------------------------------------- |
-| `README.md`           | Project overview and local setup.                 |
-| `RULE.md`             | Product and engineering invariants.               |
-| `AGENT.md`            | Guidance for coding agents.                       |
-| `AGENTS.md`           | Compatibility pointer to `AGENT.md`.              |
-| `DISCORD_UI_SKILL.md` | Notes for using Codex `ui-polish` with this repo. |
-| `codex.md`            | Codex-specific project configuration.             |
+| File                  | Purpose                                                                  |
+| --------------------- | ------------------------------------------------------------------------ |
+| `README.md`           | Project overview and local setup.                                        |
+| `RULE.md`             | Product and engineering invariants.                                      |
+| `AGENT.md`            | Guidance for coding agents.                                              |
+| `AGENTS.md`           | Compatibility pointer to `AGENT.md`.                                     |
+| `DISCORD_UI_SKILL.md` | Agent-facing UI enforcement summary that mirrors `docs/design-rules.md`. |
+| `codex.md`            | Codex-specific project configuration.                                    |
 
 ## Maintenance Rules
 
 - Write documentation in English.
 - Keep setup commands in `README.md` and deployment commands in `deployment.md`.
-- Keep UI tokens and component rules only in `design-rules.md`.
+- Keep canonical UI tokens and component rules in `design-rules.md`; `DISCORD_UI_SKILL.md` may mirror them as an agent-facing checklist but must not introduce separate values.
 - Keep product scope in `feature-spec.md`.
 - Reuse existing Markdown owners for new feature notes, checklists, and planning content before adding another `.md` file.
 - Keep sprint sequencing in `implementation-plan.md`.

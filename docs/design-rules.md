@@ -6,7 +6,7 @@
 
 ## 1. Recommended Codex Skill
 
-> **MANDATORY**: Read `DISCORD_UI_SKILL.md` at the project root BEFORE starting any UI work. That file contains the enforced color tokens, layout rules, and anti-patterns.
+> **MANDATORY**: Read `DISCORD_UI_SKILL.md` at the project root BEFORE starting any UI work. This document is the canonical design-token and component-rule reference; the skill file is the agent-facing enforcement summary that must mirror this file rather than define separate rules.
 
 Use the **`ui-polish`** skill when asking Codex to make the interface look better.
 
@@ -107,14 +107,13 @@ Responsive behavior:
 
 ### 5.1 Core Brand Colors
 
-| Token   | Hex       | Usage                                           |
-| ------- | --------- | ----------------------------------------------- |
-| Blurple | `#5865F2` | Primary actions, selected state, brand accents. |
-| Green   | `#57F287` | Success, online state, connected voice.         |
-| Yellow  | `#FEE75C` | Warning and idle state.                         |
-| Red     | `#ED4245` | Error, danger, delete, do-not-disturb.          |
-| Fuchsia | `#EB459E` | Special badges or rare accents.                 |
-| White   | `#FFFFFF` | Text on strong colored backgrounds.             |
+| Token        | Hex       | Usage                                           |
+| ------------ | --------- | ----------------------------------------------- |
+| Blurple      | `#5865F2` | Primary actions, selected state, brand accents. |
+| Online green | `#23A55A` | Online state, success, connected voice.         |
+| Idle yellow  | `#F0B232` | Warning and idle state.                         |
+| Danger red   | `#ED4245` | Error, danger, delete, do-not-disturb.          |
+| White        | `#FFFFFF` | Text on strong colored backgrounds.             |
 
 ### 5.2 Dark Theme Layers
 
@@ -153,13 +152,20 @@ Responsive behavior:
   --background-message-hover: rgba(2, 2, 2, 0.06);
 
   --input-background: #1e1f22;
+  --channeltextarea-background: #383a40;
   --input-placeholder: #87898c;
   --mention-foreground: #c9cdfb;
   --mention-background: rgba(88, 101, 242, 0.3);
+
+  --status-danger: #ed4245;
+  --button-danger-background: #da373c;
+  --modal-overlay-background: rgba(0, 0, 0, 0.85);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --elevation-high: 0 24px 64px rgba(0, 0, 0, 0.54);
 }
 ```
 
-Theme variants may adjust surface values, but must preserve contrast, readable text, and clear region separation.
+Theme variants may adjust surface values only through CSS custom properties. Component styles must consume variables rather than invent one-off hex values, and variants must preserve contrast, readable text, and clear region separation.
 
 ---
 
@@ -257,8 +263,8 @@ Buttons must be visually stable and action-specific.
 
 ```css
 .btn-primary {
-  background: #5865f2;
-  color: #ffffff;
+  background: var(--brand-color);
+  color: var(--interactive-active);
   border: 0;
   border-radius: 3px;
   min-height: 38px;
@@ -268,25 +274,25 @@ Buttons must be visually stable and action-specific.
 }
 
 .btn-primary:hover {
-  background: #4752c4;
+  background: var(--brand-hover);
 }
 .btn-primary:active {
-  background: #3c45a5;
+  background: var(--brand-active);
 }
 
 .btn-danger {
-  background: #da373c;
-  color: #ffffff;
+  background: var(--button-danger-background);
+  color: var(--interactive-active);
 }
 
 .btn-ghost {
   background: transparent;
-  color: #dbdee1;
+  color: var(--text-normal);
 }
 
 .btn-ghost:hover {
-  background: rgba(79, 84, 92, 0.16);
-  color: #ffffff;
+  background: var(--background-modifier-hover);
+  color: var(--interactive-active);
 }
 ```
 
@@ -296,21 +302,21 @@ Use icon buttons for obvious toolbar actions such as pin, search, call, upload, 
 
 ```css
 .input {
-  background: #1e1f22;
+  background: var(--input-background);
   border: 0;
   border-radius: 4px;
-  color: #dbdee1;
+  color: var(--text-normal);
   min-height: 40px;
   padding: 10px;
   outline: none;
 }
 
 .input::placeholder {
-  color: #87898c;
+  color: var(--input-placeholder);
 }
 
 .chat-input {
-  background: #383a40;
+  background: var(--channeltextarea-background);
   border-radius: 8px;
   min-height: 44px;
   display: flex;
@@ -336,17 +342,17 @@ Composer rules:
   padding: 0 8px;
   border-radius: 4px;
   gap: 6px;
-  color: #80848e;
+  color: var(--text-muted);
 }
 
 .channel-item:hover {
-  background: rgba(79, 84, 92, 0.16);
-  color: #dbdee1;
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .channel-item.active {
-  background: rgba(79, 84, 92, 0.32);
-  color: #f2f3f5;
+  background: var(--background-modifier-selected);
+  color: var(--header-primary);
 }
 ```
 
@@ -374,7 +380,7 @@ Channel rows should support:
 }
 
 .message:hover {
-  background: rgba(2, 2, 2, 0.06);
+  background: var(--background-message-hover);
 }
 ```
 
@@ -410,20 +416,20 @@ Use modals for focused account, server, channel, role, invite, and settings flow
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--modal-overlay-background);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-overlay);
 }
 
 .modal {
-  background: #313338;
+  background: var(--background-primary);
   border-radius: 8px;
   max-width: 560px;
   width: min(100%, 560px);
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.54);
+  box-shadow: var(--elevation-high, 0 24px 64px rgba(0, 0, 0, 0.54));
 }
 ```
 
@@ -459,7 +465,7 @@ Rules:
 
 ```css
 :focus-visible {
-  outline: 2px solid #5865f2;
+  outline: 2px solid var(--brand-color);
   outline-offset: 2px;
 }
 
@@ -511,7 +517,7 @@ The chat renderer should support the expected Discord-style subset:
 | `` `code` ``                 | Inline code with mono font and dark background. |
 | Code block                   | Full-width block code with dark background.     |
 | `> quote`                    | Left accent border and padded quote content.    |
-| <code>[text](url)</code>     | Link color `#00A8FC`.                           |
+| <code>[text](url)</code>     | Link color `var(--text-link)`.                  |
 | <code>\|\|spoiler\|\|</code> | Hidden content until revealed.                  |
 
 ---
@@ -557,7 +563,7 @@ The chat renderer should support the expected Discord-style subset:
 ### Pre-Ship Visual Checklist
 
 - [ ] Background layers match the shell hierarchy.
-- [ ] Primary actions use `#5865F2`.
+- [ ] Primary actions use `var(--brand-color)` (`#5865F2`).
 - [ ] Text contrast is readable on all theme surfaces.
 - [ ] Font stack starts with `gg sans` and has safe fallbacks.
 - [ ] Server icons use squircle-to-circle hover or active transitions.
@@ -571,4 +577,4 @@ The chat renderer should support the expected Discord-style subset:
 
 ---
 
-_Last updated: 2026-06-06._
+_Last updated: 2026-06-11._

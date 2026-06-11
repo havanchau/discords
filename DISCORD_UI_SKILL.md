@@ -1,6 +1,6 @@
 # Discord UI Skill — Mandatory Rules for Codex
 
-> **CRITICAL**: This file is the SINGLE SOURCE OF TRUTH for all UI work. Read it COMPLETELY before writing ANY CSS or JSX. Violations of these rules are build-breaking errors.
+> **CRITICAL**: Read this agent-facing UI rulebook before writing ANY CSS or JSX. The canonical design-token reference lives in `docs/design-rules.md`; this file mirrors the mandatory constraints for Codex workflows. If wording differs, follow `docs/design-rules.md` for token definitions and follow the stricter safety constraint for visual anti-patterns.
 
 ---
 
@@ -83,7 +83,7 @@ Rules:
 
 ## 5. Exact Color Tokens (MANDATORY — DO NOT INVENT COLORS)
 
-Every UI surface MUST use these exact CSS custom properties. **Never hardcode hex values** outside this list. **Never use neon, cyan, lime, or pink accent colors.**
+Every UI surface MUST use the canonical CSS custom properties from `docs/design-rules.md`. Component CSS should reference variables instead of hardcoded hex values. **Never use neon, cyan, lime, or pink accent colors.**
 
 ```css
 :root {
@@ -127,6 +127,7 @@ Every UI surface MUST use these exact CSS custom properties. **Never hardcode he
 
   /* === Input === */
   --input-background: #1e1f22;
+  --channeltextarea-background: #383a40;
   --input-placeholder: #87898c;
 
   /* === Mentions === */
@@ -136,6 +137,9 @@ Every UI surface MUST use these exact CSS custom properties. **Never hardcode he
   /* === Danger === */
   --status-danger: #ed4245;
   --button-danger-background: #da373c;
+  --modal-overlay-background: rgba(0, 0, 0, 0.85);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --elevation-high: 0 24px 64px rgba(0, 0, 0, 0.54);
 }
 ```
 
@@ -283,7 +287,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 ```css
 .btn-primary {
   background: var(--brand-color);
-  color: #ffffff;
+  color: var(--interactive-active);
   border: none;
   border-radius: 3px;
   min-height: 38px;
@@ -300,7 +304,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 
 .btn-danger {
   background: var(--button-danger-background);
-  color: #ffffff;
+  color: var(--interactive-active);
 }
 ```
 
@@ -316,7 +320,7 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
   padding: 10px;
 }
 .chat-input {
-  background: #383a40;
+  background: var(--channeltextarea-background);
   border-radius: 8px;
   min-height: 44px;
 }
@@ -328,14 +332,14 @@ font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-se
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  z-index: 1000;
+  background: var(--modal-overlay-background);
+  z-index: var(--z-overlay);
 }
 .modal {
   background: var(--background-primary);
   border-radius: 8px;
   max-width: 560px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.54);
+  box-shadow: var(--elevation-high);
 }
 ```
 
@@ -483,4 +487,4 @@ After ANY UI change:
 
 ---
 
-_Last updated: 2026-06-06. This file overrides any conflicting instructions from other documents._
+_Last updated: 2026-06-11. Canonical design tokens live in `docs/design-rules.md`; this file is the agent-facing enforcement summary._

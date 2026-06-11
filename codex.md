@@ -14,12 +14,12 @@ No source or documentation file should exceed 1000 lines. If a file would exceed
 
 ## Required Reading (before any frontend task)
 
-1. `DISCORD_UI_SKILL.md` — mandatory color tokens, component patterns, anti-patterns
-2. `docs/design-rules.md` — full design system reference
+1. `DISCORD_UI_SKILL.md` — mandatory agent workflow, component patterns, anti-patterns
+2. `docs/design-rules.md` — canonical color tokens and full design system reference
 3. `docs/ui-design-spec.md` — UX acceptance criteria
 
 ## Global UI Constraint
 
-This project is a Discord clone. Every UI change MUST produce output that looks like Discord's real desktop app — warm dark backgrounds, flat solid panels, Discord Blurple (#5865F2) for primary actions. No neon colors, no gradients on panels, no glowing effects, no decorative borders. Read `DISCORD_UI_SKILL.md` for the complete enforced ruleset.
+This project is a Discord clone. Every UI change MUST produce output that looks like Discord's real desktop app — warm dark backgrounds, flat solid panels, Discord Blurple (#5865F2) for primary actions. No neon colors, no gradients on panels, no glowing effects, no decorative borders. Read `docs/design-rules.md` for canonical tokens and `DISCORD_UI_SKILL.md` for the enforced Codex workflow.
 
 UI implementation must be library-first. Use established React UI, accessibility, icon, motion, and utility libraries before writing custom styles. Raw CSS is forbidden unless it is strictly required for minimal token-based styling, exact Discord layout constraints, or targeted responsive fixes; any unavoidable custom CSS must be scoped and justified by the implementation context.
