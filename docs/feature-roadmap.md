@@ -106,7 +106,7 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 
 ### Design Compliance
 
-- [ ] **ISSUE-10 — Auth gradients and cyan token cleanup:** replace the auth screen gradients with flat Discord dark surfaces, replace `--text-link: #00a8fc` with an approved Discord token, convert auth submit gradients to flat blurple states, and run `npm run ui:scan` after the CSS changes.
+- [x] **ISSUE-10 — Auth gradients and cyan token cleanup:** replace the auth screen gradients with flat Discord dark surfaces, replace `--text-link: #00a8fc` with an approved Discord token, convert auth submit gradients to flat blurple states, and run `npm run ui:scan` after the CSS changes.
 
 ## 1. Message Drafts Per Channel And DM
 
