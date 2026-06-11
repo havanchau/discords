@@ -180,6 +180,7 @@ export function useDirectMessages({
     directMessageDraft,
     setActiveConversation,
     setDirectMessages,
+    setDirectConversations,
     setDirectMessageDraft: (value: string) => directDrafts.updateDraft(activeDraftKey, value),
     clearDirectMessages,
     loadFriends,

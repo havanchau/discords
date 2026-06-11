@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
+import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 
 @Injectable()
 export class DirectMessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimePublisher,
+  ) {}
 
   async listConversations(userId: string) {
     const conversations = await this.prisma.directConversation.findMany({
@@ -19,6 +23,7 @@ export class DirectMessagesService {
     await this.requireConversationMember(userId, conversationId);
     const messages = await this.prisma.directMessage.findMany({
       where: { conversationId },
+      include: this.messageInclude(),
       orderBy: { createdAt: 'desc' },
       take: 50,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -36,11 +41,22 @@ export class DirectMessagesService {
 
     const message = await this.prisma.directMessage.create({
       data: { conversationId, authorId: userId, content },
+      include: this.messageInclude(),
     });
     await this.prisma.directConversation.update({
       where: { id: conversationId },
       data: { updatedAt: new Date() },
     });
+    const recipientIds = await this.getConversationRecipientIds(userId, conversationId);
+    this.realtime.emitToRooms(
+      [
+        this.realtime.conversationRoom(conversationId),
+        ...recipientIds.map((recipientId) => this.realtime.userRoom(recipientId)),
+      ],
+      'dm:created',
+      message,
+    );
+    this.emitDirectUnread(recipientIds, conversationId, message.id);
     return { message };
   }
 
@@ -50,6 +66,37 @@ export class DirectMessagesService {
     });
     if (!membership) throw new NotFoundException('Conversation not found');
     return membership;
+  }
+
+  private async getConversationRecipientIds(authorId: string, conversationId: string) {
+    const recipients = await this.prisma.directConversationMember.findMany({
+      where: { conversationId, userId: { not: authorId } },
+      select: { userId: true },
+    });
+    return recipients.map((recipient) => recipient.userId);
+  }
+
+  private emitDirectUnread(recipientIds: string[], conversationId: string, messageId: string) {
+    recipientIds.forEach((recipientId) => {
+      this.realtime.emitToRoom(this.realtime.userRoom(recipientId), 'dm:unread', {
+        conversationId,
+        messageId,
+        count: 1,
+      });
+    });
+  }
+
+  private messageInclude() {
+    return {
+      author: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+    };
   }
 
   private conversationInclude(userId: string) {
@@ -70,7 +117,11 @@ export class DirectMessagesService {
           },
         },
       },
-      messages: { orderBy: { createdAt: 'desc' as const }, take: 1 },
+      messages: {
+        include: this.messageInclude(),
+        orderBy: { createdAt: 'desc' as const },
+        take: 1,
+      },
     };
   }
 }

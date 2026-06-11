@@ -215,6 +215,8 @@ The project is portfolio-ready when:
 
 ## Feature Completion Checklist
 
+> Recheck note (2026-06-11): realtime direct messages and message search are now implemented in source. Remaining unchecked items should stay open until the follow-up backlog in `docs/feature-roadmap.md` is implemented and verified.
+
 - [x] Auth foundation.
 - [x] Server and channel foundation.
 - [x] Realtime channel chat.
@@ -224,9 +226,9 @@ The project is portfolio-ready when:
 - [x] Persistent read state for channels.
 - [x] Voice and screen-share foundation.
 - [x] Audit log foundation.
-- [ ] Realtime direct messages.
+- [x] Realtime direct messages.
 - [ ] Full friend-system polish.
-- [ ] Message search.
+- [x] Message search.
 - [ ] Member-level channel overrides.
 - [ ] Notification inbox.
 - [ ] Full moderation suite.

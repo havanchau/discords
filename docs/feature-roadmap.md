@@ -83,6 +83,31 @@ Use this checklist before adding any roadmap item or new product feature. It kee
 - [ ] Update README, architecture, feature spec, security, deployment, or UI planning docs when their owned topics change.
 - [ ] Record known limitations and follow-up work as unchecked items, not completed tasks.
 
+## Current Follow-Up Backlog — 2026-06-11 Recheck
+
+The realtime DM, channel message edit/delete broadcast, DM author payload, socket rate-limit cleanup, message search wiring, and `AppShell.tsx` file-size issues are considered implemented in the current source. The unchecked items below remain unfinished or insufficient and should be picked up in the next implementation pass.
+
+### Critical Remaining Product Gaps
+
+- [ ] **ISSUE-04 — Friend realtime notifications:** inject the shared realtime publisher or an event-emitter bridge into the friend flow, emit `friend:request` to `user:<receiverId>` after a new request is created, emit `friend:updated` to both users after request response changes, add shared event constants, and update `useRealtimeSocket`/home state so the friends summary refreshes without manual navigation.
+- [ ] **ISSUE-11 — Persistent DM unread tracking:** add a persistent `DirectReadState` or equivalent `lastReadAt` model for direct conversations, expose mark-read behavior for DMs, update unread counts from `dm:created`/`dm:unread`, and show unread badges in the recent DM list.
+- [ ] **ISSUE-13 — Member-level channel override UI:** add a member override section to channel settings, provide member selection and allow/deny controls, and reuse the existing channel override endpoint that already accepts `memberId`.
+
+### Notifications And Inbox
+
+- [ ] **ISSUE-05 — In-app notification inbox:** replace the placeholder/pinned-message notification surface with a real notification inbox, add `GET /notifications` or an equivalent endpoint for recent mention/system events, add unread badge counts, and support loading/empty/error states.
+
+### CI, Tests, And Verification
+
+- [ ] **ISSUE-06 — Production smoke tests:** add `npm run ui:smoke` to CI after build prerequisites are available, add post-deploy smoke coverage in `deploy.yml`, and document required deployed URL secrets.
+- [ ] **ISSUE-08 — Backend API tests:** add backend unit/integration tests for permissions, auth/session lifecycle, message create/edit/delete validation, and protected endpoint 401/403 behavior.
+- [ ] **ISSUE-09 — Frontend realtime/state tests:** add tests for `useRealtimeSocket`, `useDirectMessages`, invalid socket auth disconnect behavior, and ChatPanel loading/empty/error states.
+- [ ] **ISSUE-12 — Message service search extraction:** split `MessageSearchFilters`, search normalization, date parsing, and Prisma where-builder helpers from `messages.service.ts` into a focused `messages.search.ts` module before the service grows further.
+
+### Design Compliance
+
+- [ ] **ISSUE-10 — Auth gradients and cyan token cleanup:** replace the auth screen gradients with flat Discord dark surfaces, replace `--text-link: #00a8fc` with an approved Discord token, convert auth submit gradients to flat blurple states, and run `npm run ui:scan` after the CSS changes.
+
 ## 1. Message Drafts Per Channel And DM
 
 - [x] Define draft storage ownership and key format.

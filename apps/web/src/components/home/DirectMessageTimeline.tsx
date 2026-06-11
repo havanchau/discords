@@ -9,16 +9,26 @@ type DirectMessageTimelineProps = {
   directMessages: DirectMessage[];
 };
 
-export function DirectMessageTimeline({ auth, dmPartner, directMessages }: DirectMessageTimelineProps) {
+export function DirectMessageTimeline({
+  auth,
+  dmPartner,
+  directMessages,
+}: DirectMessageTimelineProps) {
   return (
     <div className={styles.messageList} aria-live="polite">
       {directMessages.length ? (
         directMessages.map((message) => {
           const mine = message.authorId === auth.user.id;
+          const authorName = mine
+            ? auth.user.displayName
+            : (message.author?.displayName ?? dmPartner.displayName);
 
           return (
-            <article key={message.id} className={mine ? `${styles.message} ${styles.messageMine}` : styles.message}>
-              <span className={styles.messageAuthor}>{mine ? auth.user.displayName : dmPartner.displayName}</span>
+            <article
+              key={message.id}
+              className={mine ? `${styles.message} ${styles.messageMine}` : styles.message}
+            >
+              <span className={styles.messageAuthor}>{authorName}</span>
               <p className={styles.messageBody}>{message.content}</p>
               <span className={styles.messageTime}>{formatDate(message.createdAt)}</span>
             </article>
@@ -27,7 +37,9 @@ export function DirectMessageTimeline({ auth, dmPartner, directMessages }: Direc
       ) : (
         <div className={styles.statePanel}>
           <MessageSquare size={24} aria-hidden="true" />
-          <span className={styles.statePanelCopy}>Start the conversation with {dmPartner.displayName}.</span>
+          <span className={styles.statePanelCopy}>
+            Start the conversation with {dmPartner.displayName}.
+          </span>
         </div>
       )}
     </div>

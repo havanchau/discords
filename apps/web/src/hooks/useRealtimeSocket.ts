@@ -1,6 +1,6 @@
-import { Dispatch, RefObject, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, RefObject, SetStateAction, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { AuthState, Message, ServerDetail } from '../api';
+import { AuthState, DirectConversation, DirectMessage, Message, ServerDetail } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
 import { ActiveCallSummary, SOCKET_URL } from '../helpers';
 
@@ -12,9 +12,12 @@ interface TypingUser {
 interface UseRealtimeSocketOptions {
   auth: AuthState | null;
   activeChannelIdRef: RefObject<string | null>;
+  activeConversationId?: string | null;
   decryptMessageForDisplay: (message: Message) => Promise<Message>;
   markChannelRead: (channelId: string, messageId?: string) => Promise<void>;
   setMessages: Dispatch<SetStateAction<Message[]>>;
+  setDirectMessages: Dispatch<SetStateAction<DirectMessage[]>>;
+  setDirectConversations: Dispatch<SetStateAction<DirectConversation[]>>;
   setTypingUsers: Dispatch<SetStateAction<TypingUser[]>>;
   setServer: Dispatch<SetStateAction<ServerDetail | null>>;
   setActiveCalls: Dispatch<SetStateAction<Record<string, ActiveCallSummary>>>;
@@ -24,15 +27,23 @@ interface UseRealtimeSocketOptions {
 export function useRealtimeSocket({
   auth,
   activeChannelIdRef,
+  activeConversationId,
   decryptMessageForDisplay,
   markChannelRead,
   setMessages,
+  setDirectMessages,
+  setDirectConversations,
   setTypingUsers,
   setServer,
   setActiveCalls,
   setChannelBadges,
 }: UseRealtimeSocketOptions) {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const activeConversationIdRef = useRef<string | null>(activeConversationId ?? null);
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId ?? null;
+  }, [activeConversationId]);
 
   useEffect(() => {
     if (!auth) {
@@ -94,6 +105,55 @@ export function useRealtimeSocket({
         );
         void markChannelRead(message.channelId, message.id);
       }
+    });
+
+    nextSocket.on('message:updated', async (message: Message) => {
+      const displayMessage = await decryptMessageForDisplay(message);
+      setMessages((current) =>
+        current.map((item) => (item.id === displayMessage.id ? displayMessage : item)),
+      );
+    });
+
+    nextSocket.on('message:deleted', async (message: Message) => {
+      const displayMessage = await decryptMessageForDisplay(message);
+      setMessages((current) =>
+        current.map((item) => (item.id === displayMessage.id ? displayMessage : item)),
+      );
+    });
+
+    nextSocket.on('dm:created', (message: DirectMessage) => {
+      if (message.conversationId === activeConversationIdRef.current) {
+        setDirectMessages((current) =>
+          current.some((item) => item.id === message.id) ? current : [...current, message],
+        );
+      }
+
+      setDirectConversations((current) => {
+        const existing = current.find((conversation) => conversation.id === message.conversationId);
+        if (!existing) return current;
+        const updated = {
+          ...existing,
+          messages: [message],
+          updatedAt: message.createdAt,
+        };
+        return [
+          updated,
+          ...current.filter((conversation) => conversation.id !== message.conversationId),
+        ];
+      });
+    });
+
+    nextSocket.on('dm:unread', (payload: { conversationId: string }) => {
+      if (payload.conversationId === activeConversationIdRef.current) return;
+      setDirectConversations((current) => {
+        const existing = current.find((conversation) => conversation.id === payload.conversationId);
+        return existing
+          ? [
+              existing,
+              ...current.filter((conversation) => conversation.id !== payload.conversationId),
+            ]
+          : current;
+      });
     });
 
     nextSocket.on('reaction:updated', async (payload: { message: Message }) => {
