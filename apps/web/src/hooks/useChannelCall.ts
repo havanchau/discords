@@ -42,12 +42,19 @@ export function useChannelCall({
 
     const handleUserJoined = (payload: { channelId: string; participant: CallParticipant }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
+      if (isLocalParticipant(payload.participant)) return;
       setRemoteMedia((current) => upsertRemote(current, payload.participant));
       void createOffer(payload.participant.socketId, payload.channelId);
     };
 
     const handleUserUpdated = (payload: { channelId: string; participant: CallParticipant }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
+      if (isLocalParticipant(payload.participant)) {
+        setRemoteMedia((current) =>
+          current.filter((item) => item.socketId !== payload.participant.socketId),
+        );
+        return;
+      }
       setRemoteMedia((current) => upsertRemote(current, payload.participant));
     };
 
@@ -161,7 +168,9 @@ export function useChannelCall({
             return;
           }
 
-          const participants = result?.participants ?? [];
+          const participants = (result?.participants ?? []).filter(
+            (participant) => !isLocalParticipant(participant),
+          );
           setRemoteMedia(participants);
           await Promise.all(
             participants.map((participant) => createOffer(participant.socketId, channel.id)),
@@ -276,7 +285,13 @@ export function useChannelCall({
     localStreamRef.current = null;
   }
 
+  function isLocalParticipant(participant: Pick<CallParticipant, 'socketId'>) {
+    return Boolean(socket?.id && participant.socketId === socket.id);
+  }
+
   function upsertRemote(current: RemoteMedia[], participant: CallParticipant) {
+    if (isLocalParticipant(participant)) return current;
+
     const existing = current.find((item) => item.socketId === participant.socketId);
     if (!existing) return [...current, participant];
     return current.map((item) =>
