@@ -127,7 +127,7 @@
   object-fit: cover;
 }
 
-.callTileLocal video {
+.callTileMirrorPreview video {
   transform: scaleX(-1);
 }
 

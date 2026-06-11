@@ -75,14 +75,22 @@ export function CallStage({ session, call }: CallStageProps) {
                 variant={state.isMuted ? 'danger' : 'ghost'}
                 onClick={call.toggleMute}
               >
-                {state.isMuted ? <MicOff size={17} aria-hidden="true" /> : <Mic size={17} aria-hidden="true" />}
+                {state.isMuted ? (
+                  <MicOff size={17} aria-hidden="true" />
+                ) : (
+                  <Mic size={17} aria-hidden="true" />
+                )}
               </IconButton>
               <IconButton
                 label={state.isCameraOff ? 'Turn camera on' : 'Turn camera off'}
                 onClick={call.toggleCamera}
                 disabled={state.mode === 'voice'}
               >
-                {state.isCameraOff ? <VideoOff size={17} aria-hidden="true" /> : <Video size={17} aria-hidden="true" />}
+                {state.isCameraOff ? (
+                  <VideoOff size={17} aria-hidden="true" />
+                ) : (
+                  <Video size={17} aria-hidden="true" />
+                )}
               </IconButton>
               <IconButton label="Leave call" variant="danger" onClick={call.end}>
                 <PhoneOff size={17} aria-hidden="true" />
@@ -90,7 +98,12 @@ export function CallStage({ session, call }: CallStageProps) {
             </div>
           </div>
           <div className={styles.callGrid}>
-            <div className={cn(styles.callTile, styles.callTileLocal)}>
+            <div
+              className={cn(
+                styles.callTile,
+                !state.isSharingScreen && styles.callTileMirrorPreview,
+              )}
+            >
               {state.mode !== 'voice' && !state.isCameraOff ? (
                 <video ref={call.localVideoRef} autoPlay muted playsInline />
               ) : (
@@ -103,11 +116,7 @@ export function CallStage({ session, call }: CallStageProps) {
               <div className={styles.callLabel}>
                 <strong>{auth.user.displayName}</strong>
                 <span>
-                  {state.isSharingScreen
-                    ? 'Sharing screen'
-                    : state.isMuted
-                      ? 'Muted'
-                      : 'You'}
+                  {state.isSharingScreen ? 'Sharing screen' : state.isMuted ? 'Muted' : 'You'}
                 </span>
               </div>
             </div>
