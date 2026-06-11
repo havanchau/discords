@@ -13,6 +13,7 @@ import {
   AuditLogEntry,
   Channel,
   ChannelPermissionOverride,
+  Invite,
   NotificationPreference,
   Role,
   ServerDetail,
@@ -67,6 +68,7 @@ export function useSettingsActions({
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreference[]>(
     [],
   );
+  const [invites, setInvites] = useState<Invite[]>([]);
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -78,6 +80,7 @@ export function useSettingsActions({
   useEffect(() => {
     if (!auth || !server || activeDialog !== 'server-settings') return;
     void loadAuditLogs(server.id, auth.accessToken);
+    void loadInvites(server.id, auth.accessToken);
   }, [activeDialog, server?.id, auth?.accessToken]);
 
   async function loadNotificationPreferences(token = auth?.accessToken) {
@@ -154,6 +157,65 @@ export function useSettingsActions({
       setAuditLogs(result.logs);
     } catch {
       setAuditLogs([]);
+    }
+  }
+
+  async function loadInvites(serverId: string, token = auth?.accessToken) {
+    if (!token) return;
+    try {
+      const result = await apiRequest<{ invites: Invite[] }>(`/servers/${serverId}/invites`, {}, token);
+      setInvites(result.invites);
+    } catch {
+      setInvites([]);
+    }
+  }
+
+  async function createInviteFromSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!auth || !server) return;
+    const form = new FormData(event.currentTarget);
+    setPendingAction('invite-settings-create');
+    setWorkspaceError(null);
+    try {
+      const expiresInHours = Number(form.get('expiresInHours') || 24);
+      const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
+      const maxUsesValue = String(form.get('maxUses') || '').trim();
+      const result = await apiRequest<{ invite: Invite }>(
+        `/servers/${server.id}/invites`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            channelId: channel?.id,
+            maxUses: maxUsesValue ? Number(maxUsesValue) : undefined,
+            expiresAt,
+          }),
+        },
+        auth.accessToken,
+      );
+      setInvites((current) => [result.invite, ...current.filter((invite) => invite.id !== result.invite.id)]);
+      event.currentTarget.reset();
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot create invite');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function revokeInvite(inviteId: string) {
+    if (!auth || !server) return;
+    setPendingAction(`invite-${inviteId}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest<{ invite: Invite }>(
+        `/servers/${server.id}/invites/${inviteId}`,
+        { method: 'DELETE' },
+        auth.accessToken,
+      );
+      setInvites((current) => current.filter((invite) => invite.id !== inviteId));
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot revoke invite');
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -534,10 +596,13 @@ export function useSettingsActions({
     channelOverrides,
     auditLogs,
     notificationPreferences,
+    invites,
     profileAvatarInputRef,
     channelAvatarInputRef,
     loadNotificationPreferences,
     updateNotificationPreference,
+    createInviteFromSettings,
+    revokeInvite,
     updateProfileAvatar,
     updateChannelAvatar,
     updateProfile,

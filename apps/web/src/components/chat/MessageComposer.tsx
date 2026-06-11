@@ -1,9 +1,10 @@
-import { FileAudio2, FileText, Image, Loader2, Mic, Paperclip, Reply, Send, Square, X } from 'lucide-react';
+import { FileAudio2, FileText, Image, Loader2, Mic, Paperclip, Reply, Send, Slash, Square, X } from 'lucide-react';
 import { Channel } from '../../api';
 import { formatBytes } from '../../helpers';
 import { Button, IconButton, TextField } from '../ui';
 import styles from './MessageComposer.module.css';
 import { cn } from '../../utils/cn';
+import { getSlashCommandSuggestions, parseSlashCommand } from '../../utils/slashCommands';
 import type { ChatPanelComposer, ChatPanelMessageActions } from './types';
 
 interface MessageComposerProps {
@@ -18,6 +19,8 @@ export function MessageComposer({
   messageActions,
 }: MessageComposerProps) {
   const isMessageSending = composer.pendingAction === 'send-message';
+  const commandSuggestions = getSlashCommandSuggestions(composer.draft).slice(0, 4);
+  const parsedCommand = parseSlashCommand(composer.draft);
 
   return (
     <form onSubmit={composer.sendMessage} className={styles.composer}>
@@ -34,6 +37,27 @@ export function MessageComposer({
           >
             <X size={14} aria-hidden="true" />
           </IconButton>
+        </div>
+      )}
+
+      {commandSuggestions.length > 0 && (
+        <div className={styles.commandPopover} role="listbox" aria-label="Slash command suggestions">
+          {commandSuggestions.map((command) => (
+            <button
+              type="button"
+              key={command.name}
+              className={styles.commandOption}
+              onClick={() => composer.setDraft(`/${command.name} `)}
+            >
+              <Slash size={14} aria-hidden="true" />
+              <span>
+                <strong>/{command.name}</strong>
+                <small>{command.description}</small>
+              </span>
+              <code>{command.usage}</code>
+            </button>
+          ))}
+          {parsedCommand.error ? <div className={styles.commandError}>{parsedCommand.error}</div> : null}
         </div>
       )}
 
@@ -98,7 +122,7 @@ export function MessageComposer({
         data-testid="composer-input"
         value={composer.draft}
         placeholder={
-          channel ? `Message #${channel.name}, paste a link, or attach media` : 'Select a channel'
+          channel ? `Message #${channel.name}, type / for commands` : 'Select a channel'
         }
         disabled={!channel || isMessageSending}
         onChange={(event) => {

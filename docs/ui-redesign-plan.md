@@ -98,6 +98,11 @@ Define these tokens before any component work begins. All component CSS Modules 
 
 ---
 
+## Current Feature-Roadmap Status
+
+- [x] Added Discord-token-based utility surfaces for unread inbox, media/files/links, slash command autocomplete, invite management, audit details, and permission previews.
+- [x] Kept AppShell, ChatPanel, SettingsModal, WorkspaceSidebar, and styles.css within the 1000-line source limit after the feature pass.
+
 ## Implementation Checklist
 
 ### Phase 0A: Safety And Tooling

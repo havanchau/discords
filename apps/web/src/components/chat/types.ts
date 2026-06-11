@@ -3,7 +3,7 @@ import type { AuthState, Channel, Message, NotificationItem } from '../../api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 
-export type ActivePanel = 'notifications' | 'search' | 'encryption' | null;
+export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | null;
 export type ActiveDialog =
   | 'profile'
   | 'server-settings'
@@ -25,6 +25,7 @@ export interface ChatPanelMessages {
   hasMore: boolean;
   typingUsers: Array<{ userId: string; displayName: string }>;
   pinned: Message[];
+  mediaSource: Message[];
   pinnedIds: string[];
   notifications: NotificationItem[];
   notificationUnreadCount: number;

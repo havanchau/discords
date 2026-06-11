@@ -92,6 +92,7 @@ export function ChatPanel({
         parsedSearch={messages.parsedSearch}
         searchResults={messages.visible}
         pinnedMessages={messages.pinned}
+        mediaMessages={messages.mediaSource}
         notifications={messages.notifications}
         notificationUnreadCount={messages.notificationUnreadCount}
         isLoadingNotifications={messages.isLoadingNotifications}

@@ -4,6 +4,7 @@ import type {
   AuthState,
   Channel,
   ChannelPermissionOverride,
+  Invite,
   NotificationPreference,
   Role,
   ServerDetail,
@@ -25,6 +26,7 @@ export interface SettingsModalFields {
   selectedMember: ServerDetail['members'][number] | null;
   channelOverrides: ChannelPermissionOverride[];
   auditLogs: AuditLogEntry[];
+  invites: Invite[];
   notificationPreferences: NotificationPreference[];
   pendingAction: string | null;
   uiTheme: UiTheme;
@@ -32,6 +34,8 @@ export interface SettingsModalFields {
   channelAvatarInputRef: RefObject<HTMLInputElement | null>;
   setActiveDialog: (dialog: ActiveDialog) => void;
   updateProfile: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  createInviteFromSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  revokeInvite: (inviteId: string) => Promise<void>;
   updateNotificationPreference: (
     preference: Partial<NotificationPreference> & {
       serverId?: string | null;
@@ -69,6 +73,7 @@ export interface SettingsModalProps {
     | 'selectedMember'
     | 'channelOverrides'
     | 'auditLogs'
+    | 'invites'
     | 'notificationPreferences'
     | 'pendingAction'
   >;
@@ -77,6 +82,8 @@ export interface SettingsModalProps {
   actions: Pick<
     SettingsModalFields,
     | 'setUiTheme'
+    | 'createInviteFromSettings'
+    | 'revokeInvite'
     | 'updateProfile'
     | 'updateNotificationPreference'
     | 'updateServerSettings'

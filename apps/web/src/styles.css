@@ -6,3 +6,135 @@
 @import './styles/message-overlays.css';
 @import './styles/member-home-loading.css';
 @import './styles/responsive.css';
+
+.invite-create-grid,
+.permission-preview-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-3);
+  align-items: end;
+}
+
+.permission-preview-controls label {
+  display: grid;
+  gap: var(--spacing-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.permission-preview-controls select {
+  min-height: 36px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--spacing-2);
+  color: var(--text-normal);
+  background: var(--input-background);
+}
+
+.invite-list,
+.permission-preview-grid {
+  display: grid;
+  gap: var(--spacing-2);
+}
+
+.invite-row,
+.permission-preview-row {
+  min-width: 0;
+  display: grid;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-radius: var(--radius-sm);
+  background: var(--background-secondary);
+}
+
+.invite-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.invite-row > div,
+.permission-preview-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.invite-row strong,
+.invite-row small,
+.permission-preview-row strong,
+.permission-preview-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-row strong,
+.permission-preview-row strong {
+  color: var(--header-primary);
+}
+
+.invite-row small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.audit-log-row summary {
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.audit-log-row pre {
+  max-height: 140px;
+  overflow: auto;
+  margin: var(--spacing-2) 0 0;
+  padding: var(--spacing-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-normal);
+  background: var(--background-tertiary);
+  font-size: 12px;
+}
+
+.permission-preview-row {
+  grid-template-columns: 120px 80px minmax(0, 1fr);
+}
+
+.permission-preview-row > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.permission-allowed,
+.permission-denied,
+.permission-chip-allowed,
+.permission-chip-denied {
+  width: fit-content;
+  border-radius: var(--radius-xs);
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.permission-allowed,
+.permission-chip-allowed {
+  color: var(--text-normal);
+  background: rgba(35, 165, 90, 0.16);
+}
+
+.permission-denied,
+.permission-chip-denied {
+  color: var(--text-muted);
+  background: var(--background-modifier-hover);
+}
+
+@media (max-width: 720px) {
+  .invite-create-grid,
+  .permission-preview-controls,
+  .invite-row,
+  .permission-preview-row {
+    grid-template-columns: 1fr;
+  }
+}

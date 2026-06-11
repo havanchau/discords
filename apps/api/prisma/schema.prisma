@@ -357,8 +357,12 @@ model Invite {
   maxUses   Int?
   usedCount Int       @default(0)
   expiresAt DateTime?
+  revokedAt DateTime?
   createdAt DateTime  @default(now())
   server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, revokedAt, expiresAt])
+  @@index([creatorId])
 }
 
 model FriendRequest {

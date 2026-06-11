@@ -1,9 +1,10 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck, FileText, Pin } from 'lucide-react';
+import { Bell, CheckCheck, ExternalLink, FileText, Image as ImageIcon, Link, Pin } from 'lucide-react';
 import { Channel, Message, NotificationItem } from '../../api';
 import { formatDate, previewText } from '../../helpers';
 import { buildMessageSearchSnippet } from '../../utils/messageSearch';
 import { Button, TextField } from '../ui';
+import { buildMediaCollections } from '../../utils/mediaCollections';
 import type { ActivePanel } from './types';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 import styles from './UtilityPanel.module.css';
@@ -15,6 +16,7 @@ interface UtilityPanelProps {
   parsedSearch: ParsedMessageSearch;
   searchResults: Message[];
   pinnedMessages: Message[];
+  mediaMessages: Message[];
   notifications: NotificationItem[];
   notificationUnreadCount: number;
   isLoadingNotifications: boolean;
@@ -35,6 +37,7 @@ export function UtilityPanel({
   parsedSearch,
   searchResults,
   pinnedMessages,
+  mediaMessages,
   notifications,
   notificationUnreadCount,
   isLoadingNotifications,
@@ -58,6 +61,9 @@ export function UtilityPanel({
       canShowSearchResults && parsedSearch.invalid.length === 0 ? searchResults.slice(0, 8) : [],
     [canShowSearchResults, parsedSearch.invalid.length, searchResults],
   );
+  const mediaCollections = useMemo(() => buildMediaCollections(mediaMessages), [mediaMessages]);
+  const [mediaTab, setMediaTab] = useState<'media' | 'files' | 'links'>('media');
+  const activeMediaItems = mediaCollections[mediaTab];
 
   useEffect(() => {
     if (activePanel === 'notifications') {
@@ -197,6 +203,64 @@ export function UtilityPanel({
                 <div className={styles.searchEmpty}>No matching messages in this channel.</div>
               )}
             </div>
+          )}
+        </div>
+      )}
+
+
+      {activePanel === 'media' && (
+        <div className={styles.mediaPanel}>
+          <div className={styles.mediaHeader}>
+            <strong>Media, Files & Links</strong>
+            <span>Current channel collection</span>
+          </div>
+          <div className={styles.mediaTabs} role="tablist" aria-label="Channel media categories">
+            {(['media', 'files', 'links'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={mediaTab === tab}
+                className={mediaTab === tab ? styles.mediaTabActive : ''}
+                onClick={() => setMediaTab(tab)}
+              >
+                {tab === 'media' ? 'Media' : tab === 'files' ? 'Files' : 'Links'}
+              </button>
+            ))}
+          </div>
+          {activeMediaItems.length ? (
+            <div className={mediaTab === 'media' ? styles.mediaGrid : styles.mediaRows}>
+              {activeMediaItems.slice(0, 18).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={mediaTab === 'media' ? styles.mediaTile : styles.mediaRow}
+                  onClick={() => onJumpToMessage(item.messageId)}
+                  aria-label={`Jump to ${item.category} from ${item.author.displayName}`}
+                >
+                  {item.attachment && (item.category === 'image' || item.category === 'video') ? (
+                    <span className={styles.mediaThumb}>
+                      {item.category === 'image' ? (
+                        <img src={item.attachment.url} alt={item.attachment.fileName} />
+                      ) : (
+                        <ImageIcon size={18} aria-hidden="true" />
+                      )}
+                    </span>
+                  ) : item.category === 'link' ? (
+                    <Link size={15} aria-hidden="true" />
+                  ) : (
+                    <FileText size={15} aria-hidden="true" />
+                  )}
+                  <span>
+                    <strong>{item.attachment?.fileName ?? item.hostname ?? item.url}</strong>
+                    <small>{item.author.displayName} · {formatDate(item.createdAt)}</small>
+                  </span>
+                  {item.url ? <ExternalLink size={13} aria-hidden="true" /> : null}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.notificationEmpty}>No {mediaTab} found in this channel yet.</div>
           )}
         </div>
       )}
