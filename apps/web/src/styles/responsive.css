@@ -70,7 +70,7 @@
     align-content: center;
     gap: 8px;
     padding: 12px 16px;
-    background: rgba(17, 0, 31, 0.84);
+    background: var(--background-secondary);
   }
 
   .auth-panel p {
@@ -172,7 +172,7 @@
     width: 100%;
     min-height: 100dvh;
     padding: 12px 16px;
-    background: rgba(17, 0, 31, 0.86);
+    background: var(--background-secondary);
   }
 
   .auth-panel p {
