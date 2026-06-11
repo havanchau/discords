@@ -99,7 +99,7 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 
 ### CI, Tests, And Verification
 
-- [ ] **ISSUE-06 — Production smoke tests:** add `npm run ui:smoke` to CI after build prerequisites are available, add post-deploy smoke coverage in `deploy.yml`, and document required deployed URL secrets.
+- [x] **ISSUE-06 — Production smoke tests:** add `npm run ui:smoke` to CI after build prerequisites are available, add post-deploy smoke coverage in `deploy.yml`, and document required deployed URL secrets.
 - [ ] **ISSUE-08 — Backend API tests:** add backend unit/integration tests for permissions, auth/session lifecycle, message create/edit/delete validation, and protected endpoint 401/403 behavior.
 - [ ] **ISSUE-09 — Frontend realtime/state tests:** add tests for `useRealtimeSocket`, `useDirectMessages`, invalid socket auth disconnect behavior, and ChatPanel loading/empty/error states.
 - [x] **ISSUE-12 — Message service search extraction:** split `MessageSearchFilters`, search normalization, date parsing, and Prisma where-builder helpers from `messages.service.ts` into a focused `messages.search.ts` module before the service grows further.

@@ -67,3 +67,34 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+  post-deploy-smoke:
+    name: Smoke deployed app
+    needs: deploy-web
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate smoke-test URL secrets
+        env:
+          PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          PRODUCTION_WEB_URL: ${{ secrets.PRODUCTION_WEB_URL }}
+        run: |
+          if [ -z "$PRODUCTION_API_URL" ] || [ -z "$PRODUCTION_WEB_URL" ]; then
+            echo "Missing PRODUCTION_API_URL or PRODUCTION_WEB_URL secret"
+            exit 1
+          fi
+
+      - name: Run deployed UI smoke test
+        env:
+          API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          WEB_URL: ${{ secrets.PRODUCTION_WEB_URL }}
+        run: npm run ui:smoke
