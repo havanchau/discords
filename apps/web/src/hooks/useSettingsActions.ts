@@ -38,7 +38,11 @@ interface UseSettingsActionsOptions {
   setPendingAction: (action: string | null) => void;
   setWorkspaceError: (message: string | null) => void;
   setChannelBadges: Dispatch<SetStateAction<Record<string, ChannelBadgeState>>>;
-  openServer: (serverId: string, token?: string, preferredChannelId?: string | null) => Promise<void>;
+  openServer: (
+    serverId: string,
+    token?: string,
+    preferredChannelId?: string | null,
+  ) => Promise<void>;
 }
 
 export function useSettingsActions({
@@ -325,6 +329,29 @@ export function useSettingsActions({
     }
   }
 
+  async function saveChannelOverrides(nextOverrides: ChannelPermissionOverride[]) {
+    if (!auth || !channel) return;
+    const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
+      `/channels/${channel.id}/overrides`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          overrides: nextOverrides
+            .filter((override) => override.allow.length || override.deny.length)
+            .map(({ roleId, memberId, allow, deny }) => ({
+              roleId,
+              memberId,
+              allow,
+              deny,
+            })),
+        }),
+      },
+      auth.accessToken,
+    );
+    setChannelOverrides(result.overrides);
+    await openServer(channel.serverId, auth.accessToken, channel.id);
+  }
+
   async function toggleChannelRoleOverride(roleId: string, permission: string, enabled: boolean) {
     if (!auth || !channel) return;
     setPendingAction(`channel-override-${roleId}-${permission}`);
@@ -332,7 +359,7 @@ export function useSettingsActions({
     try {
       const existing = channelOverrides.find((override) => override.roleId === roleId);
       const nextOverride: ChannelPermissionOverride = {
-        id: existing?.id ?? `local-${roleId}`,
+        id: existing?.id ?? `local-role-${roleId}`,
         channelId: channel.id,
         roleId,
         memberId: null,
@@ -341,29 +368,52 @@ export function useSettingsActions({
           : (existing?.allow ?? []).filter((item) => item !== permission),
         deny: (existing?.deny ?? []).filter((item) => item !== permission),
       };
-      const nextOverrides = [
+      await saveChannelOverrides([
         ...channelOverrides.filter((override) => override.roleId !== roleId),
         nextOverride,
-      ].filter((override) => override.allow.length || override.deny.length);
-      const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
-        `/channels/${channel.id}/overrides`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            overrides: nextOverrides.map(({ roleId, memberId, allow, deny }) => ({
-              roleId,
-              memberId,
-              allow,
-              deny,
-            })),
-          }),
-        },
-        auth.accessToken,
-      );
-      setChannelOverrides(result.overrides);
-      await openServer(channel.serverId, auth.accessToken, channel.id);
+      ]);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel permission');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function toggleChannelMemberOverride(
+    memberId: string,
+    permission: string,
+    disposition: 'allow' | 'deny',
+    enabled: boolean,
+  ) {
+    if (!auth || !channel) return;
+    setPendingAction(`channel-member-override-${memberId}-${permission}-${disposition}`);
+    setWorkspaceError(null);
+    try {
+      const existing = channelOverrides.find((override) => override.memberId === memberId);
+      const allowWithoutPermission = (existing?.allow ?? []).filter((item) => item !== permission);
+      const denyWithoutPermission = (existing?.deny ?? []).filter((item) => item !== permission);
+      const nextOverride: ChannelPermissionOverride = {
+        id: existing?.id ?? `local-member-${memberId}`,
+        channelId: channel.id,
+        roleId: null,
+        memberId,
+        allow:
+          disposition === 'allow' && enabled
+            ? Array.from(new Set([...allowWithoutPermission, permission]))
+            : allowWithoutPermission,
+        deny:
+          disposition === 'deny' && enabled
+            ? Array.from(new Set([...denyWithoutPermission, permission]))
+            : denyWithoutPermission,
+      };
+      await saveChannelOverrides([
+        ...channelOverrides.filter((override) => override.memberId !== memberId),
+        nextOverride,
+      ]);
+    } catch (err) {
+      setWorkspaceError(
+        err instanceof Error ? err.message : 'Cannot update member channel permission',
+      );
     } finally {
       setPendingAction(null);
     }
@@ -494,6 +544,7 @@ export function useSettingsActions({
     updateServerSettings,
     updateChannelSettings,
     toggleChannelRoleOverride,
+    toggleChannelMemberOverride,
     createRole,
     toggleRolePermission,
     deleteRole,

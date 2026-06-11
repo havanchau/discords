@@ -91,7 +91,7 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 
 - [x] **ISSUE-04 — Friend realtime notifications:** inject the shared realtime publisher or an event-emitter bridge into the friend flow, emit `friend:request` to `user:<receiverId>` after a new request is created, emit `friend:updated` to both users after request response changes, add shared event constants, and update `useRealtimeSocket`/home state so the friends summary refreshes without manual navigation.
 - [x] **ISSUE-11 — Persistent DM unread tracking:** add a persistent `DirectReadState` or equivalent `lastReadAt` model for direct conversations, expose mark-read behavior for DMs, update unread counts from `dm:created`/`dm:unread`, and show unread badges in the recent DM list.
-- [ ] **ISSUE-13 — Member-level channel override UI:** add a member override section to channel settings, provide member selection and allow/deny controls, and reuse the existing channel override endpoint that already accepts `memberId`.
+- [x] **ISSUE-13 — Member-level channel override UI:** add a member override section to channel settings, provide member selection and allow/deny controls, and reuse the existing channel override endpoint that already accepts `memberId`.
 
 ### Notifications And Inbox
 

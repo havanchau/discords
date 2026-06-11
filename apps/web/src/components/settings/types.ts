@@ -45,6 +45,12 @@ export interface SettingsModalFields {
     permission: string,
     enabled: boolean,
   ) => Promise<void>;
+  toggleChannelMemberOverride: (
+    memberId: string,
+    permission: string,
+    disposition: 'allow' | 'deny',
+    enabled: boolean,
+  ) => Promise<void>;
   createRole: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   toggleRolePermission: (role: Role, permission: string, enabled: boolean) => Promise<void>;
   deleteRole: (role: Role) => Promise<void>;
@@ -76,6 +82,7 @@ export interface SettingsModalProps {
     | 'updateServerSettings'
     | 'updateChannelSettings'
     | 'toggleChannelRoleOverride'
+    | 'toggleChannelMemberOverride'
     | 'createRole'
     | 'toggleRolePermission'
     | 'deleteRole'
