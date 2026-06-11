@@ -9,14 +9,25 @@ import { TooltipProvider } from './components/ui';
 import { AuthProvider, SocketProvider, ThemeProvider } from './contexts/appContexts';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useChannelEncryption } from './hooks/useChannelEncryption';
+import { useChannelReadState } from './hooks/useChannelReadState';
 import { useChannelCall } from './hooks/useChannelCall';
 import { useComposerAttachments } from './hooks/useComposerAttachments';
 import { useDirectMessages } from './hooks/useDirectMessages';
 import { usePersistentDraft } from './hooks/usePersistentDrafts';
+import { useMessageHistory } from './hooks/useMessageHistory';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
 import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
-import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
+import { useTypingIndicator } from './hooks/useTypingIndicator';
+import {
+  apiRequest,
+  assetUrl,
+  Channel,
+  Message,
+  ServerDetail,
+  ServerSummary,
+  uploadFile,
+} from './api';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
 import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
@@ -29,7 +40,9 @@ export function AppShell() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
-  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>({});
+  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>(
+    {},
+  );
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [isLoadingServers, setIsLoadingServers] = useState(false);
@@ -43,7 +56,10 @@ export function AppShell() {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const channelDraft = usePersistentDraft({ storageKey: 'discord-clone-channel-drafts', draftKey: channel ? `channel:${channel.id}` : null });
+  const channelDraft = usePersistentDraft({
+    storageKey: 'discord-clone-channel-drafts',
+    draftKey: channel ? `channel:${channel.id}` : null,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [channelQuery, setChannelQuery] = useState('');
   const [typingUsers, setTypingUsers] = useState<{ userId: string; displayName: string }[]>([]);
@@ -51,7 +67,6 @@ export function AppShell() {
   const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>({});
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const typingTimeoutRef = useRef<number | null>(null);
   const activeChannelIdRef = useRef<string | null>(null);
   const clearWorkspaceState = useCallback(() => {
     setServers([]);
@@ -83,6 +98,7 @@ export function AppShell() {
     directMessageDraft,
     setActiveConversation,
     setDirectMessages,
+    setDirectConversations,
     clearDirectMessages,
     loadFriends,
     loadDirectConversations,
@@ -114,6 +130,19 @@ export function AppShell() {
     setWorkspaceError,
     setWorkspaceNotice,
   });
+  const { markChannelRead } = useChannelReadState({ auth, setChannelBadges });
+  const { loadMoreMessages } = useMessageHistory({
+    auth,
+    channel,
+    messageCursor,
+    isLoadingMoreMessages,
+    decryptMessagesForDisplay,
+    setMessages,
+    setMessageCursor,
+    setIsLoadingMoreMessages,
+    setWorkspaceError,
+  });
+
   const {
     channelOverrides,
     auditLogs,
@@ -153,14 +182,18 @@ export function AppShell() {
   const socket = useRealtimeSocket({
     auth,
     activeChannelIdRef,
+    activeConversationId: activeConversation?.id,
     decryptMessageForDisplay,
     markChannelRead,
     setMessages,
+    setDirectMessages,
+    setDirectConversations,
     setTypingUsers,
     setServer,
     setActiveCalls,
     setChannelBadges,
   });
+  const { handleComposerInput } = useTypingIndicator({ channel, socket });
   const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } =
     useChannelCall({
       auth,
@@ -347,9 +380,13 @@ export function AppShell() {
     );
   }, [messages, searchQuery, searchResults]);
 
-  const selectedMember = useMemo(() => server?.members.find((member) => member.id === selectedMemberId) ?? null, [server?.members, selectedMemberId]);
+  const selectedMember = useMemo(
+    () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
+    [server?.members, selectedMemberId],
+  );
 
-  const activeCall = channel ? (activeCalls[channel.id] ?? null) : null; const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
+  const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
+  const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
 
   function openMemberRoleEditor(memberId: string) {
     setSelectedMemberId(memberId);
@@ -684,63 +721,6 @@ export function AppShell() {
     channelDraft.clear();
     setSelectedFiles([]);
     setReplyingToMessage(null);
-  }
-
-  function handleComposerInput() {
-    if (!channel || !socket?.connected) return;
-    socket.emit('typing:start', { channelId: channel.id });
-    if (typingTimeoutRef.current) {
-      window.clearTimeout(typingTimeoutRef.current);
-    }
-    typingTimeoutRef.current = window.setTimeout(() => {
-      socket.emit('typing:stop', { channelId: channel.id });
-    }, 1400);
-  }
-
-  async function markChannelRead(channelId: string, messageId?: string) {
-    if (!auth) return;
-    try {
-      await apiRequest(
-        `/channels/${channelId}/read`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ messageId }),
-        },
-        auth.accessToken,
-      );
-      socket?.emit('unread:clear', { channelId });
-      setChannelBadges((current) => {
-        const next = { ...current };
-        delete next[channelId];
-        return next;
-      });
-    } catch {
-      // Read state is a convenience feature; avoid blocking chat if it fails.
-    }
-  }
-
-  async function loadMoreMessages() {
-    if (!auth || !channel || !messageCursor || isLoadingMoreMessages) return;
-    setIsLoadingMoreMessages(true);
-    setWorkspaceError(null);
-    try {
-      const result = await apiRequest<{ messages: Message[]; nextCursor?: string | null }>(
-        `/channels/${channel.id}/messages?cursor=${encodeURIComponent(messageCursor)}`,
-        {},
-        auth.accessToken,
-      );
-      const displayMessages = await decryptMessagesForDisplay(result.messages);
-      setMessages((current) => {
-        const existingIds = new Set(current.map((message) => message.id));
-        const olderMessages = displayMessages.filter((message) => !existingIds.has(message.id));
-        return [...olderMessages, ...current];
-      });
-      setMessageCursor(result.nextCursor ?? null);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load older messages');
-    } finally {
-      setIsLoadingMoreMessages(false);
-    }
   }
 
   async function saveMessageEdit(messageId: string) {

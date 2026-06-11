@@ -156,6 +156,7 @@ export interface DirectMessage {
   id: string;
   conversationId: string;
   authorId: string;
+  author?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
   content: string;
   editedAt?: string | null;
   deletedAt?: string | null;

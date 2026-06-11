@@ -5,6 +5,9 @@ export const RealtimeEvents = {
   MessageUpdated: 'message:updated',
   MessageDelete: 'message:delete',
   MessageDeleted: 'message:deleted',
+  ConversationJoin: 'conversation:join',
+  DmCreated: 'dm:created',
+  DmUnread: 'dm:unread',
   ChannelJoin: 'channel:join',
   ChannelLeave: 'channel:leave',
   TypingStart: 'typing:start',
@@ -20,7 +23,7 @@ export const RealtimeEvents = {
   VoiceUserLeft: 'voice:user-left',
   WebRtcOffer: 'webrtc:offer',
   WebRtcAnswer: 'webrtc:answer',
-  WebRtcIceCandidate: 'webrtc:ice-candidate'
+  WebRtcIceCandidate: 'webrtc:ice-candidate',
 } as const;
 
 export type RealtimeEvent = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];

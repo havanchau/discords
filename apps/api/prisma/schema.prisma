@@ -58,6 +58,7 @@ model User {
   sentFriendRequests        FriendRequest[]            @relation("FriendRequester")
   receivedFriendRequests    FriendRequest[]            @relation("FriendReceiver")
   conversations             DirectConversationMember[]
+  directMessages            DirectMessage[]
 }
 
 model EmailVerificationToken {
@@ -357,4 +358,7 @@ model DirectMessage {
   deletedAt      DateTime?
   createdAt      DateTime           @default(now())
   conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author         User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
 }

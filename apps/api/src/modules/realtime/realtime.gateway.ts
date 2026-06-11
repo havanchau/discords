@@ -5,6 +5,7 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -16,6 +17,7 @@ import { Permission, PermissionsService } from '../permissions/permissions.servi
 import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
 import { ReactionDto } from '../messages/dto/reaction.dto';
 import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
+import { RealtimePublisher } from './realtime-publisher.service';
 
 interface SocketUser {
   id: string;
@@ -46,7 +48,7 @@ interface ActiveCallSummary {
     credentials: true,
   },
 })
-export class RealtimeGateway implements OnGatewayConnection {
+export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
@@ -61,12 +63,18 @@ export class RealtimeGateway implements OnGatewayConnection {
     private readonly messages: MessagesService,
     private readonly permissions: PermissionsService,
     private readonly config: ConfigService,
+    private readonly publisher: RealtimePublisher,
   ) {}
+
+  afterInit(server: Server) {
+    this.publisher.attach(server);
+  }
 
   async handleConnection(client: Socket) {
     try {
       client.data.user = await this.authenticate(client);
       await client.join(this.userRoom(client.data.user.id));
+      await this.joinDirectConversationRooms(client, client.data.user.id);
       await this.prisma.user.update({
         where: { id: client.data.user.id },
         data: { status: 'ONLINE' },
@@ -128,6 +136,39 @@ export class RealtimeGateway implements OnGatewayConnection {
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
     await this.emitUnreadUpdated(result.message);
     return result;
+  }
+
+  @SubscribeMessage('message:update')
+  async updateMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { messageId: string; content: string },
+  ) {
+    this.assertSocketRateLimit(client, 'message:update', 20, 60_000);
+    const user = this.getUser(client);
+    return this.messages.updateMessage(user.id, body.messageId, {
+      content: body.content,
+    });
+  }
+
+  @SubscribeMessage('message:delete')
+  async deleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { messageId: string },
+  ) {
+    this.assertSocketRateLimit(client, 'message:delete', 20, 60_000);
+    const user = this.getUser(client);
+    return this.messages.deleteMessage(user.id, body.messageId);
+  }
+
+  @SubscribeMessage('conversation:join')
+  async joinConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { conversationId: string },
+  ) {
+    const user = this.getUser(client);
+    await this.requireConversationMember(user.id, body.conversationId);
+    await client.join(this.conversationRoom(body.conversationId));
+    return { ok: true };
   }
 
   @SubscribeMessage('unread:get')
@@ -370,7 +411,11 @@ export class RealtimeGateway implements OnGatewayConnection {
   }
 
   private userRoom(userId: string) {
-    return `user:${userId}`;
+    return this.publisher.userRoom(userId);
+  }
+
+  private conversationRoom(conversationId: string) {
+    return this.publisher.conversationRoom(conversationId);
   }
 
   private callRoom(channelId: string) {
@@ -411,11 +456,10 @@ export class RealtimeGateway implements OnGatewayConnection {
   private leaveAllCalls(client: Socket) {
     const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
     channelIds.forEach((channelId) => this.leaveCall(client, channelId));
-    for (const key of this.socketRateLimits.keys()) {
-      if (key.startsWith(`${client.id}:`)) {
-        this.socketRateLimits.delete(key);
-      }
-    }
+    const keysToDelete = [...this.socketRateLimits.keys()].filter((key) =>
+      key.startsWith(`${client.id}:`),
+    );
+    keysToDelete.forEach((key) => this.socketRateLimits.delete(key));
   }
 
   private assertCallPeer(client: Socket, channelId: string, targetSocketId: string) {
@@ -542,6 +586,29 @@ export class RealtimeGateway implements OnGatewayConnection {
       throw new UnauthorizedException('Not a channel member');
     }
     return channel;
+  }
+
+  private async joinDirectConversationRooms(client: Socket, userId: string) {
+    const memberships = await this.prisma.directConversationMember.findMany({
+      where: { userId },
+      select: { conversationId: true },
+    });
+
+    await Promise.all(
+      memberships.map((membership) =>
+        client.join(this.conversationRoom(membership.conversationId)),
+      ),
+    );
+  }
+
+  private async requireConversationMember(userId: string, conversationId: string) {
+    const membership = await this.prisma.directConversationMember.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+    });
+    if (!membership) {
+      throw new UnauthorizedException('Not a conversation member');
+    }
+    return membership;
   }
 
   private async broadcastPresence(userId: string, status: 'ONLINE' | 'OFFLINE') {

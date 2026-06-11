@@ -4,6 +4,7 @@ import { ChannelsService } from '../channels/channels.service';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
+import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -15,6 +16,7 @@ export class MessagesService {
     private readonly channels: ChannelsService,
     private readonly permissions: PermissionsService,
     private readonly push: PushService,
+    private readonly realtime: RealtimePublisher,
   ) {}
 
   async listMessages(
@@ -266,7 +268,13 @@ export class MessagesService {
         reactions: true,
       },
     });
-    return { message: this.formatMessage(updated, userId) };
+    const formatted = this.formatMessage(updated, userId);
+    this.realtime.emitToRoom(
+      this.realtime.channelRoom(formatted.channelId),
+      'message:updated',
+      formatted,
+    );
+    return { message: formatted };
   }
 
   async deleteMessage(userId: string, messageId: string) {
@@ -295,7 +303,13 @@ export class MessagesService {
       authorId: message.authorId,
       channelId: message.channelId,
     });
-    return { message: await this.findMessageForUser(userId, deleted.id) };
+    const formatted = await this.findMessageForUser(userId, deleted.id);
+    this.realtime.emitToRoom(
+      this.realtime.channelRoom(formatted.channelId),
+      'message:deleted',
+      formatted,
+    );
+    return { message: formatted };
   }
 
   async toggleReaction(userId: string, messageId: string, dto: ReactionDto) {
@@ -565,10 +579,7 @@ function buildMessageSearchWhere(
     const channelFilter = filters.inChannel.replace(/^#/, '');
     where.push({
       channel: {
-        OR: [
-          { id: channelFilter },
-          { name: { contains: channelFilter, mode: 'insensitive' } },
-        ],
+        OR: [{ id: channelFilter }, { name: { contains: channelFilter, mode: 'insensitive' } }],
       },
     });
   }
