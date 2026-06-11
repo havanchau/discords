@@ -114,6 +114,24 @@ export function useDirectMessages({
     }
   }
 
+  async function markDirectConversationRead(conversationId: string, messageId?: string) {
+    if (!auth) return;
+    try {
+      await apiRequest(
+        `/direct-conversations/${conversationId}/read`,
+        { method: 'POST', body: JSON.stringify({ messageId }) },
+        auth.accessToken,
+      );
+      setDirectConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation,
+        ),
+      );
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot mark direct message read');
+    }
+  }
+
   async function openDirectConversation(conversation: DirectConversation) {
     if (!auth) return;
     setActiveConversation(conversation);
@@ -125,6 +143,11 @@ export function useDirectMessages({
         auth.accessToken,
       );
       setDirectMessages(result.messages);
+      setDirectConversations((current) =>
+        current.map((item) =>
+          item.id === conversation.id ? { ...item, unreadCount: 0 } : item,
+        ),
+      );
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot open conversation');
     }
@@ -188,6 +211,7 @@ export function useDirectMessages({
     requestFriend,
     respondFriendRequest,
     openDirectConversation,
+    markDirectConversationRead,
     startDirectConversation,
     sendDirectMessage,
   };

@@ -1,5 +1,5 @@
 import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
-import type { AuthState, Channel, Message } from '../../api';
+import type { AuthState, Channel, Message, NotificationItem } from '../../api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 
@@ -26,6 +26,9 @@ export interface ChatPanelMessages {
   typingUsers: Array<{ userId: string; displayName: string }>;
   pinned: Message[];
   pinnedIds: string[];
+  notifications: NotificationItem[];
+  notificationUnreadCount: number;
+  isLoadingNotifications: boolean;
   searchQuery: string;
   parsedSearch: ParsedMessageSearch;
   loadMore: () => Promise<void>;
@@ -44,6 +47,9 @@ export interface ChatPanelPanels {
   setActivePanel: Dispatch<SetStateAction<ActivePanel>>;
   setActiveDialog: (dialog: ActiveDialog) => void;
   setSearchQuery: (value: string) => void;
+  loadNotifications: () => Promise<void>;
+  markNotificationRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
 }
 
 export interface ChatPanelEncryption {

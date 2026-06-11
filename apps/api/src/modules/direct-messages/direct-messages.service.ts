@@ -2,12 +2,14 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DirectMessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async listConversations(userId: string) {
@@ -16,7 +18,15 @@ export class DirectMessagesService {
       include: this.conversationInclude(userId),
       orderBy: { updatedAt: 'desc' },
     });
-    return { conversations };
+
+    const conversationsWithUnread = await Promise.all(
+      conversations.map(async (conversation) => ({
+        ...conversation,
+        unreadCount: await this.countUnreadMessages(userId, conversation.id),
+      })),
+    );
+
+    return { conversations: conversationsWithUnread };
   }
 
   async listMessages(userId: string, conversationId: string, cursor?: string) {
@@ -28,8 +38,13 @@ export class DirectMessagesService {
       take: 50,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
+    const ordered = messages.reverse();
+    const latestMessage = ordered[ordered.length - 1];
+    if (!cursor && latestMessage) {
+      await this.markRead(userId, conversationId, latestMessage.id, { emit: true });
+    }
     return {
-      messages: messages.reverse(),
+      messages: ordered,
       nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
     };
   }
@@ -43,10 +58,14 @@ export class DirectMessagesService {
       data: { conversationId, authorId: userId, content },
       include: this.messageInclude(),
     });
-    await this.prisma.directConversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
+    await Promise.all([
+      this.prisma.directConversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      }),
+      this.markRead(userId, conversationId, message.id, { emit: false }),
+    ]);
+
     const recipientIds = await this.getConversationRecipientIds(userId, conversationId);
     this.realtime.emitToRooms(
       [
@@ -56,8 +75,26 @@ export class DirectMessagesService {
       'dm:created',
       message,
     );
-    this.emitDirectUnread(recipientIds, conversationId, message.id);
+    await this.emitDirectUnread(recipientIds, conversationId, message.id);
+    await Promise.all(
+      recipientIds.map((recipientId) =>
+        this.notifications.create({
+          userId: recipientId,
+          actorId: userId,
+          type: 'DIRECT_MESSAGE',
+          title: `New DM from ${message.author.displayName}`,
+          body: message.content.slice(0, 180),
+          conversationId,
+        }),
+      ),
+    );
     return { message };
+  }
+
+  async markConversationRead(userId: string, conversationId: string, messageId?: string) {
+    await this.requireConversationMember(userId, conversationId);
+    await this.markRead(userId, conversationId, messageId, { emit: true });
+    return { ok: true };
   }
 
   private async requireConversationMember(userId: string, conversationId: string) {
@@ -76,13 +113,70 @@ export class DirectMessagesService {
     return recipients.map((recipient) => recipient.userId);
   }
 
-  private emitDirectUnread(recipientIds: string[], conversationId: string, messageId: string) {
-    recipientIds.forEach((recipientId) => {
-      this.realtime.emitToRoom(this.realtime.userRoom(recipientId), 'dm:unread', {
+  private async markRead(
+    userId: string,
+    conversationId: string,
+    messageId: string | undefined,
+    options: { emit: boolean },
+  ) {
+    const latestMessage = messageId
+      ? await this.prisma.directMessage.findFirst({
+          where: { id: messageId, conversationId },
+          select: { id: true, createdAt: true },
+        })
+      : await this.prisma.directMessage.findFirst({
+          where: { conversationId },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, createdAt: true },
+        });
+
+    await this.prisma.directReadState.upsert({
+      where: { userId_conversationId: { userId, conversationId } },
+      update: {
+        lastReadMessageId: latestMessage?.id,
+        lastReadAt: latestMessage?.createdAt ?? new Date(),
+      },
+      create: {
+        userId,
         conversationId,
-        messageId,
-        count: 1,
+        lastReadMessageId: latestMessage?.id,
+        lastReadAt: latestMessage?.createdAt ?? new Date(),
+      },
+    });
+
+    if (options.emit) {
+      this.realtime.emitToRoom(this.realtime.userRoom(userId), 'dm:unread', {
+        conversationId,
+        count: 0,
       });
+    }
+  }
+
+  private async emitDirectUnread(recipientIds: string[], conversationId: string, messageId: string) {
+    await Promise.all(
+      recipientIds.map(async (recipientId) => {
+        const count = await this.countUnreadMessages(recipientId, conversationId);
+        this.realtime.emitToRoom(this.realtime.userRoom(recipientId), 'dm:unread', {
+          conversationId,
+          messageId,
+          count,
+        });
+      }),
+    );
+  }
+
+  private async countUnreadMessages(userId: string, conversationId: string) {
+    const readState = await this.prisma.directReadState.findUnique({
+      where: { userId_conversationId: { userId, conversationId } },
+      select: { lastReadAt: true },
+    });
+
+    return this.prisma.directMessage.count({
+      where: {
+        conversationId,
+        authorId: { not: userId },
+        ...(readState ? { createdAt: { gt: readState.lastReadAt } } : {}),
+      },
     });
   }
 
@@ -122,6 +216,7 @@ export class DirectMessagesService {
         orderBy: { createdAt: 'desc' as const },
         take: 1,
       },
+      readStates: { where: { userId }, take: 1 },
     };
   }
 }

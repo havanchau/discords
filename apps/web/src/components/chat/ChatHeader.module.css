@@ -120,3 +120,27 @@
 .fileInput {
   display: none;
 }
+
+.notificationIconWrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  padding: 0 4px;
+  color: var(--interactive-active);
+  background: var(--status-danger);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}

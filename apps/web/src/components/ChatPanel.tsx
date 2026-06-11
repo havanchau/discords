@@ -76,6 +76,7 @@ export function ChatPanel({
     <section className="chat-panel">
       <ChatHeader
         channel={session.channel}
+        notificationUnreadCount={messages.notificationUnreadCount}
         pendingAction={composer.pendingAction}
         callState={call.state}
         panels={panels}
@@ -91,8 +92,14 @@ export function ChatPanel({
         parsedSearch={messages.parsedSearch}
         searchResults={messages.visible}
         pinnedMessages={messages.pinned}
+        notifications={messages.notifications}
+        notificationUnreadCount={messages.notificationUnreadCount}
+        isLoadingNotifications={messages.isLoadingNotifications}
         isChannelEncrypted={encryption.isChannelEncrypted}
         setSearchQuery={panels.setSearchQuery}
+        loadNotifications={panels.loadNotifications}
+        markNotificationRead={panels.markNotificationRead}
+        markAllNotificationsRead={panels.markAllNotificationsRead}
         onJumpToMessage={jumpToMessage}
         configureChannelEncryption={encryption.configure}
         clearChannelEncryption={encryption.clear}

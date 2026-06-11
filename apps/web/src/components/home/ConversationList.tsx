@@ -40,6 +40,16 @@ export function ConversationList({ conversations, activeConversationId, onOpenCo
                   <span className={styles.rowTitle}>{partner.displayName}</span>
                   <span className={styles.rowMeta}>{conversation.messages[0]?.content ?? 'No messages yet'}</span>
                 </span>
+                {Boolean(conversation.unreadCount) && (
+                  <span
+                    className={styles.unreadBadge}
+                    aria-label={`${conversation.unreadCount} unread direct messages`}
+                  >
+                    {conversation.unreadCount && conversation.unreadCount > 99
+                      ? '99+'
+                      : conversation.unreadCount}
+                  </span>
+                )}
               </Button>
             );
           })

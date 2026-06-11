@@ -15,6 +15,7 @@ import { useComposerAttachments } from './hooks/useComposerAttachments';
 import { useDirectMessages } from './hooks/useDirectMessages';
 import { usePersistentDraft } from './hooks/usePersistentDrafts';
 import { useMessageHistory } from './hooks/useMessageHistory';
+import { useNotifications } from './hooks/useNotifications';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
 import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
@@ -105,6 +106,7 @@ export function AppShell() {
     requestFriend,
     respondFriendRequest,
     openDirectConversation,
+    markDirectConversationRead,
     startDirectConversation,
     sendDirectMessage,
     setDirectMessageDraft,
@@ -114,6 +116,16 @@ export function AppShell() {
     setWorkspaceError,
     setWorkspaceNotice,
   });
+  const {
+    notifications,
+    notificationUnreadCount,
+    isLoadingNotifications,
+    setNotificationUnreadCount,
+    loadNotifications,
+    markNotificationRead,
+    markAllNotificationsRead,
+    pushNotification,
+  } = useNotifications({ auth, setWorkspaceError });
   const { uiTheme, setUiTheme } = useTheme();
   const {
     channelKeys,
@@ -184,6 +196,7 @@ export function AppShell() {
     activeConversationId: activeConversation?.id,
     decryptMessageForDisplay,
     markChannelRead,
+    markDirectConversationRead,
     setMessages,
     setDirectMessages,
     setDirectConversations,
@@ -191,6 +204,10 @@ export function AppShell() {
     setServer,
     setActiveCalls,
     setChannelBadges,
+    loadFriends,
+    loadDirectConversations,
+    pushNotification,
+    setNotificationUnreadCount,
   });
   const { handleComposerInput } = useTypingIndicator({ channel, socket });
   const threadPanel = useThreadPanel({
@@ -296,12 +313,10 @@ export function AppShell() {
       setSearchResults([]);
       return;
     }
-
     if (query.length < 2 && !hasFilters) {
       setSearchResults(null);
       return;
     }
-
     const timeout = window.setTimeout(() => {
       void apiRequest<{ messages: Message[] }>(
         `/channels/${channel.id}/messages?${params.toString()}`,
@@ -313,10 +328,8 @@ export function AppShell() {
           setWorkspaceError(err instanceof Error ? err.message : 'Cannot search messages'),
         );
     }, 250);
-
     return () => window.clearTimeout(timeout);
   }, [searchQuery, channel?.id, auth?.accessToken]);
-
   useEffect(() => {
     const totalUnread = Object.values(channelBadges).reduce(
       (total, badge) => total + badge.count,
@@ -324,7 +337,6 @@ export function AppShell() {
     );
     updateFaviconBadge(totalUnread);
   }, [channelBadges]);
-
   useEffect(() => {
     if (!auth) return;
     const handler = (event: MessageEvent<{ type?: string; url?: string }>) => {
@@ -335,7 +347,6 @@ export function AppShell() {
     navigator.serviceWorker?.addEventListener('message', handler);
     return () => navigator.serviceWorker?.removeEventListener('message', handler);
   }, [auth?.accessToken, servers]);
-
   useEffect(() => {
     if (!auth || !servers.length) return;
     if (window.location.pathname.startsWith('/channels/')) {
@@ -343,37 +354,30 @@ export function AppShell() {
       window.history.replaceState({}, '', '/');
     }
   }, [auth?.accessToken, servers.length]);
-
   useEffect(() => {
     if (callState && channel?.id !== callState.channelId) {
       endCall();
     }
   }, [channel?.id]);
-
   const textChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'TEXT') ?? [],
     [server],
   );
-
   const visibleTextChannels = useMemo(() => {
     const query = channelQuery.trim().toLowerCase();
     if (!query) return textChannels;
     return textChannels.filter((item) => item.name.toLowerCase().includes(query));
   }, [channelQuery, textChannels]);
-
   const voiceChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'VOICE') ?? [],
     [server],
   );
-
   const visibleVoiceChannels = useMemo(() => {
     const query = channelQuery.trim().toLowerCase();
     if (!query) return voiceChannels;
     return voiceChannels.filter((item) => item.name.toLowerCase().includes(query));
   }, [channelQuery, voiceChannels]);
-
   const parsedSearch = useMemo(() => parseMessageSearchQuery(searchQuery), [searchQuery]);
-
   const visibleMessages = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (query.length >= 2 && searchResults) return searchResults;
@@ -382,20 +386,16 @@ export function AppShell() {
       (message) => !message.decryptionFailed && message.content.toLowerCase().includes(query),
     );
   }, [messages, searchQuery, searchResults]);
-
   const selectedMember = useMemo(
     () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
     [server?.members, selectedMemberId],
   );
-
   const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
   const pinnedMessages = channel ? (pinnedMessagesByChannel[channel.id] ?? []) : [];
-
   function openMemberRoleEditor(memberId: string) {
     setSelectedMemberId(memberId);
     setActiveDialog('member-roles');
   }
-
   async function togglePinnedMessage(message: Message) {
     if (!auth) return;
     setPendingAction(`pin-${message.id}`);
@@ -413,7 +413,6 @@ export function AppShell() {
       setPendingAction(null);
     }
   }
-
   async function loadServers(token: string) {
     setIsLoadingServers(true);
     setWorkspaceError(null);
@@ -429,7 +428,6 @@ export function AppShell() {
       setIsLoadingServers(false);
     }
   }
-
   async function navigateToNotificationUrl(url: string) {
     if (!auth) return;
     const channelId = url.match(/\/channels\/([^/?#]+)/)?.[1];
@@ -443,7 +441,6 @@ export function AppShell() {
     }
     await loadServers(auth.accessToken);
   }
-
   function openHome() {
     setServer(null);
     setChannel(null);
@@ -457,7 +454,6 @@ export function AppShell() {
       void loadDirectConversations(auth.accessToken);
     }
   }
-
   async function loadPinnedMessages(channelId: string, token = auth?.accessToken) {
     if (!token) return;
     try {
@@ -476,7 +472,6 @@ export function AppShell() {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot load pinned messages');
     }
   }
-
   async function openServer(
     serverId: string,
     token = auth?.accessToken,
@@ -499,7 +494,6 @@ export function AppShell() {
       preferredChannel ?? result.server.channels.find((item) => item.type === 'TEXT') ?? null,
     );
   }
-
   async function createServer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!auth) return;
@@ -538,7 +532,6 @@ export function AppShell() {
       setPendingAction(null);
     }
   }
-
   async function createChannel(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!auth || !server) return;
@@ -582,7 +575,6 @@ export function AppShell() {
       setPendingAction(null);
     }
   }
-
   async function createInvite() {
     if (!auth || !server) return;
     setPendingAction('create-invite');
@@ -594,7 +586,6 @@ export function AppShell() {
         window.setTimeout(() => setWorkspaceNotice(null), 1600);
         return;
       }
-
       const result = await apiRequest<{ invite: { code: string } }>(
         `/servers/${server.id}/invites`,
         {
@@ -613,7 +604,6 @@ export function AppShell() {
       setPendingAction(null);
     }
   }
-
   async function joinInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!auth) return;
@@ -642,11 +632,9 @@ export function AppShell() {
       setPendingAction(null);
     }
   }
-
   async function sendChatMessage(content: string, files: File[]) {
     if (!auth || !channel) return false;
     if (!content && files.length === 0) return;
-
     setPendingAction('send-message');
     setWorkspaceError(null);
     try {
@@ -688,7 +676,6 @@ export function AppShell() {
         });
         return acknowledged;
       }
-
       const result = await apiRequest<{ message: Message }>(
         `/channels/${channel.id}/messages`,
         {
@@ -711,21 +698,17 @@ export function AppShell() {
       setPendingAction(null);
     }
   }
-
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = channelDraft.value.trim();
     const files = selectedFiles;
     if (!content && files.length === 0) return;
-
     const sent = await sendChatMessage(content, files);
     if (!sent) return;
-
     channelDraft.clear();
     setSelectedFiles([]);
     setReplyingToMessage(null);
   }
-
   async function saveMessageEdit(messageId: string) {
     if (!auth || !editingDraft.trim()) return;
     const editingMessage = messages.find((message) => message.id === messageId);
@@ -748,7 +731,6 @@ export function AppShell() {
     setEditingMessageId(null);
     setEditingDraft('');
   }
-
   async function deleteMessage(messageId: string) {
     if (!auth) return;
     await apiRequest<{ message: Message }>(
@@ -764,15 +746,12 @@ export function AppShell() {
       ),
     );
   }
-
   async function toggleReaction(message: Message, emoji: string) {
     if (!auth) return;
-
     if (socket?.connected && channel) {
       socket.emit('reaction:toggle', { channelId: channel.id, messageId: message.id, emoji });
       return;
     }
-
     const result = await apiRequest<{ message: Message }>(
       `/messages/${message.id}/reactions`,
       {
@@ -788,12 +767,10 @@ export function AppShell() {
       ),
     );
   }
-
   function logout() {
     endCall();
     clearAuth();
   }
-
   if (!auth) {
     return (
       <AuthProvider auth={auth}>
@@ -812,7 +789,6 @@ export function AppShell() {
       </AuthProvider>
     );
   }
-
   return (
     <AuthProvider auth={auth}>
       <SocketProvider socket={socket}>
@@ -849,7 +825,6 @@ export function AppShell() {
                   setActiveDialog,
                 }}
               />
-
               {server ? (
                 <>
                   <ChatPanel
@@ -863,6 +838,9 @@ export function AppShell() {
                       typingUsers,
                       pinned: pinnedMessages,
                       pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
+                      notifications,
+                      notificationUnreadCount,
+                      isLoadingNotifications,
                       searchQuery,
                       parsedSearch,
                       loadMore: loadMoreMessages,
@@ -879,6 +857,9 @@ export function AppShell() {
                       setActivePanel,
                       setActiveDialog,
                       setSearchQuery,
+                      loadNotifications,
+                      markNotificationRead,
+                      markAllNotificationsRead,
                     }}
                     encryption={{
                       isChannelEncrypted: channel ? Boolean(channelKeys[channel.id]) : false,
@@ -928,7 +909,6 @@ export function AppShell() {
                       update: updateChannelAvatar,
                     }}
                   />
-
                   <MemberSidebar
                     assetUrl={assetUrl}
                     server={server}
@@ -960,7 +940,6 @@ export function AppShell() {
                   }}
                 />
               )}
-
               <SettingsModal
                 dialog={{ activeDialog, setActiveDialog }}
                 data={{

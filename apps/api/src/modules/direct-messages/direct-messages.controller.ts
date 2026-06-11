@@ -25,6 +25,15 @@ export class DirectMessagesController {
     return this.directMessages.listMessages(user.id, conversationId, cursor);
   }
 
+  @Post(':conversationId/read')
+  markRead(
+    @CurrentUser() user: RequestUser,
+    @Param('conversationId') conversationId: string,
+    @Body() body: { messageId?: string },
+  ) {
+    return this.directMessages.markConversationRead(user.id, conversationId, body?.messageId);
+  }
+
   @RateLimit({ keyPrefix: 'direct-message-create', limit: 40, windowMs: 60_000 })
   @Post(':conversationId/messages')
   createMessage(
