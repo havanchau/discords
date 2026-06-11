@@ -125,16 +125,16 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 
 ## 2. Threaded Replies
 
-- [ ] Decide whether thread records are channel-scoped or message-scoped.
-- [ ] Add Prisma models or fields for thread roots and participants.
-- [ ] Add API endpoints for creating and listing threads.
-- [ ] Add API endpoints for thread messages.
-- [ ] Authorize thread access through the parent server/channel membership.
-- [ ] Add Socket.IO events for thread message create/update/delete.
+- [x] Decide whether thread records are channel-scoped or message-scoped.
+- [x] Add Prisma models or fields for thread roots and participants.
+- [x] Add API endpoints for creating and listing threads.
+- [x] Add API endpoints for thread messages.
+- [x] Authorize thread access through the parent server/channel membership.
+- [x] Add Socket.IO events for thread message create/update/delete.
 - [ ] Add unread tracking for thread replies.
-- [ ] Add a compact thread preview under root messages.
-- [ ] Add a thread panel that opens beside the chat on desktop.
-- [ ] Add a full-screen thread view on mobile.
+- [x] Add a compact thread preview under root messages.
+- [x] Add a thread panel that opens beside the chat on desktop.
+- [x] Add a full-screen thread view on mobile.
 - [ ] Preserve message grouping inside thread timelines.
 - [ ] Add tests for thread permission checks.
 - [ ] Add tests for thread realtime delivery.

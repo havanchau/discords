@@ -71,6 +71,21 @@ export class MessagesController {
     return this.messages.createMessage(user.id, channelId, dto);
   }
 
+  @Get('messages/:messageId/thread')
+  listThread(@CurrentUser() user: RequestUser, @Param('messageId') messageId: string) {
+    return this.messages.listThreadMessages(user.id, messageId);
+  }
+
+  @RateLimit({ keyPrefix: 'thread-message-create', limit: 30, windowMs: 60_000 })
+  @Post('messages/:messageId/thread/messages')
+  createThreadMessage(
+    @CurrentUser() user: RequestUser,
+    @Param('messageId') messageId: string,
+    @Body() dto: CreateMessageDto,
+  ) {
+    return this.messages.createThreadMessage(user.id, messageId, dto);
+  }
+
   @Patch('messages/:messageId')
   update(
     @CurrentUser() user: RequestUser,

@@ -59,6 +59,8 @@ model User {
   receivedFriendRequests    FriendRequest[]            @relation("FriendReceiver")
   conversations             DirectConversationMember[]
   directMessages            DirectMessage[]
+  createdThreads            Thread[]                   @relation("ThreadCreator")
+  threadParticipants        ThreadParticipant[]
 }
 
 model EmailVerificationToken {
@@ -155,6 +157,7 @@ model Channel {
   updatedAt                 DateTime                    @updatedAt
   server                    Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages                  Message[]
+  threads                   Thread[]
   pins                      MessagePin[]
   permissionOverrides       ChannelPermissionOverride[]
   readStates                ReadState[]
@@ -189,16 +192,50 @@ model Message {
   authorId         String
   content          String
   replyToMessageId String?
+  threadId         String?
   editedAt         DateTime?
   deletedAt        DateTime?
   createdAt        DateTime            @default(now())
   channel          Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  thread           Thread?             @relation("ThreadMessages", fields: [threadId], references: [id], onDelete: Cascade)
+  threadRoot       Thread?             @relation("ThreadRoot")
   author           User                @relation(fields: [authorId], references: [id])
   attachments      MessageAttachment[]
   reactions        MessageReaction[]
   pin              MessagePin?
 
   @@index([channelId, createdAt])
+  @@index([threadId, createdAt])
+}
+
+model Thread {
+  id            String              @id @default(cuid())
+  channelId     String
+  serverId      String
+  rootMessageId String              @unique
+  createdById   String
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  channel       Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  rootMessage   Message             @relation("ThreadRoot", fields: [rootMessageId], references: [id], onDelete: Cascade)
+  createdBy     User                @relation("ThreadCreator", fields: [createdById], references: [id])
+  messages      Message[]           @relation("ThreadMessages")
+  participants  ThreadParticipant[]
+
+  @@index([channelId, updatedAt])
+  @@index([serverId])
+}
+
+model ThreadParticipant {
+  threadId   String
+  userId     String
+  lastReadAt DateTime?
+  joinedAt   DateTime @default(now())
+  thread     Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, userId])
+  @@index([userId])
 }
 
 model MessageAttachment {
@@ -233,6 +270,8 @@ model MessagePin {
 
   @@index([channelId, createdAt])
 }
+
+
 
 model ReadState {
   id                String   @id @default(cuid())

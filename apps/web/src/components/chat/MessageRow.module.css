@@ -573,3 +573,34 @@
 .message[data-jump-highlight='true'] {
   background: var(--background-modifier-selected);
 }
+
+.threadPreview {
+  width: fit-content;
+  max-width: min(520px, 100%);
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--spacing-3);
+  color: var(--interactive-normal);
+  background: var(--background-modifier-hover);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.threadPreview:hover {
+  color: var(--interactive-hover);
+  background: var(--background-modifier-active);
+}
+
+.threadPreview strong {
+  color: var(--header-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.threadPreview small {
+  color: var(--text-muted);
+}

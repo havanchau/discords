@@ -6,6 +6,7 @@ import {
   FileText,
   Link as LinkIcon,
   Lock,
+  MessageSquareReply,
   Pin,
   Reply,
   SmilePlus,
@@ -49,7 +50,13 @@ interface PreviewAttachment {
   kind: 'image' | 'video';
 }
 
-function MessageContent({ message }: { message: Message }) {
+function MessageContent({
+  message,
+  onOpenThread,
+}: {
+  message: Message;
+  onOpenThread: (message: Message) => void;
+}) {
   const links = extractLinks(message.content);
   const parts = message.content.split(/(https?:\/\/[^\s]+)/gi);
 
@@ -105,6 +112,21 @@ function MessageContent({ message }: { message: Message }) {
             );
           })}
         </p>
+      ) : null}
+      {!message.threadId && message.thread?.replyCount ? (
+        <button
+          type="button"
+          className={styles.threadPreview}
+          data-testid="thread-preview"
+          onClick={() => onOpenThread(message)}
+        >
+          <MessageSquareReply size={14} aria-hidden="true" />
+          <strong>{message.thread.replyCount}</strong>
+          <span>{message.thread.replyCount === 1 ? 'reply' : 'replies'}</span>
+          {message.thread.lastReplyAt ? (
+            <small>Last reply {formatDate(message.thread.lastReplyAt)}</small>
+          ) : null}
+        </button>
       ) : null}
       {links.map((link) => (
         <a
@@ -335,7 +357,7 @@ export function MessageRow({
                   </Button>
                 </div>
               ) : (
-                <MessageContent message={message} />
+                <MessageContent message={message} onOpenThread={actions.openThread} />
               )}
 
               {!message.deletedAt && (
@@ -364,9 +386,9 @@ export function MessageRow({
 
               {!message.deletedAt && !isEditing && (
                 <div className={styles.actions}>
-                  <Tooltip content="Reply">
-                    <IconButton label="Reply" onClick={() => actions.setReplyingToMessage(message)}>
-                      <Reply size={14} aria-hidden="true" />
+                  <Tooltip content="Open thread">
+                    <IconButton label="Open thread" onClick={() => actions.openThread(message)}>
+                      <MessageSquareReply size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
                   <Tooltip content={isPinned ? 'Unpin message' : 'Pin message'}>
@@ -445,8 +467,8 @@ export function MessageRow({
 
         {!message.deletedAt && (
           <ContextMenuContent>
-            <ContextMenuItem onClick={() => actions.setReplyingToMessage(message)}>
-              <Reply size={14} aria-hidden="true" /> Reply
+            <ContextMenuItem onClick={() => actions.openThread(message)}>
+              <MessageSquareReply size={14} aria-hidden="true" /> Open Thread
             </ContextMenuItem>
             <ContextMenuItem onClick={() => void actions.togglePinned(message)}>
               <Pin size={14} aria-hidden="true" /> {isPinned ? 'Unpin Message' : 'Pin Message'}

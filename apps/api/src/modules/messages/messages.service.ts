@@ -36,20 +36,10 @@ export class MessagesService {
       where: {
         channelId,
         deletedAt: null,
+        threadId: null,
         AND: buildMessageSearchWhere(filters),
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-        attachments: true,
-        reactions: true,
-      },
+      include: messageInclude,
       orderBy: { createdAt: 'desc' },
       take: 50,
       ...(cursor
@@ -83,12 +73,21 @@ export class MessagesService {
     const replyMap = new Map(
       replyMessages.map((message) => [message.id, this.formatMessage(message, userId)]),
     );
+    const threadMap = await this.getThreadSummariesForRoots(
+      userId,
+      messages.map((message) => message.id),
+    );
 
     return {
       messages: messages
         .reverse()
         .map((message) =>
-          this.formatMessage(message, userId, replyMap.get(message.replyToMessageId ?? '')),
+          this.formatMessage(
+            message,
+            userId,
+            replyMap.get(message.replyToMessageId ?? ''),
+            threadMap.get(message.id),
+          ),
         ),
       nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
     };
@@ -244,6 +243,116 @@ export class MessagesService {
     };
   }
 
+  async listThreadMessages(userId: string, rootMessageId: string) {
+    const rootMessage = await this.requireThreadRoot(userId, rootMessageId);
+    const thread = await this.prisma.thread.findUnique({ where: { rootMessageId } });
+    const messages = thread
+      ? await this.prisma.message.findMany({
+          where: { threadId: thread.id, deletedAt: null },
+          include: messageInclude,
+          orderBy: { createdAt: 'asc' },
+          take: 100,
+        })
+      : [];
+    const threadSummary = thread ? await this.getThreadSummary(userId, thread.id) : null;
+
+    return {
+      rootMessage: this.formatMessage(rootMessage, userId, undefined, threadSummary ?? undefined),
+      thread: threadSummary,
+      messages: messages.map((message) => this.formatMessage(message, userId)),
+    };
+  }
+
+  async createThreadMessage(userId: string, rootMessageId: string, dto: CreateMessageDto) {
+    const rootMessage = await this.requireThreadRoot(userId, rootMessageId);
+    await this.permissions.requireChannelPermission(
+      userId,
+      rootMessage.channelId,
+      Permission.SendMessages,
+    );
+    const content = dto.content.trim();
+    const attachments = dto.attachments ?? [];
+
+    if (!content && attachments.length === 0) {
+      throw new ForbiddenException('Message content cannot be empty without attachments');
+    }
+
+    const thread = await this.prisma.thread.upsert({
+      where: { rootMessageId },
+      create: {
+        channelId: rootMessage.channelId,
+        serverId: rootMessage.serverId,
+        rootMessageId,
+        createdById: userId,
+        participants: {
+          create: [{ userId: rootMessage.authorId }, { userId }].filter(
+            (participant, index, participants) =>
+              participants.findIndex((item) => item.userId === participant.userId) === index,
+          ),
+        },
+      },
+      update: { updatedAt: new Date() },
+    });
+
+    await this.prisma.threadParticipant.upsert({
+      where: { threadId_userId: { threadId: thread.id, userId } },
+      create: { threadId: thread.id, userId },
+      update: {},
+    });
+
+    const message = await this.prisma.message.create({
+      data: {
+        channelId: rootMessage.channelId,
+        serverId: rootMessage.serverId,
+        authorId: userId,
+        content,
+        threadId: thread.id,
+        replyToMessageId: dto.replyToMessageId ?? rootMessageId,
+        attachments: attachments.length
+          ? {
+              create: attachments.map((attachment) => ({
+                fileName: attachment.fileName,
+                mimeType: attachment.mimeType,
+                byteSize: attachment.byteSize,
+                url: attachment.url,
+              })),
+            }
+          : undefined,
+      },
+      include: messageInclude,
+    });
+
+    await this.prisma.thread.update({ where: { id: thread.id }, data: { updatedAt: new Date() } });
+    const threadSummary = await this.getThreadSummary(userId, thread.id);
+    const formattedMessage = this.formatMessage(
+      message,
+      userId,
+      this.formatMessage(rootMessage, userId),
+    );
+    const formattedRoot = this.formatMessage(rootMessage, userId, undefined, threadSummary);
+
+    this.realtime.emitToRoom(
+      this.realtime.channelRoom(rootMessage.channelId),
+      'thread:message:created',
+      {
+        thread: threadSummary,
+        rootMessage: formattedRoot,
+        message: formattedMessage,
+      },
+    );
+
+    await this.notifyMentionedUsers({
+      authorId: userId,
+      authorUsername: message.author.username,
+      serverId: rootMessage.serverId,
+      channelId: rootMessage.channelId,
+      channelName: rootMessage.channel.name,
+      content,
+    });
+
+    return { thread: threadSummary, rootMessage: formattedRoot, message: formattedMessage };
+  }
+
   async updateMessage(userId: string, messageId: string, dto: UpdateMessageDto) {
     const message = await this.prisma.message.findUnique({ where: { id: messageId } });
     if (!message) {
@@ -276,7 +385,7 @@ export class MessagesService {
     const formatted = this.formatMessage(updated, userId);
     this.realtime.emitToRoom(
       this.realtime.channelRoom(formatted.channelId),
-      'message:updated',
+      updated.threadId ? 'thread:message:updated' : 'message:updated',
       formatted,
     );
     return { message: formatted };
@@ -311,7 +420,7 @@ export class MessagesService {
     const formatted = await this.findMessageForUser(userId, deleted.id);
     this.realtime.emitToRoom(
       this.realtime.channelRoom(formatted.channelId),
-      'message:deleted',
+      formatted.threadId ? 'thread:message:deleted' : 'message:deleted',
       formatted,
     );
     return { message: formatted };
@@ -434,6 +543,54 @@ export class MessagesService {
     );
   }
 
+  private async requireThreadRoot(userId: string, rootMessageId: string) {
+    const rootMessage = await this.prisma.message.findUnique({
+      where: { id: rootMessageId },
+      include: { ...messageInclude, channel: true },
+    });
+    if (!rootMessage || rootMessage.deletedAt || rootMessage.threadId) {
+      throw new NotFoundException('Thread root message not found');
+    }
+    await this.channels.requireReadableChannel(userId, rootMessage.channelId);
+    return rootMessage;
+  }
+
+  private async getThreadSummariesForRoots(userId: string, rootMessageIds: string[]) {
+    if (!rootMessageIds.length) return new Map<string, ThreadSummary>();
+    const threads = await this.prisma.thread.findMany({
+      where: { rootMessageId: { in: rootMessageIds } },
+      include: threadSummaryInclude,
+    });
+    return new Map(
+      threads.map((thread) => [thread.rootMessageId, this.formatThreadSummary(thread, userId)]),
+    );
+  }
+
+  private async getThreadSummary(userId: string, threadId: string) {
+    const thread = await this.prisma.thread.findUnique({
+      where: { id: threadId },
+      include: threadSummaryInclude,
+    });
+    return thread ? this.formatThreadSummary(thread, userId) : null;
+  }
+
+  private formatThreadSummary(thread: ThreadWithSummary, userId: string): ThreadSummary {
+    const messages = thread.messages.filter((message) => !message.deletedAt);
+    const lastReply = messages[0] ?? null;
+    return {
+      id: thread.id,
+      rootMessageId: thread.rootMessageId,
+      channelId: thread.channelId,
+      replyCount: thread._count.messages,
+      lastReplyAt: lastReply?.createdAt ?? thread.updatedAt,
+      participants: thread.participants.map((participant) => ({
+        user: participant.user,
+        lastReadAt:
+          participant.userId === userId ? (participant.lastReadAt?.toISOString() ?? null) : null,
+      })),
+    };
+  }
+
   private async notifyMentionedUsers(input: {
     authorId: string;
     authorUsername: string;
@@ -475,7 +632,12 @@ export class MessagesService {
     );
   }
 
-  private formatMessage(message: MessageWithDetails, userId: string, replyToMessage?: unknown) {
+  private formatMessage(
+    message: MessageWithDetails,
+    userId: string,
+    replyToMessage?: unknown,
+    thread?: ThreadSummary | null,
+  ) {
     const reactionMap = new Map<string, { emoji: string; count: number; me: boolean }>();
 
     message.reactions.forEach((reaction) => {
@@ -495,6 +657,8 @@ export class MessagesService {
       ...message,
       reactions: [...reactionMap.values()],
       replyToMessage,
+      threadId: message.threadId,
+      thread: thread ?? null,
     };
   }
 
@@ -511,20 +675,49 @@ export class MessagesService {
   }
 }
 
-type MessageWithDetails = Prisma.MessageGetPayload<{
-  include: {
-    author: {
-      select: {
-        id: true;
-        username: true;
-        displayName: true;
-        avatarUrl: true;
-      };
-    };
-    attachments: true;
-    reactions: true;
-  };
-}>;
+const messageInclude = {
+  author: {
+    select: {
+      id: true,
+      username: true,
+      displayName: true,
+      avatarUrl: true,
+    },
+  },
+  attachments: true,
+  reactions: true,
+} satisfies Prisma.MessageInclude;
+
+type MessageWithDetails = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
+
+const threadSummaryInclude = {
+  messages: {
+    where: { deletedAt: null },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+  },
+  participants: {
+    include: {
+      user: {
+        select: { id: true, username: true, displayName: true, avatarUrl: true },
+      },
+    },
+  },
+  _count: { select: { messages: true } },
+} satisfies Prisma.ThreadInclude;
+
+type ThreadWithSummary = Prisma.ThreadGetPayload<{ include: typeof threadSummaryInclude }>;
+type ThreadSummary = {
+  id: string;
+  rootMessageId: string;
+  channelId: string;
+  replyCount: number;
+  lastReplyAt: Date;
+  participants: Array<{
+    user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+    lastReadAt: string | null;
+  }>;
+};
 
 function parseMentions(content: string) {
   return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);

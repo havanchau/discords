@@ -18,6 +18,7 @@ import { useMessageHistory } from './hooks/useMessageHistory';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
 import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
+import { useThreadPanel } from './hooks/useThreadPanel';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
 import {
   apiRequest,
@@ -33,7 +34,6 @@ import { ActiveCallSummary } from './helpers';
 import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
-
 export function AppShell() {
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [server, setServer] = useState<ServerDetail | null>(null);
@@ -142,7 +142,6 @@ export function AppShell() {
     setIsLoadingMoreMessages,
     setWorkspaceError,
   });
-
   const {
     channelOverrides,
     auditLogs,
@@ -194,6 +193,15 @@ export function AppShell() {
     setChannelBadges,
   });
   const { handleComposerInput } = useTypingIndicator({ channel, socket });
+  const threadPanel = useThreadPanel({
+    auth,
+    socket,
+    channelKeysRef,
+    decryptMessageForDisplay,
+    decryptMessagesForDisplay,
+    setMessages,
+    setWorkspaceError,
+  });
   const { callState, remoteMedia, localVideoRef, startCall, endCall, toggleMute, toggleCamera } =
     useChannelCall({
       auth,
@@ -216,11 +224,9 @@ export function AppShell() {
     sendChatMessage,
     setWorkspaceError,
   });
-
   useEffect(() => {
     activeChannelIdRef.current = channel?.id ?? null;
   }, [channel?.id]);
-
   useEffect(() => {
     if (!auth) return;
     void loadServers(auth.accessToken);
@@ -228,13 +234,11 @@ export function AppShell() {
     void loadDirectConversations(auth.accessToken);
     void loadNotificationPreferences(auth.accessToken);
   }, [auth]);
-
   useEffect(() => {
     if (auth) return;
     clearDirectMessages();
     clearChannelKeys();
   }, [auth, clearChannelKeys, clearDirectMessages]);
-
   useEffect(() => {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
@@ -246,6 +250,7 @@ export function AppShell() {
       return next;
     });
     setReplyingToMessage(null);
+    threadPanel.close();
     setSearchResults(null);
     setWorkspaceError(null);
     void apiRequest<{ messages: Message[]; nextCursor?: string | null }>(
@@ -281,14 +286,12 @@ export function AppShell() {
       },
     );
   }, [channel?.id, auth?.accessToken, socket]);
-
   useEffect(() => {
     if (!auth || !channel) return;
     const query = searchQuery.trim();
     const { parsed, params } = buildMessageSearchParams(query);
     const hasFilters =
       Boolean(parsed.from || parsed.in || parsed.before || parsed.after) || parsed.has.length > 0;
-
     if (parsed.invalid.length > 0) {
       setSearchResults([]);
       return;
@@ -896,6 +899,7 @@ export function AppShell() {
                       editingMessageId,
                       editingDraft,
                       setReplyingToMessage,
+                      openThread: threadPanel.openThread,
                       setEditingMessageId,
                       setEditingDraft,
                       saveEdit: saveMessageEdit,
@@ -918,6 +922,7 @@ export function AppShell() {
                       selectFiles,
                       handleInput: handleComposerInput,
                     }}
+                    thread={threadPanel}
                     channelAvatar={{
                       inputRef: channelAvatarInputRef,
                       update: updateChannelAvatar,

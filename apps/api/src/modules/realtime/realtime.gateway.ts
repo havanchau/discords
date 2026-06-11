@@ -138,6 +138,39 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     return result;
   }
 
+  @SubscribeMessage('thread:join')
+  async joinThread(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { rootMessageId: string },
+  ) {
+    const user = this.getUser(client);
+    const result = await this.messages.listThreadMessages(user.id, body.rootMessageId);
+    if (result.thread?.id) {
+      await client.join(`thread:${result.thread.id}`);
+    }
+    return result;
+  }
+
+  @SubscribeMessage('thread:message:create')
+  async createThreadMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    body: {
+      rootMessageId: string;
+      content: string;
+      replyToMessageId?: string;
+      attachments?: MessageAttachmentInputDto[];
+    },
+  ) {
+    this.assertSocketRateLimit(client, 'thread:message:create', 20, 60_000);
+    const user = this.getUser(client);
+    return this.messages.createThreadMessage(user.id, body.rootMessageId, {
+      content: body.content,
+      replyToMessageId: body.replyToMessageId,
+      attachments: body.attachments,
+    });
+  }
+
   @SubscribeMessage('message:update')
   async updateMessage(
     @ConnectedSocket() client: Socket,
