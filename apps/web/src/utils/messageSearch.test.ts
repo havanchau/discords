@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildMessageSearchParams, parseMessageSearchQuery } from './messageSearch';
+import {
+  buildMessageSearchParams,
+  buildMessageSearchSnippet,
+  parseMessageSearchQuery,
+} from './messageSearch';
 
 describe('message search parser', () => {
   it('parses supported operators and keeps free text as search text', () => {
@@ -19,7 +23,9 @@ describe('message search parser', () => {
   });
 
   it('reports unsupported has values and invalid dates without dropping text', () => {
-    expect(parseMessageSearchQuery('roadmap has:image before:yesterday after:2026-02-31')).toMatchObject({
+    expect(
+      parseMessageSearchQuery('roadmap has:image before:yesterday after:2026-02-31'),
+    ).toMatchObject({
       text: 'roadmap',
       has: [],
       invalid: [
@@ -37,5 +43,27 @@ describe('message search parser', () => {
     expect(params.get('from')).toBe('Ha Chau');
     expect(params.get('hasFile')).toBe('true');
     expect(params.get('after')).toBe('2026-01-31');
+  });
+
+  it('builds focused snippets around the first searchable text term', () => {
+    expect(
+      buildMessageSearchSnippet(
+        'Release notes include deploy windows and rollback links.',
+        'from:chau deploy',
+      ),
+    ).toMatchObject({
+      before: 'Release notes include ',
+      match: 'deploy',
+      after: ' windows and rollback links.',
+    });
+  });
+
+  it('falls back to compact snippets for filter-only and attachment-only results', () => {
+    expect(buildMessageSearchSnippet('A short filter-only result', 'has:link')).toMatchObject({
+      fallback: 'A short filter-only result',
+    });
+    expect(buildMessageSearchSnippet('', 'has:file')).toMatchObject({
+      fallback: 'Attachment-only message',
+    });
   });
 });

@@ -1,7 +1,8 @@
-import { FormEvent } from 'react';
-import { Pin } from 'lucide-react';
-import { Message } from '../../api';
-import { previewText } from '../../helpers';
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { FileText, Pin } from 'lucide-react';
+import { Channel, Message } from '../../api';
+import { formatDate, previewText } from '../../helpers';
+import { buildMessageSearchSnippet } from '../../utils/messageSearch';
 import { Button, TextField } from '../ui';
 import type { ActivePanel } from './types';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
@@ -9,25 +10,47 @@ import styles from './UtilityPanel.module.css';
 
 interface UtilityPanelProps {
   activePanel: ActivePanel;
+  channel: Channel | null;
   searchQuery: string;
   parsedSearch: ParsedMessageSearch;
+  searchResults: Message[];
   pinnedMessages: Message[];
   isChannelEncrypted: boolean;
   setSearchQuery: (value: string) => void;
+  onJumpToMessage: (messageId: string) => void;
   configureChannelEncryption: (passphrase: string) => Promise<void>;
   clearChannelEncryption: () => void;
 }
 
 export function UtilityPanel({
   activePanel,
+  channel,
   searchQuery,
   parsedSearch,
+  searchResults,
   pinnedMessages,
   isChannelEncrypted,
   setSearchQuery,
+  onJumpToMessage,
   configureChannelEncryption,
   clearChannelEncryption,
 }: UtilityPanelProps) {
+  const [activeResultIndex, setActiveResultIndex] = useState(0);
+  const trimmedSearch = searchQuery.trim();
+  const canShowSearchResults =
+    trimmedSearch.length >= 2 ||
+    Boolean(parsedSearch.from || parsedSearch.in || parsedSearch.before || parsedSearch.after) ||
+    parsedSearch.has.length > 0;
+  const renderedSearchResults = useMemo(
+    () =>
+      canShowSearchResults && parsedSearch.invalid.length === 0 ? searchResults.slice(0, 8) : [],
+    [canShowSearchResults, parsedSearch.invalid.length, searchResults],
+  );
+
+  useEffect(() => {
+    setActiveResultIndex((index) => Math.min(index, Math.max(0, renderedSearchResults.length - 1)));
+  }, [renderedSearchResults.length]);
+
   if (!activePanel) return null;
 
   function handleEncryptionSubmit(event: FormEvent<HTMLFormElement>) {
@@ -37,13 +60,49 @@ export function UtilityPanel({
     event.currentTarget.reset();
   }
 
+  function handleSearchResultKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!renderedSearchResults.length) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveResultIndex((index) => Math.min(index + 1, renderedSearchResults.length - 1));
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveResultIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setActiveResultIndex(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      setActiveResultIndex(renderedSearchResults.length - 1);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onJumpToMessage(renderedSearchResults[activeResultIndex].id);
+    }
+  }
+
   return (
     <div className={`${styles.utilityPanel} ${styles.utilityPanelOpen}`}>
       {activePanel === 'search' && (
         <div className={styles.searchPanel}>
           <TextField
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => {
+              setActiveResultIndex(0);
+              setSearchQuery(event.target.value);
+            }}
             label="Search messages"
             placeholder="from:chau has:link before:2026-06-01"
             data-testid="search-input"
@@ -63,6 +122,64 @@ export function UtilityPanel({
               {parsedSearch.invalid.join('. ')}
             </div>
           )}
+          {canShowSearchResults && parsedSearch.invalid.length === 0 && (
+            <div className={styles.searchResults} onKeyDown={handleSearchResultKeyDown}>
+              <div className={styles.searchResultsHeader}>
+                <strong>Results</strong>
+                <span>{searchResults.length} found</span>
+              </div>
+              {renderedSearchResults.length ? (
+                <div
+                  className={styles.searchResultList}
+                  role="listbox"
+                  aria-label="Message search results"
+                >
+                  {renderedSearchResults.map((message, index) => {
+                    const snippet = buildMessageSearchSnippet(message.content, searchQuery);
+                    const isActive = index === activeResultIndex;
+
+                    return (
+                      <button
+                        type="button"
+                        key={message.id}
+                        className={`${styles.searchResultButton} ${isActive ? styles.searchResultActive : ''}`}
+                        role="option"
+                        aria-selected={isActive}
+                        onFocus={() => setActiveResultIndex(index)}
+                        onClick={() => onJumpToMessage(message.id)}
+                      >
+                        <span className={styles.searchResultMeta}>
+                          <strong>#{channel?.name ?? 'channel'}</strong>
+                          <span>{message.author.displayName}</span>
+                          <time dateTime={message.createdAt}>{formatDate(message.createdAt)}</time>
+                        </span>
+                        <span className={styles.searchResultSnippet}>
+                          {snippet.fallback ? (
+                            snippet.fallback
+                          ) : (
+                            <>
+                              {snippet.before}
+                              <mark>{snippet.match}</mark>
+                              {snippet.after}
+                            </>
+                          )}
+                        </span>
+                        {message.attachments.length > 0 && (
+                          <span className={styles.searchResultAttachment}>
+                            <FileText size={12} aria-hidden="true" />
+                            {message.attachments.length} attachment
+                            {message.attachments.length === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={styles.searchEmpty}>No matching messages in this channel.</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -75,9 +192,7 @@ export function UtilityPanel({
                 variant="ghost"
                 key={message.id}
                 className={styles.pinButton}
-                onClick={() =>
-                  document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth' })
-                }
+                onClick={() => onJumpToMessage(message.id)}
               >
                 <Pin size={13} aria-hidden="true" />
                 <span>{previewText(message)}</span>

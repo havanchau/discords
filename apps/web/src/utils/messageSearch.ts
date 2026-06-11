@@ -86,6 +86,52 @@ export function buildMessageSearchParams(query: string) {
   return { parsed, params };
 }
 
+export interface MessageSearchSnippet {
+  before: string;
+  match: string;
+  after: string;
+  fallback: string;
+}
+
+export function buildMessageSearchSnippet(content: string, query: string): MessageSearchSnippet {
+  const compactContent = content.replace(/\s+/g, ' ').trim();
+  const terms = searchableTerms(query);
+  const normalized = compactContent.toLowerCase();
+  const matchTerm = terms.find((term) => normalized.includes(term));
+
+  if (!compactContent) {
+    return { before: '', match: '', after: '', fallback: 'Attachment-only message' };
+  }
+
+  if (!matchTerm) {
+    return { before: '', match: '', after: '', fallback: truncateSnippet(compactContent) };
+  }
+
+  const matchStart = normalized.indexOf(matchTerm);
+  const matchEnd = matchStart + matchTerm.length;
+  const windowStart = Math.max(0, matchStart - 42);
+  const windowEnd = Math.min(compactContent.length, matchEnd + 58);
+
+  return {
+    before: `${windowStart > 0 ? '…' : ''}${compactContent.slice(windowStart, matchStart)}`,
+    match: compactContent.slice(matchStart, matchEnd),
+    after: `${compactContent.slice(matchEnd, windowEnd)}${windowEnd < compactContent.length ? '…' : ''}`,
+    fallback: '',
+  };
+}
+
+function searchableTerms(query: string) {
+  return parseMessageSearchQuery(query)
+    .text.split(/\s+/)
+    .map((term) => term.trim().toLowerCase())
+    .filter((term) => term.length >= 2)
+    .sort((left, right) => right.length - left.length);
+}
+
+function truncateSnippet(value: string) {
+  return value.length > 110 ? `${value.slice(0, 109)}…` : value;
+}
+
 function unquote(value: string) {
   return value.replace(/^"(.+)"$/, '$1');
 }

@@ -74,8 +74,14 @@ function MessageContent({ message }: { message: Message }) {
       {message.content ? (
         <p className={styles.content}>
           {message.isEncrypted ? (
-            <span className={`${styles.encryptedPill} ${message.decryptionFailed ? styles.locked : ''}`}>
-              {message.decryptionFailed ? <Lock size={12} aria-hidden="true" /> : <Unlock size={12} aria-hidden="true" />}
+            <span
+              className={`${styles.encryptedPill} ${message.decryptionFailed ? styles.locked : ''}`}
+            >
+              {message.decryptionFailed ? (
+                <Lock size={12} aria-hidden="true" />
+              ) : (
+                <Unlock size={12} aria-hidden="true" />
+              )}
               {message.decryptionFailed ? 'Locked' : 'E2EE'}
             </span>
           ) : null}
@@ -101,7 +107,14 @@ function MessageContent({ message }: { message: Message }) {
         </p>
       ) : null}
       {links.map((link) => (
-        <a key={link} className={styles.linkPreview} href={link} target="_blank" rel="noreferrer" data-testid="link-preview">
+        <a
+          key={link}
+          className={styles.linkPreview}
+          href={link}
+          target="_blank"
+          rel="noreferrer"
+          data-testid="link-preview"
+        >
           <LinkIcon size={18} aria-hidden="true" />
           <span>{link.replace(/^https?:\/\//i, '')}</span>
         </a>
@@ -140,7 +153,10 @@ function MessageAttachments({
 
         if (kind === 'video') {
           return (
-            <div key={attachment.id ?? attachment.url} className={`${styles.attachment} ${styles.videoAttachment}`}>
+            <div
+              key={attachment.id ?? attachment.url}
+              className={`${styles.attachment} ${styles.videoAttachment}`}
+            >
               <video src={url} controls preload="metadata" />
               <span>
                 {attachment.fileName}
@@ -158,7 +174,10 @@ function MessageAttachments({
 
         if (kind === 'audio') {
           return (
-            <div key={attachment.id ?? attachment.url} className={`${styles.attachment} ${styles.audioAttachment}`}>
+            <div
+              key={attachment.id ?? attachment.url}
+              className={`${styles.attachment} ${styles.audioAttachment}`}
+            >
               <div className={styles.audioAttachmentHeader}>
                 <FileAudio2 size={18} aria-hidden="true" />
                 <span>
@@ -216,8 +235,22 @@ export function MessageRow({
 }: MessageRowProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const emojiOptions = [
-    '👍', '🔥', '😂', '❤️', '🎉', '👏', '🙏', '😍',
-    '😮', '😢', '😡', '✅', '👀', '💯', '🚀', '✨',
+    '👍',
+    '🔥',
+    '😂',
+    '❤️',
+    '🎉',
+    '👏',
+    '🙏',
+    '😍',
+    '😮',
+    '😢',
+    '😡',
+    '✅',
+    '👀',
+    '💯',
+    '🚀',
+    '✨',
   ];
 
   const showDateDivider = !isSameMessageDay(previousMessage?.createdAt, message.createdAt);
@@ -225,8 +258,9 @@ export function MessageRow({
     !previousMessage ||
     showDateDivider ||
     previousMessage.authorId !== message.authorId ||
-    new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() > 7 * 60 * 1000;
-  
+    new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() >
+      7 * 60 * 1000;
+
   const canManage = message.authorId === auth.user.id && !message.deletedAt;
   const isEditing = actions.editingMessageId === message.id;
   const isPinned = pinnedMessageIds.includes(message.id);
@@ -249,9 +283,12 @@ export function MessageRow({
             className={`${styles.message} ${isFirstInGroup ? styles.firstInGroup : styles.groupedMessage}`}
             data-testid="message"
             data-message-id={message.id}
+            tabIndex={-1}
           >
             {isFirstInGroup ? (
-              <div className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}>
+              <div
+                className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
+              >
                 {message.author.avatarUrl ? (
                   <img src={assetUrl(message.author.avatarUrl)} alt={message.author.displayName} />
                 ) : (
@@ -283,7 +320,9 @@ export function MessageRow({
                     aria-label="Edit message"
                     autoComplete="off"
                   />
-                  <Button size="sm" onClick={() => void actions.saveEdit(message.id)}>Save</Button>
+                  <Button size="sm" onClick={() => void actions.saveEdit(message.id)}>
+                    Save
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -326,10 +365,7 @@ export function MessageRow({
               {!message.deletedAt && !isEditing && (
                 <div className={styles.actions}>
                   <Tooltip content="Reply">
-                    <IconButton
-                      label="Reply"
-                      onClick={() => actions.setReplyingToMessage(message)}
-                    >
+                    <IconButton label="Reply" onClick={() => actions.setReplyingToMessage(message)}>
                       <Reply size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
@@ -415,9 +451,7 @@ export function MessageRow({
             <ContextMenuItem onClick={() => void actions.togglePinned(message)}>
               <Pin size={14} aria-hidden="true" /> {isPinned ? 'Unpin Message' : 'Pin Message'}
             </ContextMenuItem>
-            <ContextMenuItem onClick={copyMessageContent}>
-              Copy Text
-            </ContextMenuItem>
+            <ContextMenuItem onClick={copyMessageContent}>Copy Text</ContextMenuItem>
             {canManage && (
               <>
                 <ContextMenuSeparator />

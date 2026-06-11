@@ -143,3 +143,107 @@
   align-items: center;
   gap: var(--spacing-2);
 }
+
+.searchResults {
+  display: grid;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.searchResultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.searchResultsHeader strong {
+  color: var(--header-primary);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.searchResultList {
+  max-height: 360px;
+  display: grid;
+  gap: var(--spacing-1);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.searchResultButton {
+  display: grid;
+  gap: var(--spacing-1);
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2);
+  color: var(--text-normal);
+  background: var(--background-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.searchResultButton:hover,
+.searchResultButton:focus-visible,
+.searchResultActive {
+  background: var(--background-modifier-hover);
+  outline: 0;
+}
+
+.searchResultButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--brand-color);
+}
+
+.searchResultMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.searchResultMeta strong,
+.searchResultMeta span,
+.searchResultMeta time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchResultMeta strong {
+  color: var(--header-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.searchResultSnippet {
+  color: var(--text-normal);
+  font-size: 13px;
+  line-height: var(--line-height-normal);
+  overflow-wrap: anywhere;
+}
+
+.searchResultSnippet mark {
+  border-radius: var(--radius-xs);
+  color: var(--header-primary);
+  background: rgba(88, 101, 242, 0.28);
+}
+
+.searchResultAttachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.searchEmpty {
+  padding: var(--spacing-2) 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
