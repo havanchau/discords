@@ -16,6 +16,7 @@ concurrency:
 jobs:
   deploy-api:
     name: Deploy API to Render
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -67,3 +68,61 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+  post-deploy-smoke:
+    name: Smoke deployed app
+    needs: deploy-web
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check smoke-test configuration
+        id: smoke-config
+        env:
+          PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          PRODUCTION_WEB_URL: ${{ secrets.PRODUCTION_WEB_URL }}
+          UI_SMOKE_EMAIL: ${{ secrets.UI_SMOKE_EMAIL }}
+          UI_SMOKE_PASSWORD: ${{ secrets.UI_SMOKE_PASSWORD }}
+        run: |
+          if [ -z "$PRODUCTION_API_URL" ] || [ -z "$PRODUCTION_WEB_URL" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping deployed UI smoke test because PRODUCTION_API_URL or PRODUCTION_WEB_URL is not configured."
+            exit 0
+          fi
+          if [ -z "$UI_SMOKE_EMAIL" ] || [ -z "$UI_SMOKE_PASSWORD" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping deployed UI smoke test because UI_SMOKE_EMAIL or UI_SMOKE_PASSWORD is not configured."
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deployed API health
+        if: steps.smoke-config.outputs.enabled == 'true'
+        env:
+          API_URL: ${{ secrets.PRODUCTION_API_URL }}
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent "$API_URL/health" > /dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Deployed API did not become healthy before smoke test"
+          exit 1
+
+      - name: Run deployed UI smoke test
+        if: steps.smoke-config.outputs.enabled == 'true'
+        env:
+          API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          WEB_URL: ${{ secrets.PRODUCTION_WEB_URL }}
+          UI_SMOKE_EMAIL: ${{ secrets.UI_SMOKE_EMAIL }}
+          UI_SMOKE_PASSWORD: ${{ secrets.UI_SMOKE_PASSWORD }}
+        run: npm run ui:smoke

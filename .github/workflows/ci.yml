@@ -27,6 +27,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/discord_clone
       JWT_SECRET: ci-secret
       WEB_ORIGIN: http://localhost:5173
+      VITE_API_URL: http://localhost:3000
+      VITE_SOCKET_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,6 +38,35 @@ jobs:
       - run: npm ci
       - run: npm run db:generate --workspace apps/api
       - run: npm run db:push --workspace apps/api
+      - run: npm run db:seed --workspace apps/api
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      - name: Start API for smoke test
+        run: |
+          npm run start --workspace apps/api > /tmp/discord-api.log 2>&1 &
+          echo $! > /tmp/discord-api.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:3000/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/discord-api.log
+          exit 1
+      - name: Start web preview for smoke test
+        run: |
+          npm run preview --workspace apps/web -- --host 0.0.0.0 --port 5173 > /tmp/discord-web.log 2>&1 &
+          echo $! > /tmp/discord-web.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:5173 > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/discord-web.log
+          exit 1
+      - run: npm run ui:smoke
+        env:
+          API_URL: http://localhost:3000
+          WEB_URL: http://localhost:5173

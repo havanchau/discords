@@ -105,6 +105,10 @@ RENDER_API_DEPLOY_HOOK_URL=
 VERCEL_TOKEN=
 VERCEL_ORG_ID=
 VERCEL_PROJECT_ID=
+PRODUCTION_API_URL=
+PRODUCTION_WEB_URL=
+UI_SMOKE_EMAIL=
+UI_SMOKE_PASSWORD=
 ```
 
 Where to find them:
@@ -112,6 +116,10 @@ Where to find them:
 - `RENDER_API_DEPLOY_HOOK_URL`: Render API service settings, Deploy Hook URL.
 - `VERCEL_TOKEN`: Vercel account tokens.
 - `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`: Vercel project settings or `.vercel/project.json` after linking locally.
+- `PRODUCTION_API_URL`: deployed Render API origin, for example `https://your-api.onrender.com`.
+- `PRODUCTION_WEB_URL`: deployed Vercel web origin, for example `https://your-app.vercel.app`.
+- `UI_SMOKE_EMAIL`: verified production smoke-test account email.
+- `UI_SMOKE_PASSWORD`: production smoke-test account password.
 
 ## 4. Deployment Flow
 
@@ -124,10 +132,10 @@ lint -> typecheck -> build
 Manual production deploy:
 
 ```text
-GitHub Actions -> Deploy workflow -> Render API deploy hook -> Vercel Web
+GitHub Actions -> Deploy workflow -> Render API deploy hook -> Vercel Web -> deployed UI smoke test
 ```
 
-The deploy workflow can be run from GitHub Actions with `workflow_dispatch`.
+The deploy workflow can be run from GitHub Actions with `workflow_dispatch`. Deploys triggered by the CI `workflow_run` event run only after CI succeeds. After the web deploy finishes, the workflow runs `npm run ui:smoke` against `PRODUCTION_WEB_URL` and `PRODUCTION_API_URL` when those URL secrets and `UI_SMOKE_EMAIL`/`UI_SMOKE_PASSWORD` are configured. If the smoke-test secrets are missing, the deployment still completes and the smoke step is skipped with a GitHub Actions notice.
 
 ## 5. Notes
 

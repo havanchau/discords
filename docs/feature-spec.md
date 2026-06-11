@@ -232,4 +232,4 @@ The project is portfolio-ready when:
 - [ ] Member-level channel overrides.
 - [ ] Notification inbox.
 - [ ] Full moderation suite.
-- [ ] Production CI smoke tests against deployed URLs.
+- [x] Production CI smoke tests against deployed URLs.
