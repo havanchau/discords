@@ -23,16 +23,22 @@ Every Markdown file should follow this baseline:
 
 ## Documentation Ownership
 
-| Location         | Owner content                                                                 |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `README.md`      | Project overview, setup commands, useful commands, and top-level doc map.     |
-| `docs/README.md` | Documentation index, root document index, and maintenance rules.              |
-| `docs/*.md`      | Focused guides for architecture, deployment, security, UI, and feature scope. |
-| Root guides      | Agent instructions, product rules, Codex configuration, and UI skill rules.   |
+| Location         | Owner content                                                                   |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `README.md`      | Project overview, setup commands, useful commands, and top-level doc map.       |
+| `docs/README.md` | Documentation index, root document index, and maintenance rules.                |
+| `docs/*.md`      | Focused guides for architecture, deployment, security, UI, and feature scope.   |
+| Root guides      | Agent instructions, product rules, Codex configuration, and UI skill checklist. |
 
 Before adding a new document, first check the ownership table and existing docs index. If the requested content fits an existing owner, extend that file instead of creating another `.md` file. Only add a new Markdown file when the content has a distinct long-term owner, would make the existing file too broad, or would push the existing file over the 1000-line documentation limit.
 
 When a new document is genuinely required, link it from the nearest index instead of duplicating its content elsewhere.
+
+Canonical source-of-truth rules:
+
+- UI token values and reusable component rules live in `docs/design-rules.md`; `DISCORD_UI_SKILL.md`, `AGENT.md`, `.codex/instructions.md`, and `codex.md` may summarize them but must link back instead of defining competing values.
+- Product scope and feature completion status live in `docs/feature-spec.md`; `README.md` and planning docs should link to that checklist instead of copying backlog status.
+- Delivery order lives in `docs/implementation-plan.md`; roadmap slices live in `docs/feature-roadmap.md`; UI refactor phase status lives in `docs/ui-redesign-plan.md`.
 
 ## Automated Check
 

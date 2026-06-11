@@ -139,19 +139,19 @@ The API should remain resource-oriented and guarded by auth and permission check
 
 ## Realtime Events
 
-Event names should be explicit and payloads should be typed in `packages/shared`.
+Event names should be explicit and payloads should be typed in `packages/shared`. Similar message names are intentional when they represent different directions: client command events request a mutation, while server broadcast events report the persisted result.
 
-| Area          | Events                                                                                                        |
-| ------------- | ------------------------------------------------------------------------------------------------------------- |
-| Connection    | `connection`, `disconnect`, auth failure                                                                      |
-| Rooms         | `channel:join`, `channel:leave`, `conversation:join`, `conversation:leave`                                    |
-| Messages      | `message:create`, `message:created`, `message:update`, `message:updated`, `message:delete`, `message:deleted` |
-| Typing        | `typing:start`, `typing:stop`                                                                                 |
-| Reactions     | `reaction:add`, `reaction:remove`                                                                             |
-| Presence      | `presence:update`                                                                                             |
-| Voice         | `voice:join`, `voice:leave`, `voice:state`                                                                    |
-| WebRTC        | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`                                                       |
-| Notifications | `notification:create`, `read-state:update`                                                                    |
+| Area       | Client command events                                                                                     | Server broadcast events                                                       |
+| ---------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Connection | Socket connect with auth                                                                                  | `connection`, `disconnect`, auth failure                                      |
+| Rooms      | `channel:join`, `channel:leave`                                                                           | Authorized room membership changes when needed                                |
+| Messages   | `message:create`, `message:update`, `message:delete`                                                      | `message:created`, `message:updated`, `message:deleted`                       |
+| Typing     | `typing:start`, `typing:stop`                                                                             | `typing:start`, `typing:stop` to authorized viewers                           |
+| Reactions  | `reaction:toggle`                                                                                         | `reaction:updated`                                                            |
+| Presence   | Presence set/update command when supported                                                                | `presence:update`                                                             |
+| Voice      | `voice:join`, `voice:leave`, `voice:state`                                                                | `voice:user-joined`, `voice:user-updated`, `voice:user-left`                  |
+| WebRTC     | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`                                                   | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate` to target peer        |
+| Future     | Add DM, notification, read-state, and moderation events here only after adding them to `packages/shared`. | Add paired broadcast events here only after adding them to `packages/shared`. |
 
 ## UI Surfaces
 

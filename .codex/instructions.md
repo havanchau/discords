@@ -3,7 +3,7 @@
 ## Mandatory Pre-Task Steps
 
 1. **Always read `DISCORD_UI_SKILL.md`** at the project root before any frontend/UI/CSS work.
-2. **Always read `docs/design-rules.md`** for the complete design token reference.
+2. **Always read `docs/design-rules.md`** for the canonical design token reference.
 3. **Use the `ui-polish` skill** for all visual UI tasks.
 4. **Create a task checklist before implementation**. Use `- [ ]` for pending work and mark `- [x]` only after the item is genuinely complete and verified.
 
@@ -25,7 +25,7 @@
 - Use established UI/component/accessibility/icon libraries first for every UI task.
 - Do not write raw CSS for UI work unless it is strictly required for Discord tokens, exact app-shell layout constraints, or targeted responsive fixes.
 - Any unavoidable custom CSS must be minimal, token-based, scoped, and justified by the implementation context.
-- Use ONLY the color tokens from `DISCORD_UI_SKILL.md`. No exceptions.
+- Use ONLY the canonical color tokens from `docs/design-rules.md`, as mirrored in `DISCORD_UI_SKILL.md`. No exceptions.
 - **Forbidden**: neon cyan `#00e5ff`, neon pink `#ff1fb8`, neon lime `#00ff95`, `#8f78ff`, `#ffb000`, any `rgba(0, 229, 255, ...)`.
 - **Forbidden**: gradient backgrounds on panels, glowing box-shadows, decorative borders, border-radius on the app shell.
 - **Required**: warm dark palette (`#1e1f22`, `#2b2d31`, `#313338`), Discord Blurple `#5865f2`, flat solid backgrounds.

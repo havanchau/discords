@@ -62,21 +62,38 @@ Before implementing any task, create a checklist of the concrete work items.
 
 ## Realtime Rules
 
-Use explicit event names and typed payloads from `packages/shared`.
+Use explicit event names and typed payloads from `packages/shared`. Keep command events and broadcast events distinct instead of treating similarly named events as duplicate features. Add new event names to `packages/shared` before using them in the API or web client.
 
-Representative events:
+Representative client command events already modeled in shared contracts:
 
+- `channel:join`
+- `channel:leave`
 - `message:create`
 - `message:update`
 - `message:delete`
-- `channel:create`
-- `channel:update`
-- `channel:delete`
-- `member:join`
-- `member:leave`
-- `presence:update`
+- `reaction:toggle`
 - `typing:start`
 - `typing:stop`
+- `voice:join`
+- `voice:leave`
+- `voice:state`
+- `webrtc:offer`
+- `webrtc:answer`
+- `webrtc:ice-candidate`
+
+Representative server broadcast events already modeled in shared contracts:
+
+- `message:created`
+- `message:updated`
+- `message:deleted`
+- `reaction:updated`
+- `presence:update`
+- `voice:user-joined`
+- `voice:user-updated`
+- `voice:user-left`
+- `webrtc:offer`
+- `webrtc:answer`
+- `webrtc:ice-candidate`
 
 Events that mutate or reveal state must be authorized on the server. The client may optimistically render but must reconcile with server responses.
 
@@ -97,7 +114,7 @@ The app MUST look like Discord's real desktop client — a dense, warm-dark comm
 
 ### Mandatory visual rules:
 
-- **Colors**: Use ONLY the CSS custom properties from `DISCORD_UI_SKILL.md`. NEVER use neon cyan (`#00e5ff`), neon pink (`#ff1fb8`), neon lime (`#00ff95`), or any glowing/gradient effects.
+- **Colors**: Use ONLY the canonical CSS custom properties from `docs/design-rules.md` as mirrored by `DISCORD_UI_SKILL.md`. NEVER use neon cyan (`#00e5ff`), neon pink (`#ff1fb8`), neon lime (`#00ff95`), or any glowing/gradient effects.
 - **Backgrounds**: Flat solid warm-dark grays (`#1e1f22`, `#2b2d31`, `#313338`). NO gradients on panels. NO `linear-gradient()` or `radial-gradient()` on the app shell, server rail, channel sidebar, chat area, or member sidebar.
 - **Brand color**: Discord Blurple `#5865f2` for primary actions. NOT cyan, NOT old blurple `#7289DA`.
 - **Shadows**: Subtle `rgba(0,0,0,...)` only. NO colored glows, NO `box-shadow` with cyan/pink/lime.

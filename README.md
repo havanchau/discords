@@ -116,22 +116,19 @@ Current limits:
 
 - `RULE.md`: product invariants and backend rules.
 - `AGENT.md`: implementation guidance for AI or human coding agents.
-- `docs/feature-spec.md`: product scope and feature checklist.
+- `docs/README.md`: complete documentation index and ownership rules.
+- `docs/feature-spec.md`: product scope and canonical feature completion checklist.
+- `docs/feature-roadmap.md`: backlog slices and feature delivery checklist.
 - `docs/implementation-plan.md`: sprint plan and definition of done.
-- `docs/markdown-structure.md`: Markdown structure rules and docs validation.
-- `docs/README.md`: documentation index.
+- `docs/markdown-structure.md`: Markdown source-of-truth rules and docs validation.
 - `docs/architecture.md`: repository architecture and service boundaries.
 - `docs/security-check.md`: security checklist.
 - `docs/deployment.md`: Render, Vercel, Cloudinary, and GitHub Actions deployment.
-- `docs/design-rules.md`: canonical UI implementation rules.
+- `docs/design-rules.md`: canonical UI tokens and implementation rules.
 - `docs/ui-design-spec.md`: short UI product summary.
+- `docs/ui-redesign-plan.md`: phased UI refactor status.
+- `docs/ui-event-ownership-map.md`: realtime/UI side-effect ownership map.
 
 ## Current Backlog
 
-- Realtime direct messages.
-- Friend-system polish.
-- Message search.
-- Member-level channel overrides.
-- Notification inbox.
-- Full moderation suite.
-- Production CI smoke tests against deployed URLs.
+The canonical backlog and completion status live in `docs/feature-spec.md` under **Feature Completion Checklist**. Detailed upcoming slices live in `docs/feature-roadmap.md`. Keep backlog status there instead of duplicating checked/unchecked feature lists in this README.
