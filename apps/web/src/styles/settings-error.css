@@ -667,3 +667,86 @@
 .notice-banner {
   background: var(--green-360);
 }
+
+.member-override-heading {
+  margin-top: 8px;
+}
+
+.member-override-panel,
+.member-override-card {
+  display: grid;
+  gap: 10px;
+}
+
+.member-override-picker select {
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: 4px;
+  padding: 0 12px;
+  color: var(--text-normal);
+  background: var(--input-background);
+  font: inherit;
+}
+
+.member-override-picker select:hover {
+  background: var(--bg-secondary-alt);
+}
+
+.member-override-card {
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.member-override-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.member-override-summary strong {
+  color: var(--header-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.member-override-summary span,
+.settings-empty-copy {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.member-override-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding-top: 4px;
+}
+
+.member-override-permission,
+.member-override-choice {
+  color: var(--header-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-override-choice {
+  text-align: center;
+}
+
+.settings-empty-copy {
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .permission-override-row,
+  .member-override-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-override-choice {
+    display: none;
+  }
+}
