@@ -107,6 +107,27 @@ export interface Message {
   attachments: MessageAttachment[];
   reactions: MessageReaction[];
   replyToMessage?: Message | null;
+  threadId?: string | null;
+  thread?: ThreadSummary | null;
+}
+
+export interface ThreadSummary {
+  id: string;
+  rootMessageId: string;
+  channelId: string;
+  replyCount: number;
+  lastReplyAt: string;
+  participants: Array<{
+    user: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
+    lastReadAt?: string | null;
+  }>;
+}
+
+export interface ThreadMessageResult {
+  rootMessage: Message;
+  thread: ThreadSummary | null;
+  message?: Message;
+  messages?: Message[];
 }
 
 export interface MessageAttachment {

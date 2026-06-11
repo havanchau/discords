@@ -28,6 +28,7 @@ const actions: ChatPanelMessageActions = {
   editingMessageId: null,
   editingDraft: '',
   setReplyingToMessage: () => undefined,
+  openThread: () => undefined,
   setEditingMessageId: () => undefined,
   setEditingDraft: () => undefined,
   saveEdit: async () => undefined,

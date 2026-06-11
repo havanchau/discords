@@ -5,6 +5,7 @@ import { CallStage } from './chat/CallStage';
 import { MessageList } from './chat/MessageList';
 import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
+import { ThreadPanel } from './chat/ThreadPanel';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { Button } from './ui';
 import type {
@@ -19,6 +20,7 @@ import type {
   ChatPanelMessages,
   ChatPanelPanels,
   ChatPanelSession,
+  ChatPanelThread,
 } from './chat/types';
 
 export interface ChatPanelProps {
@@ -30,6 +32,7 @@ export interface ChatPanelProps {
   call: ChatPanelCall;
   messageActions: ChatPanelMessageActions;
   composer: ChatPanelComposer;
+  thread: ChatPanelThread;
   channelAvatar: ChatPanelChannelAvatar;
 }
 
@@ -42,6 +45,7 @@ export function ChatPanel({
   call,
   messageActions,
   composer,
+  thread,
   channelAvatar,
 }: ChatPanelProps) {
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
@@ -154,6 +158,17 @@ export function ChatPanel({
         channel={session.channel}
         messageActions={messageActions}
         composer={composer}
+      />
+
+      <ThreadPanel
+        rootMessage={thread.rootMessage}
+        messages={thread.messages}
+        draft={thread.draft}
+        isLoading={thread.isLoading}
+        isSending={thread.isSending}
+        onClose={thread.close}
+        onDraftChange={thread.setDraft}
+        onSend={thread.sendMessage}
       />
 
       <AttachmentPreviewDialog

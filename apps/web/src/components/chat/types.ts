@@ -67,6 +67,7 @@ export interface ChatPanelMessageActions {
   editingMessageId: string | null;
   editingDraft: string;
   setReplyingToMessage: (message: Message | null) => void;
+  openThread: (message: Message) => void;
   setEditingMessageId: (messageId: string | null) => void;
   setEditingDraft: (draft: string) => void;
   saveEdit: (messageId: string) => Promise<void>;
@@ -89,6 +90,17 @@ export interface ChatPanelComposer {
   removeSelectedFile: (index: number) => void;
   selectFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   handleInput: () => void;
+}
+
+export interface ChatPanelThread {
+  rootMessage: Message | null;
+  messages: Message[];
+  draft: string;
+  isLoading: boolean;
+  isSending: boolean;
+  close: () => void;
+  setDraft: (value: string) => void;
+  sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }
 
 export interface ChatPanelChannelAvatar {
