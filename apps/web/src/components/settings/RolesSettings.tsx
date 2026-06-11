@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { ChevronRight, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { assetUrl } from '../../api';
 import { accentClass, initials, PERMISSION_OPTIONS } from '../../helpers';
 import { Avatar, Badge, Button, IconButton, TextField } from '../ui';
+import { buildMemberPermissionPreview, buildRolePermissionPreview } from '../../utils/permissionPreview';
 import { CheckRow } from './SettingsRows';
 import type { SettingsModalFields } from './types';
 
@@ -25,7 +27,22 @@ export function RolesSettings({
   server,
   toggleRolePermission,
 }: RolesSettingsProps) {
+  const [previewRoleId, setPreviewRoleId] = useState<string | null>(null);
+  const [previewMemberId, setPreviewMemberId] = useState<string | null>(null);
+  const [previewChannelFilter, setPreviewChannelFilter] = useState('');
+
   if (!server) return null;
+
+  const previewRole = server.roles.find((role) => role.id === (previewRoleId ?? server.roles[0]?.id));
+  const previewMember = server.members.find((member) => member.id === previewMemberId);
+  const filteredPreviewChannels = server.channels.filter((channel) =>
+    channel.name.toLowerCase().includes(previewChannelFilter.trim().toLowerCase()),
+  );
+  const previewRows = previewMember
+    ? buildMemberPermissionPreview(previewMember, filteredPreviewChannels)
+    : previewRole
+      ? buildRolePermissionPreview(previewRole, filteredPreviewChannels)
+      : [];
 
   const members = [...server.members].sort((left, right) => {
     if (left.kind === 'OWNER' && right.kind !== 'OWNER') return -1;
@@ -66,6 +83,55 @@ export function RolesSettings({
           Create role
         </Button>
       </form>
+
+      <section className="settings-section permission-preview-section">
+        <div className="settings-section-heading">
+          <strong>Permission preview</strong>
+          <span>Read-only view of channel visibility and actions. @everyone supplies inherited defaults before extra roles are added.</span>
+        </div>
+        <div className="permission-preview-controls">
+          <label>
+            Role
+            <select value={previewRole?.id ?? ''} onChange={(event) => { setPreviewMemberId(null); setPreviewRoleId(event.target.value); }}>
+              {server.roles.map((role) => (
+                <option key={role.id} value={role.id}>{role.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Member
+            <select value={previewMemberId ?? ''} onChange={(event) => setPreviewMemberId(event.target.value || null)}>
+              <option value="">Role only</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>{member.user.displayName}</option>
+              ))}
+            </select>
+          </label>
+          <TextField
+            label="Filter channels"
+            value={previewChannelFilter}
+            onChange={(event) => setPreviewChannelFilter(event.target.value)}
+            placeholder="general"
+          />
+        </div>
+        <div className="permission-preview-grid" role="table" aria-label="Permission preview">
+          {previewRows.map((row) => (
+            <div className="permission-preview-row" key={row.channel.id} role="row">
+              <strong role="cell">#{row.channel.name}</strong>
+              <span className={row.canView ? 'permission-allowed' : 'permission-denied'} role="cell">
+                {row.canView ? 'Can view' : 'Hidden'}
+              </span>
+              <div role="cell">
+                {row.actions.slice(0, 6).map((action) => (
+                  <small key={action.value} className={action.allowed ? 'permission-chip-allowed' : 'permission-chip-denied'}>
+                    {action.label}
+                  </small>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="role-list">
         {server.roles.map((role) => {

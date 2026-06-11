@@ -30,6 +30,8 @@ export const RealtimeEvents = {
   VoiceUserJoined: 'voice:user-joined',
   VoiceUserUpdated: 'voice:user-updated',
   VoiceUserLeft: 'voice:user-left',
+  VoiceActive: 'voice:active',
+  VoiceEnded: 'voice:ended',
   WebRtcOffer: 'webrtc:offer',
   WebRtcAnswer: 'webrtc:answer',
   WebRtcIceCandidate: 'webrtc:ice-candidate',

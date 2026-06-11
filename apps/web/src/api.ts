@@ -81,6 +81,19 @@ export interface NotificationPreference {
   desktopEnabled: boolean;
 }
 
+export interface Invite {
+  id: string;
+  code: string;
+  serverId: string;
+  channelId?: string | null;
+  creatorId: string;
+  maxUses?: number | null;
+  usedCount: number;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+}
+
 export interface AuditLogEntry {
   id: string;
   serverId: string;

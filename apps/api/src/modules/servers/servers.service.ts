@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
 
 const DEFAULT_MEMBER_PERMISSIONS = [
   'VIEW_CHANNEL',
@@ -181,6 +182,23 @@ export class ServersService {
     return { logs };
   }
 
+  async updateMyMembership(userId: string, serverId: string, dto: UpdateNicknameDto) {
+    const member = await this.requireMembership(userId, serverId);
+    const nickname = dto.nickname?.trim() || null;
+    const updated = await this.prisma.serverMember.update({
+      where: { id: member.id },
+      data: { nickname },
+      include: {
+        user: {
+          select: { id: true, username: true, displayName: true, avatarUrl: true, status: true },
+        },
+        roles: { include: { role: true } },
+      },
+    });
+    await this.writeAuditLog(serverId, userId, 'MEMBER_NICKNAME_UPDATE', member.id, { nickname });
+    return { member: updated };
+  }
+
   async createInvite(userId: string, serverId: string, dto: CreateInviteDto) {
     await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
     if (dto.channelId) {
@@ -199,7 +217,7 @@ export class ServersService {
         channelId: dto.channelId,
         creatorId: userId,
         maxUses: dto.maxUses ?? 100,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
+        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : new Date(Date.now() + 1000 * 60 * 60 * 24)
       }
     });
     await this.writeAuditLog(serverId, userId, 'INVITE_CREATE', invite.id, {
@@ -210,6 +228,35 @@ export class ServersService {
     return { invite };
   }
 
+  async listInvites(userId: string, serverId: string) {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
+    const now = new Date();
+    const invites = await this.prisma.invite.findMany({
+      where: {
+        serverId,
+        revokedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return { invites };
+  }
+
+  async revokeInvite(userId: string, serverId: string, inviteId: string) {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
+    const invite = await this.prisma.invite.findFirst({ where: { id: inviteId, serverId } });
+    if (!invite) {
+      throw new NotFoundException('Invite not found');
+    }
+    const revoked = await this.prisma.invite.update({
+      where: { id: invite.id },
+      data: { revokedAt: new Date() },
+    });
+    await this.writeAuditLog(serverId, userId, 'INVITE_REVOKE', invite.id, { code: invite.code });
+    return { invite: revoked };
+  }
+
   async joinInvite(userId: string, code: string) {
     const invite = await this.prisma.invite.findUnique({
       where: { code },
@@ -218,6 +265,10 @@ export class ServersService {
 
     if (!invite || invite.server.deletedAt) {
       throw new NotFoundException('Invite not found');
+    }
+
+    if (invite.revokedAt) {
+      throw new ForbiddenException('Invite revoked');
     }
 
     if (invite.expiresAt && invite.expiresAt <= new Date()) {

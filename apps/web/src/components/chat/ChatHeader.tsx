@@ -1,4 +1,4 @@
-import { Bell, Edit3, Hash, Lock, MonitorUp, Phone, Search, Unlock, Video } from 'lucide-react';
+import { Bell, Edit3, FolderOpen, Hash, Lock, MonitorUp, Phone, Search, Unlock, Video } from 'lucide-react';
 import { assetUrl, Channel } from '../../api';
 import { CallMode, CallState } from '../../helpers';
 import { Avatar, Button, IconButton, Tooltip } from '../ui';
@@ -130,6 +130,20 @@ export function ChatHeader({
                 </span>
               )}
             </span>
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip content="Media, files, and links">
+          <IconButton
+            label="Media, files, and links"
+            onClick={() =>
+              panels.setActivePanel((current) => (current === 'media' ? null : 'media'))
+            }
+            disabled={!channel}
+            variant={panels.activePanel === 'media' ? 'primary' : 'ghost'}
+            data-testid="media-panel-button"
+          >
+            <FolderOpen size={18} aria-hidden="true" />
           </IconButton>
         </Tooltip>
 

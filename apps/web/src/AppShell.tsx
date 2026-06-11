@@ -34,6 +34,7 @@ import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
 import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
+import { executeSlashCommand } from './utils/executeSlashCommand';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
 export function AppShell() {
   const [servers, setServers] = useState<ServerSummary[]>([]);
@@ -157,11 +158,14 @@ export function AppShell() {
   const {
     channelOverrides,
     auditLogs,
+    invites,
     notificationPreferences,
     profileAvatarInputRef,
     channelAvatarInputRef,
     loadNotificationPreferences,
     updateNotificationPreference,
+    createInviteFromSettings,
+    revokeInvite,
     updateProfileAvatar,
     updateChannelAvatar,
     updateProfile,
@@ -356,9 +360,7 @@ export function AppShell() {
     }
   }, [auth?.accessToken, servers.length]);
   useEffect(() => {
-    if (callState && channel?.id !== callState.channelId) {
-      endCall();
-    }
+    if (callState && channel?.id !== callState.channelId) endCall();
   }, [channel?.id]);
   const textChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'TEXT') ?? [],
@@ -701,9 +703,22 @@ export function AppShell() {
   }
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const content = channelDraft.value.trim();
+    if (!auth) return;
+    let content = channelDraft.value.trim();
     const files = selectedFiles;
     if (!content && files.length === 0) return;
+    const commandResult = await executeSlashCommand({
+      content,
+      auth,
+      server,
+      channel,
+      openServer,
+      clearDraft: channelDraft.clear,
+      setWorkspaceError,
+      setWorkspaceNotice,
+    });
+    if (commandResult.handled) return;
+    content = commandResult.content;
     const sent = await sendChatMessage(content, files);
     if (!sent) return;
     channelDraft.clear();
@@ -838,6 +853,7 @@ export function AppShell() {
                       hasMore: Boolean(messageCursor),
                       typingUsers,
                       pinned: pinnedMessages,
+                      mediaSource: messages,
                       pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
                       notifications,
                       notificationUnreadCount,
@@ -950,6 +966,7 @@ export function AppShell() {
                   selectedMember,
                   channelOverrides,
                   auditLogs,
+                  invites,
                   notificationPreferences,
                   pendingAction,
                 }}
@@ -957,6 +974,8 @@ export function AppShell() {
                 theme={{ uiTheme }}
                 actions={{
                   setUiTheme,
+                  createInviteFromSettings,
+                  revokeInvite,
                   updateProfile,
                   updateNotificationPreference,
                   updateServerSettings,

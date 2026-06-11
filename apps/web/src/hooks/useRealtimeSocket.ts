@@ -239,11 +239,11 @@ export function useRealtimeSocket({
       );
     });
 
-    nextSocket.on('voice:active', (activeCall: ActiveCallSummary) => {
+    nextSocket.on(RealtimeEvents.VoiceActive, (activeCall: ActiveCallSummary) => {
       setActiveCalls((current) => ({ ...current, [activeCall.channelId]: activeCall }));
     });
 
-    nextSocket.on('voice:ended', (payload: { channelId: string }) => {
+    nextSocket.on(RealtimeEvents.VoiceEnded, (payload: { channelId: string }) => {
       setActiveCalls((current) => {
         const next = { ...current };
         delete next[payload.channelId];
