@@ -85,7 +85,7 @@ Use this checklist before adding any roadmap item or new product feature. It kee
 
 ## Current Follow-Up Backlog — 2026-06-11 Recheck
 
-The realtime DM, channel message edit/delete broadcast, DM author payload, socket rate-limit cleanup, message search wiring, and `AppShell.tsx` file-size issues are considered implemented in the current source. The unchecked items below remain unfinished or insufficient and should be picked up in the next implementation pass.
+The realtime DM, channel message edit/delete broadcast, DM author payload, socket rate-limit cleanup, message search wiring, `AppShell.tsx` file-size issues, friend polish, member-level overrides, notification inbox, and moderation follow-ups are considered implemented in the current source. Keep any future unchecked items in this section until they are implemented and verified.
 
 ### Critical Remaining Product Gaps
 

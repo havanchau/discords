@@ -6,11 +6,17 @@ import type { SettingsModalFields } from './types';
 
 type MemberRolesSettingsProps = Pick<
   SettingsModalFields,
-  'pendingAction' | 'selectedMember' | 'server' | 'setActiveDialog' | 'toggleMemberRole'
+  | 'pendingAction'
+  | 'removeMember'
+  | 'selectedMember'
+  | 'server'
+  | 'setActiveDialog'
+  | 'toggleMemberRole'
 >;
 
 export function MemberRolesSettings({
   pendingAction,
+  removeMember,
   selectedMember,
   server,
   setActiveDialog,
@@ -19,9 +25,8 @@ export function MemberRolesSettings({
   if (!server || !selectedMember) return null;
 
   const assignedRoles =
-    selectedMember.roles
-      ?.map((item) => item.role)
-      .filter((role) => role.name !== '@everyone') ?? [];
+    selectedMember.roles?.map((item) => item.role).filter((role) => role.name !== '@everyone') ??
+    [];
   const sortedRoles = [...server.roles].sort((left, right) => {
     if (left.name === '@everyone') return -1;
     if (right.name === '@everyone') return 1;
@@ -30,6 +35,7 @@ export function MemberRolesSettings({
     if (leftAssigned !== rightAssigned) return leftAssigned ? -1 : 1;
     return left.name.localeCompare(right.name);
   });
+  const canRemoveMember = selectedMember.kind !== 'OWNER';
 
   return (
     <div className="settings-form">
@@ -43,7 +49,9 @@ export function MemberRolesSettings({
         />
         <div className="member-role-summaryText">
           <strong>{selectedMember.user.displayName}</strong>
-          <span>{selectedMember.kind === 'OWNER' ? 'Owner' : selectedMember.user.status || 'Member'}</span>
+          <span>
+            {selectedMember.kind === 'OWNER' ? 'Owner' : selectedMember.user.status || 'Member'}
+          </span>
           <div className="member-role-summaryChips">
             <Badge variant="neutral" className="role-meta-badge">
               {assignedRoles.length} role{assignedRoles.length === 1 ? '' : 's'} assigned
@@ -106,6 +114,14 @@ export function MemberRolesSettings({
         })}
       </div>
       <footer className="settings-modal-footer">
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={!canRemoveMember || pendingAction === `member-remove-${selectedMember.id}`}
+          onClick={() => void removeMember(selectedMember.id)}
+        >
+          Remove member
+        </Button>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
           Done
         </Button>

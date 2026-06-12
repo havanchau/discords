@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/current-user.decorator';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { RequestUser } from '../../common/request-user';
@@ -30,6 +30,11 @@ export class FriendsController {
     @Body() dto: RespondFriendRequestDto,
   ) {
     return this.friends.respond(user.id, requestId, dto);
+  }
+
+  @Delete('requests/:requestId')
+  remove(@CurrentUser() user: RequestUser, @Param('requestId') requestId: string) {
+    return this.friends.remove(user.id, requestId);
   }
 
   @Post(':userId/dm')

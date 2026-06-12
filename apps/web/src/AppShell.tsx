@@ -21,15 +21,8 @@ import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
 import { useThreadPanel } from './hooks/useThreadPanel';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
-import {
-  apiRequest,
-  assetUrl,
-  Channel,
-  Message,
-  ServerDetail,
-  ServerSummary,
-  uploadFile,
-} from './api';
+// prettier-ignore
+import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
 import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
@@ -106,6 +99,8 @@ export function AppShell() {
     loadDirectConversations,
     requestFriend,
     respondFriendRequest,
+    removeFriend,
+    removeFriendRequest,
     openDirectConversation,
     markDirectConversationRead,
     startDirectConversation,
@@ -177,6 +172,7 @@ export function AppShell() {
     toggleRolePermission,
     deleteRole,
     toggleMemberRole,
+    removeMember,
     hydratePersistentChannelBadges,
   } = useSettingsActions({
     auth,
@@ -950,6 +946,8 @@ export function AppShell() {
                   actions={{
                     requestFriend,
                     respondFriendRequest,
+                    removeFriend,
+                    removeFriendRequest,
                     openDirectConversation,
                     startDirectConversation,
                     sendDirectMessage,
@@ -986,6 +984,7 @@ export function AppShell() {
                   toggleRolePermission,
                   deleteRole,
                   toggleMemberRole,
+                  removeMember,
                   openMemberRoleEditor,
                 }}
               />

@@ -15,14 +15,14 @@ const DEFAULT_MEMBER_PERMISSIONS = [
   'CREATE_INVITE',
   'CONNECT_VOICE',
   'SPEAK_VOICE',
-  'UPLOAD_FILES'
+  'UPLOAD_FILES',
 ];
 
 @Injectable()
 export class ServersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly permissions: PermissionsService
+    private readonly permissions: PermissionsService,
   ) {}
 
   async createServer(userId: string, dto: CreateServerDto) {
@@ -31,8 +31,8 @@ export class ServersService {
         data: {
           name: dto.name.trim(),
           description: dto.description?.trim(),
-          ownerId: userId
-        }
+          ownerId: userId,
+        },
       });
 
       const everyoneRole = await tx.role.create({
@@ -40,23 +40,23 @@ export class ServersService {
           serverId: created.id,
           name: '@everyone',
           position: 0,
-          permissions: DEFAULT_MEMBER_PERMISSIONS
-        }
+          permissions: DEFAULT_MEMBER_PERMISSIONS,
+        },
       });
 
       const ownerMember = await tx.serverMember.create({
         data: {
           userId,
           serverId: created.id,
-          kind: 'OWNER'
-        }
+          kind: 'OWNER',
+        },
       });
 
       await tx.memberRole.create({
         data: {
           memberId: ownerMember.id,
-          roleId: everyoneRole.id
-        }
+          roleId: everyoneRole.id,
+        },
       });
 
       await tx.channel.create({
@@ -64,8 +64,8 @@ export class ServersService {
           serverId: created.id,
           name: 'general',
           type: 'TEXT',
-          position: 0
-        }
+          position: 0,
+        },
       });
 
       return created;
@@ -78,18 +78,20 @@ export class ServersService {
     const servers = await this.prisma.server.findMany({
       where: {
         deletedAt: null,
-        members: { some: { userId } }
+        members: { some: { userId } },
       },
       include: {
-        channels: { orderBy: { position: 'asc' } }
+        channels: { orderBy: { position: 'asc' } },
       },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { updatedAt: 'desc' },
     });
     const visibleServers = [];
     for (const server of servers) {
       const channels = [];
       for (const channel of server.channels) {
-        if (await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel)) {
+        if (
+          await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel)
+        ) {
           channels.push(channel);
         }
       }
@@ -117,19 +119,21 @@ export class ServersService {
                 username: true,
                 displayName: true,
                 avatarUrl: true,
-                status: true
-              }
+                status: true,
+              },
             },
-            roles: { include: { role: true } }
+            roles: { include: { role: true } },
           },
-          orderBy: { joinedAt: 'asc' }
+          orderBy: { joinedAt: 'asc' },
         },
-        roles: { orderBy: { position: 'asc' } }
-      }
+        roles: { orderBy: { position: 'asc' } },
+      },
     });
     const channels = [];
     for (const channel of server.channels) {
-      if (!(await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel))) {
+      if (
+        !(await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel))
+      ) {
         continue;
       }
       const readState = channel.readStates[0];
@@ -153,8 +157,8 @@ export class ServersService {
       where: { id: serverId },
       data: {
         name: dto.name?.trim(),
-        description: dto.description?.trim()
-      }
+        description: dto.description?.trim(),
+      },
     });
     await this.writeAuditLog(serverId, userId, 'SERVER_UPDATE', serverId, {
       name: dto.name?.trim(),
@@ -199,11 +203,34 @@ export class ServersService {
     return { member: updated };
   }
 
+  async removeMember(userId: string, serverId: string, memberId: string) {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.KickMembers);
+    const [actor, target] = await Promise.all([
+      this.requireMembership(userId, serverId),
+      this.prisma.serverMember.findFirst({
+        where: { id: memberId, serverId },
+        include: { user: { select: { id: true, username: true, displayName: true } } },
+      }),
+    ]);
+    if (!target) throw new NotFoundException('Member not found');
+    if (target.kind === 'OWNER') throw new ForbiddenException('Cannot kick the server owner');
+    if (target.id === actor.id) throw new ForbiddenException('Cannot kick yourself');
+
+    await this.prisma.serverMember.delete({ where: { id: target.id } });
+    await this.writeAuditLog(serverId, userId, 'MEMBER_KICK', target.id, {
+      userId: target.userId,
+      username: target.user.username,
+      displayName: target.user.displayName,
+    });
+
+    return { ok: true };
+  }
+
   async createInvite(userId: string, serverId: string, dto: CreateInviteDto) {
     await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
     if (dto.channelId) {
       const channel = await this.prisma.channel.findFirst({
-        where: { id: dto.channelId, serverId }
+        where: { id: dto.channelId, serverId },
       });
       if (!channel) {
         throw new NotFoundException('Channel not found');
@@ -217,8 +244,10 @@ export class ServersService {
         channelId: dto.channelId,
         creatorId: userId,
         maxUses: dto.maxUses ?? 100,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : new Date(Date.now() + 1000 * 60 * 60 * 24)
-      }
+        expiresAt: dto.expiresAt
+          ? new Date(dto.expiresAt)
+          : new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
     });
     await this.writeAuditLog(serverId, userId, 'INVITE_CREATE', invite.id, {
       channelId: invite.channelId,
@@ -260,7 +289,7 @@ export class ServersService {
   async joinInvite(userId: string, code: string) {
     const invite = await this.prisma.invite.findUnique({
       where: { code },
-      include: { server: true }
+      include: { server: true },
     });
 
     if (!invite || invite.server.deletedAt) {
@@ -281,7 +310,7 @@ export class ServersService {
 
     const { member, joinedNow } = await this.prisma.$transaction(async (tx) => {
       const existingMember = await tx.serverMember.findUnique({
-        where: { userId_serverId: { userId, serverId: invite.serverId } }
+        where: { userId_serverId: { userId, serverId: invite.serverId } },
       });
       const member =
         existingMember ??
@@ -289,8 +318,8 @@ export class ServersService {
           data: {
             userId,
             serverId: invite.serverId,
-            kind: 'MEMBER'
-          }
+            kind: 'MEMBER',
+          },
         }));
       const everyoneRole = await tx.role.upsert({
         where: { serverId_name: { serverId: invite.serverId, name: '@everyone' } },
@@ -298,21 +327,21 @@ export class ServersService {
           serverId: invite.serverId,
           name: '@everyone',
           position: 0,
-          permissions: DEFAULT_MEMBER_PERMISSIONS
+          permissions: DEFAULT_MEMBER_PERMISSIONS,
         },
-        update: {}
+        update: {},
       });
 
       await tx.memberRole.upsert({
         where: { memberId_roleId: { memberId: member.id, roleId: everyoneRole.id } },
         create: { memberId: member.id, roleId: everyoneRole.id },
-        update: {}
+        update: {},
       });
 
       if (!existingMember) {
         await tx.invite.update({
           where: { id: invite.id },
-          data: { usedCount: { increment: 1 } }
+          data: { usedCount: { increment: 1 } },
         });
       }
 
@@ -324,7 +353,7 @@ export class ServersService {
 
   async requireMembership(userId: string, serverId: string) {
     const member = await this.prisma.serverMember.findUnique({
-      where: { userId_serverId: { userId, serverId } }
+      where: { userId_serverId: { userId, serverId } },
     });
 
     if (!member) {

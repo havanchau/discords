@@ -215,7 +215,7 @@ The project is portfolio-ready when:
 
 ## Feature Completion Checklist
 
-> Recheck note (2026-06-11): realtime direct messages and message search are now implemented in source. Remaining unchecked items should stay open until the follow-up backlog in `docs/feature-roadmap.md` is implemented and verified.
+> Recheck note (2026-06-12): the follow-up backlog in `docs/feature-roadmap.md` is implemented and verified in source. Friend management now includes realtime refreshes, cancel/remove/unblock flows, and DM start from accepted friends. Member-level channel overrides, notification inbox, audit timeline, and member kick moderation are implemented.
 
 - [x] Auth foundation.
 - [x] Server and channel foundation.
@@ -227,9 +227,9 @@ The project is portfolio-ready when:
 - [x] Voice and screen-share foundation.
 - [x] Audit log foundation.
 - [x] Realtime direct messages.
-- [ ] Full friend-system polish.
+- [x] Full friend-system polish.
 - [x] Message search.
-- [ ] Member-level channel overrides.
-- [ ] Notification inbox.
-- [ ] Full moderation suite.
+- [x] Member-level channel overrides.
+- [x] Notification inbox.
+- [x] Full moderation suite.
 - [x] Production CI smoke tests against deployed URLs.

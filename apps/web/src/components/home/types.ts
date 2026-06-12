@@ -3,6 +3,7 @@ import type {
   AuthState,
   DirectConversation,
   DirectMessage,
+  FriendEntry,
   FriendRequestEntry,
   FriendsSummary,
 } from '../../api';
@@ -23,6 +24,8 @@ export interface HomePanelActions {
     request: FriendRequestEntry,
     status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED',
   ) => Promise<void>;
+  removeFriend: (friend: FriendEntry) => Promise<void>;
+  removeFriendRequest: (request: FriendRequestEntry) => Promise<void>;
   openDirectConversation: (conversation: DirectConversation) => Promise<void>;
   startDirectConversation: (userId: string) => Promise<void>;
   sendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;

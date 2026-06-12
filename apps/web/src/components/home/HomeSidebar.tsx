@@ -1,6 +1,11 @@
 import type { FormEvent } from 'react';
 import { UserPlus } from 'lucide-react';
-import type { DirectConversation, FriendRequestEntry, FriendsSummary } from '../../api';
+import type {
+  DirectConversation,
+  FriendEntry,
+  FriendRequestEntry,
+  FriendsSummary,
+} from '../../api';
 import { Button, TextField } from '../ui';
 import { ConversationList } from './ConversationList';
 import { FriendRequestList } from './FriendRequestList';
@@ -13,7 +18,12 @@ type HomeSidebarProps = {
   activeConversationId?: string;
   pendingAction: string | null;
   onRequestFriend: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  onRespondFriendRequest: (request: FriendRequestEntry, status: 'ACCEPTED' | 'REJECTED') => Promise<void>;
+  onRespondFriendRequest: (
+    request: FriendRequestEntry,
+    status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED',
+  ) => Promise<void>;
+  onRemoveFriend: (friend: FriendEntry) => Promise<void>;
+  onRemoveFriendRequest: (request: FriendRequestEntry) => Promise<void>;
   onOpenDirectConversation: (conversation: DirectConversation) => Promise<void>;
   onStartDirectConversation: (userId: string) => Promise<void>;
 };
@@ -25,6 +35,8 @@ export function HomeSidebar({
   pendingAction,
   onRequestFriend,
   onRespondFriendRequest,
+  onRemoveFriend,
+  onRemoveFriendRequest,
   onOpenDirectConversation,
   onStartDirectConversation,
 }: HomeSidebarProps) {
@@ -53,8 +65,29 @@ export function HomeSidebar({
         </Button>
       </form>
 
-      <FriendsList friends={friendsSummary?.friends ?? []} onStartConversation={onStartDirectConversation} />
-      <FriendRequestList requests={friendsSummary?.pendingIncoming ?? []} onRespond={onRespondFriendRequest} />
+      <FriendsList
+        friends={friendsSummary?.friends ?? []}
+        onStartConversation={onStartDirectConversation}
+        onRemoveFriend={onRemoveFriend}
+      />
+      <FriendRequestList
+        requests={friendsSummary?.pendingIncoming ?? []}
+        onRespond={onRespondFriendRequest}
+      />
+      <FriendRequestList
+        title="Pending sent"
+        mode="outgoing"
+        requests={friendsSummary?.pendingOutgoing ?? []}
+        onRespond={onRespondFriendRequest}
+        onRemove={onRemoveFriendRequest}
+      />
+      <FriendRequestList
+        title="Blocked"
+        mode="blocked"
+        requests={friendsSummary?.blocked ?? []}
+        onRespond={onRespondFriendRequest}
+        onRemove={onRemoveFriendRequest}
+      />
       <ConversationList
         conversations={conversations}
         activeConversationId={activeConversationId}
