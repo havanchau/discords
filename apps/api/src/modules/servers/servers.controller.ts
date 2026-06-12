@@ -35,7 +35,7 @@ export class ServersController {
   update(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
-    @Body() dto: UpdateServerDto
+    @Body() dto: UpdateServerDto,
   ) {
     return this.servers.updateServer(user.id, serverId, dto);
   }
@@ -49,9 +49,19 @@ export class ServersController {
   updateMyMembership(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
-    @Body() dto: UpdateNicknameDto
+    @Body() dto: UpdateNicknameDto,
   ) {
     return this.servers.updateMyMembership(user.id, serverId, dto);
+  }
+
+  @RateLimit({ keyPrefix: 'member-kick', limit: 20, windowMs: 60_000 })
+  @Delete('servers/:serverId/members/:memberId')
+  removeMember(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return this.servers.removeMember(user.id, serverId, memberId);
   }
 
   @RateLimit({ keyPrefix: 'invite-create', limit: 10, windowMs: 60_000 })
@@ -59,7 +69,7 @@ export class ServersController {
   createInvite(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
-    @Body() dto: CreateInviteDto
+    @Body() dto: CreateInviteDto,
   ) {
     return this.servers.createInvite(user.id, serverId, dto);
   }
@@ -73,7 +83,7 @@ export class ServersController {
   revokeInvite(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
-    @Param('inviteId') inviteId: string
+    @Param('inviteId') inviteId: string,
   ) {
     return this.servers.revokeInvite(user.id, serverId, inviteId);
   }

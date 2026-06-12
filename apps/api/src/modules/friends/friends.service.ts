@@ -144,6 +144,30 @@ export class FriendsService {
     return { request: updated };
   }
 
+  async remove(userId: string, requestId: string) {
+    const request = await this.prisma.friendRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        requester: { select: this.userSelect },
+        receiver: { select: this.userSelect },
+      },
+    });
+    if (!request) throw new NotFoundException('Friend request not found');
+    if (request.requesterId !== userId && request.receiverId !== userId) {
+      throw new ForbiddenException('Cannot remove this friend relationship');
+    }
+
+    await this.prisma.friendRequest.delete({ where: { id: requestId } });
+
+    this.realtime.emitToRooms(
+      [this.realtime.userRoom(request.requesterId), this.realtime.userRoom(request.receiverId)],
+      'friend:updated',
+      { request: { ...request, status: 'REJECTED' } },
+    );
+
+    return { ok: true };
+  }
+
   async startDm(userId: string, friendUserId: string) {
     const friendship = await this.prisma.friendRequest.findFirst({
       where: {

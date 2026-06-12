@@ -4,6 +4,7 @@ import {
   AuthState,
   DirectConversation,
   DirectMessage,
+  FriendEntry,
   FriendRequestEntry,
   FriendsSummary,
 } from '../api';
@@ -114,6 +115,38 @@ export function useDirectMessages({
     }
   }
 
+  async function removeFriendRequest(request: FriendRequestEntry) {
+    if (!auth) return;
+    setPendingAction(`friend-remove-${request.id}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest(`/friends/requests/${request.id}`, { method: 'DELETE' }, auth.accessToken);
+      await loadFriends(auth.accessToken);
+      setWorkspaceNotice(
+        request.status === 'BLOCKED' ? 'User unblocked.' : 'Friend request removed.',
+      );
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove friend request');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function removeFriend(friend: FriendEntry) {
+    if (!auth) return;
+    setPendingAction(`friend-remove-${friend.id}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest(`/friends/requests/${friend.id}`, { method: 'DELETE' }, auth.accessToken);
+      await Promise.all([loadFriends(auth.accessToken), loadDirectConversations(auth.accessToken)]);
+      setWorkspaceNotice('Friend removed.');
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove friend');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function markDirectConversationRead(conversationId: string, messageId?: string) {
     if (!auth) return;
     try {
@@ -144,9 +177,7 @@ export function useDirectMessages({
       );
       setDirectMessages(result.messages);
       setDirectConversations((current) =>
-        current.map((item) =>
-          item.id === conversation.id ? { ...item, unreadCount: 0 } : item,
-        ),
+        current.map((item) => (item.id === conversation.id ? { ...item, unreadCount: 0 } : item)),
       );
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot open conversation');
@@ -210,6 +241,8 @@ export function useDirectMessages({
     loadDirectConversations,
     requestFriend,
     respondFriendRequest,
+    removeFriend,
+    removeFriendRequest,
     openDirectConversation,
     markDirectConversationRead,
     startDirectConversation,

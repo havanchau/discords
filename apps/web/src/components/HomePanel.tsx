@@ -3,10 +3,7 @@ import { HomeSidebar } from './home/HomeSidebar';
 import type { HomePanelProps } from './home/types';
 import styles from './home/HomePanel.module.css';
 
-export function HomePanel({
-  home,
-  actions,
-}: HomePanelProps) {
+export function HomePanel({ home, actions }: HomePanelProps) {
   return (
     <section className={styles.panel}>
       <HomeSidebar
@@ -16,6 +13,8 @@ export function HomePanel({
         pendingAction={home.pendingAction}
         onRequestFriend={actions.requestFriend}
         onRespondFriendRequest={actions.respondFriendRequest}
+        onRemoveFriend={actions.removeFriend}
+        onRemoveFriendRequest={actions.removeFriendRequest}
         onOpenDirectConversation={actions.openDirectConversation}
         onStartDirectConversation={actions.startDirectConversation}
       />

@@ -163,7 +163,11 @@ export function useSettingsActions({
   async function loadInvites(serverId: string, token = auth?.accessToken) {
     if (!token) return;
     try {
-      const result = await apiRequest<{ invites: Invite[] }>(`/servers/${serverId}/invites`, {}, token);
+      const result = await apiRequest<{ invites: Invite[] }>(
+        `/servers/${serverId}/invites`,
+        {},
+        token,
+      );
       setInvites(result.invites);
     } catch {
       setInvites([]);
@@ -192,7 +196,10 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setInvites((current) => [result.invite, ...current.filter((invite) => invite.id !== result.invite.id)]);
+      setInvites((current) => [
+        result.invite,
+        ...current.filter((invite) => invite.id !== result.invite.id),
+      ]);
       event.currentTarget.reset();
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot create invite');
@@ -579,6 +586,25 @@ export function useSettingsActions({
     }
   }
 
+  async function removeMember(memberId: string) {
+    if (!auth || !server) return;
+    setPendingAction(`member-remove-${memberId}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest<{ ok: true }>(
+        `/servers/${server.id}/members/${memberId}`,
+        { method: 'DELETE' },
+        auth.accessToken,
+      );
+      setActiveDialog(null);
+      await reloadCurrentServer();
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove member');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   function hydratePersistentChannelBadges(nextServer: ServerDetail) {
     const badges = nextServer.channels.reduce<Record<string, ChannelBadgeState>>(
       (current, item) => {
@@ -614,6 +640,7 @@ export function useSettingsActions({
     toggleRolePermission,
     deleteRole,
     toggleMemberRole,
+    removeMember,
     hydratePersistentChannelBadges,
   };
 }
