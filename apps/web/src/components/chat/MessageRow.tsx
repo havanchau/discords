@@ -17,7 +17,6 @@ import { assetUrl, AuthState, Message, MessageAttachment } from '../../api';
 import {
   accentClass,
   attachmentKind,
-  extractLinks,
   formatBytes,
   formatDate,
   formatDayDivider,
@@ -44,6 +43,29 @@ import {
 import styles from './MessageRow.module.css';
 import type { ChatPanelMessageActions } from './types';
 
+const MESSAGE_LINK_PATTERN = /(https?:\/\/[^\s]+)/gi;
+const MENTION_PATTERN = /(@[\w.-]+)/g;
+const MESSAGE_LINK_TEST_PATTERN = /^https?:\/\//i;
+const MENTION_TEST_PATTERN = /^@[\w.-]+$/;
+const EMOJI_OPTIONS = [
+  '👍',
+  '🔥',
+  '😂',
+  '❤️',
+  '🎉',
+  '👏',
+  '🙏',
+  '😍',
+  '😮',
+  '😢',
+  '😡',
+  '✅',
+  '👀',
+  '💯',
+  '🚀',
+  '✨',
+];
+
 interface PreviewAttachment {
   url: string;
   fileName: string;
@@ -57,8 +79,8 @@ function MessageContent({
   message: Message;
   onOpenThread: (message: Message) => void;
 }) {
-  const links = extractLinks(message.content);
-  const parts = message.content.split(/(https?:\/\/[^\s]+)/gi);
+  const parts = message.content.split(MESSAGE_LINK_PATTERN);
+  const links = parts.filter((part) => MESSAGE_LINK_TEST_PATTERN.test(part));
 
   return (
     <>
@@ -93,7 +115,7 @@ function MessageContent({
             </span>
           ) : null}
           {parts.map((part, index) => {
-            if (/^https?:\/\//i.test(part)) {
+            if (MESSAGE_LINK_TEST_PATTERN.test(part)) {
               return (
                 <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer">
                   {part}
@@ -101,8 +123,8 @@ function MessageContent({
               );
             }
 
-            return part.split(/(@[\w.-]+)/g).map((segment, segmentIndex) =>
-              /^@[\w.-]+$/.test(segment) ? (
+            return part.split(MENTION_PATTERN).map((segment, segmentIndex) =>
+              MENTION_TEST_PATTERN.test(segment) ? (
                 <span className={styles.mention} key={`${part}-${index}-${segmentIndex}`}>
                   {segment}
                 </span>
@@ -256,25 +278,7 @@ export function MessageRow({
   onPreviewAttachment,
 }: MessageRowProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
-  const emojiOptions = [
-    '👍',
-    '🔥',
-    '😂',
-    '❤️',
-    '🎉',
-    '👏',
-    '🙏',
-    '😍',
-    '😮',
-    '😢',
-    '😡',
-    '✅',
-    '👀',
-    '💯',
-    '🚀',
-    '✨',
-  ];
-
+  const [areActionsVisible, setAreActionsVisible] = useState(false);
   const showDateDivider = !isSameMessageDay(previousMessage?.createdAt, message.createdAt);
   const isFirstInGroup =
     !previousMessage ||
@@ -306,6 +310,14 @@ export function MessageRow({
             data-testid="message"
             data-message-id={message.id}
             tabIndex={-1}
+            onMouseEnter={() => setAreActionsVisible(true)}
+            onMouseLeave={() => !isEmojiOpen && setAreActionsVisible(false)}
+            onFocusCapture={() => setAreActionsVisible(true)}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget) && !isEmojiOpen) {
+                setAreActionsVisible(false);
+              }
+            }}
           >
             {isFirstInGroup ? (
               <div
@@ -384,8 +396,8 @@ export function MessageRow({
                 </div>
               )}
 
-              {!message.deletedAt && !isEditing && (
-                <div className={styles.actions}>
+              {!message.deletedAt && !isEditing && areActionsVisible && (
+                <div className={`${styles.actions} ${styles.actionsVisible}`}>
                   <Tooltip content="Open thread">
                     <IconButton label="Open thread" onClick={() => actions.openThread(message)}>
                       <MessageSquareReply size={14} aria-hidden="true" />
@@ -419,7 +431,7 @@ export function MessageRow({
                       </PopoverTrigger>
                       <PopoverContent side="top" align="end">
                         <div className={styles.emojiPickerPopover}>
-                          {emojiOptions.map((emoji) => (
+                          {EMOJI_OPTIONS.map((emoji) => (
                             <button
                               key={emoji}
                               type="button"

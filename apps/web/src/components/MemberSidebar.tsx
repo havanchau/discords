@@ -15,14 +15,19 @@ import styles from './MemberSidebar.module.css';
 import { cn } from '../utils/cn';
 import { MessageSquare, ShieldCheck } from 'lucide-react';
 
-interface MemberSidebarProps {
+export interface MemberSidebarProps {
   assetUrl: (url: string) => string;
   onManageMember: (memberId: string) => void;
   onDirectMessage: (userId: string) => void;
   server: ServerDetail | null;
 }
 
-export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, server }: MemberSidebarProps) {
+export function MemberSidebar({
+  assetUrl,
+  onManageMember,
+  onDirectMessage,
+  server,
+}: MemberSidebarProps) {
   if (!server) {
     return (
       <aside className={cn(styles.memberSidebar, 'member-sidebar')}>
@@ -33,19 +38,22 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
 
   // 1. Filter online members (status is defined and not OFFLINE)
   const onlineMembers = server.members.filter(
-    (member) => member.user.status && member.user.status !== 'OFFLINE'
+    (member) => member.user.status && member.user.status !== 'OFFLINE',
   );
 
   // 2. Filter offline members (status is undefined/null or OFFLINE)
   const offlineMembers = server.members.filter(
-    (member) => !member.user.status || member.user.status === 'OFFLINE'
+    (member) => !member.user.status || member.user.status === 'OFFLINE',
   );
 
   // 3. Exclude '@everyone' role from display grouping
   const displayRoles = server.roles.filter((role) => role.name !== '@everyone');
 
   // 4. Map online members to their highest priority role
-  const roleGroups: Record<string, { label: string; color?: string | null; members: typeof server.members }> = {};
+  const roleGroups: Record<
+    string,
+    { label: string; color?: string | null; members: typeof server.members }
+  > = {};
   displayRoles.forEach((role) => {
     roleGroups[role.id] = { label: role.name, color: role.color, members: [] };
   });
@@ -78,7 +86,9 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
             {'color' in group && group.color ? (
               <span className={styles.roleMarker} style={{ backgroundColor: group.color }} />
             ) : null}
-            <span>{group.label} - {group.members.length}</span>
+            <span>
+              {group.label} - {group.members.length}
+            </span>
           </div>
           <div className={styles.memberList}>
             {group.members.map((member) => {
@@ -107,7 +117,7 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
                             <span
                               className={cn(
                                 styles.statusDot,
-                                styles[member.user.status?.toLowerCase() || 'offline']
+                                styles[member.user.status?.toLowerCase() || 'offline'],
                               )}
                             />
                           </div>
@@ -163,9 +173,7 @@ export function MemberSidebar({ assetUrl, onManageMember, onDirectMessage, serve
           </div>
         </section>
       ))}
-      {!server.members.length && (
-        <div className={styles.emptyNote}>No members yet.</div>
-      )}
+      {!server.members.length && <div className={styles.emptyNote}>No members yet.</div>}
     </aside>
   );
 }

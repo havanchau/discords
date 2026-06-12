@@ -36,7 +36,7 @@ export interface ChannelBadgeState {
   mentions: number;
 }
 
-interface WorkspaceSidebarState {
+export interface WorkspaceSidebarState {
   auth: AuthState;
   servers: ServerSummary[];
   server: ServerDetail | null;
@@ -51,7 +51,7 @@ interface WorkspaceSidebarState {
   channelBadges: Record<string, ChannelBadgeState>;
 }
 
-interface WorkspaceSidebarActions {
+export interface WorkspaceSidebarActions {
   openHome: () => void;
   openServer: (serverId: string) => Promise<void>;
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -65,7 +65,7 @@ interface WorkspaceSidebarActions {
   setActiveDialog: (dialog: ActiveDialog) => void;
 }
 
-interface WorkspaceSidebarProps {
+export interface WorkspaceSidebarProps {
   workspace: WorkspaceSidebarState;
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
   actions: WorkspaceSidebarActions;
@@ -91,17 +91,17 @@ export function WorkspaceSidebar({
     channelBadges,
   } = workspace;
   const {
-  openHome,
-  openServer,
-  createServer,
-  joinInvite,
-  createChannel,
-  createInvite,
-  updateProfileAvatar,
-  logout,
-  setChannel,
-  setChannelQuery,
-  setActiveDialog,
+    openHome,
+    openServer,
+    createServer,
+    joinInvite,
+    createChannel,
+    createInvite,
+    updateProfileAvatar,
+    logout,
+    setChannel,
+    setChannelQuery,
+    setActiveDialog,
   } = actions;
   const [serverAction, setServerAction] = useState<'create' | 'join' | null>(null);
   const [channelCreateType, setChannelCreateType] = useState<'TEXT' | 'VOICE' | null>(null);
@@ -128,7 +128,11 @@ export function WorkspaceSidebar({
         <Tooltip content="Direct Messages" side="right">
           <Button
             type="button"
-            className={cn(styles.serverButton, styles.serverHome, !server && styles.serverButtonActive)}
+            className={cn(
+              styles.serverButton,
+              styles.serverHome,
+              !server && styles.serverButtonActive,
+            )}
             aria-current={!server ? 'page' : undefined}
             onClick={openHome}
           >
@@ -140,7 +144,10 @@ export function WorkspaceSidebar({
           <Tooltip key={item.id} content={item.name} side="right">
             <Button
               type="button"
-              className={cn(styles.serverButton, server?.id === item.id && styles.serverButtonActive)}
+              className={cn(
+                styles.serverButton,
+                server?.id === item.id && styles.serverButtonActive,
+              )}
               aria-label={item.name}
               aria-current={server?.id === item.id ? 'page' : undefined}
               onClick={() => void openServer(item.id)}
@@ -330,7 +337,10 @@ export function WorkspaceSidebar({
         </div>
       </aside>
 
-      <DialogRoot open={Boolean(serverAction)} onOpenChange={(open) => !open && setServerAction(null)}>
+      <DialogRoot
+        open={Boolean(serverAction)}
+        onOpenChange={(open) => !open && setServerAction(null)}
+      >
         <DialogContent title={serverAction === 'join' ? 'Join a server' : 'Create a server'}>
           <div className={styles.dialogTabs}>
             <Button
@@ -357,14 +367,27 @@ export function WorkspaceSidebar({
                 aria-label="Invite code"
                 required
               />
-              <Button type="submit" fullWidth data-testid="join-invite-button" disabled={pendingAction === 'join-invite'}>
-                {pendingAction === 'join-invite' ? <Loader2 className="spin" size={16} aria-hidden="true" /> : 'Join Server'}
+              <Button
+                type="submit"
+                fullWidth
+                data-testid="join-invite-button"
+                disabled={pendingAction === 'join-invite'}
+              >
+                {pendingAction === 'join-invite' ? (
+                  <Loader2 className="spin" size={16} aria-hidden="true" />
+                ) : (
+                  'Join Server'
+                )}
               </Button>
             </form>
           ) : (
             <form onSubmit={submitCreateServer} className={styles.dialogForm}>
               <TextField name="name" label="Server name" placeholder="New server" required />
-              <TextField name="description" label="Description" placeholder="Optional description" />
+              <TextField
+                name="description"
+                label="Description"
+                placeholder="Optional description"
+              />
               <Button
                 type="submit"
                 fullWidth
@@ -386,9 +409,7 @@ export function WorkspaceSidebar({
         open={Boolean(channelCreateType)}
         onOpenChange={(open) => !open && setChannelCreateType(null)}
       >
-        <DialogContent
-          title={`Create ${channelCreateType === 'VOICE' ? 'voice' : 'text'} channel`}
-        >
+        <DialogContent title={`Create ${channelCreateType === 'VOICE' ? 'voice' : 'text'} channel`}>
           <form onSubmit={submitCreateChannel} className={styles.dialogForm}>
             <TextField
               data-testid={
@@ -462,7 +483,11 @@ function ChannelRow({ channel, icon, active, muted, badge, activeCall, onClick }
   return (
     <Button
       type="button"
-      className={cn(styles.channelRow, active && styles.channelRowActive, muted && styles.channelRowMuted)}
+      className={cn(
+        styles.channelRow,
+        active && styles.channelRowActive,
+        muted && styles.channelRowMuted,
+      )}
       aria-current={active ? 'page' : undefined}
       aria-disabled={!onClick && muted ? true : undefined}
       onClick={onClick}
