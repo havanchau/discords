@@ -133,8 +133,8 @@ If a server is raided or spammed:
 - [x] Private endpoints are guarded.
 - [x] Permissions are centralized in backend services.
 - [x] Refresh-token based auth flow exists.
-- [ ] Rate-limit coverage is tested for high-abuse endpoints.
-- [ ] Permission tests cover channel overrides.
+- [x] Rate-limit coverage is tested for high-abuse endpoints.
+- [x] Permission tests cover channel overrides.
 - [ ] Upload authorization is covered by integration tests.
-- [ ] Realtime room authorization is covered by socket tests.
+- [x] Realtime room authorization is covered by socket tests.
 - [ ] Production secrets are rotated and documented outside source control.
