@@ -1,12 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AuthScreen } from './components/AuthScreen';
-import { ChatPanel } from './components/ChatPanel';
-import { HomePanel } from './components/HomePanel';
-import { MemberSidebar } from './components/MemberSidebar';
-import { SettingsModal } from './components/SettingsModal';
-import { ChannelBadgeState, WorkspaceSidebar } from './components/WorkspaceSidebar';
-import { TooltipProvider } from './components/ui';
-import { AuthProvider, SocketProvider, ThemeProvider } from './contexts/appContexts';
+import { ChannelBadgeState } from './components/WorkspaceSidebar';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useChannelEncryption } from './hooks/useChannelEncryption';
 import { useChannelReadState } from './hooks/useChannelReadState';
@@ -29,6 +22,8 @@ import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messa
 import { updateFaviconBadge } from './utils/faviconBadge';
 import { executeSlashCommand } from './utils/executeSlashCommand';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
+import { AuthGate } from './components/app/AuthGate';
+import { AuthenticatedWorkspace } from './components/app/AuthenticatedWorkspace';
 export function AppShell() {
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [server, setServer] = useState<ServerDetail | null>(null);
@@ -785,213 +780,209 @@ export function AppShell() {
   }
   if (!auth) {
     return (
-      <AuthProvider auth={auth}>
-        <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
-          <AuthScreen
-            error={error}
-            mode={mode}
-            setMode={setMode}
-            submitAuth={submitAuth}
-            submitVerification={submitVerification}
-            verificationHint={verificationHint}
-            verificationToken={verificationToken}
-            setVerificationToken={setVerificationToken}
-          />
-        </ThemeProvider>
-      </AuthProvider>
+      <AuthGate
+        auth={auth}
+        uiTheme={uiTheme}
+        setUiTheme={setUiTheme}
+        authScreen={{
+          error,
+          mode,
+          setMode,
+          submitAuth,
+          submitVerification,
+          verificationHint,
+          verificationToken,
+          setVerificationToken,
+        }}
+      >
+        {null}
+      </AuthGate>
     );
   }
+
   return (
-    <AuthProvider auth={auth}>
-      <SocketProvider socket={socket}>
-        <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
-          <TooltipProvider>
-            <main className="app-shell">
-              <WorkspaceSidebar
-                workspace={{
-                  auth,
-                  servers,
-                  server,
-                  channel,
-                  visibleTextChannels,
-                  visibleVoiceChannels,
-                  channelQuery,
-                  inviteCode,
-                  isLoadingServers,
-                  pendingAction,
-                  activeCalls,
-                  channelBadges,
-                }}
-                profileAvatarInputRef={profileAvatarInputRef}
-                actions={{
-                  openHome,
-                  openServer,
-                  createServer,
-                  joinInvite,
-                  createChannel,
-                  createInvite,
-                  updateProfileAvatar,
-                  logout,
-                  setChannel,
-                  setChannelQuery,
-                  setActiveDialog,
-                }}
-              />
-              {server ? (
-                <>
-                  <ChatPanel
-                    session={{ auth, channel }}
-                    messages={{
-                      all: messages,
-                      visible: visibleMessages,
-                      isLoading: isLoadingMessages,
-                      isLoadingMore: isLoadingMoreMessages,
-                      hasMore: Boolean(messageCursor),
-                      typingUsers,
-                      pinned: pinnedMessages,
-                      mediaSource: messages,
-                      pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
-                      notifications,
-                      notificationUnreadCount,
-                      isLoadingNotifications,
-                      searchQuery,
-                      parsedSearch,
-                      loadMore: loadMoreMessages,
-                    }}
-                    alerts={{
-                      error: workspaceError,
-                      notice: workspaceNotice,
-                      setError: setWorkspaceError,
-                      setNotice: setWorkspaceNotice,
-                    }}
-                    panels={{
-                      activePanel,
-                      activeDialog,
-                      setActivePanel,
-                      setActiveDialog,
-                      setSearchQuery,
-                      loadNotifications,
-                      markNotificationRead,
-                      markAllNotificationsRead,
-                    }}
-                    encryption={{
-                      isChannelEncrypted: channel ? Boolean(channelKeys[channel.id]) : false,
-                      configure: configureChannelEncryption,
-                      clear: clearChannelEncryption,
-                    }}
-                    call={{
-                      state: callState,
-                      active: activeCall,
-                      remoteMedia,
-                      localVideoRef,
-                      start: startCall,
-                      toggleMute,
-                      toggleCamera,
-                      end: endCall,
-                    }}
-                    messageActions={{
-                      editingMessageId,
-                      editingDraft,
-                      setReplyingToMessage,
-                      openThread: threadPanel.openThread,
-                      setEditingMessageId,
-                      setEditingDraft,
-                      saveEdit: saveMessageEdit,
-                      delete: deleteMessage,
-                      toggleReaction,
-                      togglePinned: togglePinnedMessage,
-                    }}
-                    composer={{
-                      replyingToMessage,
-                      selectedFiles,
-                      draft: channelDraft.value,
-                      isRecordingVoice,
-                      pendingAction,
-                      fileInputRef,
-                      sendMessage,
-                      setDraft: channelDraft.setValue,
-                      startVoiceRecording,
-                      stopVoiceRecording,
-                      removeSelectedFile,
-                      selectFiles,
-                      handleInput: handleComposerInput,
-                    }}
-                    thread={threadPanel}
-                    channelAvatar={{
-                      inputRef: channelAvatarInputRef,
-                      update: updateChannelAvatar,
-                    }}
-                  />
-                  <MemberSidebar
-                    assetUrl={assetUrl}
-                    server={server}
-                    onManageMember={openMemberRoleEditor}
-                    onDirectMessage={async (userId) => {
-                      openHome();
-                      await startDirectConversation(userId);
-                    }}
-                  />
-                </>
-              ) : (
-                <HomePanel
-                  home={{
-                    auth,
-                    friendsSummary,
-                    conversations: directConversations,
-                    activeConversation,
-                    directMessages,
-                    directMessageDraft,
-                    pendingAction,
-                  }}
-                  actions={{
-                    requestFriend,
-                    respondFriendRequest,
-                    removeFriend,
-                    removeFriendRequest,
-                    openDirectConversation,
-                    startDirectConversation,
-                    sendDirectMessage,
-                    setDirectMessageDraft,
-                  }}
-                />
-              )}
-              <SettingsModal
-                dialog={{ activeDialog, setActiveDialog }}
-                data={{
-                  auth,
-                  server,
-                  channel,
-                  selectedMember,
-                  channelOverrides,
-                  auditLogs,
-                  invites,
-                  notificationPreferences,
-                  pendingAction,
-                }}
-                refs={{ profileAvatarInputRef, channelAvatarInputRef }}
-                theme={{ uiTheme }}
-                actions={{
-                  setUiTheme,
-                  createInviteFromSettings,
-                  revokeInvite,
-                  updateProfile,
-                  updateNotificationPreference,
-                  updateServerSettings,
-                  updateChannelSettings,
-                  toggleChannelRoleOverride,
-                  toggleChannelMemberOverride,
-                  createRole,
-                  toggleRolePermission,
-                  deleteRole,
-                  toggleMemberRole,
-                  removeMember,
-                  openMemberRoleEditor,
-                }}
-              />
-            </main>
-          </TooltipProvider>
-        </ThemeProvider>
-      </SocketProvider>
-    </AuthProvider>
+    <AuthenticatedWorkspace
+      auth={auth}
+      socket={socket}
+      uiTheme={uiTheme}
+      setUiTheme={setUiTheme}
+      server={server}
+      workspace={{
+        workspace: {
+          auth,
+          servers,
+          server,
+          channel,
+          visibleTextChannels,
+          visibleVoiceChannels,
+          channelQuery,
+          inviteCode,
+          isLoadingServers,
+          pendingAction,
+          activeCalls,
+          channelBadges,
+        },
+        profileAvatarInputRef,
+        actions: {
+          openHome,
+          openServer,
+          createServer,
+          joinInvite,
+          createChannel,
+          createInvite,
+          updateProfileAvatar,
+          logout,
+          setChannel,
+          setChannelQuery,
+          setActiveDialog,
+        },
+      }}
+      chat={{
+        session: { auth, channel },
+        messages: {
+          all: messages,
+          visible: visibleMessages,
+          isLoading: isLoadingMessages,
+          isLoadingMore: isLoadingMoreMessages,
+          hasMore: Boolean(messageCursor),
+          typingUsers,
+          pinned: pinnedMessages,
+          mediaSource: messages,
+          pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
+          notifications,
+          notificationUnreadCount,
+          isLoadingNotifications,
+          searchQuery,
+          parsedSearch,
+          loadMore: loadMoreMessages,
+        },
+        alerts: {
+          error: workspaceError,
+          notice: workspaceNotice,
+          setError: setWorkspaceError,
+          setNotice: setWorkspaceNotice,
+        },
+        panels: {
+          activePanel,
+          activeDialog,
+          setActivePanel,
+          setActiveDialog,
+          setSearchQuery,
+          loadNotifications,
+          markNotificationRead,
+          markAllNotificationsRead,
+        },
+        encryption: {
+          isChannelEncrypted: channel ? Boolean(channelKeys[channel.id]) : false,
+          configure: configureChannelEncryption,
+          clear: clearChannelEncryption,
+        },
+        call: {
+          state: callState,
+          active: activeCall,
+          remoteMedia,
+          localVideoRef,
+          start: startCall,
+          toggleMute,
+          toggleCamera,
+          end: endCall,
+        },
+        messageActions: {
+          editingMessageId,
+          editingDraft,
+          setReplyingToMessage,
+          openThread: threadPanel.openThread,
+          setEditingMessageId,
+          setEditingDraft,
+          saveEdit: saveMessageEdit,
+          delete: deleteMessage,
+          toggleReaction,
+          togglePinned: togglePinnedMessage,
+        },
+        composer: {
+          replyingToMessage,
+          selectedFiles,
+          draft: channelDraft.value,
+          isRecordingVoice,
+          pendingAction,
+          fileInputRef,
+          sendMessage,
+          setDraft: channelDraft.setValue,
+          startVoiceRecording,
+          stopVoiceRecording,
+          removeSelectedFile,
+          selectFiles,
+          handleInput: handleComposerInput,
+        },
+        thread: threadPanel,
+        channelAvatar: {
+          inputRef: channelAvatarInputRef,
+          update: updateChannelAvatar,
+        },
+      }}
+      members={{
+        assetUrl,
+        server,
+        onManageMember: openMemberRoleEditor,
+        onDirectMessage: async (userId) => {
+          openHome();
+          await startDirectConversation(userId);
+        },
+      }}
+      home={{
+        home: {
+          auth,
+          friendsSummary,
+          conversations: directConversations,
+          activeConversation,
+          directMessages,
+          directMessageDraft,
+          pendingAction,
+        },
+        actions: {
+          requestFriend,
+          respondFriendRequest,
+          removeFriend,
+          removeFriendRequest,
+          openDirectConversation,
+          startDirectConversation,
+          sendDirectMessage,
+          setDirectMessageDraft,
+        },
+      }}
+      settings={{
+        dialog: { activeDialog, setActiveDialog },
+        data: {
+          auth,
+          server,
+          channel,
+          selectedMember,
+          channelOverrides,
+          auditLogs,
+          invites,
+          notificationPreferences,
+          pendingAction,
+        },
+        refs: { profileAvatarInputRef, channelAvatarInputRef },
+        theme: { uiTheme },
+        actions: {
+          setUiTheme,
+          createInviteFromSettings,
+          revokeInvite,
+          updateProfile,
+          updateNotificationPreference,
+          updateServerSettings,
+          updateChannelSettings,
+          toggleChannelRoleOverride,
+          toggleChannelMemberOverride,
+          createRole,
+          toggleRolePermission,
+          deleteRole,
+          toggleMemberRole,
+          removeMember,
+          openMemberRoleEditor,
+        },
+      }}
+    />
   );
 }
