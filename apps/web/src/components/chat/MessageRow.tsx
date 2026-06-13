@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Bookmark,
   Edit3,
   FileArchive,
   FileAudio2,
@@ -265,7 +266,9 @@ interface MessageRowProps {
   previousMessage?: Message;
   auth: AuthState;
   pinnedMessageIds: string[];
+  savedMessageIds: string[];
   actions: ChatPanelMessageActions;
+  onToggleSaved: (message: Message) => void;
   onPreviewAttachment: (attachment: PreviewAttachment) => void;
 }
 
@@ -274,7 +277,9 @@ export function MessageRow({
   previousMessage,
   auth,
   pinnedMessageIds,
+  savedMessageIds,
   actions,
+  onToggleSaved,
   onPreviewAttachment,
 }: MessageRowProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -290,6 +295,7 @@ export function MessageRow({
   const canManage = message.authorId === auth.user.id && !message.deletedAt;
   const isEditing = actions.editingMessageId === message.id;
   const isPinned = pinnedMessageIds.includes(message.id);
+  const isSaved = savedMessageIds.includes(message.id);
 
   function copyMessageContent() {
     void navigator.clipboard?.writeText(message.content);
@@ -398,6 +404,11 @@ export function MessageRow({
 
               {!message.deletedAt && !isEditing && areActionsVisible && (
                 <div className={`${styles.actions} ${styles.actionsVisible}`}>
+                  <Tooltip content="Reply">
+                    <IconButton label="Reply" onClick={() => actions.setReplyingToMessage(message)}>
+                      <Reply size={14} aria-hidden="true" />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip content="Open thread">
                     <IconButton label="Open thread" onClick={() => actions.openThread(message)}>
                       <MessageSquareReply size={14} aria-hidden="true" />
@@ -410,6 +421,15 @@ export function MessageRow({
                       onClick={() => void actions.togglePinned(message)}
                     >
                       <Pin size={14} aria-hidden="true" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip content={isSaved ? 'Remove saved message' : 'Save message'}>
+                    <IconButton
+                      label={isSaved ? 'Remove saved message' : 'Save message'}
+                      className={isSaved ? styles.selected : ''}
+                      onClick={() => onToggleSaved(message)}
+                    >
+                      <Bookmark size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
                   <div className={styles.quickReactions} title="Quick reactions">
@@ -479,11 +499,18 @@ export function MessageRow({
 
         {!message.deletedAt && (
           <ContextMenuContent>
+            <ContextMenuItem onClick={() => actions.setReplyingToMessage(message)}>
+              <Reply size={14} aria-hidden="true" /> Reply
+            </ContextMenuItem>
             <ContextMenuItem onClick={() => actions.openThread(message)}>
               <MessageSquareReply size={14} aria-hidden="true" /> Open Thread
             </ContextMenuItem>
             <ContextMenuItem onClick={() => void actions.togglePinned(message)}>
               <Pin size={14} aria-hidden="true" /> {isPinned ? 'Unpin Message' : 'Pin Message'}
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => onToggleSaved(message)}>
+              <Bookmark size={14} aria-hidden="true" />{' '}
+              {isSaved ? 'Remove Saved Message' : 'Save Message'}
             </ContextMenuItem>
             <ContextMenuItem onClick={copyMessageContent}>Copy Text</ContextMenuItem>
             {canManage && (

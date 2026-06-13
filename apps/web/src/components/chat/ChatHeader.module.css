@@ -144,3 +144,42 @@
   font-weight: var(--font-weight-bold);
   line-height: 1;
 }
+
+@media (max-width: 720px) {
+  .chatHeader {
+    gap: var(--spacing-1);
+    padding: 0 var(--spacing-2);
+  }
+
+  .chatTitle span {
+    max-width: 34vw;
+  }
+
+  .toolbar {
+    min-width: 0;
+    max-width: 52vw;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .headerSearch {
+    width: 32px;
+    min-width: 32px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0;
+  }
+
+  .headerSearch span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+}

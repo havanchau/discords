@@ -16,7 +16,7 @@ const chromeCandidates = [
   '/usr/bin/chromium-browser',
   '/usr/bin/chromium',
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
 ].filter(Boolean);
 
 async function resolveChromePath() {
@@ -30,7 +30,7 @@ async function resolveChromePath() {
   }
 
   throw new Error(
-    'Chrome executable not found. Set PUPPETEER_EXECUTABLE_PATH or CHROME_PATH before running npm run ui:smoke.'
+    'Chrome executable not found. Set PUPPETEER_EXECUTABLE_PATH or CHROME_PATH before running npm run ui:smoke.',
   );
 }
 
@@ -43,8 +43,8 @@ const loginResponse = await fetch(`${apiUrl}/auth/login`, {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     email: 'demo@example.com',
-    password: 'Demo@123456'
-  })
+    password: 'Demo@123456',
+  }),
 });
 
 if (!loginResponse.ok) {
@@ -61,8 +61,8 @@ const browser = await puppeteer.launch({
     '--use-fake-device-for-media-stream',
     '--use-fake-ui-for-media-stream',
     '--no-sandbox',
-    '--disable-setuid-sandbox'
-  ]
+    '--disable-setuid-sandbox',
+  ],
 });
 
 try {
@@ -83,41 +83,59 @@ try {
   await page.waitForFunction(
     (text) => document.body.innerText.includes(text),
     { timeout: 10000 },
-    channelName
+    channelName,
   );
 
   const message = `UI smoke ${new Date().toISOString()} https://example.com/smoke`;
-  await page.$eval('.file-input', (input, filePath) => input.setAttribute('data-smoke-path', filePath), uploadFixturePath);
-  const fileInput = await page.$('.composer .file-input');
+  const fileInput = await page.$('[data-testid="composer-file-input"]');
+  if (!fileInput) {
+    throw new Error('Composer file input was not found.');
+  }
   await fileInput.uploadFile(uploadFixturePath);
   await page.type('[data-testid="composer-input"]', message);
   await page.click('[data-testid="composer-send"]');
   await page.waitForFunction(
     (text) => document.body.innerText.includes(text),
     { timeout: 10000 },
-    message
+    message,
   );
   await page.waitForFunction(
-    () => document.body.innerText.includes('upload-smoke.txt') && document.querySelector('[data-testid="link-preview"]'),
-    { timeout: 10000 }
+    () =>
+      document.body.innerText.includes('upload-smoke.txt') &&
+      document.querySelector('[data-testid="link-preview"]'),
+    { timeout: 10000 },
   );
   const firstMessage = await page.$('[data-testid="message"]');
   await firstMessage.hover();
+  await page.click('button[title="Save message"]');
+  await page.click('[data-testid="saved-messages-button"]');
+  await page.waitForFunction(
+    (text) =>
+      document.body.innerText.includes('Saved messages') && document.body.innerText.includes(text),
+    { timeout: 10000 },
+    message,
+  );
+  await firstMessage.hover();
   await page.click('[data-testid="quick-reaction"]');
   await page.waitForFunction(
-    () => [...document.querySelectorAll('[data-testid="reaction-row"] button')].some((button) => button.textContent.includes('1')),
-    { timeout: 10000 }
+    () =>
+      [...document.querySelectorAll('[data-testid="reaction-row"] button')].some((button) =>
+        button.textContent.includes('1'),
+      ),
+    { timeout: 10000 },
   );
   await firstMessage.hover();
   await page.click('button[title="Reply"]');
-  await page.waitForSelector('.composer-reply', { timeout: 5000 });
+  await page.waitForSelector('[data-testid="composer-reply"]', { timeout: 5000 });
   const replyMessage = `@demo reply smoke ${Date.now()}`;
   await page.type('[data-testid="composer-input"]', replyMessage);
   await page.click('[data-testid="composer-send"]');
   await page.waitForFunction(
-    (text) => document.body.innerText.includes(text) && document.querySelector('[data-testid="reply-preview"]'),
+    (text) =>
+      document.body.innerText.includes(text) &&
+      document.querySelector('[data-testid="reply-preview"]'),
     { timeout: 10000 },
-    replyMessage
+    replyMessage,
   );
   await page.click('[data-testid="voice-call-button"]');
   await page.waitForSelector('[data-testid="call-stage"]', { timeout: 10000 });
@@ -136,14 +154,14 @@ try {
         ok: true,
         screenshots: [
           path.join(screenshotDir, 'desktop-app.png'),
-          path.join(screenshotDir, 'mobile-app.png')
+          path.join(screenshotDir, 'mobile-app.png'),
         ],
         channelName,
-        message
+        message,
       },
       null,
-      2
-    )
+      2,
+    ),
   );
 } finally {
   await browser.close();

@@ -1,4 +1,16 @@
-import { FileAudio2, FileText, Image, Loader2, Mic, Paperclip, Reply, Send, Slash, Square, X } from 'lucide-react';
+import {
+  FileAudio2,
+  FileText,
+  Image,
+  Loader2,
+  Mic,
+  Paperclip,
+  Reply,
+  Send,
+  Slash,
+  Square,
+  X,
+} from 'lucide-react';
 import { Channel } from '../../api';
 import { formatBytes } from '../../helpers';
 import { Button, IconButton, TextField } from '../ui';
@@ -13,11 +25,7 @@ interface MessageComposerProps {
   messageActions: Pick<ChatPanelMessageActions, 'setReplyingToMessage'>;
 }
 
-export function MessageComposer({
-  channel,
-  composer,
-  messageActions,
-}: MessageComposerProps) {
+export function MessageComposer({ channel, composer, messageActions }: MessageComposerProps) {
   const isMessageSending = composer.pendingAction === 'send-message';
   const commandSuggestions = getSlashCommandSuggestions(composer.draft).slice(0, 4);
   const parsedCommand = parseSlashCommand(composer.draft);
@@ -25,7 +33,7 @@ export function MessageComposer({
   return (
     <form onSubmit={composer.sendMessage} className={styles.composer}>
       {composer.replyingToMessage && (
-        <div className={styles.composerReply}>
+        <div className={styles.composerReply} data-testid="composer-reply">
           <Reply size={14} aria-hidden="true" />
           <span>
             Replying to <strong>{composer.replyingToMessage.author.displayName}</strong>
@@ -41,7 +49,11 @@ export function MessageComposer({
       )}
 
       {commandSuggestions.length > 0 && (
-        <div className={styles.commandPopover} role="listbox" aria-label="Slash command suggestions">
+        <div
+          className={styles.commandPopover}
+          role="listbox"
+          aria-label="Slash command suggestions"
+        >
           {commandSuggestions.map((command) => (
             <button
               type="button"
@@ -57,7 +69,9 @@ export function MessageComposer({
               <code>{command.usage}</code>
             </button>
           ))}
-          {parsedCommand.error ? <div className={styles.commandError}>{parsedCommand.error}</div> : null}
+          {parsedCommand.error ? (
+            <div className={styles.commandError}>{parsedCommand.error}</div>
+          ) : null}
         </div>
       )}
 
@@ -92,6 +106,7 @@ export function MessageComposer({
         ref={composer.fileInputRef}
         className={styles.fileInput}
         type="file"
+        data-testid="composer-file-input"
         multiple
         accept="image/*,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm,application/pdf,text/plain,application/zip,.zip"
         onChange={composer.selectFiles}
@@ -110,10 +125,16 @@ export function MessageComposer({
       <IconButton
         label={composer.isRecordingVoice ? 'Stop voice message' : 'Record voice message'}
         className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
-        onClick={composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording}
+        onClick={
+          composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording
+        }
         disabled={!channel || (isMessageSending && !composer.isRecordingVoice)}
       >
-        {composer.isRecordingVoice ? <Square size={15} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
+        {composer.isRecordingVoice ? (
+          <Square size={15} aria-hidden="true" />
+        ) : (
+          <Mic size={18} aria-hidden="true" />
+        )}
       </IconButton>
 
       <TextField
@@ -121,9 +142,7 @@ export function MessageComposer({
         className={styles.composerInput}
         data-testid="composer-input"
         value={composer.draft}
-        placeholder={
-          channel ? `Message #${channel.name}, type / for commands` : 'Select a channel'
-        }
+        placeholder={channel ? `Message #${channel.name}, type / for commands` : 'Select a channel'}
         disabled={!channel || isMessageSending}
         onChange={(event) => {
           composer.setDraft(event.target.value);
