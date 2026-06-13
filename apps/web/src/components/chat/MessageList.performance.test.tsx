@@ -93,7 +93,9 @@ describe('MessageList performance', () => {
               previousMessage={messages[index - 1]}
               auth={auth}
               pinnedMessageIds={[]}
+              savedMessageIds={[]}
               actions={actions}
+              onToggleSaved={() => undefined}
               onPreviewAttachment={() => undefined}
             />
           ))}

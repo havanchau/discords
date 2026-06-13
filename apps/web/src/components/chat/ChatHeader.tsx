@@ -1,4 +1,16 @@
-import { Bell, Edit3, FolderOpen, Hash, Lock, MonitorUp, Phone, Search, Unlock, Video } from 'lucide-react';
+import {
+  Bell,
+  Bookmark,
+  Edit3,
+  FolderOpen,
+  Hash,
+  Lock,
+  MonitorUp,
+  Phone,
+  Search,
+  Unlock,
+  Video,
+} from 'lucide-react';
 import { assetUrl, Channel } from '../../api';
 import { CallMode, CallState } from '../../helpers';
 import { Avatar, Button, IconButton, Tooltip } from '../ui';
@@ -117,7 +129,9 @@ export function ChatHeader({
           <IconButton
             label="Notifications"
             onClick={() =>
-              panels.setActivePanel((current) => (current === 'notifications' ? null : 'notifications'))
+              panels.setActivePanel((current) =>
+                current === 'notifications' ? null : 'notifications',
+              )
             }
             variant={panels.activePanel === 'notifications' ? 'primary' : 'ghost'}
             data-testid="notifications-button"
@@ -125,11 +139,28 @@ export function ChatHeader({
             <span className={styles.notificationIconWrap}>
               <Bell size={18} aria-hidden="true" />
               {notificationUnreadCount > 0 && (
-                <span className={styles.notificationBadge} aria-label={`${notificationUnreadCount} unread notifications`}>
+                <span
+                  className={styles.notificationBadge}
+                  aria-label={`${notificationUnreadCount} unread notifications`}
+                >
                   {notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}
                 </span>
               )}
             </span>
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip content="Saved messages">
+          <IconButton
+            label="Saved messages"
+            onClick={() =>
+              panels.setActivePanel((current) => (current === 'saved' ? null : 'saved'))
+            }
+            disabled={!channel}
+            variant={panels.activePanel === 'saved' ? 'primary' : 'ghost'}
+            data-testid="saved-messages-button"
+          >
+            <Bookmark size={18} aria-hidden="true" />
           </IconButton>
         </Tooltip>
 
@@ -154,7 +185,9 @@ export function ChatHeader({
               panels.setActivePanel((current) => (current === 'encryption' ? null : 'encryption'))
             }
             disabled={!channel}
-            variant={panels.activePanel === 'encryption' || isChannelEncrypted ? 'primary' : 'ghost'}
+            variant={
+              panels.activePanel === 'encryption' || isChannelEncrypted ? 'primary' : 'ghost'
+            }
             data-testid="encryption-button"
           >
             {isChannelEncrypted ? (
@@ -169,7 +202,9 @@ export function ChatHeader({
           type="button"
           className={styles.headerSearch}
           variant="ghost"
-          onClick={() => panels.setActivePanel((current) => (current === 'search' ? null : 'search'))}
+          onClick={() =>
+            panels.setActivePanel((current) => (current === 'search' ? null : 'search'))
+          }
           aria-pressed={panels.activePanel === 'search'}
           data-testid="search-button"
         >

@@ -491,3 +491,18 @@
 .hiddenFileInput {
   display: none;
 }
+
+@media (max-width: 480px) {
+  .serverRail {
+    gap: 6px;
+    padding: 6px 0 var(--spacing-2);
+  }
+
+  .serverButton::before {
+    left: -8px;
+  }
+
+  .railDivider {
+    width: var(--spacing-6);
+  }
+}
