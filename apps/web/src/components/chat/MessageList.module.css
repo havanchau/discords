@@ -1,5 +1,6 @@
 .messageList {
   grid-row: 3;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -8,6 +9,7 @@
 }
 
 .channelIntro {
+  min-width: 0;
   display: grid;
   gap: var(--spacing-2);
   margin: 128px var(--spacing-4) var(--spacing-5);
@@ -38,6 +40,7 @@
   color: var(--header-secondary);
   font-size: 16px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .statePanel {
@@ -143,7 +146,7 @@
 
 @media (max-width: 720px) {
   .channelIntro {
-    margin: 72px var(--spacing-4) var(--spacing-5);
+    margin: 72px var(--spacing-2) var(--spacing-5);
   }
 
   .channelIntroIcon {

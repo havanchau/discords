@@ -219,3 +219,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 480px) {
+  :root {
+    --size-server-icon: 40px;
+  }
+
+  .app-shell {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+}
