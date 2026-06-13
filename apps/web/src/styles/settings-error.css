@@ -2,10 +2,10 @@
 
 .settings-modal {
   width: min(520px, calc(100vw - 32px));
-  max-height: min(760px, calc(100vh - 48px));
+  max-height: min(760px, calc(100dvh - 48px));
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 8px;
   background: var(--bg-primary-solid);
@@ -13,9 +13,12 @@
 }
 
 .settings-modal-body {
+  flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0;
+  scrollbar-gutter: stable;
 }
 
 .settings-modal.roles-modal {
@@ -31,7 +34,7 @@
 
 .settings-form {
   min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
   display: grid;
   align-content: start;
   gap: 16px;
