@@ -3,7 +3,7 @@ import type { AuthState, Channel, Message, NotificationItem } from '../../api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 
-export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | null;
+export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | 'saved' | null;
 export type ActiveDialog =
   | 'profile'
   | 'server-settings'

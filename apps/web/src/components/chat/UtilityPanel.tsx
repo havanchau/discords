@@ -1,5 +1,14 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck, ExternalLink, FileText, Image as ImageIcon, Link, Pin } from 'lucide-react';
+import {
+  Bell,
+  Bookmark,
+  CheckCheck,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  Link,
+  Pin,
+} from 'lucide-react';
 import { Channel, Message, NotificationItem } from '../../api';
 import { formatDate, previewText } from '../../helpers';
 import { buildMessageSearchSnippet } from '../../utils/messageSearch';
@@ -16,6 +25,7 @@ interface UtilityPanelProps {
   parsedSearch: ParsedMessageSearch;
   searchResults: Message[];
   pinnedMessages: Message[];
+  savedMessages: Message[];
   mediaMessages: Message[];
   notifications: NotificationItem[];
   notificationUnreadCount: number;
@@ -37,6 +47,7 @@ export function UtilityPanel({
   parsedSearch,
   searchResults,
   pinnedMessages,
+  savedMessages,
   mediaMessages,
   notifications,
   notificationUnreadCount,
@@ -207,6 +218,40 @@ export function UtilityPanel({
         </div>
       )}
 
+      {activePanel === 'saved' && (
+        <div className={styles.notificationPanel}>
+          <div className={styles.notificationHeader}>
+            <div>
+              <strong>Saved messages</strong>
+              <span>
+                {savedMessages.length} saved in #{channel?.name ?? 'channel'}
+              </span>
+            </div>
+          </div>
+
+          {savedMessages.length ? (
+            <div className={styles.notificationList} role="list" aria-label="Saved messages">
+              {savedMessages.map((message) => (
+                <button
+                  type="button"
+                  key={message.id}
+                  className={styles.notificationItem}
+                  onClick={() => onJumpToMessage(message.id)}
+                >
+                  <Bookmark size={14} aria-hidden="true" />
+                  <span className={styles.notificationText}>
+                    <strong>{message.author.displayName}</strong>
+                    <span>{previewText(message)}</span>
+                    <time dateTime={message.createdAt}>{formatDate(message.createdAt)}</time>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.notificationEmpty}>No saved messages in this channel.</div>
+          )}
+        </div>
+      )}
 
       {activePanel === 'media' && (
         <div className={styles.mediaPanel}>
@@ -253,7 +298,9 @@ export function UtilityPanel({
                   )}
                   <span>
                     <strong>{item.attachment?.fileName ?? item.hostname ?? item.url}</strong>
-                    <small>{item.author.displayName} · {formatDate(item.createdAt)}</small>
+                    <small>
+                      {item.author.displayName} · {formatDate(item.createdAt)}
+                    </small>
                   </span>
                   {item.url ? <ExternalLink size={13} aria-hidden="true" /> : null}
                 </button>
@@ -270,7 +317,10 @@ export function UtilityPanel({
           <div className={styles.notificationHeader}>
             <div>
               <strong>Notifications</strong>
-              <span>{notificationUnreadCount} unread inbox item{notificationUnreadCount === 1 ? '' : 's'}</span>
+              <span>
+                {notificationUnreadCount} unread inbox item
+                {notificationUnreadCount === 1 ? '' : 's'}
+              </span>
             </div>
             <Button
               size="sm"
@@ -301,7 +351,9 @@ export function UtilityPanel({
                   <span className={styles.notificationText}>
                     <strong>{notification.title}</strong>
                     {notification.body && <span>{notification.body}</span>}
-                    <time dateTime={notification.createdAt}>{formatDate(notification.createdAt)}</time>
+                    <time dateTime={notification.createdAt}>
+                      {formatDate(notification.createdAt)}
+                    </time>
                   </span>
                 </button>
               ))}

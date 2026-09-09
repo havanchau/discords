@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChatHeader } from './chat/ChatHeader';
 import { UtilityPanel } from './chat/UtilityPanel';
 import { CallStage } from './chat/CallStage';
@@ -8,6 +8,13 @@ import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { Button } from './ui';
+import {
+  readSavedMessageIds,
+  selectSavedMessages,
+  toggleSavedMessageId,
+  writeSavedMessageIds,
+} from '../utils/savedMessages';
+import type { Message } from '../api';
 import type {
   ActiveDialog,
   ActivePanel,
@@ -50,6 +57,31 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [savedMessageIdsByChannel, setSavedMessageIdsByChannel] = useState(readSavedMessageIds);
+  const savedMessageIds = session.channel
+    ? (savedMessageIdsByChannel[session.channel.id] ?? [])
+    : [];
+  const savedMessages = useMemo(
+    () => selectSavedMessages(messages.all, savedMessageIds),
+    [messages.all, savedMessageIds],
+  );
+
+  useEffect(() => {
+    writeSavedMessageIds(savedMessageIdsByChannel);
+  }, [savedMessageIdsByChannel]);
+
+  const toggleSavedMessage = useCallback(
+    (message: Message) => {
+      const channelId = session.channel?.id ?? message.channelId;
+      const isSaved = (savedMessageIdsByChannel[channelId] ?? []).includes(message.id);
+
+      setSavedMessageIdsByChannel((current) =>
+        toggleSavedMessageId(current, channelId, message.id),
+      );
+      setAnnouncement(isSaved ? 'Message removed from saved messages.' : 'Message saved.');
+    },
+    [savedMessageIdsByChannel, session.channel?.id],
+  );
 
   const jumpToMessage = useCallback((messageId: string) => {
     const target = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
@@ -92,6 +124,7 @@ export function ChatPanel({
         parsedSearch={messages.parsedSearch}
         searchResults={messages.visible}
         pinnedMessages={messages.pinned}
+        savedMessages={savedMessages}
         mediaMessages={messages.mediaSource}
         notifications={messages.notifications}
         notificationUnreadCount={messages.notificationUnreadCount}
@@ -143,7 +176,9 @@ export function ChatPanel({
             previousMessage={messages.visible[index - 1]}
             auth={session.auth}
             pinnedMessageIds={messages.pinnedIds}
+            savedMessageIds={savedMessageIds}
             actions={messageActions}
+            onToggleSaved={toggleSavedMessage}
             onPreviewAttachment={setPreviewAttachment}
           />
         ))}

@@ -3,6 +3,7 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  justify-self: stretch;
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   grid-template-rows: auto auto auto;
@@ -10,6 +11,7 @@
   gap: 0;
   padding: 0 var(--spacing-4) var(--spacing-6);
   background: transparent;
+  overflow: hidden;
 }
 
 .pendingAttachments {
@@ -96,6 +98,7 @@
 
 .composerInput {
   min-width: 0;
+  width: 100%;
   height: 44px;
   border: 1px solid rgba(88, 101, 242, 0.3);
   border-inline: 0;
@@ -230,8 +233,29 @@
   }
 }
 
+@media (max-width: 480px) {
+  .composer {
+    grid-template-columns: 36px 36px minmax(0, 1fr) 36px;
+    padding: 0 6px var(--spacing-3);
+  }
+
+  .attachButton,
+  .voiceRecordButton,
+  .sendButton,
+  .composerInput {
+    height: 36px;
+  }
+
+  .attachButton,
+  .voiceRecordButton,
+  .sendButton {
+    width: 36px;
+  }
+}
+
 .commandPopover {
   grid-column: 1 / -1;
+  min-width: 0;
   max-height: 220px;
   display: grid;
   gap: var(--spacing-1);

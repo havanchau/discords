@@ -13,6 +13,7 @@
     "dev:web": "npm run dev --workspace apps/web",
     "build": "npm run build --workspaces",
     "lint": "eslint .",
+    "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

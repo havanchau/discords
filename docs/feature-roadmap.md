@@ -254,6 +254,17 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 - [x] Add tests for audit visibility permissions.
 - [x] Add UI smoke coverage for viewing a recent audit event.
 
+## 11. Saved Messages Local Bookmarks
+
+- [x] Define local saved-message ownership and storage key format.
+- [x] Add a header control for opening saved messages in the utility panel.
+- [x] Add message row and context menu actions for saving or removing a message.
+- [x] Persist saved message IDs per channel in browser storage.
+- [x] Show saved messages for the active channel with jump-to-message behavior.
+- [x] Add loading-safe and empty states that do not require backend permissions.
+- [x] Add component and utility tests for saved message rendering and storage helpers.
+- [x] Verify focused web tests, typecheck, docs check, UI static scan, and UI smoke.
+
 ## Cross-Feature Verification
 
 - [x] Verify desktop layout at 1440x900 and 1366x768.
