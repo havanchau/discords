@@ -190,7 +190,8 @@ Recommended production layout:
 - Media: Cloudinary.
 - CI/CD: GitHub Actions.
 
-See `docs/deployment.md` for operational details.
+See [deployment.md](deployment.md) for operational details.
+
 
 ## Architecture Checklist
 

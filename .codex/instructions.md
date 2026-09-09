@@ -4,8 +4,10 @@
 
 1. **Always read `DISCORD_UI_SKILL.md`** at the project root before any frontend/UI/CSS work.
 2. **Always read `docs/design-rules.md`** for the canonical design token reference.
-3. **Use the `ui-polish` skill** for all visual UI tasks.
-4. **Create a task checklist before implementation**. Use `- [ ]` for pending work and mark `- [x]` only after the item is genuinely complete and verified.
+3. **Follow global `.claude` standards** (`~/.claude/rules/workflow.md`, `~/.claude/rules/documentation.md`, `~/.claude/rules/self-review.md`).
+4. **Use the `ui-polish` skill** for all visual UI tasks.
+5. **Create a task spec in `docs/features/` and task checklist before implementation**. Use `- [ ]` for pending work and mark `- [x]` only after the item is genuinely complete and verified.
+
 
 ## Checklist Truth Rule
 

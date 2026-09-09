@@ -115,9 +115,10 @@ Current limits:
 ## Documentation Map
 
 - `RULE.md`: product invariants and backend rules.
-- `AGENT.md`: implementation guidance for AI or human coding agents.
+- `AGENT.md`: implementation guidance for AI or human coding agents (follows `.claude` standards).
 - `docs/README.md`: complete documentation index and ownership rules.
 - `docs/feature-spec.md`: product scope and canonical feature completion checklist.
+- `docs/features/`: detailed feature specifications (`realtime-chat.md`, `voice-webrtc.md`, `media-uploads.md`).
 - `docs/feature-roadmap.md`: backlog slices and feature delivery checklist.
 - `docs/implementation-plan.md`: sprint plan and definition of done.
 - `docs/markdown-structure.md`: Markdown source-of-truth rules and docs validation.
@@ -128,6 +129,7 @@ Current limits:
 - `docs/ui-design-spec.md`: short UI product summary.
 - `docs/ui-redesign-plan.md`: phased UI refactor status.
 - `docs/ui-event-ownership-map.md`: realtime/UI side-effect ownership map.
+
 
 ## Current Backlog
 

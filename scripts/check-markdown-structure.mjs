@@ -44,16 +44,26 @@ if (findings.length > 0) {
 console.log(`Checked ${markdownFiles.length} Markdown files. Structure looks good.`);
 
 function checkFirstHeading(file, lines) {
-  const firstContentIndex = lines.findIndex((line) => line.trim().length > 0);
+  let startIndex = 0;
+  if (lines[0] && lines[0].trim() === '---') {
+    const endFrontmatter = lines.slice(1).findIndex((line) => line.trim() === '---');
+    if (endFrontmatter !== -1) {
+      startIndex = endFrontmatter + 2;
+    }
+  }
+
+  const firstContentIndex = lines.slice(startIndex).findIndex((line) => line.trim().length > 0);
   if (firstContentIndex === -1) {
     addFinding(file, 1, 'is empty');
     return;
   }
 
-  if (!/^#\s+\S/.test(lines[firstContentIndex])) {
-    addFinding(file, firstContentIndex + 1, 'must start with a single H1 heading');
+  const actualIndex = startIndex + firstContentIndex;
+  if (!/^#\s+\S/.test(lines[actualIndex])) {
+    addFinding(file, actualIndex + 1, 'must start with a single H1 heading');
   }
 }
+
 
 function checkHeadingHierarchy(file, lines) {
   let h1Count = 0;

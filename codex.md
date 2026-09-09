@@ -10,9 +10,10 @@ Before implementing any task, create a checklist of concrete work items. Use `- 
 
 ## File Size Rule
 
-No source or documentation file should exceed 1000 lines. If a file would exceed 1000 lines, split it into focused modules or documents before continuing. Existing oversized files must be reduced as part of any substantial refactor that touches them.
+No source or documentation file should exceed 1000 lines. If a file would exceed 1000 lines, split it into focused modules or documents before continuing. Existing oversized files must be reduced as part of any substantial refactor that touches them. All docs follow `~/.claude/rules/documentation.md`.
 
-## Required Reading (before any frontend task)
+## Required Reading (before any task)
+
 
 1. `DISCORD_UI_SKILL.md` — mandatory agent workflow, component patterns, anti-patterns
 2. `docs/design-rules.md` — canonical color tokens and full design system reference

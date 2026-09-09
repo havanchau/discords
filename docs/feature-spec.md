@@ -1,6 +1,15 @@
 # Discord Clone Feature Specification
 
-This document defines the product scope. It avoids implementation sequencing; delivery order lives in `implementation-plan.md`.
+This document defines the top-level product scope. Delivery order lives in [implementation-plan.md](implementation-plan.md). Detailed feature specifications follow `.claude` task documentation standards in `docs/features/`:
+
+## Feature Specifications Index
+
+- **Realtime Text Chat**: [realtime-chat.md](features/realtime-chat.md)
+- **Voice & WebRTC Signaling**: [voice-webrtc.md](features/voice-webrtc.md)
+- **Media & File Uploads**: [media-uploads.md](features/media-uploads.md)
+- **UI Overhaul & De-duplication**: [ui-overhaul.md](features/ui-overhaul.md)
+
+
 
 ## Product Goal
 

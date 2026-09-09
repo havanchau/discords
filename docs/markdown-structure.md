@@ -28,7 +28,9 @@ Every Markdown file should follow this baseline:
 | `README.md`      | Project overview, setup commands, useful commands, and top-level doc map.       |
 | `docs/README.md` | Documentation index, root document index, and maintenance rules.                |
 | `docs/*.md`      | Focused guides for architecture, deployment, security, UI, and feature scope.   |
+| `docs/features/` | Feature implementation specifications following `.claude` task doc standards.  |
 | Root guides      | Agent instructions, product rules, Codex configuration, and UI skill checklist. |
+
 
 Before adding a new document, first check the ownership table and existing docs index. If the requested content fits an existing owner, extend that file instead of creating another `.md` file. Only add a new Markdown file when the content has a distinct long-term owner, would make the existing file too broad, or would push the existing file over the 1000-line documentation limit.
 

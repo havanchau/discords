@@ -1,8 +1,9 @@
 # UI Design Spec
 
-Canonical UI rules now live in `docs/design-rules.md`.
+Canonical UI rules now live in [design-rules.md](design-rules.md).
 
-This file is intentionally short to avoid duplicated design-token, layout, typography, spacing, and component rules. Use it as a product-facing summary of what the UI should feel like; use `docs/design-rules.md` when implementing CSS or React UI.
+This file is intentionally short to avoid duplicated design-token, layout, typography, spacing, and component rules. Use it as a product-facing summary of what the UI should feel like; use [design-rules.md](design-rules.md) when implementing CSS or React UI.
+
 
 ## UI Goal
 
@@ -38,11 +39,12 @@ The interface should feel like a real, dense communication product:
 - Message actions do not shift the timeline layout.
 - The composer remains reachable on mobile.
 - Realtime events are reflected without full page refreshes.
-- Visual changes follow `docs/design-rules.md`.
+- Visual changes follow [design-rules.md](design-rules.md).
 
 ## Implementation Reference
 
-- UI rules: `docs/design-rules.md`
+- UI rules: [design-rules.md](design-rules.md)
+
 - App shell: `apps/web/src/AppShell.tsx`
 - Workspace navigation: `apps/web/src/components/WorkspaceSidebar.tsx`
 - Chat surface: `apps/web/src/components/ChatPanel.tsx`
