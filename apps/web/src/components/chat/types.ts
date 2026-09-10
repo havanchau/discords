@@ -10,6 +10,11 @@ export type ActiveDialog =
   | 'channel-settings'
   | 'roles'
   | 'member-roles'
+  | 'create-server'
+  | 'join-server'
+  | 'create-channel'
+  | 'user-settings'
+  | 'channel-encryption'
   | null;
 
 export interface ChatPanelSession {

@@ -74,6 +74,9 @@ export function AppShell() {
     visibleVoiceChannels,
     loadServers,
     openServer,
+    createServer,
+    joinInvite,
+    createChannel,
   } = useWorkspaceNavigation({
     auth,
     clearAuth,
@@ -582,145 +585,133 @@ export function AppShell() {
         setUiTheme={setUiTheme}
         server={server}
         workspace={{
-          servers,
-          activeServerId: server?.id ?? null,
-          activeChannelId: channel?.id ?? null,
-          server,
-          channelBadges,
-          visibleTextChannels,
-          visibleVoiceChannels,
-          activeCalls,
-          channelQuery,
-          pendingAction,
-          auth,
-          onOpenHome: () => {
-            setServer(null);
-            setChannel(null);
+          workspace: {
+            auth,
+            servers,
+            server,
+            channel,
+            visibleTextChannels,
+            visibleVoiceChannels,
+            channelQuery,
+            inviteCode,
+            isLoadingServers,
+            pendingAction,
+            activeCalls,
+            channelBadges,
           },
-          onOpenServer: openServer,
-          onSelectChannel: setChannel,
-          onOpenCreateServer: () => setActiveDialog('create-server'),
-          onOpenJoinServer: () => setActiveDialog('join-server'),
-          onOpenCreateChannel: () => setActiveDialog('create-channel'),
-          onOpenServerSettings: () => setActiveDialog('server-settings'),
-          onOpenUserSettings: () => setActiveDialog('user-settings'),
-          onChannelQueryChange: setChannelQuery,
-          onCopyInvite: () => {
-            if (inviteCode) {
-              void navigator.clipboard?.writeText(inviteCode);
-              setWorkspaceNotice('Invite code copied.');
-              window.setTimeout(() => setWorkspaceNotice(null), 1600);
-            }
+          profileAvatarInputRef,
+          actions: {
+            openHome: () => {
+              setServer(null);
+              setChannel(null);
+            },
+            openServer,
+            createServer,
+            joinInvite,
+            createChannel,
+            createInvite: async () => {
+              await createInviteFromSettings();
+            },
+            updateProfileAvatar,
+            logout,
+            setChannel,
+            setChannelQuery,
+            setActiveDialog,
           },
         }}
         chat={{
-          session: { auth, server, channel },
+          session: { auth, channel },
           messages: {
             all: messages,
             visible: visibleMessages,
-            pinned: pinnedMessages,
-            pinnedMessageIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
-            searchQuery,
-            parsedSearch,
             isLoading: isLoadingMessages,
             isLoadingMore: isLoadingMoreMessages,
             hasMore: Boolean(messageCursor),
+            typingUsers,
+            pinned: pinnedMessages,
+            mediaSource: messages,
+            pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
             notifications,
             notificationUnreadCount,
             isLoadingNotifications,
-            mediaSource: messages,
+            searchQuery,
+            parsedSearch,
+            loadMore: loadMoreMessages,
           },
           alerts: {
-            workspaceError,
-            workspaceNotice,
-            onDismissError: () => setWorkspaceError(null),
-            onDismissNotice: () => setWorkspaceNotice(null),
+            error: workspaceError,
+            notice: workspaceNotice,
+            setError: setWorkspaceError,
+            setNotice: setWorkspaceNotice,
           },
           panels: {
             activePanel,
             activeDialog,
             setActivePanel,
             setActiveDialog,
-            searchQuery,
             setSearchQuery,
-            onJumpToMessage: jumpToMessage,
-            onMarkAllNotificationsRead: markAllNotificationsRead,
-            onMarkNotificationRead: markNotificationRead,
+            loadNotifications,
+            markNotificationRead,
+            markAllNotificationsRead,
           },
           encryption: {
             isChannelEncrypted: Boolean(channel && channelKeys[channel.id]),
-            onConfigure: () => setActiveDialog('channel-encryption'),
-            onClear: () => channel && clearChannelEncryption(channel.id),
+            configure: (passphrase: string) => configureChannelEncryption(passphrase),
+            clear: () => clearChannelEncryption(),
           },
           call: {
             state: callState,
+            active: activeCalls[0] ?? null,
             remoteMedia,
             localVideoRef,
             start: startCall,
-            end: endCall,
             toggleMute,
             toggleCamera,
+            end: endCall,
           },
           messageActions: {
             editingMessageId,
             editingDraft,
-            replyingToMessage,
-            onStartEdit: (msg) => {
-              setEditingMessageId(msg.id);
-              setEditingDraft(msg.content);
-            },
-            onCancelEdit: () => {
-              setEditingMessageId(null);
-              setEditingDraft('');
-            },
-            onSaveEdit: saveMessageEdit,
-            onEditingDraftChange: setEditingDraft,
-            onStartReply: setReplyingToMessage,
-            onCancelReply: () => setReplyingToMessage(null),
-            onDelete: deleteMessage,
-            onTogglePin: togglePinnedMessage,
-            onToggleReaction: toggleReaction,
+            setReplyingToMessage,
+            openThread: threadPanel.openThread,
+            setEditingMessageId,
+            setEditingDraft,
+            saveEdit: saveMessageEdit,
+            delete: deleteMessage,
+            toggleReaction: (msg, emoji) => toggleReaction(msg, emoji),
+            togglePinned: togglePinnedMessage,
           },
           composer: {
-            channelDraft,
+            replyingToMessage,
             selectedFiles,
             isRecordingVoice,
-            fileInputRef,
-            typingUsers,
             pendingAction,
-            onSendMessage: sendMessage,
-            onInputChange: (val) => {
-              channelDraft.setValue(val);
-              handleComposerInput();
-            },
-            onSelectFiles: selectFiles,
-            onRemoveFile: removeSelectedFile,
-            onStartVoiceRecording: startVoiceRecording,
-            onStopVoiceRecording: stopVoiceRecording,
+            draft: channelDraft.value,
+            fileInputRef,
+            sendMessage,
+            setDraft: channelDraft.setValue,
+            startVoiceRecording,
+            stopVoiceRecording,
+            removeSelectedFile,
+            selectFiles,
+            handleInput: handleComposerInput,
           },
-          thread: {
-            activeThreadMessage: threadPanel.activeThreadMessage,
-            threadReplies: threadPanel.threadReplies,
-            isLoadingThread: threadPanel.isLoadingThread,
-            threadDraft: threadPanel.threadDraft,
-            onOpenThread: threadPanel.openThread,
-            onCloseThread: threadPanel.close,
-            onSendThreadReply: threadPanel.sendReply,
-            onThreadDraftChange: threadPanel.setThreadDraft,
-          },
+          thread: threadPanel,
           channelAvatar: {
             inputRef: channelAvatarInputRef,
-            onSelectAvatar: updateChannelAvatar,
+            update: updateChannelAvatar,
           },
         }}
         members={{
-          server,
-          selectedMemberId,
-          onSelectMember: setSelectedMemberId,
-          onOpenMemberRoles: (memberId) => {
+          assetUrl,
+          onManageMember: (memberId) => {
             setSelectedMemberId(memberId);
             setActiveDialog('member-roles');
           },
+          onDirectMessage: (userId) => {
+            void startDirectConversation(userId);
+          },
+          server,
         }}
         home={{
           home: {
@@ -738,35 +729,40 @@ export function AppShell() {
             removeFriend,
             removeFriendRequest,
             openDirectConversation,
-            startDirectConversation,
+            startDirectConversation: (userIds) => startDirectConversation(userIds),
             sendDirectMessage,
             setDirectMessageDraft,
           },
         }}
         settings={{
-          auth,
-          server,
-          channel,
-          activeDialog,
-          theme: { uiTheme, setUiTheme },
-          channelOverrides,
-          auditLogs,
-          invites,
-          notificationPreferences,
-          profileAvatarInputRef,
-          channelAvatarInputRef,
-          selectedMember,
-          pendingAction,
-          workspaceError,
+          dialog: {
+            activeDialog,
+            setActiveDialog,
+          },
+          data: {
+            auth,
+            server,
+            channel,
+            selectedMember,
+            channelOverrides,
+            auditLogs,
+            invites,
+            notificationPreferences,
+            pendingAction,
+          },
+          refs: {
+            profileAvatarInputRef,
+            channelAvatarInputRef,
+          },
+          theme: {
+            uiTheme,
+          },
           actions: {
             setUiTheme,
-            onCloseDialog: () => setActiveDialog(null),
-            updateNotificationPreference,
             createInviteFromSettings,
             revokeInvite,
-            updateProfileAvatar,
-            updateChannelAvatar,
             updateProfile,
+            updateNotificationPreference,
             updateServerSettings,
             updateChannelSettings,
             toggleChannelRoleOverride,
@@ -776,9 +772,10 @@ export function AppShell() {
             deleteRole,
             toggleMemberRole,
             removeMember,
-            logout,
-            configureChannelEncryption: (passphrase) =>
-              channel && configureChannelEncryption(channel.id, passphrase),
+            openMemberRoleEditor: (memberId) => {
+              setSelectedMemberId(memberId);
+              setActiveDialog('member-roles');
+            },
           },
         }}
       />

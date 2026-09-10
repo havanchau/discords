@@ -5,9 +5,9 @@
   justify-content: space-between;
   gap: 6px;
   height: 48px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.24);
+  border-bottom: 1px solid var(--border-subtle);
   box-shadow: none;
-  background: var(--background-primary);
+  background: var(--bg-primary);
   z-index: var(--z-header);
   padding: 0 var(--spacing-3);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { apiRequest, Channel, ServerDetail, ServerSummary } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
 
@@ -104,6 +104,82 @@ export function useWorkspaceNavigation({
     [auth, loadServers, setActiveDialog, setPendingAction, setWorkspaceError, setWorkspaceNotice],
   );
 
+  const createServer = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!auth) return;
+      const formData = new FormData(event.currentTarget);
+      const name = String(formData.get('name') ?? '').trim();
+      const description = String(formData.get('description') ?? '').trim();
+      if (!name) return;
+      setPendingAction('create-server');
+      setWorkspaceError(null);
+      try {
+        const data = await apiRequest<{ server: ServerDetail }>(
+          '/servers',
+          { method: 'POST', body: JSON.stringify({ name, description }) },
+          auth.accessToken,
+        );
+        setServer(data.server);
+        setChannel(data.server.channels[0] ?? null);
+        await loadServers(auth.accessToken);
+        setActiveDialog(null);
+        setWorkspaceNotice(`Created server ${data.server.name}`);
+      } catch (err) {
+        setWorkspaceError(err instanceof Error ? err.message : 'Cannot create server');
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, loadServers, setActiveDialog, setPendingAction, setWorkspaceError, setWorkspaceNotice],
+  );
+
+  const joinInvite = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const formData = new FormData(event.currentTarget);
+      const code = String(formData.get('code') ?? '').trim();
+      if (!code) return;
+      await joinServerByInvite(code);
+    },
+    [joinServerByInvite],
+  );
+
+  const createChannel = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!auth || !server) return;
+      const formData = new FormData(event.currentTarget);
+      const name = String(formData.get('name') ?? '').trim();
+      const type = (formData.get('type') ?? 'TEXT') as 'TEXT' | 'VOICE';
+      if (!name) return;
+      setPendingAction('create-channel');
+      setWorkspaceError(null);
+      try {
+        const data = await apiRequest<{ channel: Channel }>(
+          `/servers/${server.id}/channels`,
+          { method: 'POST', body: JSON.stringify({ name, type }) },
+          auth.accessToken,
+        );
+        setServer((current) =>
+          current
+            ? {
+                ...current,
+                channels: [...current.channels, data.channel],
+              }
+            : null,
+        );
+        setChannel(data.channel);
+        setActiveDialog(null);
+      } catch (err) {
+        setWorkspaceError(err instanceof Error ? err.message : 'Cannot create channel');
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, server, setActiveDialog, setPendingAction, setWorkspaceError],
+  );
+
   const textChannels = useMemo(
     () => server?.channels.filter((item) => item.type === 'TEXT') ?? [],
     [server],
@@ -145,5 +221,8 @@ export function useWorkspaceNavigation({
     loadServers,
     openServer,
     joinServerByInvite,
+    createServer,
+    joinInvite,
+    createChannel,
   };
 }

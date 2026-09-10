@@ -33,18 +33,19 @@ export function useChatOrchestrator({
   const loadPinnedMessages = useCallback(
     async (channelId: string, token: string) => {
       try {
-        const data = await apiRequest<{ pinnedMessages: Message[] }>(
+        const data = await apiRequest<{ pinnedMessages?: Message[]; messages?: Message[] }>(
           `/channels/${channelId}/pins`,
           {},
           token,
         );
+        const pinnedList = data.messages ?? data.pinnedMessages ?? [];
         setPinnedMessagesByChannel((current) => ({
           ...current,
-          [channelId]: data.pinnedMessages,
+          [channelId]: pinnedList,
         }));
         setPinnedMessageIds((current) => ({
           ...current,
-          [channelId]: data.pinnedMessages.map((msg) => msg.id),
+          [channelId]: pinnedList.map((msg) => msg.id),
         }));
       } catch {
         // Ignored for non-essential pin loading

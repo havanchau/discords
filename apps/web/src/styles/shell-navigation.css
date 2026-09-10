@@ -11,44 +11,9 @@
   box-shadow: none;
 }
 
-.accent-0 {
-  --avatar-bg: rgba(88, 101, 242, 0.1);
-  --avatar-text: #5865f2;
-  --avatar-ring: #5865f2;
-}
-.accent-1 {
-  --avatar-bg: rgba(237, 66, 69, 0.1);
-  --avatar-text: #ed4245;
-  --avatar-ring: #ed4245;
-}
-.accent-2 {
-  --avatar-bg: rgba(35, 165, 90, 0.12);
-  --avatar-text: #57f287;
-  --avatar-ring: #23a55a;
-}
-.accent-3 {
-  --avatar-bg: rgba(240, 178, 50, 0.14);
-  --avatar-text: #f0b232;
-  --avatar-ring: #f0b232;
-}
-.accent-4 {
-  --avatar-bg: rgba(88, 101, 242, 0.16);
-  --avatar-text: #c9cdfb;
-  --avatar-ring: #5865f2;
-}
-.accent-5 {
-  --avatar-bg: rgba(255, 61, 110, 0.08);
-  --avatar-text: #f23f43;
-  --avatar-ring: #ed4245;
-}
-
 .member-sidebar {
   min-width: 0;
   min-height: 0;
-  background: var(--bg-secondary);
-}
-
-.member-sidebar {
   padding: 0;
   border-left: 1px solid var(--border-subtle);
   background: var(--bg-secondary);

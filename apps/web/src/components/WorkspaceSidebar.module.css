@@ -4,7 +4,8 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2) 0 var(--spacing-3);
-  background: var(--color-bg-rail);
+  background: #0b0d10;
+  border-right: 1px solid var(--border-subtle);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;
@@ -22,16 +23,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0;
-  border-radius: var(--radius-server-default);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
   color: var(--interactive-normal);
-  background: var(--background-secondary);
+  background: #15181e;
   font-size: 18px;
-  font-weight: var(--font-weight-semibold);
-  transition:
-    border-radius var(--motion-server-icon) ease,
-    background-color var(--motion-server-icon) ease,
-    color var(--motion-server-icon) ease;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .serverButton::before {
@@ -40,16 +38,24 @@
   left: -12px;
   width: 4px;
   height: 0;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--interactive-active);
-  transition: height var(--motion-server-icon) ease;
+  border-radius: 0 4px 4px 0;
+  background: var(--text-normal);
+  transition: height 0.2s ease;
 }
 
-.serverButton:hover,
-.serverButtonActive {
-  border-radius: var(--radius-server-active);
+.serverButton:hover {
+  border-radius: 12px;
+  border-color: var(--interactive-muted);
   color: var(--interactive-active);
-  background: var(--brand-color);
+  background: var(--bg-modifier-hover);
+  transform: translateY(-1px);
+}
+
+.serverButtonActive {
+  border-radius: 12px;
+  border-color: transparent;
+  color: #fff;
+  background: var(--accent-gradient);
 }
 
 .serverButton:hover::before {
@@ -61,19 +67,20 @@
 }
 
 .serverHome {
-  color: var(--interactive-active);
-  background: var(--brand-color);
+  color: #fff;
+  background: var(--accent-gradient);
 }
 
 .serverAdd {
   margin-top: auto;
-  color: var(--status-online);
-  background: var(--background-secondary);
+  color: var(--green);
+  background: var(--glass-bg);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .serverAdd:hover {
   color: var(--interactive-active);
-  background: var(--status-online);
+  background: var(--green);
 }
 
 .railDivider {
@@ -81,7 +88,7 @@
   height: 2px;
   flex-shrink: 0;
   border-radius: var(--radius-xs);
-  background: var(--background-modifier-active);
+  background: var(--glass-border);
 }
 
 .channelSidebar {
@@ -89,7 +96,8 @@
   min-height: 0;
   display: grid;
   grid-template-rows: var(--height-channel-header) 88px minmax(0, 1fr) 52px;
-  background: var(--color-bg-sidebar);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-subtle);
 }
 
 .homeMode .sidebarScroll {

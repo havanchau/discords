@@ -174,16 +174,16 @@ export function useSettingsActions({
     }
   }
 
-  async function createInviteFromSettings(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function createInviteFromSettings(event?: FormEvent<HTMLFormElement>) {
+    if (event) event.preventDefault();
     if (!auth || !server) return;
-    const form = new FormData(event.currentTarget);
+    const form = event ? new FormData(event.currentTarget) : null;
     setPendingAction('invite-settings-create');
     setWorkspaceError(null);
     try {
-      const expiresInHours = Number(form.get('expiresInHours') || 24);
+      const expiresInHours = Number(form?.get('expiresInHours') || 24);
       const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
-      const maxUsesValue = String(form.get('maxUses') || '').trim();
+      const maxUsesValue = String(form?.get('maxUses') || '').trim();
       const result = await apiRequest<{ invite: Invite }>(
         `/servers/${server.id}/invites`,
         {
@@ -200,7 +200,7 @@ export function useSettingsActions({
         result.invite,
         ...current.filter((invite) => invite.id !== result.invite.id),
       ]);
-      event.currentTarget.reset();
+      if (event) event.currentTarget.reset();
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot create invite');
     } finally {

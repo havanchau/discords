@@ -1,42 +1,59 @@
-/* ===== Discord UI design tokens ===== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ===== Glassmorphism Cyber-Sleek Design Tokens ===== */
 :root {
   color-scheme: dark;
-  --bg-tertiary: #1e1f22;
-  --bg-secondary: #2b2d31;
-  --bg-secondary-solid: #2b2d31;
-  --bg-primary: #313338;
-  --bg-primary-solid: #313338;
-  --bg-secondary-alt: #232428;
-  --bg-floating: #111214;
-  --bg-accent: #4e5058;
-  --bg-modifier-hover: rgba(79, 84, 92, 0.16);
-  --bg-modifier-active: rgba(79, 84, 92, 0.24);
-  --bg-modifier-selected: rgba(79, 84, 92, 0.32);
-  --header-primary: #f2f3f5;
-  --header-secondary: #b5bac1;
-  --text-normal: #dbdee1;
-  --text-muted: #80848e;
-  --text-link: var(--brand-500);
-  --interactive-normal: #b5bac1;
-  --interactive-hover: #dbdee1;
+  --bg-app-shell: #090d16;
+  --bg-tertiary: #0c101d;
+  --bg-secondary: rgba(15, 23, 42, 0.75);
+  --bg-secondary-solid: #0f172a;
+  --bg-primary: rgba(15, 23, 42, 0.6);
+  --bg-primary-solid: #0b0f19;
+  --bg-secondary-alt: rgba(11, 15, 25, 0.85);
+  --bg-floating: rgba(15, 23, 42, 0.95);
+  --bg-accent: #6366f1;
+
+  /* Solid, human-centric colors */
+  --glass-bg: #111418;
+  --glass-bg-hover: #1e2229;
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-border-glow: rgba(255, 255, 255, 0.1);
+  --glass-blur: none;
+  --glass-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.2);
+
+  /* Subtle accents */
+  --accent-gradient: #5a67d8;
+  --accent-gradient-hover: #4c51bf;
+  --glow-primary: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --glow-accent: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+  --bg-modifier-hover: rgba(255, 255, 255, 0.04);
+  --bg-modifier-active: rgba(255, 255, 255, 0.08);
+  --bg-modifier-selected: rgba(255, 255, 255, 0.06);
+  --header-primary: #f8fafc;
+  --header-secondary: #cbd5e1;
+  --text-normal: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-link: #38bdf8;
+  --interactive-normal: #94a3b8;
+  --interactive-hover: #f1f5f9;
   --interactive-active: #ffffff;
-  --interactive-muted: #4e5058;
-  --brand-500: #5865f2;
-  --brand-560: #4752c4;
-  --brand-600: #3c45a5;
-  --accent-pink: #eb459e;
-  --accent-violet: #5865f2;
-  --accent-lime: #23a55a;
-  --green-360: #23a55a;
-  --green: #57f287;
-  --yellow-300: #f0b232;
-  --red-400: #ed4245;
-  --status-danger: #ed4245;
-  --input-background: #1e1f22;
-  --channeltextarea-background: #383a40;
-  --background-modifier-accent: rgba(97, 129, 166, 0.22);
-  --deprecated-card-bg: #2b2d31;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  --interactive-muted: #64748b;
+  --brand-500: #6366f1;
+  --brand-560: #4f46e5;
+  --brand-600: #4338ca;
+  --accent-pink: #ec4899;
+  --accent-violet: #8b5cf6;
+  --accent-lime: #10b981;
+  --green-360: #10b981;
+  --green: #34d399;
+  --yellow-300: #fbbf24;
+  --red-400: #f43f5e;
+  --status-danger: #f43f5e;
+  --input-background: #111418;
+  --channeltextarea-background: #15181e;
+  --background-modifier-accent: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.05);
   --scrollbar-thin-thumb: #1a1b1e;
   --scrollbar-thin-track: transparent;
   --elevation-low: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -199,13 +216,13 @@ body,
 
 body {
   margin: 0;
-  font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  background: var(--bg-tertiary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  background-color: #0b0d10;
   color: var(--text-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.375rem;
+  line-height: 1.4;
 }
 
 /* Custom scrollbar — Discord style */
@@ -507,7 +524,10 @@ textarea:disabled {
 }
 
 .auth-adventure-copy span {
-  color: var(--brand-500);
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
 }
 
 .auth-panel {
@@ -521,7 +541,8 @@ textarea:disabled {
   gap: 24px;
   padding: 64px min(7vw, 68px);
   border-radius: 0;
-  background: var(--background-secondary);
+  background: #0f1115;
+  border-left: 1px solid var(--border-subtle);
   animation: auth-panel-in 0.22s ease-out both;
 }
 
@@ -628,24 +649,25 @@ textarea:disabled {
 .primary {
   min-height: 44px;
   border: 0;
-  border-radius: 3px;
+  border-radius: 10px;
   color: #fff;
-  background: var(--brand-500);
-  font-weight: 500;
-  font-size: 16px;
+  background: var(--accent-gradient);
+  box-shadow: var(--glow-primary);
+  font-weight: 600;
+  font-size: 15px;
   width: 100%;
   margin-top: 6px;
-  transition: background-color 0.17s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .primary:hover {
-  background: var(--brand-560);
-  transform: translateY(-1px);
+  background: var(--accent-gradient-hover);
+  box-shadow: var(--glow-accent);
+  transform: translateY(-2px);
 }
 
 .primary:active {
-  background: var(--brand-600);
-  transform: translateY(0) scale(0.99);
+  transform: translateY(0) scale(0.98);
 }
 
 .stack {

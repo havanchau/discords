@@ -160,7 +160,7 @@ export class PushService {
         Authorization: `vapid t=${jwt}, k=${publicKey}`,
         Urgency: 'normal',
       },
-      body: encrypted.body,
+      body: new Uint8Array(encrypted.body),
     });
 
     if (!response.ok) {

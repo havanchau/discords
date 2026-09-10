@@ -143,6 +143,7 @@ The app MUST look like Discord's real desktop client — a dense, warm-dark comm
 
 ### Canonical references:
 
+- **Design agent guide & prompt**: `DESIGN_AGENT.md`
 - **Mandatory skill file**: `DISCORD_UI_SKILL.md`
 - **Design tokens and rules**: `docs/design-rules.md`
 - **UX spec**: `docs/ui-design-spec.md`

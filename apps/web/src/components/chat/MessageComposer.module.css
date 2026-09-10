@@ -97,13 +97,18 @@
 .composerInput {
   min-width: 0;
   height: 44px;
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  border: 1px solid var(--border-subtle);
   border-inline: 0;
   border-radius: 0;
-  padding: 0 0 0 4px;
-  background: var(--channeltextarea-background);
+  padding: 0 0 0 8px;
+  background: var(--input-background);
   color: var(--text-normal);
-  font-size: 1rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.composerInput:focus {
+  border-color: var(--interactive-muted);
 }
 
 .composerInput::placeholder {
@@ -113,33 +118,35 @@
 .attachButton {
   height: 44px;
   width: 44px;
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  border: 1px solid var(--border-subtle);
   border-right: 0;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-  background: var(--channeltextarea-background);
+  border-radius: 12px 0 0 12px;
+  background: var(--input-background);
   color: var(--interactive-normal);
   display: grid;
   place-items: center;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .attachButton:hover {
   color: var(--interactive-hover);
-  transform: translateY(-1px);
+  background: var(--bg-modifier-hover);
 }
 
 .voiceRecordButton {
   position: relative;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  border: 1px solid var(--border-subtle);
   border-inline: 0;
   border-radius: 0;
-  background: var(--channeltextarea-background);
+  background: var(--input-background);
   color: var(--interactive-normal);
   display: grid;
   place-items: center;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .voiceRecordButton svg {
@@ -150,7 +157,7 @@
 
 .voiceRecordButton:hover {
   color: var(--interactive-hover);
-  transform: translateY(-1px);
+  background: var(--bg-modifier-hover);
 }
 
 .voiceRecordButton.recording {
@@ -172,19 +179,21 @@
 .sendButton {
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  border: 1px solid var(--border-subtle);
   border-left: 0;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  background: var(--channeltextarea-background);
+  border-radius: 0 12px 12px 0;
+  background: var(--input-background);
   color: var(--interactive-normal);
   cursor: pointer;
   display: grid;
   place-items: center;
+  transition: all 0.2s ease;
 }
 
 .sendButton:hover {
-  color: var(--color-accent-blurple);
-  transform: translateY(-1px);
+  color: #fff;
+  background: var(--accent-gradient);
+  border-color: transparent;
 }
 
 .composer button:disabled,

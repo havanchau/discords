@@ -8,7 +8,11 @@
     "declaration": false,
     "noEmit": false,
     "sourceMap": true,
-    "types": ["node"]
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "typeRoots": ["../../node_modules/@types", "node_modules/@types"]
   },
+
   "include": ["src/**/*.ts"]
 }
+
