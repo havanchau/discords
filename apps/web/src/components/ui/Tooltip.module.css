@@ -1,22 +1,22 @@
 .content {
   z-index: var(--z-tooltip);
   border-radius: var(--radius-sm);
-  background: var(--background-floating);
-  color: var(--interactive-active);
-  font-size: var(--font-size-ui);
-  line-height: var(--line-height-ui);
-  padding: var(--spacing-2) var(--spacing-3);
-  box-shadow: var(--elevation-low);
-  animation: tooltipIn var(--motion-menu) ease;
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-raised);
+  animation: tooltipIn var(--motion-fast) ease;
 }
 
 .arrow {
-  fill: var(--background-floating);
+  fill: var(--surface-overlay);
 }
 
 @keyframes tooltipIn {
   from {
     opacity: 0;
-    transform: translateY(var(--spacing-1));
+    transform: translateY(var(--space-1));
   }
 }

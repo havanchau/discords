@@ -1,0 +1,43 @@
+.chatPanel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  /*
+   * Flex column, not a grid template: several of these children are conditional (banners, call
+   * stage, typing indicator) and a fixed row template shifts when any of them is absent.
+   */
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-base);
+}
+
+.banner {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-on-accent);
+  font-size: var(--font-size-base);
+}
+
+.errorBanner {
+  background: var(--state-danger);
+}
+
+.noticeBanner {
+  background: var(--state-info);
+}
+
+.typingIndicator {
+  flex: none;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

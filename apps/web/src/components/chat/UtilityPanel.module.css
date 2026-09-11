@@ -5,11 +5,11 @@
   z-index: var(--z-header);
   width: min(340px, calc(100% - 32px));
   display: none;
-  padding: var(--spacing-4);
+  padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--color-bg-elevated);
-  box-shadow: var(--elevation-high);
-  border: 1px solid var(--border-subtle);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
+  border: 1px solid var(--border-default);
 }
 
 @keyframes panelDropIn {
@@ -25,14 +25,14 @@
 
 .utilityPanelOpen {
   display: block;
-  animation: panelDropIn var(--motion-menu) ease-out both;
+  animation: panelDropIn var(--motion-fast) ease-out both;
 }
 
 .utilityPanel label {
   display: grid;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   color: var(--text-muted);
-  font-size: var(--font-size-label);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -40,19 +40,19 @@
 
 .utilityPanel input {
   height: 36px;
-  padding: 0 var(--spacing-3);
+  padding: 0 var(--space-3);
   font-size: 14px;
 }
 
 .searchPanel {
   display: grid;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
 }
 
 .searchFilters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .searchFilter {
@@ -61,10 +61,10 @@
   align-items: center;
   gap: 5px;
   max-width: 100%;
-  padding: 0 var(--spacing-2);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
-  color: var(--text-normal);
-  background: var(--background-secondary);
+  color: var(--text-primary);
+  background: var(--surface-raised);
   font-size: 12px;
 }
 
@@ -74,18 +74,18 @@
 }
 
 .searchInvalid {
-  color: var(--status-danger);
+  color: var(--state-danger);
   font-size: 12px;
-  line-height: var(--line-height-normal);
+  line-height: var(--line-height-base);
 }
 
 .notificationPanel {
   display: grid;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .notificationPanel > strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
 }
@@ -95,17 +95,17 @@
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
-  padding: var(--spacing-2);
-  color: var(--text-normal);
-  background: var(--background-secondary);
+  padding: var(--space-2);
+  color: var(--text-primary);
+  background: var(--surface-raised);
   text-align: left;
 }
 
 .pinButton:hover {
-  background: var(--background-modifier-hover);
+  background: var(--surface-hover);
 }
 
 .pinButton span {
@@ -118,16 +118,16 @@
 .notificationEmpty {
   color: var(--text-muted);
   font-size: 14px;
-  padding: var(--spacing-2) 0;
+  padding: var(--space-2) 0;
 }
 
 .encryptionPanel {
   display: grid;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
 }
 
 .encryptionPanel strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
 }
@@ -135,18 +135,18 @@
 .encryptionPanel span {
   color: var(--text-muted);
   font-size: 12px;
-  line-height: var(--line-height-normal);
+  line-height: var(--line-height-base);
 }
 
 .encryptionActions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .searchResults {
   display: grid;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -154,13 +154,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   color: var(--text-muted);
   font-size: 12px;
 }
 
 .searchResultsHeader strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: var(--font-weight-semibold);
 }
@@ -168,20 +168,20 @@
 .searchResultList {
   max-height: 360px;
   display: grid;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
   overflow-y: auto;
   padding-right: 2px;
 }
 
 .searchResultButton {
   display: grid;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
   width: 100%;
   border: 0;
   border-radius: var(--radius-sm);
-  padding: var(--spacing-2);
-  color: var(--text-normal);
-  background: var(--background-secondary);
+  padding: var(--space-2);
+  color: var(--text-primary);
+  background: var(--surface-raised);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -190,19 +190,19 @@
 .searchResultButton:hover,
 .searchResultButton:focus-visible,
 .searchResultActive {
-  background: var(--background-modifier-hover);
+  background: var(--surface-hover);
   outline: 0;
 }
 
 .searchResultButton:focus-visible {
-  box-shadow: 0 0 0 2px var(--brand-color);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .searchResultMeta {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   color: var(--text-muted);
   font-size: 11px;
 }
@@ -217,21 +217,21 @@
 }
 
 .searchResultMeta strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
 }
 
 .searchResultSnippet {
-  color: var(--text-normal);
+  color: var(--text-primary);
   font-size: 13px;
-  line-height: var(--line-height-normal);
+  line-height: var(--line-height-base);
   overflow-wrap: anywhere;
 }
 
 .searchResultSnippet mark {
-  border-radius: var(--radius-xs);
-  color: var(--header-primary);
-  background: rgba(88, 101, 242, 0.28);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  background: var(--accent-subtle);
 }
 
 .searchResultAttachment {
@@ -243,7 +243,7 @@
 }
 
 .searchEmpty {
-  padding: var(--spacing-2) 0;
+  padding: var(--space-2) 0;
   color: var(--text-muted);
   font-size: 13px;
 }
@@ -252,7 +252,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .notificationHeader > div {
@@ -267,18 +267,18 @@
 
 .notificationList {
   display: grid;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
 }
 
 .notificationItem {
   width: 100%;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
-  padding: var(--spacing-2);
-  color: var(--interactive-normal);
+  padding: var(--space-2);
+  color: var(--text-muted);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -286,13 +286,13 @@
 
 .notificationItem:hover,
 .notificationItem:focus-visible {
-  color: var(--interactive-hover);
-  background: var(--background-modifier-hover);
+  color: var(--text-primary);
+  background: var(--surface-hover);
   outline: none;
 }
 
 .notificationItemUnread {
-  background: var(--background-modifier-selected);
+  background: var(--surface-selected);
 }
 
 .notificationText {
@@ -302,7 +302,7 @@
 }
 
 .notificationText strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 13px;
 }
 
@@ -317,14 +317,14 @@
 
 .pinnedSection {
   display: grid;
-  gap: var(--spacing-1);
-  border-top: 1px solid var(--border-subtle);
-  padding-top: var(--spacing-3);
+  gap: var(--space-1);
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-3);
 }
 
 .mediaPanel {
   display: grid;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
 }
 
 .mediaHeader {
@@ -333,7 +333,7 @@
 }
 
 .mediaHeader strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 14px;
 }
 
@@ -345,17 +345,17 @@
 .mediaTabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-1);
+  gap: var(--space-1);
   padding: 3px;
   border-radius: var(--radius-sm);
-  background: var(--background-secondary);
+  background: var(--surface-raised);
 }
 
 .mediaTabs button {
   min-height: 28px;
   border: 0;
-  border-radius: var(--radius-xs);
-  color: var(--interactive-normal);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
   background: transparent;
   font: inherit;
   font-size: 12px;
@@ -365,8 +365,8 @@
 .mediaTabs button:hover,
 .mediaTabs button:focus-visible,
 .mediaTabActive {
-  color: var(--interactive-active) !important;
-  background: var(--background-modifier-selected) !important;
+  color: var(--text-primary) !important;
+  background: var(--surface-selected) !important;
   outline: 0;
 }
 
@@ -374,14 +374,14 @@
   max-height: 360px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   overflow-y: auto;
 }
 
 .mediaRows {
   max-height: 360px;
   display: grid;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
   overflow-y: auto;
 }
 
@@ -390,8 +390,8 @@
   min-width: 0;
   border: 0;
   border-radius: var(--radius-sm);
-  color: var(--text-normal);
-  background: var(--background-secondary);
+  color: var(--text-primary);
+  background: var(--surface-raised);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -401,22 +401,22 @@
 .mediaTile:focus-visible,
 .mediaRow:hover,
 .mediaRow:focus-visible {
-  background: var(--background-modifier-hover);
+  background: var(--surface-hover);
   outline: 0;
 }
 
 .mediaTile {
   display: grid;
-  gap: var(--spacing-1);
-  padding: var(--spacing-1);
+  gap: var(--space-1);
+  padding: var(--space-1);
 }
 
 .mediaRow {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) 14px;
   align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2);
+  gap: var(--space-2);
+  padding: var(--space-2);
 }
 
 .mediaTile span:last-child,
@@ -437,7 +437,7 @@
 
 .mediaTile strong,
 .mediaRow strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 12px;
 }
 
@@ -452,8 +452,8 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: var(--radius-xs);
-  background: var(--background-tertiary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
 }
 
 .mediaThumb img {

@@ -25,7 +25,7 @@ export function MessageComposer({
   return (
     <form onSubmit={composer.sendMessage} className={styles.composer}>
       {composer.replyingToMessage && (
-        <div className={styles.composerReply}>
+        <div className={styles.composerReply} data-testid="composer-reply">
           <Reply size={14} aria-hidden="true" />
           <span>
             Replying to <strong>{composer.replyingToMessage.author.displayName}</strong>
@@ -91,6 +91,7 @@ export function MessageComposer({
       <input
         ref={composer.fileInputRef}
         className={styles.fileInput}
+        data-testid="composer-file-input"
         type="file"
         multiple
         accept="image/*,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm,application/pdf,text/plain,application/zip,.zip"

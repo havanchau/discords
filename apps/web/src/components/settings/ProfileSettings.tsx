@@ -4,6 +4,8 @@ import { Button, TextArea, TextField } from '../ui';
 import { SettingsSelect } from './SettingsSelect';
 import { SwitchRow } from './SettingsRows';
 import type { SettingsModalFields, SettingsSelectOption, UiTheme } from './types';
+import styles from '../SettingsModal.module.css';
+import { cn } from '../../utils/cn';
 
 const STATUS_OPTIONS: SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBLE'>[] = [
   { value: 'ONLINE', label: 'Online' },
@@ -13,10 +15,9 @@ const STATUS_OPTIONS: SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBL
 ];
 
 const THEME_OPTIONS: SettingsSelectOption<UiTheme>[] = [
-  { value: 'dark', label: 'Discord dark' },
-  { value: 'midnight', label: 'Midnight' },
-  { value: 'slate', label: 'Slate' },
-  { value: 'oled', label: 'OLED' },
+  { value: 'system', label: 'Match system' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ];
 
 type ProfileSettingsProps = Pick<
@@ -48,17 +49,17 @@ export function ProfileSettings({
   );
 
   return (
-    <form className="settings-form" onSubmit={updateProfile}>
-      <section className="settings-section">
-        <div className="settings-section-heading">
+    <form className={styles.settingsForm} onSubmit={updateProfile}>
+      <section className={styles.settingsSection}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Profile</strong>
           <span>How other members see you across servers.</span>
         </div>
-        <div className="settings-avatar-row">
+        <div className={styles.settingsAvatarRow}>
           <Button
             type="button"
             variant="ghost"
-            className="avatar-button modal-avatar"
+            className={cn('avatar-button', styles.modalAvatar)}
             onClick={() => profileAvatarInputRef.current?.click()}
           >
             {auth.user.avatarUrl ? (
@@ -94,23 +95,23 @@ export function ProfileSettings({
         />
       </section>
 
-      <section className="settings-section">
-        <div className="settings-section-heading">
+      <section className={styles.settingsSection}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Account</strong>
           <span>Identity and presence controls.</span>
         </div>
-        <div className="settings-grid">
+        <div className={styles.settingsGrid}>
           <TextField
             label="Username"
             value={auth.user.username}
             readOnly
-            className="readonly-input"
+            className={styles.readonlyInput}
           />
           <TextField
             label="Email"
             value={auth.user.email}
             readOnly
-            className="readonly-input"
+            className={styles.readonlyInput}
           />
         </div>
         <SettingsSelect
@@ -126,7 +127,7 @@ export function ProfileSettings({
           options={THEME_OPTIONS}
           onValueChange={setUiTheme}
         />
-        <div className="profile-preview">
+        <div className={styles.profilePreview}>
           <div className={`avatar small ${accentClass(auth.user.id)}`}>
             {auth.user.avatarUrl ? (
               <img src={assetUrl(auth.user.avatarUrl)} alt={auth.user.displayName} />
@@ -141,8 +142,8 @@ export function ProfileSettings({
         </div>
       </section>
 
-      <section className="settings-section">
-        <div className="settings-section-heading">
+      <section className={styles.settingsSection}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Notifications</strong>
           <span>Global delivery preferences for this browser session.</span>
         </div>
@@ -192,7 +193,7 @@ export function ProfileSettings({
           }
         />
       </section>
-      <footer className="settings-modal-footer">
+      <footer className={styles.settingsModalFooter}>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
           Cancel
         </Button>

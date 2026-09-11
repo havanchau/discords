@@ -2,7 +2,7 @@ import { createContext, PropsWithChildren, useContext } from 'react';
 import { Socket } from 'socket.io-client';
 import { AuthState } from '../api';
 
-export type UiTheme = 'dark' | 'midnight' | 'slate' | 'oled';
+export type UiTheme = 'light' | 'dark' | 'system';
 
 interface AuthContextValue {
   auth: AuthState | null;

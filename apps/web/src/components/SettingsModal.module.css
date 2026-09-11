@@ -1,6 +1,11 @@
+/*
+ * Settings modal and its sections. Migrated from the former global settings-error.css.
+ * Consumes semantic tokens only; see docs/features/ui-identity-redesign.md
+ */
+
 /* ===== Settings Modal ===== */
 
-.settings-modal {
+.settingsModal {
   width: min(520px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 48px));
   min-height: 0;
@@ -8,28 +13,28 @@
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   border-radius: 8px;
-  background: var(--bg-primary-solid);
+  background: var(--surface-base);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.54);
 }
 
-.settings-modal-body {
+.settingsModalBody {
   min-height: 0;
   overflow: hidden;
   padding: 0;
 }
 
-.settings-modal.roles-modal {
+.settingsModal.rolesModal {
   width: min(760px, 100%);
 }
 
-.settings-modal-footer {
+.settingsModalFooter {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
 }
 
-.settings-form {
+.settingsForm {
   min-height: 0;
   overflow-y: auto;
   display: grid;
@@ -38,52 +43,52 @@
   padding: 0 20px 20px;
 }
 
-.settings-section {
+.settingsSection {
   display: grid;
   gap: 14px;
   padding: 14px;
   border-radius: 8px;
-  background: var(--bg-secondary);
+  background: var(--surface-raised);
 }
 
-.settings-section-heading {
+.settingsSectionHeading {
   display: grid;
   gap: 3px;
 }
 
-.settings-section-heading strong {
-  color: var(--header-primary);
+.settingsSectionHeading strong {
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 700;
 }
 
-.settings-section-heading span {
+.settingsSectionHeading span {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.settings-grid {
+.settingsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.readonly-input {
+.readonlyInput {
   color: var(--text-muted);
-  background: var(--bg-tertiary);
+  background: var(--surface-sunken);
 }
 
-.settings-field {
+.settingsField {
   display: grid;
   gap: 8px;
-  color: var(--header-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.333;
   text-transform: uppercase;
 }
 
-.settings-select-trigger {
+.settingsSelectTrigger {
   width: 100%;
   min-height: 40px;
   display: grid;
@@ -93,132 +98,132 @@
   border: 0;
   border-radius: 4px;
   padding: 0 12px;
-  color: var(--text-normal);
-  background: var(--input-background);
+  color: var(--text-primary);
+  background: var(--surface-input);
   font-size: 14px;
   text-align: left;
   transition:
-    background-color var(--motion-menu) ease,
-    color var(--motion-menu) ease;
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
 }
 
-.settings-select-trigger:hover {
-  color: var(--interactive-hover);
-  background: var(--bg-secondary-alt);
+.settingsSelectTrigger:hover {
+  color: var(--text-primary);
+  background: var(--surface-sunken);
 }
 
-.settings-select-trigger span {
+.settingsSelectTrigger span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.settings-select-menu {
+.settingsSelectMenu {
   min-width: 220px;
 }
 
-.settings-select-menu [role='menuitem'] {
+.settingsSelectMenu [role='menuitem'] {
   justify-content: space-between;
 }
 
-.switch-row {
+.switchRow {
   min-height: 58px;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 12px;
   border-radius: 8px;
-  background: var(--bg-primary);
+  background: var(--surface-base);
   text-transform: none;
   letter-spacing: 0;
 }
 
-.switch-row span {
+.switchRow span {
   display: grid;
   gap: 3px;
 }
 
-.switch-row strong {
-  color: var(--header-primary);
+.switchRow strong {
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 700;
 }
 
-.switch-row small {
+.switchRow small {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
 }
 
-.profile-preview {
+.profilePreview {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: 12px;
   border-radius: 8px;
-  background: var(--bg-primary);
+  background: var(--surface-base);
 }
 
-.profile-preview strong,
-.profile-preview span {
+.profilePreview strong,
+.profilePreview span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.profile-preview strong {
-  color: var(--header-primary);
+.profilePreview strong {
+  color: var(--text-primary);
   font-size: 14px;
 }
 
-.profile-preview span {
+.profilePreview span {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.roles-shell {
+.rolesShell {
   padding-right: 14px;
 }
 
-.settings-avatar-row {
+.settingsAvatarRow {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
 }
 
-.modal-avatar {
+.modalAvatar {
   width: 64px;
   height: 64px;
 }
 
-.modal-avatar .avatar {
+.modalAvatar .avatar {
   width: 64px;
   height: 64px;
 }
 
-.settings-modal-footer {
+.settingsModalFooter {
   margin: 4px -20px -20px;
   padding: 16px 20px;
-  background: var(--bg-secondary);
+  background: var(--surface-raised);
   justify-content: flex-end;
 }
 
-.settings-modal-footer .ghost {
+.settingsModalFooter .ghost {
   height: 36px;
   padding: 0 12px;
-  color: var(--interactive-normal);
+  color: var(--text-muted);
   background: transparent;
 }
 
-.settings-modal-footer .ghost:hover {
-  color: var(--interactive-hover);
+.settingsModalFooter .ghost:hover {
+  color: var(--text-primary);
   text-decoration: underline;
 }
 
-.compact-primary {
+.compactPrimary {
   width: auto;
   min-width: 120px;
   min-height: 36px;
@@ -227,45 +232,45 @@
   font-size: 14px;
 }
 
-.settings-secondary-action {
+.settingsSecondaryAction {
   width: 100%;
   min-height: 36px;
   margin: 0;
-  background: var(--bg-modifier-hover);
+  background: var(--surface-hover);
 }
 
-.role-create-form {
+.roleCreateForm {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
   padding: 16px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  background: var(--bg-secondary);
+  background: var(--surface-raised);
 }
 
-.role-create-header,
-.role-identity {
+.roleCreateHeader,
+.roleIdentity {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
 }
 
-.role-create-icon,
-.role-color-dot {
+.roleCreateIcon,
+.roleColorDot {
   width: 34px;
   height: 34px;
   display: block;
   position: relative;
   flex-shrink: 0;
   border-radius: 8px;
-  color: var(--interactive-active);
-  background: var(--brand-500);
+  color: var(--text-primary);
+  background: var(--accent);
 }
 
-.role-create-icon svg,
-.role-color-dot svg {
+.roleCreateIcon svg,
+.roleColorDot svg {
   display: block;
   position: absolute;
   left: 50%;
@@ -275,26 +280,26 @@
   transform: translate(-50%, -50%);
 }
 
-.role-create-header strong {
+.roleCreateHeader strong {
   display: block;
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 700;
 }
 
-.role-create-header span {
+.roleCreateHeader span {
   display: block;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.role-create-fields {
+.roleCreateFields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 176px;
   gap: 10px;
 }
 
-.role-field {
+.roleField {
   display: grid;
   gap: 6px;
   color: var(--text-muted);
@@ -304,17 +309,17 @@
   text-transform: uppercase;
 }
 
-.role-permission-palette {
+.rolePermissionPalette {
   padding-top: 2px;
 }
 
-.role-create-submit {
+.roleCreateSubmit {
   width: 100%;
   min-height: 40px;
   justify-content: center;
 }
 
-.role-list {
+.roleList {
   max-height: min(460px, 58vh);
   display: grid;
   gap: 12px;
@@ -322,44 +327,44 @@
   padding-right: 4px;
 }
 
-.role-editor {
+.roleEditor {
   display: grid;
   gap: 12px;
   padding: 16px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  background: var(--bg-secondary);
+  background: var(--surface-raised);
 }
 
-.role-editor-header,
-.member-role-summary {
+.roleEditorHeader,
+.memberRoleSummary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
 }
 
-.role-color-dot {
-  color: var(--interactive-normal);
-  background: var(--bg-modifier-selected);
+.roleColorDot {
+  color: var(--text-muted);
+  background: var(--surface-selected);
 }
 
-.role-editor-header strong,
-.member-role-summary strong {
+.roleEditorHeader strong,
+.memberRoleSummary strong {
   display: block;
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 600;
 }
 
-.role-editor-header span,
-.member-role-summary span {
+.roleEditorHeader span,
+.memberRoleSummary span {
   display: block;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.role-meta {
+.roleMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -367,43 +372,43 @@
   margin-top: 4px;
 }
 
-.role-meta-badge {
+.roleMetaBadge {
   min-height: 20px;
   padding-inline: 8px;
   font-size: 11px;
 }
 
-.danger-icon {
+.dangerIcon {
   width: 32px;
   height: 32px;
   display: grid;
   place-items: center;
-  color: var(--status-danger);
+  color: var(--state-danger);
   background: transparent;
 }
 
-.danger-icon:hover {
-  color: var(--interactive-active);
-  background: var(--status-danger);
+.dangerIcon:hover {
+  color: var(--text-primary);
+  background: var(--state-danger);
 }
 
-.permission-grid {
+.permissionGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 10px;
 }
 
-.compact-permissions {
+.compactPermissions {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.check-row {
+.checkRow {
   min-height: 30px;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  color: var(--text-normal);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
@@ -411,45 +416,45 @@
   letter-spacing: 0;
 }
 
-.permission-tile,
-.permission-toggle {
+.permissionTile,
+.permissionToggle {
   min-height: 38px;
   align-items: center;
   padding: 0 10px;
   border-radius: 6px;
-  background: var(--bg-primary);
+  background: var(--surface-base);
 }
 
-.permission-tile span,
-.permission-toggle span {
+.permissionTile span,
+.permissionToggle span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.permission-tile:hover,
-.permission-toggle:hover {
-  background: var(--bg-modifier-hover);
+.permissionTile:hover,
+.permissionToggle:hover {
+  background: var(--surface-hover);
 }
 
-.permission-toggle:has([data-state='checked']),
-.permission-tile:has([data-state='checked']) {
-  color: var(--header-primary);
+.permissionToggle:has([data-state='checked']),
+.permissionTile:has([data-state='checked']) {
+  color: var(--text-primary);
   background: rgba(88, 101, 242, 0.16);
 }
 
-.role-assign-row {
+.roleAssignRow {
   grid-template-columns: 16px minmax(0, 1fr);
   align-items: start;
   gap: 12px;
   min-height: 52px;
   padding: 12px;
   border-radius: 8px;
-  background: var(--bg-secondary);
+  background: var(--surface-raised);
 }
 
-.role-assign-content {
+.roleAssignContent {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -457,174 +462,174 @@
   gap: 12px;
 }
 
-.role-assign-copy {
+.roleAssignCopy {
   min-width: 0;
   display: grid;
   gap: 4px;
 }
 
-.role-assign-copy strong {
+.roleAssignCopy strong {
   display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
 }
 
-.role-assign-row small,
-.role-assign-copy small {
+.roleAssignRow small,
+.roleAssignCopy small {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.role-assign-state {
+.roleAssignState {
   flex-shrink: 0;
 }
 
-.permission-override-list,
-.audit-log-list {
+.permissionOverrideList,
+.auditLogList {
   display: grid;
   gap: 8px;
 }
 
-.permission-override-row,
-.audit-log-row {
+.permissionOverrideRow,
+.auditLogRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
 }
 
-.audit-log-row {
+.auditLogRow {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.permission-override-row span,
-.audit-log-row small {
+.permissionOverrideRow span,
+.auditLogRow small {
   display: block;
   color: var(--text-muted);
   font-size: 12px;
   margin-top: 2px;
 }
 
-.mini-check {
+.miniCheck {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-normal);
+  color: var(--text-primary);
   font-size: 13px;
   white-space: nowrap;
 }
 
-.member-role-summary {
+.memberRoleSummary {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 14px;
   padding: 14px;
   border-radius: 8px;
-  background: var(--bg-secondary);
+  background: var(--surface-raised);
 }
 
-.member-role-summaryText {
+.memberRoleSummaryText {
   min-width: 0;
   display: grid;
   gap: 4px;
 }
 
-.member-role-summaryChips,
-.member-role-chipRow {
+.memberRoleSummaryChips,
+.memberRoleChipRow {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.member-role-chip {
+.memberRoleChip {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
   max-width: 100%;
   padding: 0 8px;
   border-radius: 999px;
-  color: var(--header-secondary);
-  background: var(--bg-primary);
+  color: var(--text-secondary);
+  background: var(--surface-base);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
 }
 
-.member-role-chipMuted {
+.memberRoleChipMuted {
   color: var(--text-muted);
 }
 
-.role-members-section {
+.roleMembersSection {
   gap: 12px;
 }
 
-.member-role-entry-list {
+.memberRoleEntryList {
   display: grid;
   gap: 10px;
 }
 
-.member-role-entry.member-role-entry {
+.memberRoleEntry.memberRoleEntry {
   min-height: 72px;
   justify-content: space-between;
   padding: 12px 14px;
   border-radius: 8px;
-  color: var(--text-normal);
-  background: var(--bg-primary);
+  color: var(--text-primary);
+  background: var(--surface-base);
 }
 
-.member-role-entry.member-role-entry:hover {
-  background: var(--bg-modifier-hover);
+.memberRoleEntry.memberRoleEntry:hover {
+  background: var(--surface-hover);
 }
 
-.member-role-entryIdentity {
+.memberRoleEntryIdentity {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.member-role-entryText {
+.memberRoleEntryText {
   min-width: 0;
   display: grid;
   gap: 4px;
   text-align: left;
 }
 
-.member-role-entryText strong {
+.memberRoleEntryText strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
 }
 
-.member-role-entryText span {
+.memberRoleEntryText span {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.member-role-entryMeta {
+.memberRoleEntryMeta {
   min-width: 0;
   display: grid;
   gap: 6px;
   justify-items: end;
 }
 
-.member-role-entryAction {
+.memberRoleEntryAction {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--header-secondary);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -643,8 +648,8 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 4px;
-  color: var(--interactive-active);
-  background: var(--status-danger);
+  color: var(--text-primary);
+  background: var(--state-danger);
   font-size: 14px;
   animation: banner-slide-in 0.18s ease-out both;
 }
@@ -653,7 +658,7 @@
   border: 0;
   border-radius: 3px;
   padding: 4px 12px;
-  color: var(--interactive-active);
+  color: var(--text-primary);
   background: rgba(0, 0, 0, 0.15);
   font-size: 13px;
   font-weight: 500;
@@ -664,60 +669,60 @@
   transform: translateY(-1px);
 }
 
-.notice-banner {
-  background: var(--green-360);
+.noticeBanner {
+  background: var(--state-success);
 }
 
-.member-override-heading {
+.memberOverrideHeading {
   margin-top: 8px;
 }
 
-.member-override-panel,
-.member-override-card {
+.memberOverridePanel,
+.memberOverrideCard {
   display: grid;
   gap: 10px;
 }
 
-.member-override-picker select {
+.memberOverridePicker select {
   width: 100%;
   min-height: 40px;
   border: 0;
   border-radius: 4px;
   padding: 0 12px;
-  color: var(--text-normal);
-  background: var(--input-background);
+  color: var(--text-primary);
+  background: var(--surface-input);
   font: inherit;
 }
 
-.member-override-picker select:hover {
-  background: var(--bg-secondary-alt);
+.memberOverridePicker select:hover {
+  background: var(--surface-sunken);
 }
 
-.member-override-card {
+.memberOverrideCard {
   padding: 12px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
 }
 
-.member-override-summary {
+.memberOverrideSummary {
   display: grid;
   gap: 3px;
 }
 
-.member-override-summary strong {
-  color: var(--header-primary);
+.memberOverrideSummary strong {
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 700;
 }
 
-.member-override-summary span,
-.settings-empty-copy {
+.memberOverrideSummary span,
+.settingsEmptyCopy {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.member-override-grid {
+.memberOverrideGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
@@ -725,28 +730,169 @@
   padding-top: 4px;
 }
 
-.member-override-permission,
-.member-override-choice {
-  color: var(--header-secondary);
+.memberOverridePermission,
+.memberOverrideChoice {
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-.member-override-choice {
+.memberOverrideChoice {
   text-align: center;
 }
 
-.settings-empty-copy {
+.settingsEmptyCopy {
   margin: 0;
 }
 
 @media (max-width: 560px) {
-  .permission-override-row,
-  .member-override-grid {
+  .permissionOverrideRow,
+  .memberOverrideGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .member-override-choice {
+  .memberOverrideChoice {
     display: none;
+  }
+}
+
+.inviteCreateGrid,
+.permissionPreviewControls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.permissionPreviewControls label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.permissionPreviewControls select {
+  min-height: 36px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+  color: var(--text-primary);
+  background: var(--surface-input);
+}
+
+.inviteList,
+.permissionPreviewGrid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.inviteRow,
+.permissionPreviewRow {
+  min-width: 0;
+  display: grid;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.inviteRow {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.inviteRow > div,
+.permissionPreviewRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.inviteRow strong,
+.inviteRow small,
+.permissionPreviewRow strong,
+.permissionPreviewRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inviteRow strong,
+.permissionPreviewRow strong {
+  color: var(--text-primary);
+}
+
+.inviteRow small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.auditLogRow summary {
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.auditLogRow pre {
+  max-height: 140px;
+  overflow: auto;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+  font-size: 12px;
+}
+
+.permissionPreviewRow {
+  grid-template-columns: 120px 80px minmax(0, 1fr);
+}
+
+.permissionPreviewRow > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.permissionAllowed,
+.permissionDenied,
+.permissionChipAllowed,
+.permissionChipDenied {
+  width: fit-content;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.permissionAllowed,
+.permissionChipAllowed {
+  color: var(--text-primary);
+  background: rgba(35, 165, 90, 0.16);
+}
+
+.permissionDenied,
+.permissionChipDenied {
+  color: var(--text-muted);
+  background: var(--surface-hover);
+}
+
+@media (max-width: 720px) {
+  .inviteCreateGrid,
+  .permissionPreviewControls,
+  .inviteRow,
+  .permissionPreviewRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .roleCreateForm,
+  .roleCreateFields,
+  .permissionGrid,
+  .compactPermissions {
+    grid-template-columns: 1fr;
   }
 }

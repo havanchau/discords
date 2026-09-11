@@ -11,7 +11,9 @@ import type {
 } from '../../api';
 import type { ActiveDialog } from '../ChatPanel';
 
-export type UiTheme = 'dark' | 'midnight' | 'slate' | 'oled';
+import type { UiTheme } from '../../contexts/appContexts';
+
+export type { UiTheme };
 
 export interface SettingsSelectOption<T extends string> {
   value: T;

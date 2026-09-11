@@ -8,6 +8,7 @@ import {
   Button,
 } from '../ui';
 import type { SettingsSelectOption } from './types';
+import styles from '../SettingsModal.module.css';
 
 interface SettingsSelectProps<T extends string> {
   name: string;
@@ -28,17 +29,17 @@ export function SettingsSelect<T extends string>({
   const selected = options.find((option) => option.value === value) ?? options[0];
 
   return (
-    <label className="settings-field">
+    <label className={styles.settingsField}>
       <span>{label}</span>
       <input type="hidden" name={name} value={value} />
       <DropdownMenuRoot>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="secondary" className="settings-select-trigger" aria-label={label}>
+          <Button type="button" variant="secondary" className={styles.settingsSelectTrigger} aria-label={label}>
             <span>{selected?.label}</span>
             <ChevronDown size={16} aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="settings-select-menu">
+        <DropdownMenuContent align="start" className={styles.settingsSelectMenu}>
           {options.map((option) => (
             <DropdownMenuItem
               key={option.value}

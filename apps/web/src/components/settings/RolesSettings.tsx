@@ -6,6 +6,8 @@ import { Avatar, Badge, Button, IconButton, TextField } from '../ui';
 import { buildMemberPermissionPreview, buildRolePermissionPreview } from '../../utils/permissionPreview';
 import { CheckRow } from './SettingsRows';
 import type { SettingsModalFields } from './types';
+import styles from '../SettingsModal.module.css';
+import { cn } from '../../utils/cn';
 
 type RolesSettingsProps = Pick<
   SettingsModalFields,
@@ -51,10 +53,10 @@ export function RolesSettings({
   });
 
   return (
-    <div className="settings-form roles-shell">
-      <form className="role-create-form" onSubmit={createRole}>
-        <div className="role-create-header">
-          <span className="role-create-icon">
+    <div className={cn(styles.settingsForm, styles.rolesShell)}>
+      <form className={styles.roleCreateForm} onSubmit={createRole}>
+        <div className={styles.roleCreateHeader}>
+          <span className={styles.roleCreateIcon}>
             <Plus size={18} aria-hidden="true" />
           </span>
           <div>
@@ -62,15 +64,15 @@ export function RolesSettings({
             <span>{PERMISSION_OPTIONS.length} permissions available</span>
           </div>
         </div>
-        <div className="role-create-fields">
+        <div className={styles.roleCreateFields}>
           <TextField label="Role name" name="name" placeholder="Moderator" maxLength={50} required />
           <TextField label="Color" name="color" placeholder="#5865F2" maxLength={24} />
         </div>
-        <div className="permission-grid role-permission-palette">
+        <div className={cn(styles.permissionGrid, styles.rolePermissionPalette)}>
           {PERMISSION_OPTIONS.map((permission) => (
             <CheckRow
               key={permission.value}
-              className="check-row permission-tile"
+              className={cn(styles.checkRow, styles.permissionTile)}
               name="permissions"
               value={permission.value}
               label={permission.label}
@@ -84,12 +86,12 @@ export function RolesSettings({
         </Button>
       </form>
 
-      <section className="settings-section permission-preview-section">
-        <div className="settings-section-heading">
+      <section className={cn(styles.settingsSection, 'permission-preview-section')}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Permission preview</strong>
           <span>Read-only view of channel visibility and actions. @everyone supplies inherited defaults before extra roles are added.</span>
         </div>
-        <div className="permission-preview-controls">
+        <div className={styles.permissionPreviewControls}>
           <label>
             Role
             <select value={previewRole?.id ?? ''} onChange={(event) => { setPreviewMemberId(null); setPreviewRoleId(event.target.value); }}>
@@ -114,16 +116,16 @@ export function RolesSettings({
             placeholder="general"
           />
         </div>
-        <div className="permission-preview-grid" role="table" aria-label="Permission preview">
+        <div className={styles.permissionPreviewGrid} role="table" aria-label="Permission preview">
           {previewRows.map((row) => (
-            <div className="permission-preview-row" key={row.channel.id} role="row">
+            <div className={styles.permissionPreviewRow} key={row.channel.id} role="row">
               <strong role="cell">#{row.channel.name}</strong>
-              <span className={row.canView ? 'permission-allowed' : 'permission-denied'} role="cell">
+              <span className={row.canView ? styles.permissionAllowed : styles.permissionDenied} role="cell">
                 {row.canView ? 'Can view' : 'Hidden'}
               </span>
               <div role="cell">
                 {row.actions.slice(0, 6).map((action) => (
-                  <small key={action.value} className={action.allowed ? 'permission-chip-allowed' : 'permission-chip-denied'}>
+                  <small key={action.value} className={action.allowed ? styles.permissionChipAllowed : styles.permissionChipDenied}>
                     {action.label}
                   </small>
                 ))}
@@ -133,29 +135,29 @@ export function RolesSettings({
         </div>
       </section>
 
-      <div className="role-list">
+      <div className={styles.roleList}>
         {server.roles.map((role) => {
           const isEveryone = role.name === '@everyone';
           const assignedMembers = server.members.filter((member) =>
             member.roles?.some((item) => item.role.id === role.id),
           );
           return (
-            <section key={role.id} className="role-editor">
-              <div className="role-editor-header">
-                <div className="role-identity">
+            <section key={role.id} className={styles.roleEditor}>
+              <div className={styles.roleEditorHeader}>
+                <div className={styles.roleIdentity}>
                   <span
-                    className="role-color-dot"
+                    className={styles.roleColorDot}
                     style={{ backgroundColor: role.color || undefined }}
                   >
                     {!role.color ? <ShieldCheck size={14} aria-hidden="true" /> : null}
                   </span>
                   <div>
                     <strong style={{ color: role.color || undefined }}>{role.name}</strong>
-                    <div className="role-meta">
+                    <div className={styles.roleMeta}>
                       <span>
                         {isEveryone ? 'Default server role' : `${role.permissions.length} permissions`}
                       </span>
-                      <Badge variant="neutral" className="role-meta-badge">
+                      <Badge variant="neutral" className={styles.roleMetaBadge}>
                         {assignedMembers.length} member{assignedMembers.length === 1 ? '' : 's'}
                       </Badge>
                     </div>
@@ -173,11 +175,11 @@ export function RolesSettings({
                   </IconButton>
                 ) : null}
               </div>
-              <div className="permission-grid">
+              <div className={styles.permissionGrid}>
                 {PERMISSION_OPTIONS.map((permission) => (
                   <CheckRow
                     key={permission.value}
-                    className="check-row permission-toggle"
+                    className={cn(styles.checkRow, styles.permissionToggle)}
                     label={`${permission.label} permission for ${role.name}`}
                     checked={role.permissions.includes(permission.value)}
                     disabled={isEveryone || pendingAction === `role-${role.id}`}
@@ -194,12 +196,12 @@ export function RolesSettings({
         })}
       </div>
 
-      <section className="settings-section role-members-section">
-        <div className="settings-section-heading">
+      <section className={cn(styles.settingsSection, styles.roleMembersSection)}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Member role assignments</strong>
           <span>Open a member editor to add or remove roles for specific users.</span>
         </div>
-        <div className="member-role-entry-list">
+        <div className={styles.memberRoleEntryList}>
           {members.map((member) => {
             const memberRoles = member.roles?.map(({ role }) => role).filter((role) => role.name !== '@everyone') ?? [];
             const topRole = memberRoles.find((role) => role.color) ?? memberRoles[0];
@@ -209,10 +211,10 @@ export function RolesSettings({
               <Button
                 key={member.id}
                 variant={isSelected ? 'secondary' : 'ghost'}
-                className="member-role-entry"
+                className={styles.memberRoleEntry}
                 onClick={() => openMemberRoleEditor(member.id)}
               >
-                <div className="member-role-entryIdentity">
+                <div className={styles.memberRoleEntryIdentity}>
                   <Avatar
                     src={member.user.avatarUrl ? assetUrl(member.user.avatarUrl) : null}
                     alt={member.user.displayName}
@@ -220,26 +222,26 @@ export function RolesSettings({
                     size="md"
                     className={accentClass(member.user.id)}
                   />
-                  <div className="member-role-entryText">
+                  <div className={styles.memberRoleEntryText}>
                     <strong style={topRole?.color ? { color: topRole.color } : undefined}>
                       {member.user.displayName}
                     </strong>
                     <span>{member.kind === 'OWNER' ? 'Owner' : member.user.status || 'Member'}</span>
                   </div>
                 </div>
-                <div className="member-role-entryMeta">
-                  <div className="member-role-chipRow">
+                <div className={styles.memberRoleEntryMeta}>
+                  <div className={styles.memberRoleChipRow}>
                     {memberRoles.length ? (
                       memberRoles.slice(0, 3).map((role) => (
-                        <small key={role.id} className="member-role-chip" style={role.color ? { color: role.color } : undefined}>
+                        <small key={role.id} className={styles.memberRoleChip} style={role.color ? { color: role.color } : undefined}>
                           {role.name}
                         </small>
                       ))
                     ) : (
-                      <small className="member-role-chip member-role-chipMuted">No extra roles</small>
+                      <small className={cn(styles.memberRoleChip, styles.memberRoleChipMuted)}>No extra roles</small>
                     )}
                   </div>
-                  <span className="member-role-entryAction">
+                  <span className={styles.memberRoleEntryAction}>
                     Edit roles
                     <ChevronRight size={14} aria-hidden="true" />
                   </span>

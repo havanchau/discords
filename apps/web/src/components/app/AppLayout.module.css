@@ -1,0 +1,30 @@
+/*
+ * The app shell grid. Each sidebar hides itself at the matching breakpoint from its own module;
+ * this file only owns how many columns the grid offers.
+ * Column widths are the shell's own decision, not design tokens, so they live here.
+ */
+.shell {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: auto 240px minmax(0, 1fr) 240px;
+  overflow: hidden;
+  background: var(--surface-base);
+}
+
+/* Without a server there is no chat or member column; the home panel takes the remaining space. */
+.homeShell {
+  grid-template-columns: auto 240px minmax(0, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    grid-template-columns: auto 240px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .shell,
+  .homeShell {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}

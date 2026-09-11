@@ -87,8 +87,8 @@ try {
   );
 
   const message = `UI smoke ${new Date().toISOString()} https://example.com/smoke`;
-  await page.$eval('.file-input', (input, filePath) => input.setAttribute('data-smoke-path', filePath), uploadFixturePath);
-  const fileInput = await page.$('.composer .file-input');
+  await page.$eval('[data-testid="composer-file-input"]', (input, filePath) => input.setAttribute('data-smoke-path', filePath), uploadFixturePath);
+  const fileInput = await page.$('[data-testid="composer-file-input"]');
   await fileInput.uploadFile(uploadFixturePath);
   await page.type('[data-testid="composer-input"]', message);
   await page.click('[data-testid="composer-send"]');
@@ -110,7 +110,7 @@ try {
   );
   await firstMessage.hover();
   await page.click('button[title="Reply"]');
-  await page.waitForSelector('.composer-reply', { timeout: 5000 });
+  await page.waitForSelector('[data-testid="composer-reply"]', { timeout: 5000 });
   const replyMessage = `@demo reply smoke ${Date.now()}`;
   await page.type('[data-testid="composer-input"]', replyMessage);
   await page.click('[data-testid="composer-send"]');

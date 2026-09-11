@@ -1,12 +1,13 @@
 .avatar {
   position: relative;
-  width: var(--avatar-size, var(--size-interactive-min));
-  height: var(--avatar-size, var(--size-interactive-min));
+  width: var(--avatar-size, var(--control-min-size));
+  height: var(--avatar-size, var(--control-min-size));
   flex: 0 0 auto;
   overflow: hidden;
   border-radius: var(--radius-full);
-  background: var(--background-accent);
-  color: var(--interactive-active);
+  /* .accent-N (see styles/utilities.css) overrides the tint per user. */
+  background: var(--avatar-tint, var(--accent));
+  color: var(--text-on-accent);
 }
 
 .image {
@@ -21,21 +22,21 @@
   height: 100%;
   display: grid;
   place-items: center;
-  color: var(--interactive-active);
-  font-size: var(--font-size-ui);
+  color: inherit;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   text-transform: uppercase;
 }
 
 .sm {
-  --avatar-size: var(--size-interactive-min);
+  --avatar-size: var(--control-min-size);
 }
 
 .md {
-  --avatar-size: var(--height-member-row);
+  --avatar-size: 40px;
 }
 
 .lg {
-  --avatar-size: var(--size-server-icon);
+  --avatar-size: 48px;
 }

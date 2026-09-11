@@ -15,6 +15,17 @@ import styles from './MemberSidebar.module.css';
 import { cn } from '../utils/cn';
 import { MessageSquare, ShieldCheck } from 'lucide-react';
 
+const PRESENCE_LABELS: Record<string, string> = {
+  ONLINE: 'Online',
+  IDLE: 'Idle',
+  DND: 'Do not disturb',
+  OFFLINE: 'Offline',
+};
+
+function presenceLabel(status: string | null | undefined): string {
+  return PRESENCE_LABELS[status ?? ''] ?? PRESENCE_LABELS.OFFLINE;
+}
+
 export interface MemberSidebarProps {
   assetUrl: (url: string) => string;
   onManageMember: (memberId: string) => void;
@@ -94,6 +105,11 @@ export function MemberSidebar({
             {group.members.map((member) => {
               const topRole = member.roles?.find(({ role }) => role.color)?.role;
               const roleNames = member.roles?.map(({ role }) => role.name).filter(Boolean) ?? [];
+              // @everyone applies to every member, so it says nothing about this one.
+              const namedRoles = roleNames.filter((name) => name !== '@everyone');
+              // The subtitle carries one kind of information only: the member's standing in the
+              // server. Presence is conveyed by the status dot, never repeated as text here.
+              const subtitle = member.kind === 'OWNER' ? 'Owner' : namedRoles[0];
 
               return (
                 <ContextMenuRoot key={member.id}>
@@ -119,15 +135,15 @@ export function MemberSidebar({
                                 styles.statusDot,
                                 styles[member.user.status?.toLowerCase() || 'offline'],
                               )}
+                              role="img"
+                              aria-label={presenceLabel(member.user.status)}
                             />
                           </div>
                           <div className={styles.memberInfo}>
                             <strong style={topRole?.color ? { color: topRole.color } : undefined}>
                               {member.user.displayName}
                             </strong>
-                            <span>
-                              {member.kind === 'OWNER' ? 'Owner' : member.user.status || 'Member'}
-                            </span>
+                            {subtitle ? <span>{subtitle}</span> : null}
                           </div>
                         </Button>
                       </PopoverTrigger>
@@ -144,9 +160,9 @@ export function MemberSidebar({
                           <strong>{member.user.displayName}</strong>
                           <span>@{member.user.username}</span>
                           {member.user.bio ? <p>{member.user.bio}</p> : null}
-                          {roleNames.length > 0 && (
+                          {namedRoles.length > 0 && (
                             <div className={styles.roleChips}>
-                              {roleNames.slice(0, 4).map((roleName) => (
+                              {namedRoles.slice(0, 4).map((roleName) => (
                                 <small key={roleName} className={styles.roleChip}>
                                   {roleName}
                                 </small>

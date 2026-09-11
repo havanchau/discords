@@ -1,12 +1,12 @@
 .content {
   z-index: var(--z-dropdown);
   border-radius: var(--radius-md);
-  background: var(--color-bg-elevated);
-  color: var(--text-normal);
-  padding: var(--spacing-2);
-  box-shadow: var(--elevation-high);
-  border: 1px solid var(--border-subtle);
-  animation: popoverIn var(--motion-menu) ease;
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-overlay);
+  border: 1px solid var(--border-default);
+  animation: popoverIn var(--motion-fast) ease;
 }
 
 .content:focus {

@@ -1,0 +1,267 @@
+.sidebar {
+  min-width: 0;
+  min-height: 0;
+  /*
+   * Flex column rather than a fixed grid: the search row is conditional, and a grid template
+   * would shift every row when it is absent.
+   */
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--border-default);
+}
+
+.header {
+  flex: none;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  z-index: var(--z-header);
+}
+
+.headerButton {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-2);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.homeButton {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.headerButton strong {
+  overflow: hidden;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerButton[data-state='open'] .chevron {
+  transform: rotate(180deg);
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform var(--motion-fast);
+}
+
+.menuHint {
+  display: block;
+  padding: var(--space-1) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.searchRow {
+  flex: none;
+  padding: var(--space-3) var(--space-3) 0;
+}
+
+.scrollArea {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-2);
+}
+
+.group + .group {
+  margin-top: var(--space-5);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.channelList {
+  display: grid;
+  gap: 2px;
+}
+
+.channelRow {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  justify-content: start;
+  gap: var(--space-2);
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-2);
+  color: var(--text-muted);
+  font-weight: var(--font-weight-normal);
+  text-align: left;
+}
+
+.channelRow:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.channelRowActive {
+  color: var(--text-primary);
+  background: var(--surface-selected);
+}
+
+/*
+ * A row without a click handler is informational, not disabled: it keeps full-contrast text so it
+ * stays readable. Only its weight marks it as secondary.
+ */
+.channelRowStatic {
+  cursor: default;
+}
+
+.channelRow svg {
+  flex: none;
+  color: var(--text-disabled);
+}
+
+.channelName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voiceBlock + .voiceBlock {
+  margin-top: 2px;
+}
+
+.voiceOccupants {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
+}
+
+.voiceOccupants span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveBadge,
+.mentionBadge {
+  flex: none;
+  min-width: var(--badge-min-size);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--badge-min-size);
+  text-align: center;
+}
+
+.liveBadge {
+  color: var(--text-on-accent);
+  background: var(--state-success);
+}
+
+.mentionBadge {
+  color: var(--text-on-accent);
+  background: var(--state-danger);
+}
+
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-primary);
+}
+
+.emptyNote {
+  margin: 0;
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.userStrip {
+  flex: none;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-sunken);
+}
+
+.userIdentity {
+  min-width: 0;
+  display: grid;
+}
+
+.userIdentity strong,
+.userIdentity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userIdentity strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.userIdentity span {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+}
+
+.avatarButton {
+  width: 32px;
+  height: 32px;
+  min-width: 0;
+  min-height: 0;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  padding: 0;
+  background: transparent;
+}
+
+.avatarButton img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    display: none;
+  }
+}

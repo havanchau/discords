@@ -4,6 +4,8 @@ import { MemberSidebar, type MemberSidebarProps } from '../MemberSidebar';
 import { SettingsModal } from '../SettingsModal';
 import { WorkspaceSidebar, type WorkspaceSidebarProps } from '../WorkspaceSidebar';
 import { TooltipProvider } from '../ui';
+import { cn } from '../../utils/cn';
+import styles from './AppLayout.module.css';
 import { AuthProvider, SocketProvider, ThemeProvider } from '../../contexts/appContexts';
 import type { AuthState, ServerDetail } from '../../api';
 import type { SettingsModalProps } from '../settings/types';
@@ -40,7 +42,7 @@ export function AuthenticatedWorkspace({
       <SocketProvider socket={socket}>
         <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
           <TooltipProvider>
-            <main className="app-shell">
+            <main className={cn(styles.shell, !server && styles.homeShell)}>
               <WorkspaceSidebar {...workspace} />
               {server ? (
                 <>

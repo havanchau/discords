@@ -1,26 +1,26 @@
 .field {
   display: grid;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .label {
-  color: var(--header-secondary);
-  font-size: var(--font-size-label);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-label);
+  line-height: var(--line-height-tight);
   text-transform: uppercase;
 }
 
 .control {
   width: 100%;
-  min-height: var(--height-input);
-  border: 0;
+  min-height: var(--control-height-md);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  background: var(--color-bg-input);
-  color: var(--text-normal);
-  font-size: var(--font-size-ui);
-  line-height: var(--line-height-ui);
-  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  padding: var(--space-2) var(--space-3);
 }
 
 .controlShell {
@@ -28,30 +28,53 @@
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  background: var(--color-bg-input);
+  background: var(--surface-input);
+  padding-inline: var(--space-3);
+}
+
+.controlShell:focus-within {
+  border-color: var(--border-focus);
 }
 
 .leadingIcon {
   display: grid;
   place-items: center;
-  color: var(--interactive-normal);
+  color: var(--text-muted);
 }
 
 .controlWithIcon {
   min-width: 0;
+  border: 0;
   background: transparent;
-  padding-left: 0;
+  padding-inline: 0;
+  border-radius: 0;
+}
+
+/* The shell already draws the focus affordance for an icon field. */
+.controlWithIcon:focus-visible {
+  outline: none;
+}
+
+/* Fix browser autofill styling */
+.control:-webkit-autofill,
+.control:-webkit-autofill:hover,
+.control:-webkit-autofill:focus,
+.control:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-input) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .control::placeholder {
-  color: var(--input-placeholder);
+  color: var(--text-disabled);
 }
 
 .control:focus-visible {
-  outline: var(--focus-outline-width) solid var(--brand-color);
-  outline-offset: var(--focus-outline-offset);
+  outline: var(--focus-ring-width) solid var(--border-focus);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .control:disabled {
@@ -60,14 +83,14 @@
 }
 
 .textarea {
-  min-height: var(--height-textarea-min);
+  min-height: var(--control-height-lg);
   resize: vertical;
 }
 
 .hint,
 .error {
-  font-size: var(--font-size-label);
-  line-height: var(--line-height-label);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
 }
 
 .hint {
@@ -75,5 +98,5 @@
 }
 
 .error {
-  color: var(--status-danger);
+  color: var(--state-danger);
 }

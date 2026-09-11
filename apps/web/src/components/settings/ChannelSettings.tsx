@@ -4,6 +4,8 @@ import { assetUrl } from '../../api';
 import { Button, TextArea, TextField } from '../ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
 import type { SettingsModalFields } from './types';
+import styles from '../SettingsModal.module.css';
+import { cn } from '../../utils/cn';
 
 type ChannelSettingsProps = Pick<
   SettingsModalFields,
@@ -39,17 +41,17 @@ export function ChannelSettings({
   if (!channel) return null;
 
   return (
-    <form className="settings-form" onSubmit={updateChannelSettings}>
-      <section className="settings-section">
-        <div className="settings-section-heading">
+    <form className={styles.settingsForm} onSubmit={updateChannelSettings}>
+      <section className={styles.settingsSection}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Overview</strong>
           <span>Basic channel identity and placement.</span>
         </div>
-        <div className="settings-avatar-row">
+        <div className={styles.settingsAvatarRow}>
           <Button
             type="button"
             variant="ghost"
-            className="channel-avatar-button modal-avatar"
+            className={cn('channel-avatar-button', styles.modalAvatar)}
             onClick={() => channelAvatarInputRef.current?.click()}
           >
             {channel.avatarUrl ? (
@@ -67,7 +69,7 @@ export function ChannelSettings({
             Change channel avatar
           </Button>
         </div>
-        <div className="settings-grid">
+        <div className={styles.settingsGrid}>
           <TextField
             label="Channel name"
             name="name"
@@ -86,8 +88,8 @@ export function ChannelSettings({
         <TextArea label="Topic" name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
       </section>
 
-      <section className="settings-section">
-        <div className="settings-section-heading">
+      <section className={styles.settingsSection}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Access</strong>
           <span>Control channel visibility for regular members.</span>
         </div>
@@ -101,17 +103,17 @@ export function ChannelSettings({
           label="Channel type"
           value={channel.type === 'VOICE' ? 'Voice channel' : 'Text channel'}
           readOnly
-          className="readonly-input"
+          className={styles.readonlyInput}
         />
       </section>
 
       {server ? (
-        <section className="settings-section">
-          <div className="settings-section-heading">
+        <section className={styles.settingsSection}>
+          <div className={styles.settingsSectionHeading}>
             <strong>Role overrides</strong>
             <span>Grant specific roles access to private or restricted channels.</span>
           </div>
-          <div className="permission-override-list">
+          <div className={styles.permissionOverrideList}>
             {server.roles.map((role) => {
               const override = channelOverrides.find((item) => item.roleId === role.id);
               const canView = Boolean(override?.allow.includes('VIEW_CHANNEL'));
@@ -119,13 +121,13 @@ export function ChannelSettings({
               const disabled = pendingAction?.startsWith(`channel-override-${role.id}`);
 
               return (
-                <div className="permission-override-row" key={role.id}>
+                <div className={styles.permissionOverrideRow} key={role.id}>
                   <div>
                     <strong style={{ color: role.color || undefined }}>{role.name}</strong>
                     <span>{role.name === '@everyone' ? 'Default role' : 'Role access'}</span>
                   </div>
                   <CheckRow
-                    className="mini-check"
+                    className={styles.miniCheck}
                     label={`Allow ${role.name} to view channel`}
                     checked={canView}
                     disabled={disabled}
@@ -136,7 +138,7 @@ export function ChannelSettings({
                     View
                   </CheckRow>
                   <CheckRow
-                    className="mini-check"
+                    className={styles.miniCheck}
                     label={`Allow ${role.name} to send messages`}
                     checked={canSend}
                     disabled={disabled}
@@ -151,7 +153,7 @@ export function ChannelSettings({
             })}
           </div>
 
-          <div className="settings-section-heading member-override-heading">
+          <div className={cn(styles.settingsSectionHeading, styles.memberOverrideHeading)}>
             <strong>Member overrides</strong>
             <span>
               Allow or deny channel access for one member. Member rules take priority over role
@@ -159,8 +161,8 @@ export function ChannelSettings({
             </span>
           </div>
           {members.length ? (
-            <div className="member-override-panel">
-              <label className="settings-field member-override-picker">
+            <div className={styles.memberOverridePanel}>
+              <label className={cn(styles.settingsField, styles.memberOverridePicker)}>
                 <span>Select member</span>
                 <select
                   value={selectedMember?.id ?? ''}
@@ -189,8 +191,8 @@ export function ChannelSettings({
                     const disabled = Boolean(pendingAction?.startsWith(memberPendingPrefix));
 
                     return (
-                      <div className="member-override-card">
-                        <div className="member-override-summary">
+                      <div className={styles.memberOverrideCard}>
+                        <div className={styles.memberOverrideSummary}>
                           <strong>{memberName}</strong>
                           <span>
                             {override?.allow.length || override?.deny.length
@@ -199,16 +201,16 @@ export function ChannelSettings({
                           </span>
                         </div>
                         <div
-                          className="member-override-grid"
+                          className={styles.memberOverrideGrid}
                           role="group"
                           aria-label={`Member overrides for ${memberName}`}
                         >
-                          <span className="member-override-permission">Permission</span>
-                          <span className="member-override-choice">Allow</span>
-                          <span className="member-override-choice">Deny</span>
-                          <span className="member-override-permission">View channel</span>
+                          <span className={styles.memberOverridePermission}>Permission</span>
+                          <span className={styles.memberOverrideChoice}>Allow</span>
+                          <span className={styles.memberOverrideChoice}>Deny</span>
+                          <span className={styles.memberOverridePermission}>View channel</span>
                           <CheckRow
-                            className="mini-check"
+                            className={styles.miniCheck}
                             label={`Allow ${memberName} to view channel`}
                             checked={viewAllow}
                             disabled={disabled}
@@ -224,7 +226,7 @@ export function ChannelSettings({
                             Allow
                           </CheckRow>
                           <CheckRow
-                            className="mini-check"
+                            className={styles.miniCheck}
                             label={`Deny ${memberName} from viewing channel`}
                             checked={viewDeny}
                             disabled={disabled}
@@ -239,9 +241,9 @@ export function ChannelSettings({
                           >
                             Deny
                           </CheckRow>
-                          <span className="member-override-permission">Send messages</span>
+                          <span className={styles.memberOverridePermission}>Send messages</span>
                           <CheckRow
-                            className="mini-check"
+                            className={styles.miniCheck}
                             label={`Allow ${memberName} to send messages`}
                             checked={sendAllow}
                             disabled={disabled}
@@ -257,7 +259,7 @@ export function ChannelSettings({
                             Allow
                           </CheckRow>
                           <CheckRow
-                            className="mini-check"
+                            className={styles.miniCheck}
                             label={`Deny ${memberName} from sending messages`}
                             checked={sendDeny}
                             disabled={disabled}
@@ -279,13 +281,13 @@ export function ChannelSettings({
                 : null}
             </div>
           ) : (
-            <p className="settings-empty-copy">
+            <p className={styles.settingsEmptyCopy}>
               No server members are available for channel overrides.
             </p>
           )}
         </section>
       ) : null}
-      <footer className="settings-modal-footer">
+      <footer className={styles.settingsModalFooter}>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
           Cancel
         </Button>

@@ -1,0 +1,236 @@
+/*
+ * Design tokens — two tiers.
+ *
+ * Primitive tokens hold raw palette values and are never referenced by a component.
+ * Semantic tokens are the only tier components may consume; they are redefined per theme.
+ *
+ * Canonical documentation: docs/design-rules.md
+ * Contrast is enforced by scripts/ui-static-scan.mjs against the pairings declared at the
+ * bottom of this file.
+ */
+
+/* ===== Primitive: palette ===== */
+:root {
+  --gray-0: #ffffff;
+  --gray-50: #f6f7f9;
+  --gray-100: #f0f1f4;
+  --gray-150: #e3e4e8;
+  --gray-200: #d2d5dc;
+  --gray-300: #b5b9c3;
+  --gray-400: #959daa;
+  --gray-450: #8e95a3;
+  --gray-500: #767d8a;
+  --gray-600: #5b616d;
+  --gray-700: #40454e;
+  --gray-800: #2e323c;
+  --gray-850: #23272f;
+  --gray-900: #191c22;
+  --gray-950: #0d0f13;
+
+  --accent-300: #aeb7ff;
+  --accent-400: #8b96ff;
+  --accent-500: #5a68e0;
+  --accent-600: #4a56cf;
+  --accent-700: #3a44a3;
+
+  --green-400: #3cc47d;
+  --green-600: #1c7f4a;
+  --amber-400: #e2a33c;
+  --amber-600: #9a6200;
+  --red-400: #f2717a;
+  --red-600: #c02b35;
+  --blue-400: #6cb0ff;
+  --blue-600: #1a68c4;
+
+  /* Deterministic avatar tints (helpers.ts accentClass). Each clears 4.5:1 against white. */
+  --avatar-tint-0: #4a56cf;
+  --avatar-tint-1: #0f7a86;
+  --avatar-tint-2: #2f7d3f;
+  --avatar-tint-3: #9a5b00;
+  --avatar-tint-4: #b23a48;
+  --avatar-tint-5: #6d4bb0;
+}
+
+/* ===== Primitive: metrics ===== */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  --font-family-base:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-base: 1.45;
+
+  --z-sidebar: 10;
+  --z-header: 20;
+  --z-dropdown: 100;
+  --z-tooltip: 200;
+  --z-context-menu: 300;
+  --z-popout: 400;
+  --z-modal: 500;
+  --z-notification: 600;
+  --z-overlay: 1000;
+
+  --motion-fast: 100ms ease;
+  --motion-base: 160ms ease;
+  --motion-slow: 240ms ease;
+
+  --control-height-sm: 32px;
+  --control-height-md: 38px;
+  --control-height-lg: 44px;
+  --control-min-size: 32px;
+  --badge-min-size: 16px;
+
+  --width-dialog: 440px;
+  --width-context-menu: 200px;
+  --width-toast: 360px;
+
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+}
+
+/* ===== Semantic: light (default) ===== */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --surface-sunken: var(--gray-150);
+  --surface-base: var(--gray-100);
+  --surface-raised: var(--gray-0);
+  --surface-overlay: var(--gray-0);
+  --surface-input: var(--gray-0);
+  --surface-hover: rgba(12, 14, 17, 0.05);
+  --surface-active: rgba(12, 14, 17, 0.09);
+  --surface-selected: rgba(98, 114, 240, 0.12);
+  --surface-scrim: rgba(12, 14, 17, 0.45);
+
+  --text-primary: var(--gray-900);
+  --text-secondary: var(--gray-700);
+  --text-muted: var(--gray-600);
+  --text-disabled: var(--gray-500);
+  --text-on-accent: var(--gray-0);
+  --text-link: var(--blue-600);
+
+  --border-default: var(--gray-200);
+  --border-strong: var(--gray-450);
+  --border-focus: var(--accent-600);
+
+  --accent: var(--accent-600);
+  --accent-hover: var(--accent-700);
+  --accent-active: var(--accent-700);
+  --accent-subtle: rgba(74, 86, 207, 0.12);
+
+  --state-success: var(--green-600);
+  --state-warning: var(--amber-600);
+  --state-danger: var(--red-600);
+  --state-info: var(--blue-600);
+
+  --shadow-raised: 0 1px 2px rgba(12, 14, 17, 0.08);
+  --shadow-overlay: 0 12px 32px rgba(12, 14, 17, 0.18);
+}
+
+/* ===== Semantic: dark ===== */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --surface-sunken: var(--gray-950);
+  --surface-base: var(--gray-900);
+  --surface-raised: var(--gray-850);
+  --surface-overlay: var(--gray-800);
+  --surface-input: var(--gray-950);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-active: rgba(255, 255, 255, 0.11);
+  --surface-selected: rgba(139, 150, 255, 0.16);
+  --surface-scrim: rgba(6, 7, 9, 0.65);
+
+  --text-primary: var(--gray-50);
+  --text-secondary: var(--gray-300);
+  --text-muted: var(--gray-400);
+  --text-disabled: var(--gray-500);
+  --text-on-accent: var(--gray-0);
+  --text-link: var(--blue-400);
+
+  --border-default: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.34);
+  --border-focus: var(--accent-400);
+
+  --accent: var(--accent-500);
+  --accent-hover: var(--accent-400);
+  --accent-active: var(--accent-600);
+  --accent-subtle: rgba(139, 150, 255, 0.16);
+
+  --state-success: var(--green-400);
+  --state-warning: var(--amber-400);
+  --state-danger: var(--red-400);
+  --state-info: var(--blue-400);
+
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/*
+ * Contrast pairings checked in CI. Each entry is `text-token on surface-token`.
+ * ui-static-scan.mjs parses this block; keep the format stable.
+ *
+ * @contrast-pairs
+ * text-primary on surface-base >= 4.5
+ * text-primary on surface-raised >= 4.5
+ * text-primary on surface-sunken >= 4.5
+ * text-primary on surface-overlay >= 4.5
+ * text-secondary on surface-base >= 4.5
+ * text-secondary on surface-raised >= 4.5
+ * text-secondary on surface-sunken >= 4.5
+ * text-muted on surface-base >= 4.5
+ * text-muted on surface-raised >= 4.5
+ * text-muted on surface-sunken >= 4.5
+ * text-muted on surface-overlay >= 4.5
+ * text-secondary on surface-overlay >= 4.5
+ * text-disabled on surface-overlay >= 3
+ * text-on-accent on accent >= 4.5
+ * text-on-accent on avatar-tint-0 >= 4.5
+ * text-on-accent on avatar-tint-1 >= 4.5
+ * text-on-accent on avatar-tint-2 >= 4.5
+ * text-on-accent on avatar-tint-3 >= 4.5
+ * text-on-accent on avatar-tint-4 >= 4.5
+ * text-on-accent on avatar-tint-5 >= 4.5
+ * text-link on surface-base >= 4.5
+ * text-link on surface-raised >= 4.5
+ * state-danger on surface-base >= 4.5
+ * state-danger on surface-raised >= 4.5
+ * state-success on surface-raised >= 4.5
+ * state-warning on surface-raised >= 4.5
+ * state-info on surface-raised >= 4.5
+ * text-disabled on surface-raised >= 3
+ * border-strong on surface-raised >= 3
+ *
+ * # Region separation: adjacent surfaces must be distinguishable, which is what the
+ * # previous palette failed at. These are surface-to-surface ratios, not text contrast.
+ * surface-raised on surface-base >= 1.12
+ * surface-sunken on surface-base >= 1.12
+ * @end-contrast-pairs
+ */

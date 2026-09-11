@@ -1,146 +1,131 @@
 .chatHeader {
-  position: relative;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: var(--space-3);
   height: 48px;
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: none;
-  background: var(--bg-primary);
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-base);
   z-index: var(--z-header);
-  padding: 0 var(--spacing-3);
 }
 
 .chatTitle {
   min-width: 0;
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
-  flex: 1 1 auto;
-}
-
-.chatTitle strong {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 16px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--header-primary);
-  line-height: var(--line-height-tight);
-}
-
-.chatTitle span {
-  display: block;
-  max-width: min(720px, 48vw);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-muted);
-  font-size: var(--font-size-label);
-  line-height: var(--line-height-tight);
-}
-
-.chatTitle span::before {
-  content: '';
-  display: inline-block;
-  width: 1px;
-  height: 20px;
-  margin: 0 var(--spacing-3) 0 var(--spacing-2);
-  vertical-align: middle;
-  background: var(--border-subtle);
+  gap: var(--space-2);
 }
 
 .channelAvatarButton {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 0;
-  border-radius: var(--radius-full);
-  color: var(--interactive-normal);
-  background: transparent;
+  width: var(--control-min-size);
+  height: var(--control-min-size);
+  min-width: 0;
+  min-height: 0;
+  flex: none;
   padding: 0;
-}
-
-.channelAvatarButton:hover {
-  color: var(--interactive-hover);
-  background: var(--background-modifier-hover);
-}
-
-.channelAvatarButton img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  border-radius: inherit;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  flex-shrink: 0;
-}
-
-.headerSearch {
-  width: 144px;
-  height: 28px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 18px;
-  align-items: center;
-  gap: var(--spacing-1);
-  border: 0;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--spacing-2);
   color: var(--text-muted);
-  background: var(--input-background);
-  font-size: 13px;
-  text-align: left;
 }
 
-.headerSearch.headerSearch {
-  justify-content: stretch;
+.channelIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
-.headerSearch:hover,
-.headerSearch[aria-pressed='true'] {
-  color: var(--interactive-hover);
-  background: var(--background-secondary-alt);
-}
-
-.headerSearch span {
+.channelIdentity strong,
+.channelIdentity span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.channelIdentity strong {
+  /* Shrinks and truncates before it can push into the toolbar on a narrow viewport. */
+  flex: 0 1 auto;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* The topic is supporting detail: it shares the line and truncates first. */
+.channelIdentity span {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 20px;
+  margin-inline: var(--space-1);
+  background: var(--border-default);
+}
+
+/* Sized from the same control token as every other input, so the header reads as one row. */
+.headerSearch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 160px;
+  height: var(--control-height-sm);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-2);
+  color: var(--text-muted);
+  background: var(--surface-input);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+}
+
+.headerSearch:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.notificationIconWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: var(--badge-min-size);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-1);
+  color: var(--text-on-accent);
+  background: var(--state-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--badge-min-size);
+  text-align: center;
 }
 
 .fileInput {
   display: none;
 }
 
-.notificationIconWrap {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-}
+@media (max-width: 900px) {
+  .headerSearch {
+    width: var(--control-height-sm);
+    justify-content: center;
+  }
 
-.notificationBadge {
-  position: absolute;
-  top: -8px;
-  right: -10px;
-  min-width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-full);
-  padding: 0 4px;
-  color: var(--interactive-active);
-  background: var(--status-danger);
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  line-height: 1;
+  .headerSearch span {
+    display: none;
+  }
 }

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Checkbox, Switch } from '../ui';
+import styles from '../SettingsModal.module.css';
+import { cn } from '../../utils/cn';
 
 interface SwitchRowProps {
   title: string;
@@ -21,7 +23,7 @@ export function SwitchRow({
   onCheckedChange,
 }: SwitchRowProps) {
   return (
-    <div className="settings-field switch-row">
+    <div className={cn(styles.settingsField, styles.switchRow)}>
       <span>
         <strong>{title}</strong>
         <small>{description}</small>

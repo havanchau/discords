@@ -1,11 +1,11 @@
 .viewport {
   position: fixed;
-  right: var(--spacing-4);
-  bottom: var(--spacing-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
   z-index: var(--z-notification);
   display: grid;
-  gap: var(--spacing-2);
-  width: min(var(--width-toast), calc(100vw - var(--spacing-8)));
+  gap: var(--space-2);
+  width: min(var(--width-toast), calc(100vw - var(--space-6)));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -16,12 +16,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--background-floating);
-  color: var(--text-normal);
-  padding: var(--spacing-4);
-  box-shadow: var(--elevation-high);
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-overlay);
 }
 
 .viewport > .root:nth-last-child(n + 4) {
@@ -29,15 +29,15 @@
 }
 
 .root[data-variant='error'] {
-  border-left: 3px solid var(--status-danger);
+  border-left: 3px solid var(--state-danger);
 }
 
 .root[data-state='open'] {
-  animation: toastIn var(--motion-toast) ease;
+  animation: toastIn var(--motion-base) ease;
 }
 
 .root[data-state='closed'] {
-  animation: toastOut var(--motion-menu) ease;
+  animation: toastOut var(--motion-fast) ease;
 }
 
 .copy {
@@ -46,22 +46,22 @@
 
 .title {
   margin: 0;
-  color: var(--header-primary);
-  font-size: var(--font-size-ui);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-ui);
+  line-height: var(--line-height-base);
 }
 
 .description {
-  margin: var(--spacing-1) 0 0;
-  color: var(--header-secondary);
-  font-size: var(--font-size-ui);
-  line-height: var(--line-height-ui);
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
 }
 
 .close {
-  width: var(--size-interactive-min);
-  height: var(--size-interactive-min);
+  width: var(--control-min-size);
+  height: var(--control-min-size);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -69,29 +69,29 @@
   border-radius: var(--radius-sm);
   padding: 0;
   background: transparent;
-  color: var(--interactive-normal);
+  color: var(--text-muted);
 }
 
 .close:hover {
-  background: var(--background-modifier-hover);
-  color: var(--interactive-hover);
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .close:focus-visible {
-  outline: var(--focus-outline-width) solid var(--brand-color);
-  outline-offset: var(--focus-outline-offset);
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translateY(var(--spacing-4));
+    transform: translateY(var(--space-4));
   }
 }
 
 @keyframes toastOut {
   to {
     opacity: 0;
-    transform: translateY(var(--spacing-4));
+    transform: translateY(var(--space-4));
   }
 }

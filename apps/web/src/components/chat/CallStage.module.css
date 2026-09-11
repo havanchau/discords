@@ -1,15 +1,15 @@
 .activeCallBanner {
-  grid-row: 2;
+  flex: none;
   min-width: 0;
-  margin: var(--spacing-2) var(--spacing-4) 0;
-  padding: var(--spacing-3);
+  margin: var(--space-2) var(--space-4) 0;
+  padding: var(--space-3);
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--background-secondary);
-  border: 1px solid rgba(35, 165, 90, 0.28);
+  background: var(--surface-raised);
+  border: 1px solid var(--state-success);
   animation: panelRiseIn 0.18s ease-out both;
 }
 
@@ -30,8 +30,8 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-full);
-  color: var(--interactive-active);
-  background: var(--status-online);
+  color: var(--text-primary);
+  background: var(--state-success);
 }
 
 .activeCallCopy {
@@ -49,29 +49,29 @@
 }
 
 .activeCallCopy strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: var(--font-weight-bold);
 }
 
 .activeCallCopy span {
   color: var(--text-muted);
-  font-size: var(--font-size-label);
+  font-size: var(--font-size-sm);
 }
 
 .activeCallJoin {
   height: 36px;
-  padding: 0 var(--spacing-3);
+  padding: 0 var(--space-3);
   white-space: nowrap;
 }
 
 .callStage {
-  grid-row: 2;
+  flex: none;
   min-width: 0;
-  margin: var(--spacing-2) var(--spacing-4) 0;
-  padding: var(--spacing-3);
+  margin: var(--space-2) var(--space-4) 0;
+  padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--background-secondary);
+  background: var(--surface-raised);
   animation: panelRiseIn 0.18s ease-out both;
 }
 
@@ -79,8 +79,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-2);
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .callStageHeader strong,
@@ -91,23 +91,23 @@
 .callStageHeader strong {
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
-  color: var(--header-primary);
+  color: var(--text-primary);
 }
 
 .callStageHeader span {
   color: var(--text-muted);
-  font-size: var(--font-size-label);
+  font-size: var(--font-size-sm);
 }
 
 .callControls {
   display: flex;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .callGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 .callTile {
@@ -117,7 +117,7 @@
   place-items: center;
   overflow: hidden;
   border-radius: var(--radius-md);
-  background: var(--color-bg-rail);
+  background: var(--surface-sunken);
 }
 
 .callTile video {
@@ -143,17 +143,17 @@
 
 .callLabel {
   position: absolute;
-  left: var(--spacing-2);
-  right: var(--spacing-2);
-  bottom: var(--spacing-2);
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-2);
-  padding: var(--spacing-1) var(--spacing-2);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.6);
-  font-size: var(--font-size-label);
+  font-size: var(--font-size-sm);
 }
 
 .callLabel strong,
@@ -162,5 +162,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #fff;
+  color: var(--text-on-accent);
 }

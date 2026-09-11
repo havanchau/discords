@@ -14,6 +14,7 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/voice-webrtc.md`  | Feature spec for voice channel occupancy and WebRTC peer-to-peer signaling.               |
 | `features/media-uploads.md` | Feature spec for attachment uploads, chunked media assembly, and storage drivers.         |
 | `features/ui-overhaul.md`   | Feature spec for UI visual redesign and web codebase de-duplication.                      |
+| `features/ui-identity-redesign.md` | Feature spec for the neutral visual identity and the global-CSS to CSS Modules migration. |
 | `implementation-plan.md`    | Sprint plan, delivery sequence, test strategy, risks, and definition of done.             |
 
 | `markdown-structure.md`     | Markdown ownership, structure rules, and automated documentation validation.              |

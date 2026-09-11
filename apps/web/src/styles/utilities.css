@@ -1,0 +1,76 @@
+/*
+ * Genuinely global helpers: values a component cannot own because they are applied by a helper
+ * function or shared across unrelated surfaces. Everything else belongs in a CSS Module.
+ */
+
+/* Deterministic per-user avatar tint, applied via helpers.ts accentClass(). */
+.accent-0 {
+  --avatar-tint: var(--avatar-tint-0);
+}
+
+.accent-1 {
+  --avatar-tint: var(--avatar-tint-1);
+}
+
+.accent-2 {
+  --avatar-tint: var(--avatar-tint-2);
+}
+
+.accent-3 {
+  --avatar-tint: var(--avatar-tint-3);
+}
+
+.accent-4 {
+  --avatar-tint: var(--avatar-tint-4);
+}
+
+.accent-5 {
+  --avatar-tint: var(--avatar-tint-5);
+}
+
+/* Avatar rendered outside the Avatar primitive by surfaces still on global CSS. */
+.avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  color: var(--text-on-accent);
+  background: var(--avatar-tint, var(--accent));
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.avatar.small {
+  width: 32px;
+  height: 32px;
+  font-size: var(--font-size-sm);
+}
+
+.avatar img,
+.channel-avatar-button img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.empty-note {
+  margin: 0;
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+
+.spin {
+  animation: spin 0.78s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

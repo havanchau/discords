@@ -5,6 +5,8 @@ import { RolesSettings } from './settings/RolesSettings';
 import { ServerSettings } from './settings/ServerSettings';
 import type { SettingsModalProps } from './settings/types';
 import { DialogContent, DialogRoot } from './ui';
+import { cn } from '../utils/cn';
+import styles from './SettingsModal.module.css';
 
 function getSettingsTitle(activeDialog: SettingsModalProps['dialog']['activeDialog']) {
   if (activeDialog === 'profile') return 'Edit profile';
@@ -33,8 +35,8 @@ export function SettingsModal(props: SettingsModalProps) {
       <DialogContent
         title={getSettingsTitle(activeDialog)}
         description="Tune profile, server, channel, role, and notification preferences."
-        className={`settings-modal ${activeDialog === 'roles' ? 'roles-modal' : ''}`}
-        bodyClassName="settings-modal-body"
+        className={cn(styles.settingsModal, activeDialog === 'roles' && styles.rolesModal)}
+        bodyClassName={styles.settingsModalBody}
       >
         {activeDialog === 'profile' ? <ProfileSettings {...settingsProps} /> : null}
         {activeDialog === 'server-settings' ? <ServerSettings {...settingsProps} /> : null}

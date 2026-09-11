@@ -3,6 +3,8 @@ import { accentClass, initials } from '../../helpers';
 import { Avatar, Badge, Button } from '../ui';
 import { CheckRow } from './SettingsRows';
 import type { SettingsModalFields } from './types';
+import styles from '../SettingsModal.module.css';
+import { cn } from '../../utils/cn';
 
 type MemberRolesSettingsProps = Pick<
   SettingsModalFields,
@@ -38,8 +40,8 @@ export function MemberRolesSettings({
   const canRemoveMember = selectedMember.kind !== 'OWNER';
 
   return (
-    <div className="settings-form">
-      <div className="member-role-summary">
+    <div className={styles.settingsForm}>
+      <div className={styles.memberRoleSummary}>
         <Avatar
           src={selectedMember.user.avatarUrl ? assetUrl(selectedMember.user.avatarUrl) : null}
           alt={selectedMember.user.displayName}
@@ -47,39 +49,39 @@ export function MemberRolesSettings({
           size="lg"
           className={accentClass(selectedMember.user.id)}
         />
-        <div className="member-role-summaryText">
+        <div className={styles.memberRoleSummaryText}>
           <strong>{selectedMember.user.displayName}</strong>
           <span>
             {selectedMember.kind === 'OWNER' ? 'Owner' : selectedMember.user.status || 'Member'}
           </span>
-          <div className="member-role-summaryChips">
-            <Badge variant="neutral" className="role-meta-badge">
+          <div className={styles.memberRoleSummaryChips}>
+            <Badge variant="neutral" className={styles.roleMetaBadge}>
               {assignedRoles.length} role{assignedRoles.length === 1 ? '' : 's'} assigned
             </Badge>
             {assignedRoles.length ? (
               assignedRoles.slice(0, 4).map((role) => (
                 <small
                   key={role.id}
-                  className="member-role-chip"
+                  className={styles.memberRoleChip}
                   style={role.color ? { color: role.color } : undefined}
                 >
                   {role.name}
                 </small>
               ))
             ) : (
-              <small className="member-role-chip member-role-chipMuted">No extra roles</small>
+              <small className={cn(styles.memberRoleChip, styles.memberRoleChipMuted)}>No extra roles</small>
             )}
           </div>
         </div>
       </div>
-      <div className="role-list">
+      <div className={styles.roleList}>
         {sortedRoles.map((role) => {
           const isEveryone = role.name === '@everyone';
           const hasRole = Boolean(selectedMember.roles?.some((item) => item.role.id === role.id));
           return (
             <CheckRow
               key={role.id}
-              className="check-row role-assign-row"
+              className={cn(styles.checkRow, styles.roleAssignRow)}
               label={`Assign ${role.name} to ${selectedMember.user.displayName}`}
               checked={hasRole}
               disabled={
@@ -91,8 +93,8 @@ export function MemberRolesSettings({
                 void toggleMemberRole(selectedMember.id, role.id, checked)
               }
             >
-              <div className="role-assign-content">
-                <div className="role-assign-copy">
+              <div className={styles.roleAssignContent}>
+                <div className={styles.roleAssignCopy}>
                   <strong style={{ color: role.color || undefined }}>{role.name}</strong>
                   <small>
                     {isEveryone
@@ -104,7 +106,7 @@ export function MemberRolesSettings({
                 </div>
                 <Badge
                   variant={isEveryone ? 'neutral' : hasRole ? 'success' : 'neutral'}
-                  className="role-assign-state"
+                  className={styles.roleAssignState}
                 >
                   {isEveryone ? 'Default' : hasRole ? 'Assigned' : 'Available'}
                 </Badge>
@@ -113,7 +115,7 @@ export function MemberRolesSettings({
           );
         })}
       </div>
-      <footer className="settings-modal-footer">
+      <footer className={styles.settingsModalFooter}>
         <Button
           type="button"
           variant="ghost"

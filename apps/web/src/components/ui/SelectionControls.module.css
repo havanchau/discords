@@ -2,17 +2,17 @@
 .switch {
   flex-shrink: 0;
   border: 0;
-  color: var(--interactive-active);
+  color: var(--text-primary);
   transition:
-    background-color var(--motion-menu) ease,
-    border-color var(--motion-menu) ease,
-    opacity var(--motion-menu) ease;
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
 }
 
 .checkbox:focus-visible,
 .switch:focus-visible {
-  outline: var(--focus-outline-width) solid var(--brand-color);
-  outline-offset: var(--focus-outline-offset);
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .checkbox:disabled,
@@ -26,14 +26,14 @@
   height: 18px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid var(--interactive-muted);
+  border: 1px solid var(--text-disabled);
   border-radius: var(--radius-sm);
   background: transparent;
 }
 
 .checkbox[data-state='checked'] {
-  border-color: var(--brand-color);
-  background: var(--brand-color);
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .indicator {
@@ -45,12 +45,12 @@
   width: 42px;
   height: 24px;
   padding: 3px;
-  border-radius: var(--radius-round);
-  background: var(--background-accent);
+  border-radius: var(--radius-full);
+  background: var(--accent);
 }
 
 .switch[data-state='checked'] {
-  background: var(--status-online);
+  background: var(--state-success);
 }
 
 .thumb {
@@ -58,7 +58,7 @@
   height: 18px;
   display: block;
   border-radius: var(--radius-full);
-  background: var(--interactive-active);
+  background: var(--text-primary);
   transition: transform 170ms ease;
 }
 

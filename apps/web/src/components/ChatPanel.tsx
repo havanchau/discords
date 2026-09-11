@@ -8,6 +8,8 @@ import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { Button } from './ui';
+import { cn } from '../utils/cn';
+import styles from './ChatPanel.module.css';
 import type {
   ActiveDialog,
   ActivePanel,
@@ -73,7 +75,7 @@ export function ChatPanel({
   }, [lastMessage?.id, messages.isLoading]);
 
   return (
-    <section className="chat-panel">
+    <section className={cn(styles.chatPanel, 'chat-panel')}>
       <ChatHeader
         channel={session.channel}
         notificationUnreadCount={messages.notificationUnreadCount}
@@ -107,7 +109,7 @@ export function ChatPanel({
       />
 
       {alerts.error && (
-        <div className="banner error-banner">
+        <div className={cn(styles.banner, styles.errorBanner)} role="alert">
           {alerts.error}
           <Button variant="ghost" size="sm" onClick={() => alerts.setError(null)}>
             Dismiss
@@ -116,7 +118,7 @@ export function ChatPanel({
       )}
 
       {alerts.notice && (
-        <div className="banner notice-banner">
+        <div className={cn(styles.banner, styles.noticeBanner)} role="status">
           {alerts.notice}
           <Button variant="ghost" size="sm" onClick={() => alerts.setNotice(null)}>
             Dismiss
@@ -150,7 +152,7 @@ export function ChatPanel({
       </MessageList>
 
       {messages.typingUsers.length > 0 && (
-        <div className="typing-indicator" aria-live="polite">
+        <div className={styles.typingIndicator} aria-live="polite">
           {messages.typingUsers.length === 1
             ? `${messages.typingUsers[0].displayName} is typing...`
             : `${messages.typingUsers

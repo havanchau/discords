@@ -1,490 +1,63 @@
-# Discord UI Skill — Mandatory Rules for Codex
+# UI Enforcement Checklist
 
-> **CRITICAL**: Read this agent-facing UI rulebook before writing ANY CSS or JSX. The canonical design-token reference lives in `docs/design-rules.md`; this file mirrors the mandatory constraints for Codex workflows. If wording differs, follow `docs/design-rules.md` for token definitions and follow the stricter safety constraint for visual anti-patterns.
+Agent-facing checklist for UI work in this repository. It mirrors
+[`docs/design-rules.md`](docs/design-rules.md), which is canonical; this file defines no values of
+its own.
 
----
+## Before you write any UI code
 
-## ⚠️ THE #1 RULE: LOOK LIKE DISCORD, NOT A GENERIC APP
+1. Read [`docs/design-rules.md`](docs/design-rules.md).
+2. Open [`apps/web/src/styles/tokens.css`](apps/web/src/styles/tokens.css) and use the semantic
+   token that already exists rather than inventing a value.
+3. Look for an existing primitive in [`apps/web/src/components/ui/`](apps/web/src/components/ui/)
+   before building a control.
+4. Write a checklist and keep it honest: a task is checked only after it is verified.
 
-The UI MUST look like Discord's actual desktop app. NOT a landing page. NOT a dashboard. NOT a neon/cyberpunk theme. NOT glassmorphism. NOT Material UI. The goal is a **warm dark chat application** with **dense information layout**.
+## The rules that get work rejected
 
-If your output has any of these, you have FAILED:
+- **No hardcoded colours.** Every colour resolves to a semantic token.
+- **No primitive tokens in components.** `--gray-*`, `--accent-500`, and friends belong to
+  `tokens.css` only; components use `--surface-*`, `--text-*`, `--border-*`, `--accent`, `--state-*`.
+- **No new file in `apps/web/src/styles/`.** Component styles go in a sibling `.module.css`.
+- **No rebuilt primitives.** Use `Button`, `IconButton`, `TextField`, `Avatar`, `Dialog`,
+  `DropdownMenu`, `ContextMenu`, `Popover`, `Tooltip`, `Toast` from `components/ui/`.
+- **No icon-only control without an accessible label** and a tooltip.
+- **No fixed `grid-template-rows` over conditional children.** Use a flex column; a grid template
+  shifts every row when an optional child is absent.
+- **No blank region.** Loading, empty, and error states are all handled.
+- **No decorative element** that carries no information.
+- **No lowered contrast threshold** to make a colour fit. Fix the colour.
+- **No source file over 1000 lines**; components stay near 250.
 
-- Cyan/neon glows (`#00e5ff`, `#00ff95`, `#ff1fb8`, etc.)
-- Gradient backgrounds on panels
-- Glowing borders or box-shadows with color
-- Cards inside cards
-- Hero sections, marketing blocks, or decorative dashboards
-- Pure black (`#000000`) backgrounds
-- Rounded corners > 16px on the app shell
-- Decorative radial/linear gradients on the body or app shell
+## Both themes, every time
 
----
+`light` and `dark` both ship. A change is not done until the surface has been checked in both, at
+1440px and at 390px, with no horizontal scroll.
 
-## 1. Codex Skill to Use
+## Verification
 
-Use **`ui-polish`** for all visual UI work. This skill audits layout, spacing, color, and interaction states.
-
-When to use it:
-
-- Fixing ugly or generic-looking components
-- Auditing screenshots for Discord accuracy
-- Fixing spacing, overflow, hierarchy, and responsive issues
-- For high-risk visual changes, optionally verify with desktop and mobile screenshots
-
----
-
-## 2. Implementation Checklist Requirement
-
-Before implementing any UI task, create a task checklist.
-
-- Start each not-yet-done item with `- [ ]`.
-- Change an item to `- [x]` only after the exact work is complete and verified.
-- Never check an item that is pending, partially done, blocked, untested, or only visually assumed.
-- Keep the checklist updated as work progresses.
-- Include verification tasks for accessibility, lint/typecheck, build, and screenshots only when relevant.
-
----
-
-## 3. Library-First UI Implementation
-
-UI work MUST be library-first. Raw CSS is forbidden unless it is strictly required for Discord tokens, exact app-shell layout constraints, or targeted responsive fixes.
-
-Use existing or task-approved libraries for:
-
-- Icons.
-- Accessible dialogs, menus, tooltips, tabs, toggles, and popovers.
-- Form controls.
-- Virtualized lists or complex scrolling behavior.
-- Motion primitives when animation is needed.
-- Date/time, markdown, upload, and media UI helpers.
-
-Rules:
-
-- Do not hand-roll complex UI behavior that a proven library already covers.
-- Do not create raw CSS for UI behavior or styling when a component, utility, or existing class pattern can do the job.
-- Custom CSS is allowed only when needed to apply Discord tokens, exact shell dimensions, targeted responsive fixes, or narrowly scoped component polish.
-- Any custom CSS must be minimal, token-based, scoped to the relevant component/surface, and justified by the implementation context.
-- If adding a new library, keep it narrow, maintained, and aligned with the existing React/Vite stack.
-
----
-
-## 4. File Size Limit
-
-No source or documentation file may exceed **1000 lines** after a UI refactor.
-
-Rules:
-
-- If a component, stylesheet, hook, or document would exceed 1000 lines, split it into focused modules before continuing.
-- Existing oversized files must be reduced when a substantial UI refactor touches them.
-- `AppShell.tsx`, `ChatPanel.tsx`, `SettingsModal.tsx`, `WorkspaceSidebar.tsx`, and `styles.css` are known refactor targets and must be split below the limit during the UI redesign.
-
----
-
-## 5. Exact Color Tokens (MANDATORY — DO NOT INVENT COLORS)
-
-Every UI surface MUST use the canonical CSS custom properties from `docs/design-rules.md`. Component CSS should reference variables instead of hardcoded hex values. **Never use neon, cyan, lime, or pink accent colors.**
-
-```css
-:root {
-  /* === Surface layers (warm dark grays, NOT pure black) === */
-  --background-floating: #111214;
-  --background-tertiary: #1e1f22; /* Server rail, deepest panels */
-  --background-secondary-alt: #232428;
-  --background-secondary: #2b2d31; /* Channel sidebar, member sidebar */
-  --background-primary: #313338; /* Main chat area */
-  --background-accent: #4e5058;
-
-  /* === Text === */
-  --text-normal: #dbdee1;
-  --text-muted: #80848e;
-  --text-link: #00a8fc;
-  --header-primary: #f2f3f5;
-  --header-secondary: #b5bac1;
-
-  /* === Interactive states === */
-  --interactive-normal: #b5bac1;
-  --interactive-hover: #dbdee1;
-  --interactive-active: #ffffff;
-  --interactive-muted: #4e5058;
-
-  /* === Brand (Discord Blurple) === */
-  --brand-color: #5865f2;
-  --brand-hover: #4752c4;
-  --brand-active: #3c45a5;
-
-  /* === Status === */
-  --status-online: #23a55a;
-  --status-idle: #f0b232;
-  --status-dnd: #f23f43;
-  --status-offline: #80848e;
-
-  /* === Modifiers (semi-transparent overlays) === */
-  --background-modifier-hover: rgba(79, 84, 92, 0.16);
-  --background-modifier-active: rgba(79, 84, 92, 0.24);
-  --background-modifier-selected: rgba(79, 84, 92, 0.32);
-  --background-message-hover: rgba(2, 2, 2, 0.06);
-
-  /* === Input === */
-  --input-background: #1e1f22;
-  --channeltextarea-background: #383a40;
-  --input-placeholder: #87898c;
-
-  /* === Mentions === */
-  --mention-foreground: #c9cdfb;
-  --mention-background: rgba(88, 101, 242, 0.3);
-
-  /* === Danger === */
-  --status-danger: #ed4245;
-  --button-danger-background: #da373c;
-  --modal-overlay-background: rgba(0, 0, 0, 0.85);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --elevation-high: 0 24px 64px rgba(0, 0, 0, 0.54);
-}
+```bash
+npm run typecheck
+npm run lint
+npm run test --workspace apps/web
+npm run build --workspace apps/web
+npm run ui:scan
+npm run check:file-size
 ```
 
-### Forbidden Colors
-
-These colors MUST NOT appear anywhere in the CSS:
-
-- `#00e5ff` (neon cyan)
-- `#ff1fb8` (neon pink)
-- `#00ff95` or `#3cffb0` (neon green/lime)
-- `#8f78ff` (neon violet)
-- `#ffb000` (neon amber — use `#f0b232` for idle status instead)
-- Any `rgba(0, 229, 255, ...)` variations
-- Any neon glow `box-shadow` values
-
----
-
-## 6. App Shell Layout (EXACT DIMENSIONS)
-
-The app uses a **4-column grid** on desktop. No decorative borders, no border-radius on the shell, no gradient backgrounds.
-
-```
-+-------------+------------------+--------------------------+----------------+
-| Server Rail | Channel Sidebar  | Chat Area                | Member Sidebar |
-| 72px        | 240px            | flex: 1, min 460px       | 240px          |
-+-------------+------------------+--------------------------+----------------+
-```
-
-```css
-.app-shell {
-  height: 100vh;
-  display: grid;
-  grid-template-columns: 72px 240px minmax(0, 1fr) 240px;
-  overflow: hidden;
-  /* NO border, NO border-radius, NO gradient background, NO box-shadow */
-  background: var(--background-tertiary);
-}
-```
-
-### Panel backgrounds (FLAT, NO GRADIENTS)
-
-| Panel           | Background                |
-| --------------- | ------------------------- |
-| Server rail     | `#1e1f22` — flat, solid   |
-| Channel sidebar | `#2b2d31` — flat, solid   |
-| Chat area       | `#313338` — flat, solid   |
-| Member sidebar  | `#2b2d31` — flat, solid   |
-| Headers         | inherit from parent panel |
-
-**NEVER** use `linear-gradient()` or `radial-gradient()` on panel backgrounds.
-
----
-
-## 7. Fixed Dimensions
-
-| Element                | Value  |
-| ---------------------- | ------ |
-| Channel header height  | `48px` |
-| Channel row height     | `34px` |
-| Member row height      | `42px` |
-| Composer min height    | `44px` |
-| Message toolbar height | `32px` |
-| Server icon size       | `48px` |
-
----
-
-## 8. Typography
-
-```css
-font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-```
-
-| Role           | Size | Weight | Usage                             |
-| -------------- | ---- | ------ | --------------------------------- |
-| Modal title    | 24px | 700    | Major headings                    |
-| Panel title    | 20px | 600    | Section headers                   |
-| Channel name   | 16px | 600    | Sidebar items, card title         |
-| Chat message   | 16px | 400    | Message body                      |
-| UI label       | 14px | 400    | Menus, tooltips, buttons          |
-| Timestamp      | 12px | 400    | Timestamps, metadata              |
-| Badge          | 10px | 600    | Notification badges               |
-| Category label | 11px | 600    | UPPERCASE, letter-spacing: 0.02em |
-
----
-
-## 9. Component Patterns
-
-### Server Icons (Squircle → Circle on hover)
-
-```css
-.server-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px; /* squircle at rest */
-  background: var(--background-tertiary);
-  transition:
-    border-radius 150ms ease,
-    background-color 150ms ease;
-}
-.server-icon:hover,
-.server-icon.active {
-  border-radius: 50%; /* circle on hover/active */
-  background: var(--brand-color);
-}
-```
-
-### Channel Rows
-
-```css
-.channel-item {
-  height: 34px;
-  margin: 1px 8px;
-  padding: 0 8px;
-  border-radius: 4px;
-  color: var(--text-muted);
-  gap: 6px;
-}
-.channel-item:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-.channel-item.active {
-  background: var(--background-modifier-selected);
-  color: var(--header-primary);
-}
-```
-
-### Messages
-
-```css
-.message {
-  padding: 2px 16px 2px 72px;
-  min-height: 22px;
-}
-.message.first-in-group {
-  margin-top: 17px;
-}
-.message:hover {
-  background: var(--background-message-hover);
-}
-```
-
-### Buttons
-
-```css
-.btn-primary {
-  background: var(--brand-color);
-  color: var(--interactive-active);
-  border: none;
-  border-radius: 3px;
-  min-height: 38px;
-  padding: 2px 16px;
-  font-size: 14px;
-  font-weight: 500;
-}
-.btn-primary:hover {
-  background: var(--brand-hover);
-}
-.btn-primary:active {
-  background: var(--brand-active);
-}
-
-.btn-danger {
-  background: var(--button-danger-background);
-  color: var(--interactive-active);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  background: var(--input-background);
-  border: none;
-  border-radius: 4px;
-  color: var(--text-normal);
-  min-height: 40px;
-  padding: 10px;
-}
-.chat-input {
-  background: var(--channeltextarea-background);
-  border-radius: 8px;
-  min-height: 44px;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--modal-overlay-background);
-  z-index: var(--z-overlay);
-}
-.modal {
-  background: var(--background-primary);
-  border-radius: 8px;
-  max-width: 560px;
-  box-shadow: var(--elevation-high);
-}
-```
-
----
-
-## 10. Spacing (base-4 scale)
-
-```
-4px | 8px | 12px | 16px | 20px | 24px | 32px | 40px
-```
-
-| Element                | Spacing             |
-| ---------------------- | ------------------- |
-| Channel row padding    | `0 8px`             |
-| Message padding        | `2px 16px 2px 72px` |
-| First message in group | `16px 16px 0 72px`  |
-| Composer margin        | `0 16px 24px`       |
-| Sidebar padding-top    | `8px`               |
-| Modal body padding     | `16px 20px`         |
-
----
-
-## 11. Radius Tokens
-
-| Component         | Radius |
-| ----------------- | ------ |
-| Channel row       | `4px`  |
-| Button            | `3px`  |
-| Input / Composer  | `8px`  |
-| Avatar            | `50%`  |
-| Server icon idle  | `16px` |
-| Server icon hover | `50%`  |
-| Context menu      | `4px`  |
-| Modal             | `8px`  |
-
----
-
-## 12. Motion (SHORT and FUNCTIONAL only)
-
-| Transition              | Duration |
-| ----------------------- | -------- |
-| Hover color/opacity     | `100ms`  |
-| Server icon radius      | `150ms`  |
-| Context menu appear     | `100ms`  |
-| Modal fade+scale        | `200ms`  |
-| Sidebar expand/collapse | `300ms`  |
-
-**NEVER** animate:
-
-- Layout changes during typing/scrolling
-- Large-area background color changes
-- Decorative pulse/glow/shimmer effects
-- Parallax or scroll-linked animations
-
----
-
-## 13. Z-Index Scale (DO NOT INVENT VALUES)
-
-```css
---z-message-toolbar: 1;
---z-sidebar: 10;
---z-header: 20;
---z-dropdown: 100;
---z-tooltip: 200;
---z-context-menu: 300;
---z-popout: 400;
---z-modal: 500;
---z-notification: 600;
---z-overlay: 1000;
-```
-
----
-
-## 14. Interaction States Checklist
-
-Every interactive component MUST have these states:
-
-- [ ] **Default** — muted, not attention-grabbing
-- [ ] **Hover** — subtle background change via `--background-modifier-hover`
-- [ ] **Active/Selected** — stronger background via `--background-modifier-selected`
-- [ ] **Focus-visible** — `2px solid var(--brand-color)` outline
-- [ ] **Disabled** — `opacity: 0.5; cursor: not-allowed`
-- [ ] **Loading** — skeleton or spinner, NOT empty space
-
----
-
-## 15. Anti-Patterns (INSTANT REJECTION)
-
-| ❌ DO NOT                                | ✅ DO INSTEAD                                        |
-| ---------------------------------------- | ---------------------------------------------------- |
-| Pure black `#000000` backgrounds         | Warm dark `#1e1f22`, `#2b2d31`, `#313338`            |
-| Neon/cyan/pink accent colors             | Discord Blurple `#5865f2`                            |
-| Gradient panel backgrounds               | Flat solid colors from the token list                |
-| Glowing box-shadows                      | Subtle `rgba(0,0,0,...)` shadows only                |
-| Borders on every panel edge              | Background layering for visual separation            |
-| Cards nested inside cards                | Flat regions with background difference              |
-| Old blurple `#7289DA`                    | Current blurple `#5865f2`                            |
-| Hero headings in compact panels          | Dense headings matching surface context              |
-| Animation on every state change          | Short transitions for hover, modal, menu, toast only |
-| Body/shell gradients                     | Solid `var(--background-tertiary)` on body           |
-| Decorative `::before`/`::after` overlays | Clean flat surfaces, no CSS art                      |
-| Marketing-style empty states             | Functional empty states with action buttons          |
-| Hand-rolled complex UI behavior          | Use proven React/accessibility/component libraries   |
-| Large raw CSS rewrites                   | Use existing component patterns and minimal CSS      |
-
----
-
-## 16. Responsive Rules
-
-1. **Tablet**: Hide member sidebar first
-2. **Mobile**: Single-column, navigation via explicit controls
-3. **Never** compress chat area below readable message width
-4. **Never** let the composer become unreachable on mobile
-5. **Never** overlap text with icons on small screens
-
----
-
-## 17. Verification Workflow
-
-After ANY UI change:
-
-1. Check that **all 4 panels** use the correct flat background colors
-2. Check that **no neon/gradient/glow** exists anywhere
-3. Check that **Blurple `#5865f2`** is used for primary actions
-4. Check that **text contrast** is readable on all surfaces
-5. Check that **server icons** use squircle→circle hover transition
-6. Check that **channel rows** are 34px with correct padding
-7. Check that **messages** are properly grouped with correct padding
-8. For layout-sensitive changes, verify desktop and mobile widths with the lightest reliable method available; screenshots are optional unless explicitly requested
-9. Run `npm run lint` and `npx tsc --noEmit`
-10. Confirm the implementation checklist is truthful: only completed work is checked
-
----
-
-## 18. File References
-
-- Canonical design rules: `docs/design-rules.md`
-- App shell component: `apps/web/src/AppShell.tsx`
-- CSS tokens and styles: `apps/web/src/styles.css`
-- Channel sidebar: `apps/web/src/components/WorkspaceSidebar.tsx`
-- Chat surface: `apps/web/src/components/ChatPanel.tsx`
-- Member sidebar: `apps/web/src/components/MemberSidebar.tsx`
-- Settings: `apps/web/src/components/SettingsModal.tsx`
-- UI spec summary: `docs/ui-design-spec.md`
-
----
-
-_Last updated: 2026-06-11. Canonical design tokens live in `docs/design-rules.md`; this file is the agent-facing enforcement summary._
+`npm run ui:scan` includes the token contrast check, which fails the run if any declared text/surface
+pairing drops below its WCAG threshold in either theme. Do not edit the thresholds to pass it.
+
+## Where things live
+
+| Concern | Location |
+| --- | --- |
+| Tokens and themes | [`apps/web/src/styles/tokens.css`](apps/web/src/styles/tokens.css) |
+| Reset and focus ring | [`apps/web/src/styles/reset.css`](apps/web/src/styles/reset.css) |
+| Global helpers | [`apps/web/src/styles/utilities.css`](apps/web/src/styles/utilities.css) |
+| Shared primitives | [`apps/web/src/components/ui/`](apps/web/src/components/ui/) |
+| Shell grid | [`apps/web/src/components/app/AppLayout.module.css`](apps/web/src/components/app/AppLayout.module.css) |
+| Theme resolution | [`apps/web/src/hooks/useTheme.ts`](apps/web/src/hooks/useTheme.ts) |
+| Contrast check | [`scripts/check-token-contrast.mjs`](scripts/check-token-contrast.mjs) |
+| Canonical rules | [`docs/design-rules.md`](docs/design-rules.md) |
+| Migration record | [`docs/features/ui-identity-redesign.md`](docs/features/ui-identity-redesign.md) |

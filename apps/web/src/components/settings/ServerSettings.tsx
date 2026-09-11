@@ -1,6 +1,8 @@
 import { Clipboard, Trash2 } from 'lucide-react';
 import { Button, IconButton, TextField } from '../ui';
 import type { SettingsModalFields } from './types';
+import styles from '../SettingsModal.module.css';
+import { cn } from '../../utils/cn';
 
 type ServerSettingsProps = Pick<
   SettingsModalFields,
@@ -27,8 +29,8 @@ export function ServerSettings({
   if (!server) return null;
 
   return (
-    <div className="settings-form">
-      <form className="settings-section" onSubmit={updateServerSettings}>
+    <div className={styles.settingsForm}>
+      <form className={styles.settingsSection} onSubmit={updateServerSettings}>
         <Button type="button" variant="secondary" fullWidth onClick={() => setActiveDialog('roles')}>
           Manage roles, permissions, and member assignments
         </Button>
@@ -46,7 +48,7 @@ export function ServerSettings({
           defaultValue={server.description ?? ''}
           maxLength={200}
         />
-        <footer className="settings-modal-footer">
+        <footer className={styles.settingsModalFooter}>
           <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
             Cancel
           </Button>
@@ -56,22 +58,22 @@ export function ServerSettings({
         </footer>
       </form>
 
-      <section className="settings-section invite-section">
-        <div className="settings-section-heading">
+      <section className={cn(styles.settingsSection, 'invite-section')}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Invite links</strong>
           <span>Create expiring invite codes and revoke active links.</span>
         </div>
-        <form className="invite-create-grid" onSubmit={createInviteFromSettings}>
+        <form className={styles.inviteCreateGrid} onSubmit={createInviteFromSettings}>
           <TextField label="Expires in hours" name="expiresInHours" type="number" min={1} max={168} defaultValue="24" />
           <TextField label="Max uses" name="maxUses" type="number" min={1} max={100} placeholder="100" />
           <Button type="submit" disabled={pendingAction === 'invite-settings-create'}>
             Create invite
           </Button>
         </form>
-        <div className="invite-list">
+        <div className={styles.inviteList}>
           {invites.length ? (
             invites.map((invite) => (
-              <div className="invite-row" key={invite.id}>
+              <div className={styles.inviteRow} key={invite.id}>
                 <div>
                   <strong>{invite.code}</strong>
                   <small>
@@ -105,15 +107,15 @@ export function ServerSettings({
         </div>
       </section>
 
-      <section className="settings-section audit-section">
-        <div className="settings-section-heading">
+      <section className={cn(styles.settingsSection, 'audit-section')}>
+        <div className={styles.settingsSectionHeading}>
           <strong>Audit log</strong>
           <span>Recent moderation and configuration changes.</span>
         </div>
-        <div className="audit-log-list">
+        <div className={styles.auditLogList}>
           {auditLogs.length ? (
             auditLogs.slice(0, 12).map((log) => (
-              <details className="audit-log-row" key={log.id}>
+              <details className={styles.auditLogRow} key={log.id}>
                 <summary>
                   <span>{log.action.replaceAll('_', ' ').toLowerCase()}</span>
                   <small>

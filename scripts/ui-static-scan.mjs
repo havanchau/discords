@@ -40,7 +40,9 @@ const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
   .filter(Boolean)
   .filter((file) => file !== 'scripts/ui-static-scan.mjs')
   .filter((file) => scannedExtensions.has(extensionOf(file)))
-  .filter((file) => !ignoredPathParts.some((part) => file.includes(part)));
+  .filter((file) => !ignoredPathParts.some((part) => file.includes(part)))
+  // `git ls-files` still lists files deleted in the working tree.
+  .filter((file) => fs.existsSync(file));
 
 const findings = [];
 

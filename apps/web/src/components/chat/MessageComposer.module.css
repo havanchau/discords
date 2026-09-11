@@ -1,5 +1,5 @@
 .composer {
-  grid-row: 5;
+  flex: none;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -8,16 +8,16 @@
   grid-template-rows: auto auto auto;
   align-items: center;
   gap: 0;
-  padding: 0 var(--spacing-4) var(--spacing-6);
+  padding: 0 var(--space-4) var(--space-6);
   background: transparent;
 }
 
 .pendingAttachments {
   grid-column: 1 / -1;
   display: flex;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   overflow-x: auto;
-  padding-bottom: var(--spacing-2);
+  padding-bottom: var(--space-2);
   scrollbar-width: none;
 }
 
@@ -31,19 +31,19 @@
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) 24px;
   align-items: center;
-  gap: var(--spacing-2);
-  padding: 0 var(--spacing-3);
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-focus);
   border-bottom: 0;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   color: var(--text-muted);
-  background: var(--channeltextarea-background);
+  background: var(--surface-input);
   font-size: 13px;
   animation: itemIn 0.16s ease-out both;
 }
 
 .composerReply strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-weight: var(--font-weight-medium);
 }
 
@@ -51,14 +51,14 @@
   width: 24px;
   height: 24px;
   background: transparent;
-  color: var(--interactive-normal);
+  color: var(--text-muted);
   border: 0;
   padding: 0;
   cursor: pointer;
 }
 
 .composerReply button:hover {
-  color: var(--interactive-hover);
+  color: var(--text-primary);
 }
 
 .pendingFile {
@@ -69,10 +69,10 @@
   grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
-  padding: 0 var(--spacing-2);
-  color: var(--text-normal);
-  background: var(--background-secondary);
-  border-radius: var(--radius-xs);
+  padding: 0 var(--space-2);
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   border: 0;
   cursor: pointer;
@@ -97,18 +97,18 @@
 .composerInput {
   min-width: 0;
   height: 44px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-inline: 0;
   border-radius: 0;
   padding: 0 0 0 8px;
-  background: var(--input-background);
-  color: var(--text-normal);
+  background: var(--surface-input);
+  color: var(--text-primary);
   font-size: 0.95rem;
   transition: border-color 0.2s ease;
 }
 
 .composerInput:focus {
-  border-color: var(--interactive-muted);
+  border-color: var(--text-disabled);
 }
 
 .composerInput::placeholder {
@@ -118,11 +118,11 @@
 .attachButton {
   height: 44px;
   width: 44px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-right: 0;
   border-radius: 12px 0 0 12px;
-  background: var(--input-background);
-  color: var(--interactive-normal);
+  background: var(--surface-input);
+  color: var(--text-muted);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -130,19 +130,19 @@
 }
 
 .attachButton:hover {
-  color: var(--interactive-hover);
-  background: var(--bg-modifier-hover);
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .voiceRecordButton {
   position: relative;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-inline: 0;
   border-radius: 0;
-  background: var(--input-background);
-  color: var(--interactive-normal);
+  background: var(--surface-input);
+  color: var(--text-muted);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -156,12 +156,12 @@
 }
 
 .voiceRecordButton:hover {
-  color: var(--interactive-hover);
-  background: var(--bg-modifier-hover);
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .voiceRecordButton.recording {
-  color: var(--status-danger);
+  color: var(--state-danger);
 }
 
 .voiceRecordButton.recording::after {
@@ -179,11 +179,11 @@
 .sendButton {
   width: 44px;
   height: 44px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-left: 0;
   border-radius: 0 12px 12px 0;
-  background: var(--input-background);
-  color: var(--interactive-normal);
+  background: var(--surface-input);
+  color: var(--text-muted);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -191,8 +191,8 @@
 }
 
 .sendButton:hover {
-  color: #fff;
-  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  background: var(--accent);
   border-color: transparent;
 }
 
@@ -218,7 +218,7 @@
 @media (max-width: 720px) {
   .composer {
     grid-template-columns: 40px 40px minmax(0, 1fr) 40px;
-    padding: 0 var(--spacing-2) var(--spacing-4);
+    padding: 0 var(--space-2) var(--space-4);
   }
 
   .attachButton,
@@ -243,14 +243,14 @@
   grid-column: 1 / -1;
   max-height: 220px;
   display: grid;
-  gap: var(--spacing-1);
+  gap: var(--space-1);
   overflow-y: auto;
-  margin-bottom: var(--spacing-2);
-  padding: var(--spacing-2);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--radius-md);
-  background: var(--background-floating);
-  box-shadow: var(--elevation-high);
-  border: 1px solid var(--border-subtle);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
+  border: 1px solid var(--border-default);
 }
 
 .commandOption {
@@ -258,11 +258,11 @@
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
-  padding: var(--spacing-2);
-  color: var(--interactive-normal);
+  padding: var(--space-2);
+  color: var(--text-muted);
   background: transparent;
   font: inherit;
   text-align: left;
@@ -271,8 +271,8 @@
 
 .commandOption:hover,
 .commandOption:focus-visible {
-  color: var(--interactive-hover);
-  background: var(--background-modifier-hover);
+  color: var(--text-primary);
+  background: var(--surface-hover);
   outline: 0;
 }
 
@@ -291,7 +291,7 @@
 }
 
 .commandOption strong {
-  color: var(--header-primary);
+  color: var(--text-primary);
   font-size: 13px;
 }
 
@@ -305,11 +305,11 @@
 .commandOption code {
   max-width: 110px;
   padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  background: var(--background-secondary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
 }
 
 .commandError {
-  padding: var(--spacing-1) var(--spacing-2);
-  color: var(--status-danger);
+  padding: var(--space-1) var(--space-2);
+  color: var(--state-danger);
 }
