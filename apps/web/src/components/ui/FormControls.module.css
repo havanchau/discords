@@ -33,6 +33,7 @@
   border-radius: var(--radius-sm);
   background: var(--surface-input);
   padding-inline: var(--space-3);
+  cursor: text;
 }
 
 .controlShell:focus-within {
@@ -73,8 +74,8 @@
 }
 
 .control:focus-visible {
-  outline: var(--focus-ring-width) solid var(--border-focus);
-  outline-offset: var(--focus-ring-offset);
+  border-color: var(--border-focus);
+  outline: none;
 }
 
 .control:disabled {

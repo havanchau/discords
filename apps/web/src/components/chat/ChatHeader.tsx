@@ -164,7 +164,7 @@ export function ChatHeader({
             ))}
             <DropdownMenuItem
               disabled={!channel}
-              onSelect={() => panels.setActiveDialog('channel-settings')}
+              onSelect={() => setTimeout(() => panels.setActiveDialog('channel-settings'), 0)}
             >
               <Edit3 size={16} aria-hidden="true" />
               Channel settings

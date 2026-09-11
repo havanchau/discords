@@ -12,8 +12,9 @@
   justify-content: space-between;
   gap: var(--space-7);
   padding: var(--space-7);
-  background: var(--surface-sunken);
-  border-right: 1px solid var(--border-default);
+  background: var(--accent);
+  border-right: none;
+  color: var(--text-on-accent);
 }
 
 .brandLockup {
@@ -28,8 +29,8 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--surface-raised);
+  color: var(--accent);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
@@ -40,13 +41,13 @@
 }
 
 .brandName strong {
-  color: var(--text-primary);
+  color: var(--text-on-accent);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-tight);
 }
 
 .brandName small {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.7);
   font-size: var(--font-size-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -60,14 +61,14 @@
 
 .pitch h2 {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-on-accent);
   font-size: var(--font-size-2xl);
   line-height: var(--line-height-tight);
 }
 
 .pitch p {
   margin: 0;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.9);
   font-size: var(--font-size-base);
 }
 
@@ -83,13 +84,13 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.9);
   font-size: var(--font-size-base);
 }
 
 .highlights svg {
   flex: none;
-  color: var(--accent);
+  color: var(--surface-raised);
 }
 
 /* Form side */

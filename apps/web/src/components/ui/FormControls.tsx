@@ -61,7 +61,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
 
     return (
       <FieldShell id={inputId} label={label} hint={hint} error={error} className={fieldClassName}>
-        <span className={cn(leadingIcon && styles.controlShell, shellClassName)}>
+        <label htmlFor={inputId} className={cn(leadingIcon && styles.controlShell, shellClassName)}>
           {leadingIcon ? <span className={styles.leadingIcon}>{leadingIcon}</span> : null}
           <input
             ref={ref}
@@ -70,7 +70,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             aria-invalid={ariaInvalid ?? Boolean(error)}
             {...props}
           />
-        </span>
+        </label>
       </FieldShell>
     );
   },

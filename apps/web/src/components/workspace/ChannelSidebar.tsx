@@ -70,7 +70,7 @@ export function ChannelSidebar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="bottom">
-              <DropdownMenuItem onSelect={() => setActiveDialog('server-settings')}>
+              <DropdownMenuItem onSelect={() => setTimeout(() => setActiveDialog('server-settings'), 0)}>
                 <Settings size={16} aria-hidden="true" />
                 Server settings
               </DropdownMenuItem>
