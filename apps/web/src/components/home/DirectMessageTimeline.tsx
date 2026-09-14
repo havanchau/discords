@@ -1,11 +1,11 @@
 import { MessageSquare } from 'lucide-react';
-import type { AuthState, DirectMessage, User } from '../../api';
+import type { AuthState, DirectMessage, PublicUser } from '../../api';
 import { formatDate } from '../../helpers';
 import styles from './HomePanel.module.css';
 
 type DirectMessageTimelineProps = {
   auth: AuthState;
-  dmPartner: User;
+  dmPartner: PublicUser;
   directMessages: DirectMessage[];
 };
 

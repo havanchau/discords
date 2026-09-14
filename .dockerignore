@@ -7,5 +7,6 @@ dist
 artifacts
 apps/api/uploads
 *.log
-.env
-.env.*
+**/.env
+**/.env.*
+!**/.env.example

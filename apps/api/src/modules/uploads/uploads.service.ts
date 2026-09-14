@@ -1,17 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  renameSync,
-  rmSync,
-  unlinkSync,
-  writeFileSync,
-} from 'fs';
+import { copyFile, mkdir, open, readFile, readdir, rename, rm, writeFile } from 'fs/promises';
 import { basename, extname, join } from 'path';
 import { randomUUID } from 'crypto';
 
@@ -54,10 +44,42 @@ function detectAllowedMimeType(file: Pick<Express.Multer.File, 'mimetype' | 'ori
   return null;
 }
 
-export type IncomingUploadFile = Pick<
+export type IncomingUploadChunk = Pick<
   Express.Multer.File,
   'buffer' | 'mimetype' | 'originalname' | 'size'
 >;
+
+/** A single-request upload that multer has already streamed to a temp file. */
+export type IncomingDiskUpload = Pick<
+  Express.Multer.File,
+  'path' | 'mimetype' | 'originalname' | 'size'
+>;
+
+function hasErrorCode(error: unknown, code: string) {
+  return error instanceof Error && 'code' in error && error.code === code;
+}
+
+async function readChunk(chunkPath: string) {
+  try {
+    return await readFile(chunkPath);
+  } catch (error) {
+    if (hasErrorCode(error, 'ENOENT')) {
+      throw new BadRequestException('Upload chunk is missing');
+    }
+    throw error;
+  }
+}
+
+// rename() cannot cross filesystems; UPLOAD_TMP_DIR and STORAGE_LOCAL_DIR may be different mounts.
+async function moveFile(sourcePath: string, targetPath: string) {
+  try {
+    await rename(sourcePath, targetPath);
+  } catch (error) {
+    if (!hasErrorCode(error, 'EXDEV')) throw error;
+    await copyFile(sourcePath, targetPath);
+    await rm(sourcePath, { force: true });
+  }
+}
 
 @Injectable()
 export class UploadsService {
@@ -84,26 +106,27 @@ export class UploadsService {
     return Boolean(detectAllowedMimeType(file));
   }
 
-  async upload(file: IncomingUploadFile) {
-    const extension = this.safeExtension(file);
-    const mimeType = detectAllowedMimeType(file) ?? normalizeMimeType(file.mimetype);
-    const fileName = basename(file.originalname).slice(0, 255);
-    const key = this.buildStorageKey(extension);
-    const url =
-      this.storageDriver === 'cloudinary'
-        ? await this.uploadToCloudinary(file, key, mimeType)
-        : this.uploadToLocal(file, key);
+  private get uploadTmpDir() {
+    return this.config.get<string>('UPLOAD_TMP_DIR', join('uploads', '.chunks'));
+  }
 
-    return {
-      fileName,
-      mimeType,
-      byteSize: file.size,
-      url,
-    };
+  async upload(file: IncomingDiskUpload) {
+    try {
+      if (file.size > this.maxUploadBytes) {
+        throw new BadRequestException('File is too large');
+      }
+      if (!this.isAllowedFile(file)) {
+        throw new BadRequestException('Unsupported file type');
+      }
+      return await this.uploadFromPath(file);
+    } catch (error) {
+      await rm(file.path, { force: true });
+      throw error;
+    }
   }
 
   async uploadChunk(
-    file: IncomingUploadFile,
+    file: IncomingUploadChunk,
     metadata: {
       uploadId?: string;
       chunkIndex: number;
@@ -137,7 +160,6 @@ export class UploadsService {
 
     const normalizedMimeType = normalizeMimeType(metadata.mimeType || file.mimetype);
     const candidate = {
-      buffer: file.buffer,
       mimetype: normalizedMimeType,
       originalname: fileName,
       size: fileSize,
@@ -148,12 +170,11 @@ export class UploadsService {
     }
 
     const uploadDir = this.chunkUploadDir(uploadId);
-    if (!existsSync(uploadDir)) {
-      mkdirSync(uploadDir, { recursive: true });
-    }
-
-    writeFileSync(join(uploadDir, `${chunkIndex}.part`), file.buffer);
-    const receivedChunks = readdirSync(uploadDir).filter((name) => name.endsWith('.part')).length;
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(join(uploadDir, `${chunkIndex}.part`), file.buffer);
+    const receivedChunks = (await readdir(uploadDir)).filter((name) =>
+      name.endsWith('.part'),
+    ).length;
 
     if (receivedChunks < totalChunks) {
       return {
@@ -164,33 +185,26 @@ export class UploadsService {
       };
     }
 
-    const assembledPath = join(uploadDir, fileName);
-    if (existsSync(assembledPath)) {
-      unlinkSync(assembledPath);
-    }
-    for (let index = 0; index < totalChunks; index += 1) {
-      const chunkPath = join(uploadDir, `${index}.part`);
-      if (!existsSync(chunkPath)) {
-        throw new BadRequestException('Upload chunk is missing');
-      }
-      appendFileSync(assembledPath, readFileSync(chunkPath));
-    }
+    try {
+      const assembledPath = join(uploadDir, fileName);
+      await this.assembleChunks(uploadDir, totalChunks, assembledPath);
+      const attachment = await this.uploadFromPath({
+        path: assembledPath,
+        originalname: fileName,
+        mimetype: normalizedMimeType,
+        size: fileSize,
+      });
 
-    const attachment = await this.uploadFromPath({
-      path: assembledPath,
-      originalname: fileName,
-      mimetype: normalizedMimeType,
-      size: fileSize,
-    });
-    rmSync(uploadDir, { recursive: true, force: true });
-
-    return {
-      uploadId,
-      receivedChunks,
-      totalChunks,
-      done: true,
-      attachment,
-    };
+      return {
+        uploadId,
+        receivedChunks,
+        totalChunks,
+        done: true,
+        attachment,
+      };
+    } finally {
+      await rm(uploadDir, { recursive: true, force: true });
+    }
   }
 
   private get storageDriver() {
@@ -204,20 +218,16 @@ export class UploadsService {
     return `${prefix}/${randomUUID()}${extension}`;
   }
 
-  private uploadToLocal(file: IncomingUploadFile, key: string) {
-    const localDir = this.config.get<string>('STORAGE_LOCAL_DIR', 'uploads');
-    const fileName = key.split('/').pop();
-
-    if (!fileName) {
-      throw new InternalServerErrorException('Cannot create upload file name');
+  // One chunk buffer in memory at a time, written with async I/O so the event loop stays free.
+  private async assembleChunks(uploadDir: string, totalChunks: number, assembledPath: string) {
+    const output = await open(assembledPath, 'w');
+    try {
+      for (let index = 0; index < totalChunks; index += 1) {
+        await output.write(await readChunk(join(uploadDir, `${index}.part`)));
+      }
+    } finally {
+      await output.close();
     }
-
-    if (!existsSync(localDir)) {
-      mkdirSync(localDir, { recursive: true });
-    }
-
-    writeFileSync(join(localDir, fileName), file.buffer);
-    return `/uploads/${fileName}`;
   }
 
   private async uploadFromPath(file: {
@@ -233,7 +243,7 @@ export class UploadsService {
     const url =
       this.storageDriver === 'cloudinary'
         ? await this.uploadPathToCloudinary(file.path, key, mimeType)
-        : this.uploadPathToLocal(file.path, key);
+        : await this.uploadPathToLocal(file.path, key);
 
     return {
       fileName,
@@ -243,7 +253,7 @@ export class UploadsService {
     };
   }
 
-  private uploadPathToLocal(sourcePath: string, key: string) {
+  private async uploadPathToLocal(sourcePath: string, key: string) {
     const localDir = this.config.get<string>('STORAGE_LOCAL_DIR', 'uploads');
     const fileName = key.split('/').pop();
 
@@ -251,45 +261,9 @@ export class UploadsService {
       throw new InternalServerErrorException('Cannot create upload file name');
     }
 
-    if (!existsSync(localDir)) {
-      mkdirSync(localDir, { recursive: true });
-    }
-
-    const targetPath = join(localDir, fileName);
-    renameSync(sourcePath, targetPath);
+    await mkdir(localDir, { recursive: true });
+    await moveFile(sourcePath, join(localDir, fileName));
     return `/uploads/${fileName}`;
-  }
-
-  private async uploadToCloudinary(file: IncomingUploadFile, key: string, mimeType: string) {
-    const resourceType = this.cloudinaryResourceType(mimeType);
-    const publicId = resourceType === 'raw' ? key : key.replace(/\.[^.]+$/, '');
-
-    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          public_id: publicId,
-          resource_type: resourceType,
-          overwrite: false,
-          use_filename: false,
-          unique_filename: false,
-        },
-        (error, response) => {
-          if (error || !response) {
-            reject(error ?? new Error('Cloudinary upload failed'));
-            return;
-          }
-          resolve(response);
-        },
-      );
-
-      stream.end(file.buffer);
-    }).catch((error) => {
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Cloudinary upload failed',
-      );
-    });
-
-    return result.secure_url;
   }
 
   private async uploadPathToCloudinary(path: string, key: string, mimeType: string) {
@@ -321,13 +295,12 @@ export class UploadsService {
         );
       });
 
-    unlinkSync(path);
+    await rm(path, { force: true });
     return result.secure_url;
   }
 
   private chunkUploadDir(uploadId: string) {
-    const tmpDir = this.config.get<string>('UPLOAD_TMP_DIR', join('uploads', '.chunks'));
-    return join(tmpDir, uploadId);
+    return join(this.uploadTmpDir, uploadId);
   }
 
   private safeUploadId(uploadId: string) {

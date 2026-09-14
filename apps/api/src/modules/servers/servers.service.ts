@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { slugifyChannelName } from '../../common/slugify';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { countChannelUnread } from '../messages/unread-counts';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
@@ -85,18 +86,18 @@ export class ServersService {
       },
       orderBy: { updatedAt: 'desc' },
     });
-    const visibleServers = [];
-    for (const server of servers) {
-      const channels = [];
-      for (const channel of server.channels) {
-        if (
-          await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel)
-        ) {
-          channels.push(channel);
-        }
-      }
-      visibleServers.push({ ...server, channels });
-    }
+    const viewableChannelIds = new Set(
+      (
+        await this.permissions.filterViewableChannels(
+          userId,
+          servers.flatMap((server) => server.channels),
+        )
+      ).map((channel) => channel.id),
+    );
+    const visibleServers = servers.map((server) => ({
+      ...server,
+      channels: server.channels.filter((channel) => viewableChannelIds.has(channel.id)),
+    }));
     return { servers: visibleServers };
   }
 
@@ -107,9 +108,6 @@ export class ServersService {
       include: {
         channels: {
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-          include: {
-            readStates: { where: { userId }, take: 1 },
-          },
         },
         members: {
           include: {
@@ -129,25 +127,16 @@ export class ServersService {
         roles: { orderBy: { position: 'asc' } },
       },
     });
-    const channels = [];
-    for (const channel of server.channels) {
-      if (
-        !(await this.permissions.hasChannelPermission(userId, channel.id, Permission.ViewChannel))
-      ) {
-        continue;
-      }
-      const readState = channel.readStates[0];
-      const unreadCount = await this.prisma.message.count({
-        where: {
-          channelId: channel.id,
-          deletedAt: null,
-          authorId: { not: userId },
-          ...(readState ? { createdAt: { gt: readState.lastReadAt } } : {}),
-        },
-      });
-      const { readStates: _readStates, ...rest } = channel;
-      channels.push({ ...rest, unreadCount });
-    }
+    const viewableChannels = await this.permissions.filterViewableChannels(userId, server.channels);
+    const unreadCounts = await countChannelUnread(
+      this.prisma,
+      userId,
+      viewableChannels.map((channel) => channel.id),
+    );
+    const channels = viewableChannels.map((channel) => ({
+      ...channel,
+      unreadCount: unreadCounts[channel.id] ?? 0,
+    }));
     return { server: { ...server, channels } };
   }
 

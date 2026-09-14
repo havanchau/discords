@@ -23,6 +23,12 @@
   padding: 0;
 }
 
+.panelLoading {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
 .settingsModal.rolesModal {
   width: min(760px, 100%);
 }

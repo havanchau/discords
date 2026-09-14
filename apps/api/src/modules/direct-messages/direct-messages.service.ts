@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { countDirectUnread } from '../messages/unread-counts';
 
 @Injectable()
 export class DirectMessagesService {
@@ -19,12 +20,15 @@ export class DirectMessagesService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const conversationsWithUnread = await Promise.all(
-      conversations.map(async (conversation) => ({
-        ...conversation,
-        unreadCount: await this.countUnreadMessages(userId, conversation.id),
-      })),
+    const unreadCounts = await countDirectUnread(
+      this.prisma,
+      userId,
+      conversations.map((conversation) => conversation.id),
     );
+    const conversationsWithUnread = conversations.map((conversation) => ({
+      ...conversation,
+      unreadCount: unreadCounts[conversation.id] ?? 0,
+    }));
 
     return { conversations: conversationsWithUnread };
   }
@@ -201,7 +205,6 @@ export class DirectMessagesService {
           user: {
             select: {
               id: true,
-              email: true,
               username: true,
               displayName: true,
               avatarUrl: true,

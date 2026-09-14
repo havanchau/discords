@@ -18,6 +18,7 @@ import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
 import { ReactionDto } from '../messages/dto/reaction.dto';
 import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
 import { RealtimePublisher } from './realtime-publisher.service';
+import { countChannelUnread } from '../messages/unread-counts';
 
 interface SocketUser {
   id: string;
@@ -532,27 +533,29 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     serverId: string;
     content: string;
   }) {
-    const members = await this.prisma.serverMember.findMany({
-      where: { serverId: message.serverId, userId: { not: message.authorId } },
-      include: { user: { select: { username: true } } },
-    });
-
-    await Promise.all(
-      members.map(async (member) => {
-        const canView = await this.permissions.hasChannelPermission(
-          member.userId,
-          message.channelId,
-          Permission.ViewChannel,
-        );
-        if (!canView) return;
-
-        this.server.to(this.userRoom(member.userId)).emit('unread:updated', {
-          channelId: message.channelId,
-          count: 1,
-          mentions: messageMentionsUsername(message.content, member.user.username) ? 1 : 0,
-        });
+    const [channel, members] = await Promise.all([
+      this.prisma.channel.findUnique({
+        where: { id: message.channelId },
+        select: { id: true, isPrivate: true },
       }),
-    );
+      this.prisma.serverMember.findMany({
+        where: { serverId: message.serverId, userId: { not: message.authorId } },
+        include: {
+          user: { select: { username: true } },
+          roles: { include: { role: true } },
+        },
+      }),
+    ]);
+    if (!channel) return;
+
+    const viewers = await this.permissions.filterMembersWhoCanView(channel, members);
+    for (const member of viewers) {
+      this.server.to(this.userRoom(member.userId)).emit('unread:updated', {
+        channelId: message.channelId,
+        count: 1,
+        mentions: messageMentionsUsername(message.content, member.user.username) ? 1 : 0,
+      });
+    }
   }
 
   private async countUnreadByChannel(userId: string) {
@@ -565,33 +568,15 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
 
     const channels = await this.prisma.channel.findMany({
       where: { serverId: { in: serverIds }, type: 'TEXT' },
-      include: { readStates: { where: { userId }, take: 1 } },
+      select: { id: true, serverId: true, isPrivate: true },
     });
-    const counts: Record<string, number> = {};
+    const viewableChannels = await this.permissions.filterViewableChannels(userId, channels);
 
-    await Promise.all(
-      channels.map(async (channel) => {
-        const canView = await this.permissions.hasChannelPermission(
-          userId,
-          channel.id,
-          Permission.ViewChannel,
-        );
-        if (!canView) return;
-
-        const readState = channel.readStates[0];
-        const count = await this.prisma.message.count({
-          where: {
-            channelId: channel.id,
-            deletedAt: null,
-            authorId: { not: userId },
-            ...(readState ? { createdAt: { gt: readState.lastReadAt } } : {}),
-          },
-        });
-        if (count > 0) counts[channel.id] = count;
-      }),
+    return countChannelUnread(
+      this.prisma,
+      userId,
+      viewableChannels.map((channel) => channel.id),
     );
-
-    return counts;
   }
 
   private assertSocketRateLimit(client: Socket, event: string, limit: number, windowMs: number) {

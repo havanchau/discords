@@ -24,9 +24,12 @@ import { ActiveCallSummary } from './helpers';
 import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import { executeSlashCommand } from './utils/executeSlashCommand';
-import type { ActiveDialog, ActivePanel } from './components/chat/types';
+import type { ActiveDialog, ActivePanel, ChatPanelMessageActions } from './components/chat/types';
 import { AuthGate } from './components/app/AuthGate';
 import { AuthenticatedWorkspace } from './components/app/AuthenticatedWorkspace';
+
+// Shared empty value so channels without pins pass the same array to memoized rows each render.
+const NO_PINNED_MESSAGE_IDS: string[] = [];
 
 export function AppShell() {
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
@@ -471,66 +474,116 @@ export function AppShell() {
     setReplyingToMessage(null);
   }
 
-  async function saveMessageEdit(messageId: string) {
-    if (!auth || !editingDraft.trim()) return;
-    const editingMessage = messages.find((message) => message.id === messageId);
-    const channelKey = editingMessage ? channelKeysRef.current[editingMessage.channelId] : null;
-    const content = channelKey
-      ? await encryptChannelMessage(channelKey, editingDraft.trim())
-      : editingDraft.trim();
-    const result = await apiRequest<{ message: Message }>(
-      `/messages/${messageId}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ content }),
-      },
-      auth.accessToken,
-    );
-    const displayMessage = await decryptMessageForDisplay(result.message);
-    setMessages((current) =>
-      current.map((message) => (message.id === messageId ? displayMessage : message)),
-    );
-    setEditingMessageId(null);
-    setEditingDraft('');
-  }
+  // Read through a ref so saveMessageEdit keeps its identity when new messages arrive.
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
-  async function deleteMessage(messageId: string) {
-    if (!auth) return;
-    await apiRequest<{ message: Message }>(
-      `/messages/${messageId}`,
-      { method: 'DELETE' },
-      auth.accessToken,
-    );
-    setMessages((current) =>
-      current.map((message) =>
-        message.id === messageId
-          ? { ...message, content: '', deletedAt: new Date().toISOString() }
-          : message,
-      ),
-    );
-  }
+  const saveMessageEdit = useCallback(
+    async (messageId: string) => {
+      if (!auth || !editingDraft.trim()) return;
+      const editingMessage = messagesRef.current.find((message) => message.id === messageId);
+      const channelKey = editingMessage ? channelKeysRef.current[editingMessage.channelId] : null;
+      const content = channelKey
+        ? await encryptChannelMessage(channelKey, editingDraft.trim())
+        : editingDraft.trim();
+      const result = await apiRequest<{ message: Message }>(
+        `/messages/${messageId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ content }),
+        },
+        auth.accessToken,
+      );
+      const displayMessage = await decryptMessageForDisplay(result.message);
+      setMessages((current) =>
+        current.map((message) => (message.id === messageId ? displayMessage : message)),
+      );
+      setEditingMessageId(null);
+      setEditingDraft('');
+    },
+    [
+      auth,
+      editingDraft,
+      channelKeysRef,
+      decryptMessageForDisplay,
+      setMessages,
+      setEditingMessageId,
+      setEditingDraft,
+    ],
+  );
 
-  async function toggleReaction(message: Message, emoji: string) {
-    if (!auth) return;
-    if (socket?.connected && channel) {
-      socket.emit('reaction:toggle', { channelId: channel.id, messageId: message.id, emoji });
-      return;
-    }
-    const result = await apiRequest<{ message: Message }>(
-      `/messages/${message.id}/reactions`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ emoji }),
-      },
-      auth.accessToken,
-    );
-    const displayMessage = await decryptMessageForDisplay(result.message);
-    setMessages((current) =>
-      current.map((currentMessage) =>
-        currentMessage.id === message.id ? displayMessage : currentMessage,
-      ),
-    );
-  }
+  const deleteMessage = useCallback(
+    async (messageId: string) => {
+      if (!auth) return;
+      await apiRequest<{ message: Message }>(
+        `/messages/${messageId}`,
+        { method: 'DELETE' },
+        auth.accessToken,
+      );
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? { ...message, content: '', deletedAt: new Date().toISOString() }
+            : message,
+        ),
+      );
+    },
+    [auth, setMessages],
+  );
+
+  const toggleReaction = useCallback(
+    async (message: Message, emoji: string) => {
+      if (!auth) return;
+      if (socket?.connected && channel) {
+        socket.emit('reaction:toggle', { channelId: channel.id, messageId: message.id, emoji });
+        return;
+      }
+      const result = await apiRequest<{ message: Message }>(
+        `/messages/${message.id}/reactions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ emoji }),
+        },
+        auth.accessToken,
+      );
+      const displayMessage = await decryptMessageForDisplay(result.message);
+      setMessages((current) =>
+        current.map((currentMessage) =>
+          currentMessage.id === message.id ? displayMessage : currentMessage,
+        ),
+      );
+    },
+    [auth, socket, channel, decryptMessageForDisplay, setMessages],
+  );
+
+  const messageActions = useMemo<ChatPanelMessageActions>(
+    () => ({
+      editingMessageId,
+      editingDraft,
+      setReplyingToMessage,
+      openThread: threadPanel.openThread,
+      setEditingMessageId,
+      setEditingDraft,
+      saveEdit: saveMessageEdit,
+      delete: deleteMessage,
+      toggleReaction,
+      togglePinned: togglePinnedMessage,
+    }),
+    [
+      editingMessageId,
+      editingDraft,
+      setReplyingToMessage,
+      threadPanel.openThread,
+      setEditingMessageId,
+      setEditingDraft,
+      saveMessageEdit,
+      deleteMessage,
+      toggleReaction,
+      togglePinnedMessage,
+    ],
+  );
 
   function logout() {
     endCall();
@@ -630,7 +683,9 @@ export function AppShell() {
             typingUsers,
             pinned: pinnedMessages,
             mediaSource: messages,
-            pinnedIds: channel ? (pinnedMessageIds[channel.id] ?? []) : [],
+            pinnedIds: channel
+              ? (pinnedMessageIds[channel.id] ?? NO_PINNED_MESSAGE_IDS)
+              : NO_PINNED_MESSAGE_IDS,
             notifications,
             notificationUnreadCount,
             isLoadingNotifications,
@@ -669,18 +724,7 @@ export function AppShell() {
             toggleCamera,
             end: endCall,
           },
-          messageActions: {
-            editingMessageId,
-            editingDraft,
-            setReplyingToMessage,
-            openThread: threadPanel.openThread,
-            setEditingMessageId,
-            setEditingDraft,
-            saveEdit: saveMessageEdit,
-            delete: deleteMessage,
-            toggleReaction: (msg, emoji) => toggleReaction(msg, emoji),
-            togglePinned: togglePinnedMessage,
-          },
+          messageActions,
           composer: {
             replyingToMessage,
             selectedFiles,

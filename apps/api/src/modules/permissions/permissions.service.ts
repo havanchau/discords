@@ -1,23 +1,15 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { Channel, ServerMember } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  evaluateChannelPermission,
+  Permission,
+  PermissionChannel,
+  PermissionMember,
+  PermissionValue,
+} from './channel-permission';
 
-export const Permission = {
-  ViewChannel: 'VIEW_CHANNEL',
-  SendMessages: 'SEND_MESSAGES',
-  ManageMessages: 'MANAGE_MESSAGES',
-  ManageChannels: 'MANAGE_CHANNELS',
-  ManageServer: 'MANAGE_SERVER',
-  ManageRoles: 'MANAGE_ROLES',
-  KickMembers: 'KICK_MEMBERS',
-  BanMembers: 'BAN_MEMBERS',
-  CreateInvite: 'CREATE_INVITE',
-  ConnectVoice: 'CONNECT_VOICE',
-  SpeakVoice: 'SPEAK_VOICE',
-  UploadFiles: 'UPLOAD_FILES'
-} as const;
-
-export type PermissionValue = (typeof Permission)[keyof typeof Permission];
+export { Permission };
+export type { PermissionValue };
 
 @Injectable()
 export class PermissionsService {
@@ -72,7 +64,10 @@ export class PermissionsService {
   }
 
   async hasChannelPermission(userId: string, channelId: string, permission: PermissionValue) {
-    const channel = await this.prisma.channel.findUnique({ where: { id: channelId } });
+    const channel = await this.prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { id: true, serverId: true, isPrivate: true },
+    });
     if (!channel) {
       return false;
     }
@@ -81,59 +76,65 @@ export class PermissionsService {
       where: { userId_serverId: { userId, serverId: channel.serverId } },
       include: { roles: { include: { role: true } } },
     });
-
     if (!member) {
       return false;
     }
 
-    if (member.kind === 'OWNER') {
-      return true;
-    }
-
-    if (permission === Permission.ViewChannel && channel.isPrivate) {
-      const canManageChannels = await this.hasServerPermission(
-        userId,
-        channel.serverId,
-        Permission.ManageChannels,
-      );
-      if (canManageChannels) {
-        return true;
-      }
-      return this.applyChannelOverrides(channel, member, permission, false);
-    }
-
-    const baseAllowed = member.roles.some(({ role }) => role.permissions.includes(permission));
-    return this.applyChannelOverrides(channel, member, permission, baseAllowed);
+    const overrides = await this.loadOverrides([channel.id]);
+    return evaluateChannelPermission({ member, channel, overrides, permission });
   }
 
-  private async applyChannelOverrides(
-    channel: Channel,
-    member: ServerMemberWithRoles,
-    permission: PermissionValue,
-    baseAllowed: boolean,
+  /** Channels (across any servers) the user can view, evaluated with two queries in total. */
+  async filterViewableChannels<T extends PermissionChannel & { serverId: string }>(
+    userId: string,
+    channels: T[],
+  ): Promise<T[]> {
+    if (!channels.length) return [];
+
+    const serverIds = [...new Set(channels.map((channel) => channel.serverId))];
+    const [members, overrides] = await Promise.all([
+      this.prisma.serverMember.findMany({
+        where: { userId, serverId: { in: serverIds } },
+        include: { roles: { include: { role: true } } },
+      }),
+      this.loadOverrides(channels.map((channel) => channel.id)),
+    ]);
+    const memberByServer = new Map(members.map((member) => [member.serverId, member]));
+
+    return channels.filter((channel) =>
+      evaluateChannelPermission({
+        member: memberByServer.get(channel.serverId),
+        channel,
+        overrides,
+        permission: Permission.ViewChannel,
+      }),
+    );
+  }
+
+  /** Members (already loaded with roles) who can view one channel, with a single overrides query. */
+  async filterMembersWhoCanView<T extends PermissionMember>(
+    channel: PermissionChannel,
+    members: T[],
   ) {
-    const roleIds = member.roles.map(({ roleId }) => roleId);
-    const overrides = await this.prisma.channelPermissionOverride.findMany({
-      where: {
-        channelId: channel.id,
-        OR: [{ roleId: { in: roleIds } }, { memberId: member.id }],
-      },
+    if (!members.length) return [];
+
+    const overrides = await this.loadOverrides([channel.id]);
+    return members.filter((member) =>
+      evaluateChannelPermission({
+        member,
+        channel,
+        overrides,
+        permission: Permission.ViewChannel,
+      }),
+    );
+  }
+
+  // Ordered so conflicting role overrides resolve the same way on every path.
+  private loadOverrides(channelIds: string[]) {
+    return this.prisma.channelPermissionOverride.findMany({
+      where: { channelId: { in: channelIds } },
+      select: { channelId: true, roleId: true, memberId: true, allow: true, deny: true },
+      orderBy: { createdAt: 'asc' },
     });
-
-    let allowed = baseAllowed;
-    for (const override of overrides.filter((item) => item.roleId)) {
-      if (override.deny.includes(permission)) allowed = false;
-      if (override.allow.includes(permission)) allowed = true;
-    }
-
-    const memberOverride = overrides.find((item) => item.memberId === member.id);
-    if (memberOverride?.deny.includes(permission)) allowed = false;
-    if (memberOverride?.allow.includes(permission)) allowed = true;
-
-    return allowed;
   }
 }
-
-type ServerMemberWithRoles = ServerMember & {
-  roles: Array<{ roleId: string; role: { permissions: string[] } }>;
-};

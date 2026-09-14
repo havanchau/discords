@@ -68,14 +68,14 @@ export function useChannelEncryption({
     );
   }
 
-  async function decryptMessagesForDisplay(nextMessages: Message[]) {
-    return Promise.all(nextMessages.map((message) => decryptMessageForDisplay(message)));
-  }
-
-  async function decryptMessageForDisplay(message: Message): Promise<Message> {
+  // Stable identity (reads keys through the ref) so memoized message actions and rows do not
+  // re-create on every render.
+  const decryptMessageForDisplay = useCallback(async function decrypt(
+    message: Message,
+  ): Promise<Message> {
     const encryptedContent = message.encryptedContent ?? message.content;
     const replyToMessage = message.replyToMessage
-      ? await decryptMessageForDisplay(message.replyToMessage)
+      ? await decrypt(message.replyToMessage)
       : message.replyToMessage;
 
     if (!isEncryptedMessage(encryptedContent)) {
@@ -113,7 +113,13 @@ export function useChannelEncryption({
         replyToMessage,
       };
     }
-  }
+  }, []);
+
+  const decryptMessagesForDisplay = useCallback(
+    (nextMessages: Message[]) =>
+      Promise.all(nextMessages.map((message) => decryptMessageForDisplay(message))),
+    [decryptMessageForDisplay],
+  );
 
   return {
     channelKeys,

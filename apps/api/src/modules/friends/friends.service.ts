@@ -203,7 +203,6 @@ export class FriendsService {
   private get userSelect() {
     return {
       id: true,
-      email: true,
       username: true,
       displayName: true,
       avatarUrl: true,

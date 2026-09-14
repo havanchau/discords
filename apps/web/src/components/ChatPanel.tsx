@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChatHeader } from './chat/ChatHeader';
 import { UtilityPanel } from './chat/UtilityPanel';
 import { CallStage } from './chat/CallStage';
-import { MessageList } from './chat/MessageList';
+import { MessageList, type MessageListHandle } from './chat/MessageList';
 import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
@@ -53,15 +53,10 @@ export function ChatPanel({
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
+  const messageListRef = useRef<MessageListHandle>(null);
+
   const jumpToMessage = useCallback((messageId: string) => {
-    const target = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
-    if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    target.focus({ preventScroll: true });
-    target.dataset.jumpHighlight = 'true';
-    window.setTimeout(() => {
-      delete target.dataset.jumpHighlight;
-    }, 1400);
+    messageListRef.current?.scrollToMessage(messageId);
   }, []);
 
   // Announce incoming messages to screen readers
@@ -129,6 +124,7 @@ export function ChatPanel({
       <CallStage session={session} call={call} />
 
       <MessageList
+        ref={messageListRef}
         channel={session.channel}
         messages={messages.all}
         visibleMessages={messages.visible}
@@ -137,19 +133,18 @@ export function ChatPanel({
         hasMoreMessages={messages.hasMore}
         searchQuery={messages.searchQuery}
         loadMoreMessages={messages.loadMore}
-      >
-        {messages.visible.map((message, index) => (
+        renderMessage={(message, index) => (
           <MessageRow
-            key={message.id}
             message={message}
             previousMessage={messages.visible[index - 1]}
             auth={session.auth}
             pinnedMessageIds={messages.pinnedIds}
             actions={messageActions}
             onPreviewAttachment={setPreviewAttachment}
+            onJumpToMessage={jumpToMessage}
           />
-        ))}
-      </MessageList>
+        )}
+      />
 
       {messages.typingUsers.length > 0 && (
         <div className={styles.typingIndicator} aria-live="polite">

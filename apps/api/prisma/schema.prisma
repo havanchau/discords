@@ -376,6 +376,7 @@ model FriendRequest {
   receiver    User         @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, receiverId])
+  @@index([receiverId])
 }
 
 model DirectConversation {

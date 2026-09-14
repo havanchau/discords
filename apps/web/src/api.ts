@@ -32,6 +32,9 @@ export interface User {
   emailVerifiedAt?: string | null;
 }
 
+/** Another user's profile as returned by friends and DM endpoints; email is private to its owner. */
+export type PublicUser = Omit<User, 'email' | 'emailVerifiedAt'>;
+
 export interface ServerSummary {
   id: string;
   name: string;
@@ -159,7 +162,7 @@ export interface MessageReaction {
 
 export interface FriendEntry {
   id: string;
-  user: User;
+  user: PublicUser;
   status: 'ACCEPTED';
 }
 
@@ -168,8 +171,8 @@ export interface FriendRequestEntry {
   requesterId: string;
   receiverId: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'BLOCKED';
-  requester?: User;
-  receiver?: User;
+  requester?: PublicUser;
+  receiver?: PublicUser;
 }
 
 export interface FriendsSummary {
@@ -181,7 +184,7 @@ export interface FriendsSummary {
 
 export interface DirectConversation {
   id: string;
-  members: Array<{ user: User }>;
+  members: Array<{ user: PublicUser }>;
   messages: DirectMessage[];
   updatedAt?: string;
   unreadCount?: number;

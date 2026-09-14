@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import {
   Edit3,
   FileArchive,
@@ -75,9 +75,11 @@ interface PreviewAttachment {
 function MessageContent({
   message,
   onOpenThread,
+  onJumpToMessage,
 }: {
   message: Message;
   onOpenThread: (message: Message) => void;
+  onJumpToMessage: (messageId: string) => void;
 }) {
   const parts = message.content.split(MESSAGE_LINK_PATTERN);
   const links = parts.filter((part) => MESSAGE_LINK_TEST_PATTERN.test(part));
@@ -90,9 +92,7 @@ function MessageContent({
           className={styles.replyPreview}
           data-testid="reply-preview"
           onClick={() => {
-            document
-              .querySelector(`[data-message-id="${message.replyToMessage?.id}"]`)
-              ?.scrollIntoView({ behavior: 'smooth' });
+            if (message.replyToMessage) onJumpToMessage(message.replyToMessage.id);
           }}
         >
           <Reply size={13} aria-hidden="true" />
@@ -267,15 +267,18 @@ interface MessageRowProps {
   pinnedMessageIds: string[];
   actions: ChatPanelMessageActions;
   onPreviewAttachment: (attachment: PreviewAttachment) => void;
+  onJumpToMessage: (messageId: string) => void;
 }
 
-export function MessageRow({
+// Memoized: the list re-renders on typing and other workspace events that do not touch a row.
+export const MessageRow = memo(function MessageRow({
   message,
   previousMessage,
   auth,
   pinnedMessageIds,
   actions,
   onPreviewAttachment,
+  onJumpToMessage,
 }: MessageRowProps) {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [areActionsVisible, setAreActionsVisible] = useState(false);
@@ -369,7 +372,11 @@ export function MessageRow({
                   </Button>
                 </div>
               ) : (
-                <MessageContent message={message} onOpenThread={actions.openThread} />
+                <MessageContent
+                  message={message}
+                  onOpenThread={actions.openThread}
+                  onJumpToMessage={onJumpToMessage}
+                />
               )}
 
               {!message.deletedAt && (
@@ -507,4 +514,4 @@ export function MessageRow({
       </ContextMenuRoot>
     </div>
   );
-}
+});

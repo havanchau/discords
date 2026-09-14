@@ -8,13 +8,29 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
+import { randomUUID } from 'crypto';
+import { mkdir } from 'fs/promises';
+import { diskStorage, memoryStorage } from 'multer';
+import { join } from 'path';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
 
 const maxUploadBytes = Number(process.env.UPLOAD_MAX_BYTES || 10 * 1024 * 1024);
 const maxChunkBytes = Number(process.env.UPLOAD_CHUNK_BYTES || 2 * 1024 * 1024);
+const uploadTmpDir = process.env.UPLOAD_TMP_DIR || join('uploads', '.chunks');
+
+// Whole files go to disk so a request never holds up to UPLOAD_MAX_BYTES in memory.
+// The temp name is server-generated; the client file name is never used as a path.
+const tempFileStorage = diskStorage({
+  destination: (_request, _file, callback) => {
+    mkdir(uploadTmpDir, { recursive: true }).then(
+      () => callback(null, uploadTmpDir),
+      (error: Error) => callback(error, uploadTmpDir),
+    );
+  },
+  filename: (_request, _file, callback) => callback(null, `${randomUUID()}.upload`),
+});
 
 @UseGuards(JwtAuthGuard)
 @Controller('uploads')
@@ -26,7 +42,7 @@ export class UploadsController {
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: maxUploadBytes },
-      storage: memoryStorage(),
+      storage: tempFileStorage,
       fileFilter: (_request, file, callback) => {
         const allowedExtensions = new Set([
           '.jpg',
@@ -61,14 +77,7 @@ export class UploadsController {
       throw new BadRequestException('File is required');
     }
 
-    if (file.size > this.uploads.maxUploadBytes) {
-      throw new BadRequestException('File is too large');
-    }
-
-    if (!this.uploads.isAllowedFile(file)) {
-      throw new BadRequestException('Unsupported file type');
-    }
-
+    // Size and MIME checks run in the service so the temp file is removed when they fail.
     return { attachment: await this.uploads.upload(file) };
   }
 

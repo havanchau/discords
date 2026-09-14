@@ -8,6 +8,7 @@
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test src/modules/permissions/channel-permission.test.ts src/modules/uploads/uploads.service.test.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

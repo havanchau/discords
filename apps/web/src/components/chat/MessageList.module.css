@@ -2,7 +2,11 @@
   /* Takes the slack in ChatPanel's flex column so the composer stays pinned to the bottom. */
   flex: 1;
   min-height: 0;
+  /* offsetParent for the virtual rows, so their offsetTop is measured from the scroll container. */
+  position: relative;
   overflow-y: auto;
+  /* The virtualizer corrects scroll on prepend; native anchoring would double-correct. */
+  overflow-anchor: none;
   overflow-x: hidden;
   padding: 0;
   background: transparent;
@@ -136,4 +140,16 @@
 .loadMoreButton:hover {
   color: var(--text-primary);
   background: var(--surface-hover);
+}
+
+.virtualRows {
+  position: relative;
+  width: 100%;
+}
+
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
 }

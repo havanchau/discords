@@ -1,8 +1,20 @@
-import { ReactNode } from 'react';
+import { ReactNode, Ref, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Hash, Loader2, MessageSquare, Search } from 'lucide-react';
 import { Channel, Message } from '../../api';
 import { Button } from '../ui';
 import styles from './MessageList.module.css';
+
+// Typical single-line row; real heights are measured after render.
+const ESTIMATED_ROW_HEIGHT = 56;
+const OVERSCAN_ROWS = 8;
+const JUMP_HIGHLIGHT_MS = 1400;
+const JUMP_RENDER_ATTEMPTS = 10;
+
+export interface MessageListHandle {
+  /** Scrolls a message of the visible list into view, then focuses and highlights it. */
+  scrollToMessage: (messageId: string) => void;
+}
 
 interface MessageListProps {
   channel: Channel | null;
@@ -13,7 +25,25 @@ interface MessageListProps {
   hasMoreMessages: boolean;
   searchQuery: string;
   loadMoreMessages: () => Promise<void>;
-  children: ReactNode;
+  renderMessage: (message: Message, index: number) => ReactNode;
+  ref?: Ref<MessageListHandle>;
+}
+
+// Rows outside the overscan window are not in the DOM, so wait a few frames for the target to mount.
+function focusMessageWhenRendered(messageId: string, attemptsLeft = JUMP_RENDER_ATTEMPTS) {
+  const target = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+  if (!target) {
+    if (attemptsLeft > 0) {
+      window.requestAnimationFrame(() => focusMessageWhenRendered(messageId, attemptsLeft - 1));
+    }
+    return;
+  }
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.focus({ preventScroll: true });
+  target.dataset.jumpHighlight = 'true';
+  window.setTimeout(() => {
+    delete target.dataset.jumpHighlight;
+  }, JUMP_HIGHLIGHT_MS);
 }
 
 export function MessageList({
@@ -25,10 +55,52 @@ export function MessageList({
   hasMoreMessages,
   searchQuery,
   loadMoreMessages,
-  children,
+  renderMessage,
+  ref,
 }: MessageListProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const [rowsOffset, setRowsOffset] = useState(0);
+  const hasSearch = Boolean(searchQuery.trim());
+
+  const virtualizer = useVirtualizer({
+    count: visibleMessages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    getItemKey: (index) => visibleMessages[index].id,
+    overscan: OVERSCAN_ROWS,
+    scrollMargin: rowsOffset,
+    // Keeps the row being read in place when older messages are prepended.
+    anchorTo: 'end',
+  });
+
+  // The intro and "load older" row sit above the virtual rows; their height is the scroll margin.
+  useLayoutEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+    const measure = () => setRowsOffset(rowsRef.current?.offsetTop ?? 0);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(scrollElement);
+    return () => observer.disconnect();
+  }, [channel?.id, hasSearch, hasMoreMessages, isLoadingMessages, visibleMessages.length === 0]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToMessage: (messageId) => {
+        const index = visibleMessages.findIndex((message) => message.id === messageId);
+        if (index === -1) return;
+        virtualizer.scrollToIndex(index, { align: 'center' });
+        focusMessageWhenRendered(messageId);
+      },
+    }),
+    [visibleMessages, virtualizer],
+  );
+
   return (
-    <div className={styles.messageList} data-testid="message-list">
+    <div className={styles.messageList} data-testid="message-list" ref={scrollRef}>
       {isLoadingMessages ? (
         <div className={styles.messageSkeletonList} aria-label="Loading messages">
           {Array.from({ length: 7 }, (_, index) => (
@@ -59,7 +131,7 @@ export function MessageList({
         </div>
       ) : (
         <>
-          {!searchQuery.trim() ? (
+          {!hasSearch ? (
             <section className={styles.channelIntro}>
               <div className={styles.channelIntroIcon}>
                 <Hash size={46} aria-hidden="true" />
@@ -71,7 +143,7 @@ export function MessageList({
               </span>
             </section>
           ) : null}
-          {hasMoreMessages && !searchQuery.trim() && (
+          {hasMoreMessages && !hasSearch && (
             <div className={styles.loadMoreRow}>
               <Button
                 variant="ghost"
@@ -84,7 +156,23 @@ export function MessageList({
               </Button>
             </div>
           )}
-          {children}
+          <div
+            ref={rowsRef}
+            className={styles.virtualRows}
+            style={{ height: virtualizer.getTotalSize() }}
+          >
+            {virtualizer.getVirtualItems().map((item) => (
+              <div
+                key={item.key}
+                ref={virtualizer.measureElement}
+                data-index={item.index}
+                className={styles.virtualRow}
+                style={{ transform: `translateY(${item.start - rowsOffset}px)` }}
+              >
+                {renderMessage(visibleMessages[item.index], item.index)}
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>
