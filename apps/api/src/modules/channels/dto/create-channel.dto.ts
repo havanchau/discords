@@ -14,4 +14,9 @@ export class CreateChannelDto {
   @IsString()
   @MaxLength(250)
   topic?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  categoryId?: string;
 }

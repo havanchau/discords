@@ -159,19 +159,22 @@
   font-size: var(--font-size-sm);
 }
 
+/* Flex column: the call stage and ringing banner are optional rows. */
 .chat {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: 56px minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   background: var(--surface-base);
 }
 
 .chatEmpty {
-  grid-template-rows: minmax(0, 1fr);
+  justify-content: center;
 }
 
 .chatHeader {
+  height: 56px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -196,6 +199,7 @@
 }
 
 .messageList {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -204,38 +208,95 @@
   padding: 18px;
 }
 
-.message {
-  max-width: min(680px, 80%);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
+.composerArea {
+  display: grid;
+}
+
+.composerReply {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 18px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 4px var(--space-2) 4px var(--space-3);
+  color: var(--text-muted);
   background: var(--surface-raised);
-  animation: message-in 0.16s ease-out both;
+  font-size: var(--font-size-sm);
 }
 
-.messageMine {
-  align-self: flex-end;
-  background: color-mix(in srgb, var(--accent), var(--surface-raised) 74%);
+.composerReply strong {
+  color: var(--text-primary);
 }
 
-.messageAuthor,
-.messageTime {
-  display: block;
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
-.messageAuthor {
+.pinnedPanel {
+  width: min(360px, calc(100vw - 32px));
+  max-height: 420px;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+.pinnedTitle {
   color: var(--text-primary);
   font-size: var(--font-size-base);
-  font-weight: 700;
 }
 
-.messageBody {
-  margin: 4px 0;
+.pinnedState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.pinnedList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pinnedList button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
   color: var(--text-primary);
+  background: var(--surface-raised);
+  text-align: left;
+  cursor: pointer;
 }
 
-.messageTime {
+.pinnedList button:hover {
+  background: var(--surface-hover);
+}
+
+.pinnedList small {
   color: var(--text-muted);
   font-size: var(--font-size-xs);
+}
+
+.pinnedList span {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .composer {
@@ -310,4 +371,125 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   line-height: 1;
+}
+
+.sectionTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.groupAvatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-on-accent);
+  background: var(--accent);
+}
+
+.groupForm {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.groupFriendList {
+  max-height: 320px;
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.groupFriendRow {
+  display: grid;
+  grid-template-columns: auto 32px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.groupFriendRow:hover {
+  background: var(--surface-hover);
+}
+
+.groupFriendRow span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupMenu {
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 96px));
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+.groupRename {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.groupMemberList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.groupMemberList li {
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+}
+
+.groupMemberList span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownerIcon {
+  color: var(--state-warning);
+}
+
+.incomingCall {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  padding-block: var(--space-4);
+}
+
+.incomingCallActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.ringingBanner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 18px 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  font-size: var(--font-size-sm);
 }

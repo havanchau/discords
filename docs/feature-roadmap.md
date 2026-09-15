@@ -264,3 +264,35 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 - [x] Verify auth and permission paths before exposing private data.
 - [x] Verify optimistic UI reconciles with server responses.
 - [x] Update `docs/ui-redesign-plan.md` when a feature materially changes UI phase status.
+
+## Discord Parity Backlog — 2026-09-15
+
+Second roadmap wave. Each item has a feature spec under `docs/features/`; the spec is the contract and the checklist below tracks delivery. Order follows dependencies: blocking is used by every DM feature, markdown rendering is used by custom emoji, and the account-security items share the auth module.
+
+### Delivery Order
+
+1. Social: [user-blocking.md](features/user-blocking.md), [dm-message-actions.md](features/dm-message-actions.md), [group-dm.md](features/group-dm.md), [dm-calls.md](features/dm-calls.md).
+2. Moderation: [member-bans.md](features/member-bans.md), [member-timeout-and-slowmode.md](features/member-timeout-and-slowmode.md).
+3. Channels: [channel-categories.md](features/channel-categories.md).
+4. Message rendering: [message-markdown.md](features/message-markdown.md), [custom-emoji.md](features/custom-emoji.md), [link-previews.md](features/link-previews.md).
+5. Account security: [password-reset.md](features/password-reset.md), [session-management.md](features/session-management.md), [two-factor-auth.md](features/two-factor-auth.md).
+6. Community: [server-events.md](features/server-events.md).
+
+### Checklist
+
+Status 2026-09-15: every item below is implemented, with typecheck, lint, build, web tests, and API unit tests passing. Items stay unchecked until the API integration tests (`npm run test:int --workspace apps/api`, needs a disposable `TEST_DATABASE_URL`) and a manual pass have run.
+
+- [ ] Block and unblock users with enforcement on friend requests, DM creation, and 1-1 DM sends.
+- [ ] Edit, delete, reply, react to, and pin direct messages.
+- [ ] Create group DMs, rename them, add and remove members, and leave.
+- [ ] Ring, accept, decline, and cancel 1-1 and group DM voice/video calls.
+- [ ] Ban and unban server members; reject banned users on invite join.
+- [ ] Time out members and enforce channel slowmode.
+- [ ] Group channels into collapsible categories.
+- [ ] Render safe markdown in channel and direct messages.
+- [ ] Upload server custom emoji and use them in messages and reactions.
+- [ ] Show SSRF-safe link preview cards.
+- [ ] Reset a forgotten password by email.
+- [ ] List and revoke active sessions.
+- [ ] Protect login with TOTP two-factor authentication and recovery codes.
+- [ ] Schedule server events with interest tracking.

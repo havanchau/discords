@@ -12,6 +12,9 @@ interface UseChannelCallOptions {
 
 export interface StartCallOptions {
   receiveOnly?: boolean;
+  /** Defaults to the selected channel; DM calls pass `dm:<conversationId>`. */
+  callId?: string;
+  label?: string;
 }
 
 export function useChannelCall({
@@ -120,8 +123,15 @@ export function useChannelCall({
     };
   }, [socket]);
 
-  async function startCall(mode: CallMode, options: StartCallOptions = {}) {
-    if (!channel || !auth || !socket) return;
+  /** Resolves false when the call could not start, e.g. media permission was denied. */
+  async function startCall(mode: CallMode, options: StartCallOptions = {}): Promise<boolean> {
+    const callId = options.callId ?? channel?.id;
+    const label = options.label ?? (channel ? `#${channel.name}` : '');
+    if (!callId || !auth || !socket) return false;
+    if (callStateRef.current) {
+      setWorkspaceError('Leave the current call before starting another one.');
+      return false;
+    }
     try {
       const stream = options.receiveOnly
         ? null
@@ -132,7 +142,8 @@ export function useChannelCall({
               video: mode === 'video',
             });
       const nextState: CallState = {
-        channelId: channel.id,
+        channelId: callId,
+        label,
         mode,
         isMuted: Boolean(options.receiveOnly),
         isCameraOff: options.receiveOnly || mode === 'voice',
@@ -155,7 +166,7 @@ export function useChannelCall({
       socket.timeout(5000).emit(
         'voice:join',
         {
-          channelId: channel.id,
+          channelId: callId,
           mode,
           isMuted: nextState.isMuted,
           isCameraOff: nextState.isCameraOff,
@@ -173,13 +184,15 @@ export function useChannelCall({
           );
           setRemoteMedia(participants);
           await Promise.all(
-            participants.map((participant) => createOffer(participant.socketId, channel.id)),
+            participants.map((participant) => createOffer(participant.socketId, callId)),
           );
         },
       );
+      return true;
     } catch (err) {
       stopLocalStream();
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot start call');
+      return false;
     }
   }
 

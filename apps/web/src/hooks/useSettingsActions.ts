@@ -370,6 +370,8 @@ export function useSettingsActions({
     setWorkspaceError(null);
     try {
       const positionValue = String(form.get('position') || '').trim();
+      const slowmodeValue = form.get('slowmodeSeconds');
+      const categoryValue = form.get('categoryId');
       const result = await apiRequest<{ channel: Channel }>(
         `/channels/${channel.id}`,
         {
@@ -379,6 +381,9 @@ export function useSettingsActions({
             topic: String(form.get('topic') || '').trim(),
             isPrivate: form.get('isPrivate') === 'on',
             position: positionValue ? Number(positionValue) : undefined,
+            slowmodeSeconds: slowmodeValue === null ? undefined : Number(slowmodeValue),
+            // The select is only rendered when the server has categories; '' means "No category".
+            categoryId: categoryValue === null ? undefined : String(categoryValue) || null,
           }),
         },
         auth.accessToken,

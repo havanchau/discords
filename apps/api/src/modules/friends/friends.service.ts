@@ -9,6 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
 import { RespondFriendRequestDto } from './dto/respond-friend-request.dto';
+import { findBlockBetween } from './user-blocks';
 
 @Injectable()
 export class FriendsService {
@@ -19,16 +20,23 @@ export class FriendsService {
   ) {}
 
   async list(userId: string) {
-    const requests = await this.prisma.friendRequest.findMany({
-      where: {
-        OR: [{ requesterId: userId }, { receiverId: userId }],
-      },
-      include: {
-        requester: { select: this.userSelect },
-        receiver: { select: this.userSelect },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const [requests, blocks] = await Promise.all([
+      this.prisma.friendRequest.findMany({
+        where: {
+          OR: [{ requesterId: userId }, { receiverId: userId }],
+        },
+        include: {
+          requester: { select: this.userSelect },
+          receiver: { select: this.userSelect },
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.userBlock.findMany({
+        where: { blockerId: userId },
+        include: { blocked: { select: this.userSelect } },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     return {
       friends: requests
@@ -44,7 +52,7 @@ export class FriendsService {
       pendingOutgoing: requests.filter(
         (request) => request.status === 'PENDING' && request.requesterId === userId,
       ),
-      blocked: requests.filter((request) => request.status === 'BLOCKED'),
+      blocked: blocks.map((block) => ({ user: block.blocked, createdAt: block.createdAt })),
     };
   }
 
@@ -62,6 +70,9 @@ export class FriendsService {
 
     if (!target) throw new NotFoundException('User not found');
     if (target.id === userId) throw new BadRequestException('Cannot add yourself');
+    if (await findBlockBetween(this.prisma, userId, target.id)) {
+      throw new ForbiddenException('You cannot send a friend request to this user');
+    }
 
     const existing = await this.prisma.friendRequest.findFirst({
       where: {
@@ -77,9 +88,6 @@ export class FriendsService {
     });
 
     if (existing) {
-      if (existing.status === 'BLOCKED') {
-        throw new ForbiddenException('Friend request is blocked');
-      }
       return { request: existing };
     }
 
@@ -112,8 +120,21 @@ export class FriendsService {
     const isReceiver = request.receiverId === userId;
     const isRequester = request.requesterId === userId;
     if (!isReceiver && !isRequester) throw new ForbiddenException('Cannot update this request');
-    if (dto.status !== 'BLOCKED' && !isReceiver) {
+
+    // Kept for API compatibility: blocking through a request blocks its other party.
+    if (dto.status === 'BLOCKED') {
+      const otherUserId = isReceiver ? request.requesterId : request.receiverId;
+      return this.block(userId, otherUserId);
+    }
+
+    if (!isReceiver) {
       throw new ForbiddenException('Only the receiver can accept or reject this request');
+    }
+    if (
+      dto.status === 'ACCEPTED' &&
+      (await findBlockBetween(this.prisma, request.requesterId, request.receiverId))
+    ) {
+      throw new ForbiddenException('You cannot accept this friend request');
     }
 
     const updated = await this.prisma.friendRequest.update({
@@ -168,6 +189,48 @@ export class FriendsService {
     return { ok: true };
   }
 
+  async block(userId: string, targetUserId: string) {
+    if (targetUserId === userId) throw new BadRequestException('Cannot block yourself');
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: this.userSelect,
+    });
+    if (!target) throw new NotFoundException('User not found');
+
+    const [, block] = await this.prisma.$transaction([
+      this.prisma.friendRequest.deleteMany({
+        where: {
+          OR: [
+            { requesterId: userId, receiverId: targetUserId },
+            { requesterId: targetUserId, receiverId: userId },
+          ],
+        },
+      }),
+      this.prisma.userBlock.upsert({
+        where: { blockerId_blockedId: { blockerId: userId, blockedId: targetUserId } },
+        create: { blockerId: userId, blockedId: targetUserId },
+        update: {},
+      }),
+    ]);
+
+    // No block details in the payload: the blocked user only learns their friend list changed.
+    this.realtime.emitToRooms(
+      [this.realtime.userRoom(userId), this.realtime.userRoom(targetUserId)],
+      'friend:updated',
+      {},
+    );
+
+    return { block: { user: target, createdAt: block.createdAt } };
+  }
+
+  async unblock(userId: string, targetUserId: string) {
+    await this.prisma.userBlock.deleteMany({
+      where: { blockerId: userId, blockedId: targetUserId },
+    });
+    this.realtime.emitToRoom(this.realtime.userRoom(userId), 'friend:updated', {});
+    return { ok: true };
+  }
+
   async startDm(userId: string, friendUserId: string) {
     const friendship = await this.prisma.friendRequest.findFirst({
       where: {
@@ -180,9 +243,13 @@ export class FriendsService {
     });
 
     if (!friendship) throw new ForbiddenException('You can only DM accepted friends');
+    if (await findBlockBetween(this.prisma, userId, friendUserId)) {
+      throw new ForbiddenException('You cannot message this user');
+    }
 
     const existing = await this.prisma.directConversation.findFirst({
       where: {
+        isGroup: false,
         AND: [{ members: { some: { userId } } }, { members: { some: { userId: friendUserId } } }],
       },
       include: this.conversationInclude,
@@ -197,6 +264,11 @@ export class FriendsService {
       },
       include: this.conversationInclude,
     });
+    // Already-connected sockets only join conversation rooms on connect, so move them explicitly.
+    this.realtime.joinUsersToRoom(
+      [userId, friendUserId],
+      this.realtime.conversationRoom(conversation.id),
+    );
     return { conversation };
   }
 

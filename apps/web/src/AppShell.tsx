@@ -5,17 +5,23 @@ import { useChannelEncryption } from './hooks/useChannelEncryption';
 import { useChannelReadState } from './hooks/useChannelReadState';
 import { useChannelCall } from './hooks/useChannelCall';
 import { useComposerAttachments } from './hooks/useComposerAttachments';
-import { useDirectMessages } from './hooks/useDirectMessages';
+import { useComposerRestrictions } from './hooks/useComposerRestrictions';
+import { useDirectCall } from './hooks/useDirectCall';
+import { useHomeWorkspace } from './hooks/useHomeWorkspace';
 import { usePersistentDraft } from './hooks/usePersistentDrafts';
 import { useMessageHistory } from './hooks/useMessageHistory';
 import { useNotifications } from './hooks/useNotifications';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
+import { useServerEmojis } from './hooks/useServerEmojis';
+import { useServerEvents } from './hooks/useServerEvents';
+import { useServerModeration } from './hooks/useServerModeration';
 import { useSettingsActions } from './hooks/useSettingsActions';
 import { useTheme } from './hooks/useTheme';
 import { useThreadPanel } from './hooks/useThreadPanel';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
 import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 import { useChatOrchestrator } from './hooks/useChatOrchestrator';
+import { useChannelMessageActions } from './hooks/useChannelMessageActions';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
 // prettier-ignore
 import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
@@ -24,9 +30,10 @@ import { ActiveCallSummary } from './helpers';
 import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import { executeSlashCommand } from './utils/executeSlashCommand';
-import type { ActiveDialog, ActivePanel, ChatPanelMessageActions } from './components/chat/types';
+import type { ActiveDialog, ActivePanel } from './components/chat/types';
 import { AuthGate } from './components/app/AuthGate';
 import { AuthenticatedWorkspace } from './components/app/AuthenticatedWorkspace';
+import { conversationDisplayName } from './components/home/conversationDisplay';
 
 // Shared empty value so channels without pins pass the same array to memoized rows each render.
 const NO_PINNED_MESSAGE_IDS: string[] = [];
@@ -47,19 +54,9 @@ export function AppShell() {
     setChannelBadges({});
   }, []);
 
-  const {
-    auth,
-    setAuth,
-    mode,
-    setMode,
-    verificationToken,
-    verificationHint,
-    setVerificationToken,
-    error,
-    submitAuth,
-    submitVerification,
-    clearAuth,
-  } = useAuthSession({ onClearAuth: clearWorkspaceState });
+  const { auth, setAuth, clearAuth, authScreen } = useAuthSession({
+    onClearAuth: clearWorkspaceState,
+  });
 
   const {
     servers,
@@ -80,6 +77,9 @@ export function AppShell() {
     createServer,
     joinInvite,
     createChannel,
+    createCategory,
+    updateCategory,
+    deleteCategory,
   } = useWorkspaceNavigation({
     auth,
     clearAuth,
@@ -133,28 +133,21 @@ export function AppShell() {
   });
 
   const {
-    friendsSummary,
-    directConversations,
     activeConversation,
-    directMessages,
-    directMessageDraft,
-    setActiveConversation,
     setDirectMessages,
     setDirectConversations,
     clearDirectMessages,
+    removeDirectConversation,
+    directConversations,
     loadFriends,
     loadDirectConversations,
-    requestFriend,
-    respondFriendRequest,
-    removeFriend,
-    removeFriendRequest,
-    openDirectConversation,
     markDirectConversationRead,
     startDirectConversation,
-    sendDirectMessage,
-    setDirectMessageDraft,
-  } = useDirectMessages({
+    applyDirectMessageUpdate,
+    homeProps,
+  } = useHomeWorkspace({
     auth,
+    pendingAction,
     setPendingAction,
     setWorkspaceError,
     setWorkspaceNotice,
@@ -259,6 +252,8 @@ export function AppShell() {
     setServer,
     setActiveCalls,
     setChannelBadges,
+    applyDirectMessageUpdate,
+    removeDirectConversation,
     loadFriends,
     loadDirectConversations,
     pushNotification,
@@ -266,6 +261,27 @@ export function AppShell() {
   });
 
   const { handleComposerInput } = useTypingIndicator({ channel, socket });
+
+  const { restriction: composerRestriction, markMessageSent } = useComposerRestrictions({
+    auth,
+    server,
+    channel,
+  });
+
+  const serverEmojis = useServerEmojis({ auth, socket, serverId: server?.id ?? null });
+  const serverEvents = useServerEvents({ auth, socket, serverId: server?.id ?? null });
+
+  const moderation = useServerModeration({
+    auth,
+    socket,
+    server,
+    setServer,
+    setServers,
+    setChannel,
+    setPendingAction,
+    setWorkspaceError,
+    setWorkspaceNotice,
+  });
 
   const threadPanel = useThreadPanel({
     auth,
@@ -284,6 +300,30 @@ export function AppShell() {
       socket,
       setWorkspaceError,
     });
+
+  function conversationLabel(conversationId: string, fallback: string) {
+    const conversation = directConversations.find((item) => item.id === conversationId);
+    return conversation && auth ? conversationDisplayName(conversation, auth.user.id) : fallback;
+  }
+
+  const {
+    incomingCall,
+    outgoingCall,
+    startDirectCall,
+    acceptIncomingCall,
+    declineIncomingCall,
+    endDirectCall,
+  } = useDirectCall({
+    socket,
+    viewerId: auth?.user.id ?? null,
+    callState,
+    remoteMedia,
+    startCall,
+    endCall,
+    getConversationLabel: conversationLabel,
+    setWorkspaceError,
+    setWorkspaceNotice,
+  });
 
   const {
     selectedFiles,
@@ -408,12 +448,13 @@ export function AppShell() {
             .emit(
               'message:create',
               payload,
-              async (err: Error | null, result?: { message: Message }) => {
+              async (err: Error | null, result?: { message?: Message; error?: string }) => {
                 if (err || !result?.message) {
-                  setWorkspaceError('Message was not acknowledged. Try again.');
+                  setWorkspaceError(result?.error ?? 'Message was not acknowledged. Try again.');
                   resolve(false);
                   return;
                 }
+                markMessageSent(channel.id);
                 const displayMessage = await decryptMessageForDisplay(result.message);
                 setMessages((current) =>
                   current.some((item) => item.id === displayMessage.id)
@@ -440,6 +481,7 @@ export function AppShell() {
       );
       const displayMessage = await decryptMessageForDisplay(result.message);
       setMessages((current) => [...current, displayMessage]);
+      markMessageSent(channel.id);
       return true;
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot send message');
@@ -474,138 +516,35 @@ export function AppShell() {
     setReplyingToMessage(null);
   }
 
-  // Read through a ref so saveMessageEdit keeps its identity when new messages arrive.
-  const messagesRef = useRef(messages);
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  const saveMessageEdit = useCallback(
-    async (messageId: string) => {
-      if (!auth || !editingDraft.trim()) return;
-      const editingMessage = messagesRef.current.find((message) => message.id === messageId);
-      const channelKey = editingMessage ? channelKeysRef.current[editingMessage.channelId] : null;
-      const content = channelKey
-        ? await encryptChannelMessage(channelKey, editingDraft.trim())
-        : editingDraft.trim();
-      const result = await apiRequest<{ message: Message }>(
-        `/messages/${messageId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ content }),
-        },
-        auth.accessToken,
-      );
-      const displayMessage = await decryptMessageForDisplay(result.message);
-      setMessages((current) =>
-        current.map((message) => (message.id === messageId ? displayMessage : message)),
-      );
-      setEditingMessageId(null);
-      setEditingDraft('');
-    },
-    [
-      auth,
-      editingDraft,
-      channelKeysRef,
-      decryptMessageForDisplay,
-      setMessages,
-      setEditingMessageId,
-      setEditingDraft,
-    ],
-  );
-
-  const deleteMessage = useCallback(
-    async (messageId: string) => {
-      if (!auth) return;
-      await apiRequest<{ message: Message }>(
-        `/messages/${messageId}`,
-        { method: 'DELETE' },
-        auth.accessToken,
-      );
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === messageId
-            ? { ...message, content: '', deletedAt: new Date().toISOString() }
-            : message,
-        ),
-      );
-    },
-    [auth, setMessages],
-  );
-
-  const toggleReaction = useCallback(
-    async (message: Message, emoji: string) => {
-      if (!auth) return;
-      if (socket?.connected && channel) {
-        socket.emit('reaction:toggle', { channelId: channel.id, messageId: message.id, emoji });
-        return;
-      }
-      const result = await apiRequest<{ message: Message }>(
-        `/messages/${message.id}/reactions`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ emoji }),
-        },
-        auth.accessToken,
-      );
-      const displayMessage = await decryptMessageForDisplay(result.message);
-      setMessages((current) =>
-        current.map((currentMessage) =>
-          currentMessage.id === message.id ? displayMessage : currentMessage,
-        ),
-      );
-    },
-    [auth, socket, channel, decryptMessageForDisplay, setMessages],
-  );
-
-  const messageActions = useMemo<ChatPanelMessageActions>(
-    () => ({
-      editingMessageId,
-      editingDraft,
-      setReplyingToMessage,
-      openThread: threadPanel.openThread,
-      setEditingMessageId,
-      setEditingDraft,
-      saveEdit: saveMessageEdit,
-      delete: deleteMessage,
-      toggleReaction,
-      togglePinned: togglePinnedMessage,
-    }),
-    [
-      editingMessageId,
-      editingDraft,
-      setReplyingToMessage,
-      threadPanel.openThread,
-      setEditingMessageId,
-      setEditingDraft,
-      saveMessageEdit,
-      deleteMessage,
-      toggleReaction,
-      togglePinnedMessage,
-    ],
-  );
+  const messageActions = useChannelMessageActions({
+    auth,
+    socket,
+    channel,
+    messages,
+    channelKeysRef,
+    decryptMessageForDisplay,
+    setMessages,
+    editingMessageId,
+    editingDraft,
+    setEditingMessageId,
+    setEditingDraft,
+    setReplyingToMessage,
+    openThread: threadPanel.openThread,
+    togglePinnedMessage,
+  });
 
   function logout() {
-    endCall();
+    endDirectCall();
     clearAuth();
   }
 
-  if (!auth) {
+  if (!auth || !homeProps) {
     return (
       <AuthGate
         auth={auth}
         uiTheme={uiTheme}
         setUiTheme={setUiTheme}
-        authScreen={{
-          error,
-          mode,
-          setMode,
-          submitAuth,
-          submitVerification,
-          verificationHint,
-          verificationToken,
-          setVerificationToken,
-        }}
+        authScreen={authScreen}
       >
         {null}
       </AuthGate>
@@ -653,6 +592,7 @@ export function AppShell() {
             channelBadges,
           },
           profileAvatarInputRef,
+          serverEvents,
           actions: {
             openHome: () => {
               setServer(null);
@@ -662,6 +602,9 @@ export function AppShell() {
             createServer,
             joinInvite,
             createChannel,
+            createCategory,
+            updateCategory,
+            deleteCategory,
             createInvite: async () => {
               await createInviteFromSettings();
             },
@@ -722,10 +665,11 @@ export function AppShell() {
             start: startCall,
             toggleMute,
             toggleCamera,
-            end: endCall,
+            end: endDirectCall,
           },
           messageActions,
           composer: {
+            restriction: composerRestriction,
             replyingToMessage,
             selectedFiles,
             isRecordingVoice,
@@ -758,25 +702,27 @@ export function AppShell() {
           server,
         }}
         home={{
-          home: {
-            auth,
-            friendsSummary,
-            conversations: directConversations,
-            activeConversation,
-            directMessages,
-            directMessageDraft,
-            pendingAction,
+          ...homeProps,
+          call: {
+            state: callState,
+            activeCalls,
+            remoteMedia,
+            localVideoRef,
+            outgoingCall,
+            startDirectCall,
+            toggleMute,
+            toggleCamera,
+            end: endDirectCall,
           },
-          actions: {
-            requestFriend,
-            respondFriendRequest,
-            removeFriend,
-            removeFriendRequest,
-            openDirectConversation,
-            startDirectConversation: (userIds) => startDirectConversation(userIds),
-            sendDirectMessage,
-            setDirectMessageDraft,
-          },
+        }}
+        serverEmojis={serverEmojis.emojis}
+        incomingCall={{
+          incomingCall,
+          conversationLabel: incomingCall
+            ? conversationLabel(incomingCall.conversationId, incomingCall.caller.displayName)
+            : null,
+          onAccept: acceptIncomingCall,
+          onDecline: declineIncomingCall,
         }}
         settings={{
           dialog: {
@@ -793,6 +739,12 @@ export function AppShell() {
             invites,
             notificationPreferences,
             pendingAction,
+            bans: moderation.bans,
+            isLoadingBans: moderation.isLoadingBans,
+            bansError: moderation.bansError,
+            emojis: serverEmojis.emojis,
+            isLoadingEmojis: serverEmojis.isLoading,
+            emojisError: serverEmojis.error,
           },
           refs: {
             profileAvatarInputRef,
@@ -803,6 +755,7 @@ export function AppShell() {
           },
           actions: {
             setUiTheme,
+            signOut: logout,
             createInviteFromSettings,
             revokeInvite,
             updateProfile,
@@ -816,6 +769,12 @@ export function AppShell() {
             deleteRole,
             toggleMemberRole,
             removeMember,
+            loadBans: moderation.loadBans,
+            banMember: moderation.banMember,
+            unbanUser: moderation.unbanUser,
+            timeoutMember: moderation.timeoutMember,
+            createEmoji: serverEmojis.createEmoji,
+            deleteEmoji: serverEmojis.deleteEmoji,
             openMemberRoleEditor: (memberId) => {
               setSelectedMemberId(memberId);
               setActiveDialog('member-roles');

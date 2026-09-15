@@ -1,6 +1,8 @@
 import {
+  CalendarDays,
   ChevronDown,
   Edit3,
+  FolderPlus,
   Hash,
   Loader2,
   LogOut,
@@ -11,10 +13,11 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { assetUrl } from '../../api';
+import { assetUrl, type Channel, type ChannelCategory } from '../../api';
 import { accentClass, initials } from '../../helpers';
 import { cn } from '../../utils/cn';
 import {
+  Badge,
   Button,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -24,12 +27,18 @@ import {
   IconButton,
   TextField,
 } from '../ui';
-import { ChannelGroup, ChannelRow } from './ChannelList';
+import { useCollapsedCategories } from '../../hooks/useCollapsedCategories';
+import { groupChannelsByCategory } from '../../utils/channelCategories';
+import { memberHasServerPermission } from '../../utils/serverPermissions';
+import { CategorySection, ChannelGroup, ChannelRow } from './ChannelList';
 import styles from './ChannelSidebar.module.css';
 import type { ChannelCreateType, WorkspaceSidebarProps } from './types';
 
 interface ChannelSidebarProps extends WorkspaceSidebarProps {
-  onCreateChannel: (type: ChannelCreateType) => void;
+  onCreateChannel: (type: ChannelCreateType, categoryId?: string) => void;
+  onCreateCategory: () => void;
+  onEditCategory: (category: ChannelCategory) => void;
+  onOpenEvents: () => void;
 }
 
 export function ChannelSidebar({
@@ -37,6 +46,10 @@ export function ChannelSidebar({
   profileAvatarInputRef,
   actions,
   onCreateChannel,
+  onCreateCategory,
+  onEditCategory,
+  onOpenEvents,
+  serverEvents,
 }: ChannelSidebarProps) {
   const {
     auth,
@@ -54,6 +67,52 @@ export function ChannelSidebar({
   const { openHome, createInvite, updateProfileAvatar, logout, setChannel, setChannelQuery, setActiveDialog } =
     actions;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { collapsedIds, toggleCategory } = useCollapsedCategories();
+  const isSearching = Boolean(channelQuery.trim());
+  const canManageChannels = memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS');
+  const visibleChannelIds = new Set(
+    [...visibleTextChannels, ...visibleVoiceChannels].map((item) => item.id),
+  );
+  const grouped = groupChannelsByCategory(
+    (server?.channels ?? []).filter((item) => visibleChannelIds.has(item.id)),
+    server?.categories ?? [],
+    { includeEmptyCategories: canManageChannels && !isSearching },
+  );
+
+  function renderChannel(item: Channel) {
+    if (item.type === 'VOICE') {
+      return (
+        <div className={styles.voiceBlock} key={item.id}>
+          <ChannelRow
+            channel={item}
+            icon={<Volume2 size={16} aria-hidden="true" />}
+            activeCall={activeCalls[item.id]}
+          />
+          {activeCalls[item.id]?.participants.length ? (
+            <div className={styles.voiceOccupants}>
+              {activeCalls[item.id].participants.map((participant) => (
+                <span key={participant.socketId}>
+                  {participant.displayName}
+                  {participant.isMuted ? ' · muted' : ''}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+    return (
+      <ChannelRow
+        key={item.id}
+        channel={item}
+        icon={<Hash size={16} aria-hidden="true" />}
+        active={channel?.id === item.id}
+        badge={channelBadges[item.id]}
+        activeCall={activeCalls[item.id]}
+        onClick={() => setChannel(item)}
+      />
+    );
+  }
 
   return (
     <aside
@@ -73,6 +132,16 @@ export function ChannelSidebar({
               <DropdownMenuItem onSelect={() => setTimeout(() => setActiveDialog('server-settings'), 0)}>
                 <Settings size={16} aria-hidden="true" />
                 Server settings
+              </DropdownMenuItem>
+              {canManageChannels ? (
+                <DropdownMenuItem onSelect={() => setTimeout(onCreateCategory, 0)}>
+                  <FolderPlus size={16} aria-hidden="true" />
+                  Create category
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onSelect={() => setTimeout(onOpenEvents, 0)}>
+                <CalendarDays size={16} aria-hidden="true" />
+                Events
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={pendingAction === 'create-invite'}
@@ -139,25 +208,32 @@ export function ChannelSidebar({
       <div className={styles.scrollArea}>
         {server ? (
           <>
+            {serverEvents.events.length ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className={styles.eventsRow}
+                onClick={onOpenEvents}
+                data-testid="events-row"
+              >
+                <CalendarDays size={16} aria-hidden="true" />
+                <span className={styles.channelName}>Events</span>
+                <Badge variant="neutral" aria-label={`${serverEvents.events.length} upcoming events`}>
+                  {serverEvents.events.length}
+                </Badge>
+              </Button>
+            ) : null}
             <ChannelGroup
               title="Text channels"
               createLabel="Create text channel"
               onCreate={() => onCreateChannel('TEXT')}
             >
-              {visibleTextChannels.length ? (
-                visibleTextChannels.map((item) => (
-                  <ChannelRow
-                    key={item.id}
-                    channel={item}
-                    icon={<Hash size={16} aria-hidden="true" />}
-                    active={channel?.id === item.id}
-                    badge={channelBadges[item.id]}
-                    activeCall={activeCalls[item.id]}
-                    onClick={() => setChannel(item)}
-                  />
-                ))
+              {grouped.uncategorizedText.length ? (
+                grouped.uncategorizedText.map(renderChannel)
               ) : (
-                <p className={styles.emptyNote}>No text channels match.</p>
+                <p className={styles.emptyNote}>
+                  {grouped.categories.length ? 'No uncategorized text channels.' : 'No text channels match.'}
+                </p>
               )}
             </ChannelGroup>
 
@@ -166,30 +242,34 @@ export function ChannelSidebar({
               createLabel="Create voice channel"
               onCreate={() => onCreateChannel('VOICE')}
             >
-              {visibleVoiceChannels.length ? (
-                visibleVoiceChannels.map((item) => (
-                  <div className={styles.voiceBlock} key={item.id}>
-                    <ChannelRow
-                      channel={item}
-                      icon={<Volume2 size={16} aria-hidden="true" />}
-                      activeCall={activeCalls[item.id]}
-                    />
-                    {activeCalls[item.id]?.participants.length ? (
-                      <div className={styles.voiceOccupants}>
-                        {activeCalls[item.id].participants.map((participant) => (
-                          <span key={participant.socketId}>
-                            {participant.displayName}
-                            {participant.isMuted ? ' · muted' : ''}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))
+              {grouped.uncategorizedVoice.length ? (
+                grouped.uncategorizedVoice.map(renderChannel)
               ) : (
                 <p className={styles.emptyNote}>No voice channels yet.</p>
               )}
             </ChannelGroup>
+
+            {grouped.categories.map(({ category, channels: categoryChannels }) => {
+              const isCollapsed = collapsedIds.includes(category.id) && !isSearching;
+              const shownChannels = isCollapsed
+                ? categoryChannels.filter(
+                    (item) => item.id === channel?.id || Boolean(channelBadges[item.id]?.mentions),
+                  )
+                : categoryChannels;
+              return (
+                <CategorySection
+                  key={category.id}
+                  name={category.name}
+                  isCollapsed={isCollapsed}
+                  createLabel={canManageChannels ? `Create channel in ${category.name}` : null}
+                  onToggle={() => toggleCategory(category.id)}
+                  onCreate={() => onCreateChannel('TEXT', category.id)}
+                  onEdit={canManageChannels ? () => onEditCategory(category) : undefined}
+                >
+                  {shownChannels.map(renderChannel)}
+                </CategorySection>
+              );
+            })}
           </>
         ) : null}
       </div>

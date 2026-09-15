@@ -42,10 +42,16 @@ model User {
   bio                       String?
   status                    UserStatus                 @default(OFFLINE)
   emailVerifiedAt           DateTime?
+  twoFactorSecret           String?
+  twoFactorPendingSecret    String?
+  twoFactorEnabledAt        DateTime?
+  twoFactorLastUsedStep     Int?
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
   sessions                  Session[]
   emailVerificationTokens   EmailVerificationToken[]
+  passwordResetTokens       PasswordResetToken[]
+  twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
   memberships               ServerMember[]
   messages                  Message[]
   messagePins               MessagePin[]               @relation("MessagePins")
@@ -64,6 +70,15 @@ model User {
   directReadStates          DirectReadState[]
   notifications             Notification[]              @relation("NotificationUser")
   actedNotifications        Notification[]              @relation("NotificationActor")
+  directMessageReactions    DirectMessageReaction[]
+  ownedConversations        DirectConversation[]       @relation("ConversationOwner")
+  serverBans                ServerBan[]                @relation("BannedUser")
+  issuedServerBans          ServerBan[]                @relation("BanIssuer")
+  createdEmojis             ServerEmoji[]              @relation("EmojiCreator")
+  createdServerEvents       ServerEvent[]              @relation("EventCreator")
+  serverEventInterests      ServerEventInterest[]
+  blocksCreated             UserBlock[]                 @relation("UserBlocker")
+  blocksReceived            UserBlock[]                 @relation("UserBlocked")
 }
 
 model EmailVerificationToken {
@@ -78,15 +93,41 @@ model EmailVerificationToken {
   @@index([userId, expiresAt])
 }
 
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TwoFactorRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model Session {
-  id          String    @id @default(cuid())
-  userId      String
-  refreshHash String
-  userAgent   String?
-  revokedAt   DateTime?
-  expiresAt   DateTime
-  createdAt   DateTime  @default(now())
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String
+  refreshHash  String
+  userAgent    String?
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
 }
 
 model Server {
@@ -105,6 +146,38 @@ model Server {
   invites                 Invite[]
   notificationPreferences NotificationPreference[]
   auditLogs               AuditLog[]
+  bans                    ServerBan[]
+  channelCategories       ChannelCategory[]
+  emojis                  ServerEmoji[]
+  events                  ServerEvent[]
+}
+
+model ServerEmoji {
+  id        String   @id @default(cuid())
+  serverId  String
+  name      String
+  url       String
+  creatorId String
+  createdAt DateTime @default(now())
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  creator   User     @relation("EmojiCreator", fields: [creatorId], references: [id])
+
+  @@unique([serverId, name])
+}
+
+model ServerBan {
+  id         String   @id @default(cuid())
+  serverId   String
+  userId     String
+  bannedById String
+  reason     String?
+  createdAt  DateTime @default(now())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user       User     @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  bannedBy   User     @relation("BanIssuer", fields: [bannedById], references: [id])
+
+  @@unique([serverId, userId])
+  @@index([userId])
 }
 
 model ServerMember {
@@ -113,6 +186,7 @@ model ServerMember {
   serverId            String
   kind                MemberKind                  @default(MEMBER)
   nickname            String?
+  timeoutUntil        DateTime?
   joinedAt            DateTime                    @default(now())
   user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   server              Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
@@ -147,18 +221,34 @@ model MemberRole {
   @@id([memberId, roleId])
 }
 
+model ChannelCategory {
+  id        String    @id @default(cuid())
+  serverId  String
+  name      String
+  position  Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channels  Channel[]
+
+  @@index([serverId, position])
+}
+
 model Channel {
   id                        String                      @id @default(cuid())
   serverId                  String
+  categoryId                String?
   name                      String
   type                      ChannelType                 @default(TEXT)
   topic                     String?
   avatarUrl                 String?
   position                  Int                         @default(0)
   isPrivate                 Boolean                     @default(false)
+  slowmodeSeconds           Int                         @default(0)
   createdAt                 DateTime                    @default(now())
   updatedAt                 DateTime                    @updatedAt
   server                    Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category                  ChannelCategory?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   messages                  Message[]
   threads                   Thread[]
   pins                      MessagePin[]
@@ -166,8 +256,42 @@ model Channel {
   readStates                ReadState[]
   notificationPreferences   NotificationPreference[]
   pushNotificationThrottles PushNotificationThrottle[]
+  events                    ServerEvent[]
 
   @@unique([serverId, name])
+  @@index([categoryId])
+}
+
+model ServerEvent {
+  id          String                @id @default(cuid())
+  serverId    String
+  channelId   String?
+  creatorId   String
+  name        String
+  description String?
+  location    String?
+  startAt     DateTime
+  endAt       DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  server      Server                @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel     Channel?              @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  creator     User                  @relation("EventCreator", fields: [creatorId], references: [id])
+  interests   ServerEventInterest[]
+
+  @@index([serverId, startAt])
+}
+
+model ServerEventInterest {
+  eventId   String
+  userId    String
+  createdAt DateTime    @default(now())
+  event     ServerEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
 }
 
 model ChannelPermissionOverride {
@@ -208,6 +332,7 @@ model Message {
   pin              MessagePin?
 
   @@index([channelId, createdAt])
+  @@index([channelId, authorId, createdAt])
   @@index([threadId, createdAt])
 }
 
@@ -379,10 +504,25 @@ model FriendRequest {
   @@index([receiverId])
 }
 
+model UserBlock {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
 model DirectConversation {
   id         String                     @id @default(cuid())
+  isGroup    Boolean                    @default(false)
+  name       String?
+  ownerId    String?
   createdAt  DateTime                   @default(now())
   updatedAt  DateTime                   @updatedAt
+  owner      User?                      @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   members    DirectConversationMember[]
   messages   DirectMessage[]
   readStates DirectReadState[]
@@ -391,6 +531,7 @@ model DirectConversation {
 model DirectConversationMember {
   conversationId String
   userId         String
+  joinedAt       DateTime           @default(now())
   conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -398,18 +539,34 @@ model DirectConversationMember {
 }
 
 model DirectMessage {
-  id             String             @id @default(cuid())
-  conversationId String
-  authorId       String
-  content        String
-  editedAt       DateTime?
-  deletedAt      DateTime?
-  createdAt      DateTime           @default(now())
-  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  author         User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id               String                  @id @default(cuid())
+  conversationId   String
+  authorId         String
+  content          String
+  replyToMessageId String?
+  pinnedAt         DateTime?
+  pinnedById       String?
+  editedAt         DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime                @default(now())
+  conversation     DirectConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author           User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions        DirectMessageReaction[]
 
   @@index([authorId])
   @@index([conversationId, createdAt])
+  @@index([conversationId, pinnedAt])
+}
+
+model DirectMessageReaction {
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime      @default(now())
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
 }
 
 model DirectReadState {

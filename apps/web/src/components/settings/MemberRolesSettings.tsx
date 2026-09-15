@@ -2,12 +2,17 @@ import { assetUrl } from '../../api';
 import { accentClass, initials } from '../../helpers';
 import { Avatar, Badge, Button } from '../ui';
 import { CheckRow } from './SettingsRows';
+import { memberHasServerPermission } from '../../utils/serverPermissions';
+import { MemberModerationSection } from './MemberModerationSection';
 import type { SettingsModalFields } from './types';
 import styles from '../SettingsModal.module.css';
 import { cn } from '../../utils/cn';
 
 type MemberRolesSettingsProps = Pick<
   SettingsModalFields,
+  | 'auth'
+  | 'banMember'
+  | 'timeoutMember'
   | 'pendingAction'
   | 'removeMember'
   | 'selectedMember'
@@ -17,6 +22,9 @@ type MemberRolesSettingsProps = Pick<
 >;
 
 export function MemberRolesSettings({
+  auth,
+  banMember,
+  timeoutMember,
   pendingAction,
   removeMember,
   selectedMember,
@@ -37,7 +45,6 @@ export function MemberRolesSettings({
     if (leftAssigned !== rightAssigned) return leftAssigned ? -1 : 1;
     return left.name.localeCompare(right.name);
   });
-  const canRemoveMember = selectedMember.kind !== 'OWNER';
 
   return (
     <div className={styles.settingsForm}>
@@ -115,15 +122,18 @@ export function MemberRolesSettings({
           );
         })}
       </div>
+      {selectedMember.user.id !== auth.user.id ? (
+        <MemberModerationSection
+          selectedMember={selectedMember}
+          pendingAction={pendingAction}
+          removeMember={removeMember}
+          banMember={banMember}
+          timeoutMember={timeoutMember}
+          canKick={memberHasServerPermission(server, auth.user.id, 'KICK_MEMBERS')}
+          canBan={memberHasServerPermission(server, auth.user.id, 'BAN_MEMBERS')}
+        />
+      ) : null}
       <footer className={styles.settingsModalFooter}>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={!canRemoveMember || pendingAction === `member-remove-${selectedMember.id}`}
-          onClick={() => void removeMember(selectedMember.id)}
-        >
-          Remove member
-        </Button>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
           Done
         </Button>

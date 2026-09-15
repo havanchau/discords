@@ -17,6 +17,20 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/ui-identity-redesign.md` | Feature spec for the neutral visual identity and the global-CSS to CSS Modules migration. |
 | `features/performance-optimization.md` | Spec for batched permission/unread queries, web bundle size, and message list re-renders. |
 | `features/ui-consistency-pass.md` | Spec for token-only colours, uniform control heights, and the type scale across the web UI. |
+| `features/user-blocking.md` | Spec for blocking users and enforcing blocks on friend and DM paths. |
+| `features/dm-message-actions.md` | Spec for editing, deleting, replying to, reacting to, and pinning direct messages. |
+| `features/group-dm.md` | Spec for group direct conversations and their membership lifecycle. |
+| `features/dm-calls.md` | Spec for ringing voice and video calls inside direct conversations. |
+| `features/member-bans.md` | Spec for banning and unbanning server members. |
+| `features/member-timeout-and-slowmode.md` | Spec for member timeouts and per-channel slowmode. |
+| `features/channel-categories.md` | Spec for collapsible channel categories. |
+| `features/message-markdown.md` | Spec for safe Discord-style markdown rendering. |
+| `features/custom-emoji.md` | Spec for server custom emoji in messages and reactions. |
+| `features/link-previews.md` | Spec for SSRF-safe link preview cards. |
+| `features/password-reset.md` | Spec for email-based password reset. |
+| `features/session-management.md` | Spec for listing and revoking active sessions. |
+| `features/two-factor-auth.md` | Spec for TOTP two-factor authentication and recovery codes. |
+| `features/server-events.md` | Spec for scheduled server events with interest tracking. |
 | `implementation-plan.md`    | Sprint plan, delivery sequence, test strategy, risks, and definition of done.             |
 
 | `markdown-structure.md`     | Markdown ownership, structure rules, and automated documentation validation.              |

@@ -7,6 +7,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { EmailService } from './email.service';
+import {
+  TWO_FACTOR_CHALLENGE_TTL_SECONDS,
+  TwoFactorChallengeService
+} from './two-factor-challenge.service';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +18,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
-    private readonly email: EmailService
+    private readonly email: EmailService,
+    private readonly twoFactorChallenges: TwoFactorChallengeService
   ) {}
 
   async register(dto: RegisterDto, _userAgent?: string) {
@@ -59,6 +64,14 @@ export class AuthService {
 
     if (!user.emailVerifiedAt) {
       throw new UnauthorizedException('Email is not verified');
+    }
+
+    if (user.twoFactorEnabledAt) {
+      return {
+        twoFactorRequired: true,
+        challengeToken: await this.twoFactorChallenges.issue(user.id),
+        expiresIn: TWO_FACTOR_CHALLENGE_TTL_SECONDS
+      };
     }
 
     return this.createSession(user.id, userAgent);
@@ -146,7 +159,8 @@ export class AuthService {
         data: {
           refreshHash,
           userAgent,
-          expiresAt
+          expiresAt,
+          lastActiveAt: new Date()
         }
       });
 
@@ -172,7 +186,7 @@ export class AuthService {
     throw new UnauthorizedException('Invalid refresh token');
   }
 
-  private async createSession(userId: string, userAgent?: string) {
+  async createSession(userId: string, userAgent?: string) {
     const refreshToken = randomUUID();
     const refreshHash = await bcrypt.hash(refreshToken, 12);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);

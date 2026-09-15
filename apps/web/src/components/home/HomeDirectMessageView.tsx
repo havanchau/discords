@@ -1,10 +1,18 @@
 import type { FormEvent } from 'react';
-import { MessageSquare } from 'lucide-react';
-import type { AuthState, DirectConversation, DirectMessage } from '../../api';
+import { MessageSquare, Phone, Users, Video } from 'lucide-react';
+import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '../../api';
+import { directCallId } from '../../hooks/useDirectCall';
 import { cn } from '../../utils/cn';
+import { CallStage } from '../chat/CallStage';
+import { Button, IconButton, Tooltip } from '../ui';
 import { DirectMessageComposer } from './DirectMessageComposer';
-import { DirectMessageTimeline } from './DirectMessageTimeline';
+import type { DirectMessageRowActions } from './DirectMessageRow';
+import { DirectMessageTimeline, jumpToDirectMessage } from './DirectMessageTimeline';
+import { DirectPinnedMessages } from './DirectPinnedMessages';
+import { conversationDisplayName, conversationPartners } from './conversationDisplay';
+import { GroupConversationMenu } from './GroupConversationMenu';
 import { UserAvatar } from './UserAvatar';
+import type { HomeDirectCall, HomePanelActions, HomePanelState } from './types';
 import styles from './HomePanel.module.css';
 
 type HomeDirectMessageViewProps = {
@@ -13,8 +21,25 @@ type HomeDirectMessageViewProps = {
   directMessages: DirectMessage[];
   directMessageDraft: string;
   pendingAction: string | null;
+  pins: Pick<HomePanelState, 'pinnedDirectMessages' | 'isLoadingPins' | 'pinsError'>;
+  friends: FriendEntry[];
+  replyingTo: DirectMessage | null;
+  actions: Pick<
+    HomePanelActions,
+    | 'sendDirectMessage'
+    | 'setDirectMessageDraft'
+    | 'setReplyingToDirectMessage'
+    | 'editDirectMessage'
+    | 'deleteDirectMessage'
+    | 'toggleDirectReaction'
+    | 'toggleDirectPin'
+    | 'loadDirectPins'
+    | 'renameGroupConversation'
+    | 'addGroupMember'
+    | 'removeGroupMember'
+  >;
+  call: HomeDirectCall;
   onSendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  onDirectMessageDraftChange: (value: string) => void;
 };
 
 export function HomeDirectMessageView({
@@ -23,29 +48,139 @@ export function HomeDirectMessageView({
   directMessages,
   directMessageDraft,
   pendingAction,
+  pins,
+  friends,
+  replyingTo,
+  actions,
+  call,
   onSendDirectMessage,
-  onDirectMessageDraftChange,
 }: HomeDirectMessageViewProps) {
-  const dmPartner = activeConversation?.members[0]?.user;
+  const partners = activeConversation ? conversationPartners(activeConversation, auth.user.id) : [];
+  const dmPartner = partners[0];
+  const isGroup = Boolean(activeConversation?.isGroup);
+  const title = activeConversation ? conversationDisplayName(activeConversation, auth.user.id) : '';
+  const callId = activeConversation ? directCallId(activeConversation.id) : null;
+  const isInThisCall = Boolean(callId && call.state?.channelId === callId);
+  const activeCall = callId ? (call.activeCalls[callId] ?? null) : null;
+  const isRinging = Boolean(
+    activeConversation && call.outgoingCall?.conversationId === activeConversation.id,
+  );
+
+  const rowActions: DirectMessageRowActions = {
+    onReply: actions.setReplyingToDirectMessage,
+    onEdit: actions.editDirectMessage,
+    onDelete: actions.deleteDirectMessage,
+    onReact: actions.toggleDirectReaction,
+    onTogglePin: actions.toggleDirectPin,
+    onJumpToMessage: jumpToDirectMessage,
+  };
+
+  const replyingToName = replyingTo
+    ? replyingTo.authorId === auth.user.id
+      ? auth.user.displayName
+      : (replyingTo.author?.displayName ?? null)
+    : null;
 
   return (
-    <main className={cn(styles.chat, !dmPartner && styles.chatEmpty)} aria-label="Direct message thread">
-      {activeConversation && dmPartner ? (
+    <main
+      className={cn(styles.chat, !activeConversation && styles.chatEmpty)}
+      aria-label="Direct message thread"
+    >
+      {activeConversation && (isGroup || dmPartner) ? (
         <>
           <header className={styles.chatHeader}>
-            <UserAvatar user={dmPartner} />
+            {isGroup || !dmPartner ? (
+              <span className={styles.groupAvatar} aria-hidden="true">
+                <Users size={16} />
+              </span>
+            ) : (
+              <UserAvatar user={dmPartner} />
+            )}
             <span className={styles.headerText}>
-              <strong className={styles.headerName}>{dmPartner.displayName}</strong>
-              <span className={styles.headerHandle}>@{dmPartner.username}</span>
+              <strong className={styles.headerName}>{title}</strong>
+              <span className={styles.headerHandle}>
+                {isGroup ? `${partners.length + 1} members` : `@${dmPartner?.username}`}
+              </span>
+            </span>
+            <span className={styles.headerActions}>
+              {(['voice', 'video'] as const).map((mode) => {
+                const label = mode === 'voice' ? 'Start voice call' : 'Start video call';
+                const Icon = mode === 'voice' ? Phone : Video;
+                return (
+                  <Tooltip key={mode} content={label}>
+                    <IconButton
+                      label={label}
+                      disabled={Boolean(call.state)}
+                      data-testid={`dm-${mode}-call-button`}
+                      onClick={() => void call.startDirectCall(activeConversation.id, mode, title)}
+                    >
+                      <Icon size={18} aria-hidden="true" />
+                    </IconButton>
+                  </Tooltip>
+                );
+              })}
+              {isGroup ? (
+                <GroupConversationMenu
+                  conversation={activeConversation}
+                  viewer={auth.user}
+                  partners={partners}
+                  friends={friends}
+                  pendingAction={pendingAction}
+                  onRename={actions.renameGroupConversation}
+                  onAddMember={actions.addGroupMember}
+                  onRemoveMember={actions.removeGroupMember}
+                />
+              ) : null}
+              <DirectPinnedMessages
+                pinnedMessages={pins.pinnedDirectMessages}
+                isLoading={pins.isLoadingPins}
+                error={pins.pinsError}
+                onOpen={() => void actions.loadDirectPins(activeConversation.id)}
+                onJumpToMessage={jumpToDirectMessage}
+              />
             </span>
           </header>
-          <DirectMessageTimeline auth={auth} dmPartner={dmPartner} directMessages={directMessages} />
+          {isRinging ? (
+            <div className={styles.ringingBanner} role="status">
+              <span>Calling {title}…</span>
+              <Button type="button" size="sm" variant="danger" onClick={call.end}>
+                Cancel
+              </Button>
+            </div>
+          ) : null}
+          {isInThisCall || (activeCall && !call.state) ? (
+            <CallStage
+              session={{ auth, channel: null }}
+              contextLabel={title}
+              call={{
+                state: isInThisCall ? call.state : null,
+                active: activeCall,
+                remoteMedia: isInThisCall ? call.remoteMedia : [],
+                localVideoRef: call.localVideoRef,
+                start: (mode) =>
+                  call.startDirectCall(activeConversation.id, mode === 'video' ? 'video' : 'voice', title),
+                toggleMute: call.toggleMute,
+                toggleCamera: call.toggleCamera,
+                end: call.end,
+              }}
+            />
+          ) : null}
+          <DirectMessageTimeline
+            auth={auth}
+            emptyStateName={title}
+            members={partners}
+            directMessages={directMessages}
+            actions={rowActions}
+          />
           <DirectMessageComposer
-            username={dmPartner.username}
+            placeholderName={isGroup ? title : `@${dmPartner?.username}`}
             draft={directMessageDraft}
             pendingAction={pendingAction}
+            replyingTo={replyingTo}
+            replyingToName={replyingToName}
+            onCancelReply={() => actions.setReplyingToDirectMessage(null)}
             onSendDirectMessage={onSendDirectMessage}
-            onDraftChange={onDirectMessageDraftChange}
+            onDraftChange={actions.setDirectMessageDraft}
           />
         </>
       ) : (

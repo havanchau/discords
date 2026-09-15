@@ -8,6 +8,11 @@ import styles from './SettingsModal.module.css';
 const ProfileSettings = lazy(() =>
   import('./settings/ProfileSettings').then((module) => ({ default: module.ProfileSettings })),
 );
+const AccountSecuritySettings = lazy(() =>
+  import('./settings/AccountSecuritySettings').then((module) => ({
+    default: module.AccountSecuritySettings,
+  })),
+);
 const ServerSettings = lazy(() =>
   import('./settings/ServerSettings').then((module) => ({ default: module.ServerSettings })),
 );
@@ -64,7 +69,12 @@ export function SettingsModal(props: SettingsModalProps) {
         bodyClassName={styles.settingsModalBody}
       >
         <Suspense fallback={<SettingsPanelFallback />}>
-          {activeDialog === 'profile' ? <ProfileSettings {...settingsProps} /> : null}
+          {activeDialog === 'profile' ? (
+            <>
+              <ProfileSettings {...settingsProps} />
+              <AccountSecuritySettings {...settingsProps} />
+            </>
+          ) : null}
           {activeDialog === 'server-settings' ? <ServerSettings {...settingsProps} /> : null}
           {activeDialog === 'channel-settings' ? <ChannelSettings {...settingsProps} /> : null}
           {activeDialog === 'roles' ? <RolesSettings {...settingsProps} /> : null}

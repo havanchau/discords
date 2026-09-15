@@ -3,6 +3,8 @@ import { Loader2, MessageSquareReply, Send, X } from 'lucide-react';
 import { assetUrl, Message } from '../../api';
 import { formatDate, initials, previewText } from '../../helpers';
 import { Button, IconButton } from '../ui';
+import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
+import { MarkdownContent } from './MarkdownContent';
 import styles from './ThreadPanel.module.css';
 
 interface ThreadPanelProps {
@@ -78,6 +80,7 @@ export function ThreadPanel({
 }
 
 function ThreadMessage({ message, isRoot = false }: { message: Message; isRoot?: boolean }) {
+  const { resolveEmoji } = useServerEmojiContext();
   return (
     <article className={`${styles.message} ${isRoot ? styles.rootMessage : ''}`}>
       <div className={`${styles.avatar} avatar`}>
@@ -92,9 +95,17 @@ function ThreadMessage({ message, isRoot = false }: { message: Message; isRoot?:
           <strong>{message.author.displayName}</strong>
           <span>{formatDate(message.createdAt)}</span>
         </div>
-        <p className={message.deletedAt ? styles.deleted : undefined}>
-          {message.deletedAt ? 'Message deleted' : message.content || 'Attachment'}
-        </p>
+        {message.deletedAt || !message.content ? (
+          <p className={message.deletedAt ? styles.deleted : undefined}>
+            {message.deletedAt ? 'Message deleted' : 'Attachment'}
+          </p>
+        ) : (
+          <MarkdownContent
+            className={styles.messageText}
+            content={message.content}
+            resolveEmoji={resolveEmoji}
+          />
+        )}
       </div>
     </article>
   );

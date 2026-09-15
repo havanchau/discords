@@ -4,9 +4,29 @@ import { assetUrl } from '../../api';
 import { Button, TextArea, TextField } from '../ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
 import { SettingsSelect } from './SettingsSelect';
-import type { SettingsModalFields } from './types';
+import type { SettingsModalFields, SettingsSelectOption } from './types';
 import styles from '../SettingsModal.module.css';
 import { cn } from '../../utils/cn';
+
+type SlowmodeOption =
+  | '0' | '5' | '10' | '15' | '30' | '60' | '120' | '300' | '600' | '900' | '1800' | '3600' | '7200' | '21600';
+
+const SLOWMODE_OPTIONS: SettingsSelectOption<SlowmodeOption>[] = [
+  { value: '0', label: 'Off' },
+  { value: '5', label: '5 seconds' },
+  { value: '10', label: '10 seconds' },
+  { value: '15', label: '15 seconds' },
+  { value: '30', label: '30 seconds' },
+  { value: '60', label: '1 minute' },
+  { value: '120', label: '2 minutes' },
+  { value: '300', label: '5 minutes' },
+  { value: '600', label: '10 minutes' },
+  { value: '900', label: '15 minutes' },
+  { value: '1800', label: '30 minutes' },
+  { value: '3600', label: '1 hour' },
+  { value: '7200', label: '2 hours' },
+  { value: '21600', label: '6 hours' },
+];
 
 type ChannelSettingsProps = Pick<
   SettingsModalFields,
@@ -86,7 +106,26 @@ export function ChannelSettings({
             defaultValue={channel.position ?? 0}
           />
         </div>
+        {server?.categories?.length ? (
+          <SettingsSelect
+            name="categoryId"
+            label="Category"
+            defaultValue={channel.categoryId ?? ''}
+            options={[
+              { value: '', label: 'No category' },
+              ...server.categories.map((category) => ({ value: category.id, label: category.name })),
+            ]}
+          />
+        ) : null}
         <TextArea label="Topic" name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
+        {channel.type === 'TEXT' ? (
+          <SettingsSelect
+            name="slowmodeSeconds"
+            label="Slowmode"
+            defaultValue={String(channel.slowmodeSeconds ?? 0) as SlowmodeOption}
+            options={SLOWMODE_OPTIONS}
+          />
+        ) : null}
       </section>
 
       <section className={styles.settingsSection}>

@@ -5,11 +5,9 @@ import styles from './HomePanel.module.css';
 type FriendRequestListProps = {
   requests: FriendRequestEntry[];
   title?: string;
-  mode?: 'incoming' | 'outgoing' | 'blocked';
-  onRespond: (
-    request: FriendRequestEntry,
-    status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED',
-  ) => Promise<void>;
+  mode?: 'incoming' | 'outgoing';
+  onRespond: (request: FriendRequestEntry, status: 'ACCEPTED' | 'REJECTED') => Promise<void>;
+  onBlock?: (userId: string) => Promise<void>;
   onRemove?: (request: FriendRequestEntry) => Promise<void>;
 };
 
@@ -18,6 +16,7 @@ export function FriendRequestList({
   title = 'Requests',
   mode = 'incoming',
   onRespond,
+  onBlock,
   onRemove,
 }: FriendRequestListProps) {
   if (!requests.length) return null;
@@ -33,9 +32,7 @@ export function FriendRequestList({
             <span className={styles.requestName}>
               {mode === 'outgoing'
                 ? (request.receiver?.displayName ?? 'Outgoing request')
-                : (request.requester?.displayName ??
-                  request.receiver?.displayName ??
-                  'Friend request')}
+                : (request.requester?.displayName ?? 'Friend request')}
             </span>
             <span className={styles.requestActions}>
               {mode === 'incoming' ? (
@@ -58,18 +55,20 @@ export function FriendRequestList({
                   >
                     Decline
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={styles.requestButton}
-                    onClick={() => void onRespond(request, 'BLOCKED')}
-                  >
-                    Block
-                  </Button>
+                  {onBlock ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={styles.requestButton}
+                      onClick={() => void onBlock(request.requesterId)}
+                    >
+                      Block
+                    </Button>
+                  ) : null}
                 </>
               ) : null}
-              {mode !== 'incoming' && onRemove ? (
+              {mode === 'outgoing' && onRemove ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -77,7 +76,7 @@ export function FriendRequestList({
                   className={styles.requestButton}
                   onClick={() => void onRemove(request)}
                 >
-                  {mode === 'blocked' ? 'Unblock' : 'Cancel'}
+                  Cancel
                 </Button>
               ) : null}
             </span>

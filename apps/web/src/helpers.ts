@@ -43,7 +43,9 @@ export interface RemoteMedia extends CallParticipant {
 }
 
 export interface CallState {
+  /** Channel id, or `dm:<conversationId>` for a direct message call. */
   channelId: string;
+  label: string;
   mode: CallMode;
   isMuted: boolean;
   isCameraOff: boolean;

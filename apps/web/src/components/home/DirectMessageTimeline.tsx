@@ -1,47 +1,63 @@
 import { MessageSquare } from 'lucide-react';
 import type { AuthState, DirectMessage, PublicUser } from '../../api';
-import { formatDate } from '../../helpers';
+import { DirectMessageRow, type DirectMessageRowActions } from './DirectMessageRow';
 import styles from './HomePanel.module.css';
 
 type DirectMessageTimelineProps = {
   auth: AuthState;
-  dmPartner: PublicUser;
+  emptyStateName: string;
+  members: PublicUser[];
   directMessages: DirectMessage[];
+  actions: DirectMessageRowActions;
 };
 
 export function DirectMessageTimeline({
   auth,
-  dmPartner,
+  emptyStateName,
+  members,
   directMessages,
+  actions,
 }: DirectMessageTimelineProps) {
+  function authorName(message: DirectMessage) {
+    if (message.authorId === auth.user.id) return auth.user.displayName;
+    return (
+      message.author?.displayName ??
+      members.find((member) => member.id === message.authorId)?.displayName ??
+      'Unknown user'
+    );
+  }
+
   return (
     <div className={styles.messageList} aria-live="polite">
       {directMessages.length ? (
-        directMessages.map((message) => {
-          const mine = message.authorId === auth.user.id;
-          const authorName = mine
-            ? auth.user.displayName
-            : (message.author?.displayName ?? dmPartner.displayName);
-
-          return (
-            <article
-              key={message.id}
-              className={mine ? `${styles.message} ${styles.messageMine}` : styles.message}
-            >
-              <span className={styles.messageAuthor}>{authorName}</span>
-              <p className={styles.messageBody}>{message.content}</p>
-              <span className={styles.messageTime}>{formatDate(message.createdAt)}</span>
-            </article>
-          );
-        })
+        directMessages.map((message) => (
+          <DirectMessageRow
+            key={message.id}
+            message={message}
+            viewerId={auth.user.id}
+            accessToken={auth.accessToken}
+            authorName={authorName(message)}
+            actions={actions}
+          />
+        ))
       ) : (
         <div className={styles.statePanel}>
           <MessageSquare size={24} aria-hidden="true" />
-          <span className={styles.statePanelCopy}>
-            Start the conversation with {dmPartner.displayName}.
-          </span>
+          <span className={styles.statePanelCopy}>Start the conversation with {emptyStateName}.</span>
         </div>
       )}
     </div>
   );
+}
+
+/** Scrolls a rendered direct message into view and briefly highlights it. */
+export function jumpToDirectMessage(messageId: string) {
+  const target = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+  if (!target) return;
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.focus({ preventScroll: true });
+  target.dataset.jumpHighlight = 'true';
+  window.setTimeout(() => {
+    delete target.dataset.jumpHighlight;
+  }, 1400);
 }

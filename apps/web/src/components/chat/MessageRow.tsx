@@ -4,7 +4,6 @@ import {
   FileArchive,
   FileAudio2,
   FileText,
-  Link as LinkIcon,
   Lock,
   MessageSquareReply,
   Pin,
@@ -40,31 +39,15 @@ import {
   PopoverRoot,
   PopoverTrigger,
 } from '../ui';
+import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
+import { EmojiPicker, ReactionEmoji } from './EmojiPicker';
+import { LinkPreviewCard } from './LinkPreviewCard';
+import { extractMarkdownLinks } from '../../utils/markdown';
+import { MarkdownContent } from './MarkdownContent';
 import styles from './MessageRow.module.css';
 import type { ChatPanelMessageActions } from './types';
 
-const MESSAGE_LINK_PATTERN = /(https?:\/\/[^\s]+)/gi;
-const MENTION_PATTERN = /(@[\w.-]+)/g;
-const MESSAGE_LINK_TEST_PATTERN = /^https?:\/\//i;
-const MENTION_TEST_PATTERN = /^@[\w.-]+$/;
-const EMOJI_OPTIONS = [
-  '👍',
-  '🔥',
-  '😂',
-  '❤️',
-  '🎉',
-  '👏',
-  '🙏',
-  '😍',
-  '😮',
-  '😢',
-  '😡',
-  '✅',
-  '👀',
-  '💯',
-  '🚀',
-  '✨',
-];
+const MAX_LINK_PREVIEWS = 3;
 
 interface PreviewAttachment {
   url: string;
@@ -74,15 +57,17 @@ interface PreviewAttachment {
 
 function MessageContent({
   message,
+  accessToken,
   onOpenThread,
   onJumpToMessage,
 }: {
   message: Message;
+  accessToken: string;
   onOpenThread: (message: Message) => void;
   onJumpToMessage: (messageId: string) => void;
 }) {
-  const parts = message.content.split(MESSAGE_LINK_PATTERN);
-  const links = parts.filter((part) => MESSAGE_LINK_TEST_PATTERN.test(part));
+  const { resolveEmoji } = useServerEmojiContext();
+  const links = extractMarkdownLinks(message.content);
 
   return (
     <>
@@ -101,39 +86,25 @@ function MessageContent({
         </button>
       ) : null}
       {message.content ? (
-        <p className={styles.content}>
-          {message.isEncrypted ? (
-            <span
-              className={`${styles.encryptedPill} ${message.decryptionFailed ? styles.locked : ''}`}
-            >
-              {message.decryptionFailed ? (
-                <Lock size={12} aria-hidden="true" />
-              ) : (
-                <Unlock size={12} aria-hidden="true" />
-              )}
-              {message.decryptionFailed ? 'Locked' : 'E2EE'}
-            </span>
-          ) : null}
-          {parts.map((part, index) => {
-            if (MESSAGE_LINK_TEST_PATTERN.test(part)) {
-              return (
-                <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer">
-                  {part}
-                </a>
-              );
-            }
-
-            return part.split(MENTION_PATTERN).map((segment, segmentIndex) =>
-              MENTION_TEST_PATTERN.test(segment) ? (
-                <span className={styles.mention} key={`${part}-${index}-${segmentIndex}`}>
-                  {segment}
-                </span>
-              ) : (
-                <span key={`${part}-${index}-${segmentIndex}`}>{segment}</span>
-              ),
-            );
-          })}
-        </p>
+        <MarkdownContent
+          className={styles.content}
+          content={message.content}
+          resolveEmoji={resolveEmoji}
+          prefix={
+            message.isEncrypted ? (
+              <span
+                className={`${styles.encryptedPill} ${message.decryptionFailed ? styles.locked : ''}`}
+              >
+                {message.decryptionFailed ? (
+                  <Lock size={12} aria-hidden="true" />
+                ) : (
+                  <Unlock size={12} aria-hidden="true" />
+                )}
+                {message.decryptionFailed ? 'Locked' : 'E2EE'}
+              </span>
+            ) : null
+          }
+        />
       ) : null}
       {!message.threadId && message.thread?.replyCount ? (
         <button
@@ -150,18 +121,13 @@ function MessageContent({
           ) : null}
         </button>
       ) : null}
-      {links.map((link) => (
-        <a
+      {links.map((link, index) => (
+        <LinkPreviewCard
           key={link}
-          className={styles.linkPreview}
-          href={link}
-          target="_blank"
-          rel="noreferrer"
-          data-testid="link-preview"
-        >
-          <LinkIcon size={18} aria-hidden="true" />
-          <span>{link.replace(/^https?:\/\//i, '')}</span>
-        </a>
+          url={link}
+          canFetchPreview={index < MAX_LINK_PREVIEWS && !message.isEncrypted}
+          accessToken={accessToken}
+        />
       ))}
     </>
   );
@@ -374,6 +340,7 @@ export const MessageRow = memo(function MessageRow({
               ) : (
                 <MessageContent
                   message={message}
+                  accessToken={auth.accessToken}
                   onOpenThread={actions.openThread}
                   onJumpToMessage={onJumpToMessage}
                 />
@@ -396,7 +363,7 @@ export const MessageRow = memo(function MessageRow({
                       onClick={() => void actions.toggleReaction(message, reaction.emoji)}
                       title={`React ${reaction.emoji}`}
                     >
-                      <span>{reaction.emoji}</span>
+                      <ReactionEmoji emoji={reaction.emoji} />
                       <strong>{reaction.count}</strong>
                     </button>
                   ))}
@@ -437,20 +404,12 @@ export const MessageRow = memo(function MessageRow({
                         </IconButton>
                       </PopoverTrigger>
                       <PopoverContent side="top" align="end">
-                        <div className={styles.emojiPickerPopover}>
-                          {EMOJI_OPTIONS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              onClick={() => {
-                                setIsEmojiOpen(false);
-                                void actions.toggleReaction(message, emoji);
-                              }}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
+                        <EmojiPicker
+                          onSelect={(emoji) => {
+                            setIsEmojiOpen(false);
+                            void actions.toggleReaction(message, emoji);
+                          }}
+                        />
                       </PopoverContent>
                     </PopoverRoot>
                   </div>

@@ -7,7 +7,9 @@ import type {
   Invite,
   NotificationPreference,
   Role,
+  ServerBanEntry,
   ServerDetail,
+  ServerEmoji,
 } from '../../api';
 import type { ActiveDialog } from '../ChatPanel';
 
@@ -31,6 +33,12 @@ export interface SettingsModalFields {
   invites: Invite[];
   notificationPreferences: NotificationPreference[];
   pendingAction: string | null;
+  bans: ServerBanEntry[];
+  isLoadingBans: boolean;
+  bansError: string | null;
+  emojis: ServerEmoji[];
+  isLoadingEmojis: boolean;
+  emojisError: string | null;
   uiTheme: UiTheme;
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
   channelAvatarInputRef: RefObject<HTMLInputElement | null>;
@@ -62,8 +70,15 @@ export interface SettingsModalFields {
   deleteRole: (role: Role) => Promise<void>;
   toggleMemberRole: (memberId: string, roleId: string, enabled: boolean) => Promise<void>;
   removeMember: (memberId: string) => Promise<void>;
+  loadBans: (serverId: string) => Promise<void>;
+  banMember: (userId: string, reason: string) => Promise<boolean>;
+  unbanUser: (userId: string) => Promise<void>;
+  timeoutMember: (memberId: string, durationMinutes: number) => Promise<void>;
+  createEmoji: (file: File, name: string) => Promise<boolean>;
+  deleteEmoji: (emojiId: string) => Promise<void>;
   openMemberRoleEditor: (memberId: string) => void;
   setUiTheme: (theme: UiTheme) => void;
+  signOut: () => void;
 }
 
 export interface SettingsModalProps {
@@ -79,12 +94,19 @@ export interface SettingsModalProps {
     | 'invites'
     | 'notificationPreferences'
     | 'pendingAction'
+    | 'bans'
+    | 'isLoadingBans'
+    | 'bansError'
+    | 'emojis'
+    | 'isLoadingEmojis'
+    | 'emojisError'
   >;
   refs: Pick<SettingsModalFields, 'profileAvatarInputRef' | 'channelAvatarInputRef'>;
   theme: Pick<SettingsModalFields, 'uiTheme'>;
   actions: Pick<
     SettingsModalFields,
     | 'setUiTheme'
+    | 'signOut'
     | 'createInviteFromSettings'
     | 'revokeInvite'
     | 'updateProfile'
@@ -98,6 +120,12 @@ export interface SettingsModalProps {
     | 'deleteRole'
     | 'toggleMemberRole'
     | 'removeMember'
+    | 'loadBans'
+    | 'banMember'
+    | 'unbanUser'
+    | 'timeoutMember'
+    | 'createEmoji'
+    | 'deleteEmoji'
     | 'openMemberRoleEditor'
   >;
 }

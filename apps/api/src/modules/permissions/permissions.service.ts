@@ -56,6 +56,17 @@ export class PermissionsService {
     return member.kind === 'OWNER' || member.roles.some(({ role }) => role.permissions.includes(permission));
   }
 
+  /** Refuses members whose timeout has not expired yet; the owner can never be timed out. */
+  async requireNotTimedOut(userId: string, serverId: string, now = new Date()) {
+    const member = await this.prisma.serverMember.findUnique({
+      where: { userId_serverId: { userId, serverId } },
+      select: { kind: true, timeoutUntil: true },
+    });
+    if (member && member.kind !== 'OWNER' && member.timeoutUntil && member.timeoutUntil > now) {
+      throw new ForbiddenException(`You are timed out until ${member.timeoutUntil.toISOString()}`);
+    }
+  }
+
   async requireChannelPermission(userId: string, channelId: string, permission: PermissionValue) {
     const allowed = await this.hasChannelPermission(userId, channelId, permission);
     if (!allowed) {

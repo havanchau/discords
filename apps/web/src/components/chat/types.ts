@@ -1,6 +1,7 @@
 import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
 import type { AuthState, Channel, Message, NotificationItem } from '../../api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
+import type { ComposerRestriction } from '../../hooks/useComposerRestrictions';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 
 export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | null;
@@ -69,7 +70,7 @@ export interface ChatPanelCall {
   active: ActiveCallSummary | null;
   remoteMedia: RemoteMedia[];
   localVideoRef: RefObject<HTMLVideoElement | null>;
-  start: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<void>;
+  start: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<unknown>;
   toggleMute: () => void;
   toggleCamera: () => void;
   end: () => void;
@@ -89,6 +90,7 @@ export interface ChatPanelMessageActions {
 }
 
 export interface ChatPanelComposer {
+  restriction: ComposerRestriction;
   replyingToMessage: Message | null;
   selectedFiles: File[];
   isRecordingVoice: boolean;

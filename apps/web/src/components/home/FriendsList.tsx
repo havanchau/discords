@@ -1,5 +1,13 @@
 import type { FriendEntry } from '../../api';
-import { Button } from '../ui';
+import { Ban, MoreVertical, UserMinus } from 'lucide-react';
+import {
+  Button,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  IconButton,
+} from '../ui';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
 import { handleListKeyboardNavigation } from './keyboardNavigation';
@@ -8,9 +16,15 @@ type FriendsListProps = {
   friends: FriendEntry[];
   onStartConversation: (userId: string) => Promise<void>;
   onRemoveFriend: (friend: FriendEntry) => Promise<void>;
+  onBlock: (userId: string) => Promise<void>;
 };
 
-export function FriendsList({ friends, onStartConversation, onRemoveFriend }: FriendsListProps) {
+export function FriendsList({
+  friends,
+  onStartConversation,
+  onRemoveFriend,
+  onBlock,
+}: FriendsListProps) {
   return (
     <section aria-labelledby="home-friends-title">
       <h2 id="home-friends-title" className={styles.sectionTitle}>
@@ -35,15 +49,23 @@ export function FriendsList({ friends, onStartConversation, onRemoveFriend }: Fr
                 >
                   Message
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className={styles.requestButton}
-                  onClick={() => void onRemoveFriend(friend)}
-                >
-                  Remove
-                </Button>
+                <DropdownMenuRoot>
+                  <DropdownMenuTrigger asChild>
+                    <IconButton label={`More actions for ${friend.user.displayName}`} size="sm">
+                      <MoreVertical size={16} aria-hidden="true" />
+                    </IconButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="bottom">
+                    <DropdownMenuItem onSelect={() => void onRemoveFriend(friend)}>
+                      <UserMinus size={16} aria-hidden="true" />
+                      Remove friend
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => void onBlock(friend.user.id)}>
+                      <Ban size={16} aria-hidden="true" />
+                      Block
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuRoot>
               </span>
             </article>
           ))

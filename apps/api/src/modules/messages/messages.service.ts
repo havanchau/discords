@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ChannelsService } from '../channels/channels.service';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
@@ -8,6 +14,7 @@ import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { slowmodeRetryAfterSeconds } from './slowmode';
 import {
   buildMessageSearchWhere,
   MessageSearchFilters,
@@ -155,6 +162,8 @@ export class MessagesService {
   async createMessage(userId: string, channelId: string, dto: CreateMessageDto) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
+    await this.permissions.requireNotTimedOut(userId, channel.serverId);
+    await this.enforceSlowmode(userId, channel);
     const content = dto.content.trim();
     const attachments = dto.attachments ?? [];
 
@@ -270,6 +279,7 @@ export class MessagesService {
       rootMessage.channelId,
       Permission.SendMessages,
     );
+    await this.permissions.requireNotTimedOut(userId, rootMessage.serverId);
     const content = dto.content.trim();
     const attachments = dto.attachments ?? [];
 
@@ -432,6 +442,7 @@ export class MessagesService {
       throw new NotFoundException('Message not found');
     }
     await this.channels.requireReadableChannel(userId, message.channelId);
+    await this.permissions.requireNotTimedOut(userId, message.serverId);
 
     const where = {
       messageId_userId_emoji: {
@@ -541,6 +552,36 @@ export class MessagesService {
       userId,
       replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined,
     );
+  }
+
+  /* Top-level messages only; deleted messages still count so deleting cannot reset the cooldown. */
+  private async enforceSlowmode(
+    userId: string,
+    channel: { id: string; serverId: string; slowmodeSeconds: number },
+  ) {
+    if (channel.slowmodeSeconds <= 0) return;
+    const [canManageMessages, canManageChannels] = await Promise.all([
+      this.permissions.hasServerPermission(userId, channel.serverId, Permission.ManageMessages),
+      this.permissions.hasServerPermission(userId, channel.serverId, Permission.ManageChannels),
+    ]);
+    if (canManageMessages || canManageChannels) return;
+
+    const lastMessage = await this.prisma.message.findFirst({
+      where: { channelId: channel.id, authorId: userId, threadId: null },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    const retryAfter = slowmodeRetryAfterSeconds(
+      lastMessage?.createdAt,
+      channel.slowmodeSeconds,
+      new Date(),
+    );
+    if (retryAfter > 0) {
+      throw new HttpException(
+        `Slowmode is enabled. Try again in ${retryAfter}s.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
   }
 
   private async requireThreadRoot(userId: string, rootMessageId: string) {

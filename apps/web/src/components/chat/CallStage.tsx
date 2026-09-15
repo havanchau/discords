@@ -9,13 +9,16 @@ import type { ChatPanelCall, ChatPanelSession } from './types';
 interface CallStageProps {
   session: ChatPanelSession;
   call: ChatPanelCall;
+  /** Where the call happens, e.g. `#general` or a DM name; defaults to the selected channel. */
+  contextLabel?: string;
 }
 
-export function CallStage({ session, call }: CallStageProps) {
+export function CallStage({ session, call, contextLabel }: CallStageProps) {
   const { auth, channel } = session;
   const { active, state, remoteMedia } = call;
 
   if (!active && !state) return null;
+  const bannerLabel = contextLabel ?? `#${channel?.name ?? ''}`;
 
   return (
     <>
@@ -39,7 +42,7 @@ export function CallStage({ session, call }: CallStageProps) {
                   : 'Voice call is active'}
             </strong>
             <span>
-              #{channel?.name} - {active.participants.length} participant
+              {bannerLabel} - {active.participants.length} participant
               {active.participants.length === 1 ? '' : 's'}
             </span>
           </div>
@@ -65,7 +68,7 @@ export function CallStage({ session, call }: CallStageProps) {
                     : 'Voice call'}
               </strong>
               <span>
-                #{channel?.name} - {remoteMedia.length + 1} participant
+                {state.label} - {remoteMedia.length + 1} participant
                 {remoteMedia.length ? 's' : ''}
               </span>
             </div>
