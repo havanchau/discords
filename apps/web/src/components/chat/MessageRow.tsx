@@ -372,6 +372,11 @@ export const MessageRow = memo(function MessageRow({
 
               {!message.deletedAt && !isEditing && areActionsVisible && (
                 <div className={`${styles.actions} ${styles.actionsVisible}`}>
+                  <Tooltip content="Reply">
+                    <IconButton label="Reply" onClick={() => actions.setReplyingToMessage(message)}>
+                      <Reply size={14} aria-hidden="true" />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip content="Open thread">
                     <IconButton label="Open thread" onClick={() => actions.openThread(message)}>
                       <MessageSquareReply size={14} aria-hidden="true" />
@@ -445,6 +450,9 @@ export const MessageRow = memo(function MessageRow({
 
         {!message.deletedAt && (
           <ContextMenuContent>
+            <ContextMenuItem onClick={() => actions.setReplyingToMessage(message)}>
+              <Reply size={14} aria-hidden="true" /> Reply
+            </ContextMenuItem>
             <ContextMenuItem onClick={() => actions.openThread(message)}>
               <MessageSquareReply size={14} aria-hidden="true" /> Open Thread
             </ContextMenuItem>
