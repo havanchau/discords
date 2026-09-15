@@ -66,7 +66,7 @@
 
 .danger {
   background: var(--state-danger);
-  color: var(--text-on-accent);
+  color: var(--text-on-danger);
 }
 
 .danger:hover {
@@ -74,7 +74,7 @@
 }
 
 .sm {
-  min-height: var(--control-min-size);
+  min-height: var(--control-height-sm);
   padding: var(--space-1) var(--space-2);
   font-size: var(--font-size-sm);
 }
@@ -92,9 +92,12 @@
   width: 100%;
 }
 
+/* min-* too: a size class's min-height would otherwise outgrow the fixed square. */
 .iconButton {
   width: var(--control-min-size);
   height: var(--control-min-size);
+  min-width: var(--control-min-size);
+  min-height: var(--control-min-size);
   padding: 0;
   border-radius: var(--radius-sm);
 }

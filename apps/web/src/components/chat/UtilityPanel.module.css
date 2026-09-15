@@ -39,9 +39,9 @@
 }
 
 .utilityPanel input {
-  height: 36px;
+  height: var(--control-height-md);
   padding: 0 var(--space-3);
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .searchPanel {
@@ -65,7 +65,7 @@
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   background: var(--surface-raised);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .searchFilter strong {
@@ -75,7 +75,7 @@
 
 .searchInvalid {
   color: var(--state-danger);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-base);
 }
 
@@ -86,7 +86,7 @@
 
 .notificationPanel > strong {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -117,7 +117,7 @@
 
 .notificationEmpty {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   padding: var(--space-2) 0;
 }
 
@@ -128,13 +128,13 @@
 
 .encryptionPanel strong {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
 }
 
 .encryptionPanel span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-base);
 }
 
@@ -156,12 +156,12 @@
   justify-content: space-between;
   gap: var(--space-2);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .searchResultsHeader strong {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -204,7 +204,7 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .searchResultMeta strong,
@@ -223,7 +223,7 @@
 
 .searchResultSnippet {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-base);
   overflow-wrap: anywhere;
 }
@@ -239,13 +239,13 @@
   align-items: center;
   gap: 4px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .searchEmpty {
   padding: var(--space-2) 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .notificationHeader {
@@ -262,7 +262,7 @@
 
 .notificationHeader span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .notificationList {
@@ -303,7 +303,7 @@
 
 .notificationText strong {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .notificationText span,
@@ -312,7 +312,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .pinnedSection {
@@ -334,12 +334,12 @@
 
 .mediaHeader strong {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .mediaHeader span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .mediaTabs {
@@ -358,7 +358,7 @@
   color: var(--text-muted);
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -438,13 +438,13 @@
 .mediaTile strong,
 .mediaRow strong {
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .mediaTile small,
 .mediaRow small {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .mediaThumb {

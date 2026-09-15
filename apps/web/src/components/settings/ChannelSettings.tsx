@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { assetUrl } from '../../api';
 import { Button, TextArea, TextField } from '../ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
+import { SettingsSelect } from './SettingsSelect';
 import type { SettingsModalFields } from './types';
 import styles from '../SettingsModal.module.css';
 import { cn } from '../../utils/cn';
@@ -162,20 +163,16 @@ export function ChannelSettings({
           </div>
           {members.length ? (
             <div className={styles.memberOverridePanel}>
-              <label className={cn(styles.settingsField, styles.memberOverridePicker)}>
-                <span>Select member</span>
-                <select
-                  value={selectedMember?.id ?? ''}
-                  onChange={(event) => setSelectedMemberId(event.target.value)}
-                  aria-label="Select member for channel overrides"
-                >
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.user.displayName || member.user.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SettingsSelect
+                name="channelOverrideMemberId"
+                label="Select member"
+                defaultValue={selectedMember?.id ?? members[0].id}
+                options={members.map((member) => ({
+                  value: member.id,
+                  label: member.user.displayName || member.user.username,
+                }))}
+                onValueChange={setSelectedMemberId}
+              />
               {selectedMember
                 ? (() => {
                     const override = channelOverrides.find(

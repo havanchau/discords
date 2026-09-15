@@ -9,7 +9,7 @@
   gap: var(--space-3);
   margin: var(--space-5) var(--space-4) var(--space-2);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -65,7 +65,8 @@
   place-items: center;
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-bold);
-  font-size: 16px;
+  --avatar-initials-size: 16px;
+  font-size: var(--avatar-initials-size);
   flex-shrink: 0;
   cursor: pointer;
   overflow: hidden;
@@ -95,7 +96,7 @@
   width: 56px;
   display: block;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   line-height: 1.3;
   text-align: right;
 }
@@ -113,8 +114,8 @@
 }
 
 .meta strong {
-  font-size: 1rem;
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   cursor: pointer;
 }
@@ -169,7 +170,7 @@
   padding: 1px 6px;
   color: var(--state-success);
   background: var(--surface-hover);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   vertical-align: middle;
 }
@@ -190,7 +191,7 @@
   padding: 0;
   color: var(--text-muted);
   background: transparent;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   text-align: left;
   cursor: pointer;
 }
@@ -224,7 +225,7 @@
   color: var(--text-link);
   background: var(--surface-overlay);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .linkPreview:hover {
@@ -289,7 +290,7 @@
   justify-content: space-between;
   gap: var(--space-2);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   padding: 0 var(--space-1);
   overflow-wrap: anywhere;
 }
@@ -300,7 +301,7 @@
   padding: 4px var(--space-2);
   color: var(--text-muted);
   background: var(--surface-hover);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -343,7 +344,7 @@
 
 .audioAttachmentHeader small {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .audioAttachment audio {
@@ -415,7 +416,7 @@
 .fileAttachment small {
   margin-top: 2px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .deletedMessage {
@@ -441,7 +442,7 @@
   padding: 0 var(--space-2);
   color: var(--text-primary);
   background: var(--surface-hover);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   cursor: pointer;
 }
 
@@ -457,7 +458,7 @@
 }
 
 .reactionRow strong {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
 }
 
@@ -510,9 +511,9 @@
 }
 
 .quickReactions button {
-  min-width: 24px;
-  min-height: 24px;
-  font-size: 13px;
+  min-width: var(--control-min-size);
+  min-height: var(--control-min-size);
+  font-size: var(--font-size-base);
 }
 
 .emojiPickerPopover {
@@ -525,10 +526,10 @@
 
 .emojiPickerPopover button {
   width: 40px;
-  height: 34px;
+  height: var(--control-height-sm);
   min-width: 40px;
-  min-height: 34px;
-  font-size: 18px;
+  min-height: var(--control-height-sm);
+  font-size: var(--font-size-lg);
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -592,7 +593,7 @@
   padding: 0 var(--space-3);
   color: var(--text-muted);
   background: var(--surface-hover);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 

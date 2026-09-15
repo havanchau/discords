@@ -50,7 +50,7 @@
 
 .activeCallCopy strong {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
 }
 
@@ -60,7 +60,7 @@
 }
 
 .activeCallJoin {
-  height: 36px;
+  height: var(--control-height-md);
   padding: 0 var(--space-3);
   white-space: nowrap;
 }
@@ -89,7 +89,7 @@
 }
 
 .callStageHeader strong {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
 }
@@ -135,7 +135,8 @@
   width: 80px;
   height: 80px;
   border-radius: var(--radius-full);
-  font-size: 24px;
+  --avatar-initials-size: 24px;
+  font-size: var(--avatar-initials-size);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +153,7 @@
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--surface-scrim);
   font-size: var(--font-size-sm);
 }
 

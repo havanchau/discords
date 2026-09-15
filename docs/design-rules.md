@@ -102,7 +102,11 @@ columns the grid offers; a sidebar hides itself.
 
 ## Anti-patterns
 
-- A hardcoded colour in a component.
+- A hardcoded colour in a component (`#hex`, `rgb()`, `rgba()`, `white`/`black`). Enforced by `npm run ui:scan`.
+- A `font-size` that is not a `var(...)` in a component module. A size used by one component only (e.g.
+  avatar initials) goes in a local custom property in that module. Enforced by `npm run ui:scan`.
+- A control height outside `--control-height-sm|md|lg`, or a component `height` fighting a `Button` size
+  class — pass the matching `size` instead.
 - A primitive token referenced outside `tokens.css`.
 - A new file in `apps/web/src/styles/`.
 - A fixed grid row template over conditional children.

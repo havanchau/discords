@@ -19,7 +19,8 @@ export function ServerRail({ servers, server, openHome, openServer, onAddServer 
       <Tooltip content="Direct Messages" side="right">
         <Button
           type="button"
-          className={cn(styles.serverButton, styles.serverHome, !server && styles.serverButtonActive)}
+          variant="ghost"
+          className={cn(styles.serverButton, !server && styles.serverButtonActive)}
           aria-label="Direct Messages"
           aria-current={!server ? 'page' : undefined}
           onClick={openHome}
@@ -34,6 +35,7 @@ export function ServerRail({ servers, server, openHome, openServer, onAddServer 
         <Tooltip key={item.id} content={item.name} side="right">
           <Button
             type="button"
+            variant="ghost"
             className={cn(styles.serverButton, server?.id === item.id && styles.serverButtonActive)}
             aria-label={item.name}
             aria-current={server?.id === item.id ? 'page' : undefined}
@@ -47,6 +49,7 @@ export function ServerRail({ servers, server, openHome, openServer, onAddServer 
       <Tooltip content="Add a server" side="right">
         <Button
           type="button"
+          variant="ghost"
           className={cn(styles.serverButton, styles.serverAdd)}
           aria-label="Add a server"
           onClick={onAddServer}

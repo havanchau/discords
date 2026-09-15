@@ -1,5 +1,5 @@
 import type { FriendEntry } from '../../api';
-import { Button, Banner } from '../ui';
+import { Button } from '../ui';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
 import { handleListKeyboardNavigation } from './keyboardNavigation';
@@ -48,9 +48,7 @@ export function FriendsList({ friends, onStartConversation, onRemoveFriend }: Fr
             </article>
           ))
         ) : (
-          <Banner className={styles.emptyBanner} variant="info">
-            No friends yet.
-          </Banner>
+          <p className="empty-note">No friends yet.</p>
         )}
       </div>
     </section>

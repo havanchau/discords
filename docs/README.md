@@ -16,6 +16,7 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/ui-overhaul.md`   | Feature spec for UI visual redesign and web codebase de-duplication.                      |
 | `features/ui-identity-redesign.md` | Feature spec for the neutral visual identity and the global-CSS to CSS Modules migration. |
 | `features/performance-optimization.md` | Spec for batched permission/unread queries, web bundle size, and message list re-renders. |
+| `features/ui-consistency-pass.md` | Spec for token-only colours, uniform control heights, and the type scale across the web UI. |
 | `implementation-plan.md`    | Sprint plan, delivery sequence, test strategy, risks, and definition of done.             |
 
 | `markdown-structure.md`     | Markdown ownership, structure rules, and automated documentation validation.              |

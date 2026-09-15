@@ -24,7 +24,8 @@
   display: none;
 }
 
-.serverButton {
+/* Scoped under .rail so the Button variant's hover rules cannot outrank the rail states. */
+.rail .serverButton {
   position: relative;
   width: 48px;
   height: 48px;
@@ -45,7 +46,7 @@
     color var(--motion-fast);
 }
 
-.serverButton::before {
+.rail .serverButton::before {
   content: '';
   position: absolute;
   left: calc(-1 * (var(--rail-indicator-gutter) + var(--rail-indicator-width)));
@@ -56,47 +57,41 @@
   transition: height var(--motion-base);
 }
 
-.serverButton:hover {
+.rail .serverButton:hover {
   border-radius: var(--radius-md);
   color: var(--text-primary);
   background: var(--surface-overlay);
 }
 
-.serverButton:hover::before {
+.rail .serverButton:hover::before {
   height: 20px;
 }
 
-.serverButtonActive {
+.rail .serverButtonActive,
+.rail .serverButtonActive:hover {
   border-color: transparent;
   border-radius: var(--radius-md);
   color: var(--text-on-accent);
   background: var(--accent);
 }
 
-.serverButtonActive:hover {
-  color: var(--text-on-accent);
+.rail .serverButtonActive:hover {
   background: var(--accent-hover);
 }
 
-.serverButtonActive::before {
+.rail .serverButtonActive::before {
   height: 32px;
 }
 
-.serverHome {
-  color: var(--text-on-accent);
-  background: var(--accent);
-  border-color: transparent;
-}
-
-.serverAdd {
+.rail .serverAdd {
   margin-top: auto;
-  color: var(--state-success);
+  color: var(--text-muted);
 }
 
-.serverAdd:hover {
-  color: var(--text-on-accent);
-  background: var(--state-success);
+.rail .serverAdd:hover {
   border-color: transparent;
+  color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 .railDivider {

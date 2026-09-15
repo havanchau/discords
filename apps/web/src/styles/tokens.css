@@ -134,6 +134,7 @@
   --text-muted: var(--gray-600);
   --text-disabled: var(--gray-500);
   --text-on-accent: var(--gray-0);
+  --text-on-danger: var(--gray-0);
   --text-link: var(--blue-600);
 
   --border-default: var(--gray-200);
@@ -173,6 +174,8 @@
   --text-muted: var(--gray-400);
   --text-disabled: var(--gray-500);
   --text-on-accent: var(--gray-0);
+  /* --state-danger is a light red here; white on it fails 4.5:1. */
+  --text-on-danger: var(--gray-950);
   --text-link: var(--blue-400);
 
   --border-default: rgba(255, 255, 255, 0.09);
@@ -212,6 +215,7 @@
  * text-secondary on surface-overlay >= 4.5
  * text-disabled on surface-overlay >= 3
  * text-on-accent on accent >= 4.5
+ * text-on-danger on state-danger >= 4.5
  * text-on-accent on avatar-tint-0 >= 4.5
  * text-on-accent on avatar-tint-1 >= 4.5
  * text-on-accent on avatar-tint-2 >= 4.5

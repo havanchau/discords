@@ -53,7 +53,8 @@
   border-radius: var(--radius-full);
   color: var(--text-primary);
   background: var(--accent);
-  font-size: 13px;
+  --avatar-initials-size: 13px;
+  font-size: var(--avatar-initials-size);
   font-weight: var(--font-weight-bold);
 }
 
@@ -81,7 +82,7 @@
 
 .meta span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .message p {
@@ -103,7 +104,7 @@
   gap: var(--space-2);
   margin: 0 var(--space-4) var(--space-2);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
@@ -134,7 +135,7 @@
 
 .composer input {
   min-width: 0;
-  height: 40px;
+  height: var(--control-height-md);
   border: 0;
   border-radius: var(--radius-md);
   padding: 0 var(--space-3);
@@ -147,7 +148,7 @@
 }
 
 .composer button {
-  min-height: 40px;
+  min-height: var(--control-height-md);
 }
 
 @media (max-width: 900px) {

@@ -1,5 +1,5 @@
 import type { DirectConversation } from '../../api';
-import { Button, Banner } from '../ui';
+import { Button } from '../ui';
 import { cn } from '../../utils/cn';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
@@ -54,7 +54,7 @@ export function ConversationList({ conversations, activeConversationId, onOpenCo
             );
           })
         ) : (
-          <Banner className={styles.emptyBanner} variant="info">No direct messages yet.</Banner>
+          <p className="empty-note">No direct messages yet.</p>
         )}
       </div>
     </section>

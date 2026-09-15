@@ -188,6 +188,7 @@ export function ChatHeader({
           type="button"
           className={styles.headerSearch}
           variant="ghost"
+          size="sm"
           onClick={() => togglePanel('search')}
           aria-pressed={panels.activePanel === 'search'}
           data-testid="search-button"

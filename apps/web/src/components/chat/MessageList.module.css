@@ -33,7 +33,7 @@
 
 .channelIntro strong {
   color: var(--text-primary);
-  font-size: 30px;
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   line-height: 1.15;
 }
@@ -41,7 +41,7 @@
 .channelIntro span {
   max-width: 900px;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: var(--font-size-base);
   line-height: 1.4;
 }
 
@@ -65,13 +65,13 @@
 
 .statePanel strong {
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
 }
 
 .statePanel span {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .messageSkeletonList {
@@ -132,7 +132,7 @@
   padding: 0 var(--space-4);
   color: var(--text-muted);
   background: var(--surface-raised);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }

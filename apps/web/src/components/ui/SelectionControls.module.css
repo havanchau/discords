@@ -11,7 +11,7 @@
 
 .checkbox:focus-visible,
 .switch:focus-visible {
-  outline: var(--focus-ring-width) solid var(--accent);
+  outline: var(--focus-ring-width) solid var(--border-focus);
   outline-offset: var(--focus-ring-offset);
 }
 
@@ -46,11 +46,11 @@
   height: 24px;
   padding: 3px;
   border-radius: var(--radius-full);
-  background: var(--accent);
+  background: var(--border-strong);
 }
 
 .switch[data-state='checked'] {
-  background: var(--state-success);
+  background: var(--accent);
 }
 
 .thumb {
@@ -58,7 +58,7 @@
   height: 18px;
   display: block;
   border-radius: var(--radius-full);
-  background: var(--text-primary);
+  background: var(--text-on-accent);
   transition: transform 170ms ease;
 }
 

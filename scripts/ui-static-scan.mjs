@@ -35,6 +35,19 @@ const forbiddenPatterns = [
   }
 ];
 
+// Component modules may only use semantic tokens (docs/design-rules.md). Checked per declaration,
+// after stripping comments, so every offending line is reported rather than the first per file.
+const componentModuleRules = [
+  {
+    name: 'colour literal in component module',
+    pattern: /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(|:\s*(?:white|black)\b|\s(?:white|black)\s*;/i
+  },
+  {
+    name: 'font-size literal in component module',
+    pattern: /(?:^|[;{\s])font-size\s*:(?!\s*var\()[^;]+/i
+  }
+];
+
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
   .split(/\r?\n/)
   .filter(Boolean)
@@ -48,6 +61,9 @@ const findings = [];
 
 for (const file of files) {
   const text = fs.readFileSync(file, 'utf8');
+  if (file.endsWith('.module.css')) {
+    scanComponentModule(file, text);
+  }
   for (const rule of forbiddenPatterns) {
     const match = rule.pattern.exec(text);
     if (!match) continue;
@@ -69,6 +85,22 @@ if (findings.length > 0) {
 }
 
 console.log(`Scanned ${files.length} UI source files. No forbidden UI patterns found.`);
+
+function scanComponentModule(file, text) {
+  // Keep line positions stable while removing comment content.
+  const withoutComments = text.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  const lines = withoutComments.split(/\r?\n/);
+  lines.forEach((line, index) => {
+    // Local custom properties (e.g. `--avatar-initials-size: 16px`) are the sanctioned place for
+    // single-component values; only their consumers must go through var().
+    if (/^\s*--[\w-]+\s*:/.test(line)) return;
+    for (const rule of componentModuleRules) {
+      const match = rule.pattern.exec(line);
+      if (!match) continue;
+      findings.push({ file, line: index + 1, rule: rule.name, sample: line.trim().slice(0, 120) });
+    }
+  });
+}
 
 function extensionOf(file) {
   const index = file.lastIndexOf('.');

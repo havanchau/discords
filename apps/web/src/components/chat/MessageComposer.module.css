@@ -38,7 +38,7 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   color: var(--text-muted);
   background: var(--surface-input);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   animation: itemIn 0.16s ease-out both;
 }
 
@@ -73,7 +73,7 @@
   color: var(--text-primary);
   background: var(--surface-raised);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   border: 0;
   cursor: pointer;
   animation: itemIn 0.16s ease-out both;
@@ -87,7 +87,7 @@
 
 .pendingFile small {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .fileInput {
@@ -96,14 +96,14 @@
 
 .composerInput {
   min-width: 0;
-  height: 44px;
+  height: var(--control-height-lg);
   border: 1px solid var(--border-default);
   border-inline: 0;
   border-radius: 0;
   padding: 0 0 0 8px;
   background: var(--surface-input);
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   transition: border-color 0.2s ease;
 }
 
@@ -116,11 +116,11 @@
 }
 
 .attachButton {
-  height: 44px;
-  width: 44px;
+  height: var(--control-height-lg);
+  width: var(--control-height-lg);
   border: 1px solid var(--border-default);
   border-right: 0;
-  border-radius: 12px 0 0 12px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
   background: var(--surface-input);
   color: var(--text-muted);
   display: grid;
@@ -136,8 +136,8 @@
 
 .voiceRecordButton {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: var(--control-height-lg);
+  height: var(--control-height-lg);
   border: 1px solid var(--border-default);
   border-inline: 0;
   border-radius: 0;
@@ -177,11 +177,11 @@
 }
 
 .sendButton {
-  width: 44px;
-  height: 44px;
+  width: var(--control-height-lg);
+  height: var(--control-height-lg);
   border: 1px solid var(--border-default);
   border-left: 0;
-  border-radius: 0 12px 12px 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   background: var(--surface-input);
   color: var(--text-muted);
   cursor: pointer;
@@ -217,25 +217,11 @@
 
 @media (max-width: 720px) {
   .composer {
-    grid-template-columns: 40px 40px minmax(0, 1fr) 40px;
     padding: 0 var(--space-2) var(--space-4);
   }
 
-  .attachButton,
-  .voiceRecordButton,
-  .sendButton,
   .composerInput {
-    height: 40px;
-  }
-
-  .attachButton,
-  .voiceRecordButton,
-  .sendButton {
-    width: 40px;
-  }
-
-  .composerInput {
-    font-size: 14px;
+    font-size: var(--font-size-base);
   }
 }
 
@@ -292,14 +278,14 @@
 
 .commandOption strong {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .commandOption small,
 .commandOption code,
 .commandError {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .commandOption code {
