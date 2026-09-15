@@ -7,7 +7,10 @@ This document defines the top-level product scope. Delivery order lives in [impl
 - **Realtime Text Chat**: [realtime-chat.md](features/realtime-chat.md)
 - **Voice & WebRTC Signaling**: [voice-webrtc.md](features/voice-webrtc.md)
 - **Media & File Uploads**: [media-uploads.md](features/media-uploads.md)
-- **UI Overhaul & De-duplication**: [ui-overhaul.md](features/ui-overhaul.md)
+- **UI Identity Redesign**: [ui-identity-redesign.md](features/ui-identity-redesign.md)
+- **UI Consistency Pass**: [ui-consistency-pass.md](features/ui-consistency-pass.md)
+- **Performance Optimization**: [performance-optimization.md](features/performance-optimization.md)
+- **DDoS & Abuse Protection**: [ddos-protection.md](features/ddos-protection.md)
 - **User Blocking**: [user-blocking.md](features/user-blocking.md)
 - **Direct Message Actions**: [dm-message-actions.md](features/dm-message-actions.md)
 - **Group Direct Messages**: [group-dm.md](features/group-dm.md)
@@ -22,8 +25,6 @@ This document defines the top-level product scope. Delivery order lives in [impl
 - **Session Management**: [session-management.md](features/session-management.md)
 - **Two-Factor Authentication**: [two-factor-auth.md](features/two-factor-auth.md)
 - **Server Events**: [server-events.md](features/server-events.md)
-
-
 
 ## Product Goal
 
