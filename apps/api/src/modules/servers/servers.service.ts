@@ -125,9 +125,16 @@ export class ServersService {
           orderBy: { joinedAt: 'asc' },
         },
         roles: { orderBy: { position: 'asc' } },
+        channelCategories: { orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] },
       },
     });
     const viewableChannels = await this.permissions.filterViewableChannels(userId, server.channels);
+    const categories = await this.filterVisibleCategories(
+      userId,
+      serverId,
+      server.channelCategories,
+      viewableChannels,
+    );
     const unreadCounts = await countChannelUnread(
       this.prisma,
       userId,
@@ -137,7 +144,22 @@ export class ServersService {
       ...channel,
       unreadCount: unreadCounts[channel.id] ?? 0,
     }));
-    return { server: { ...server, channels } };
+    const { channelCategories: _allCategories, ...serverFields } = server;
+    return { server: { ...serverFields, channels, categories } };
+  }
+
+  /* Category names can reveal private areas, so members only see categories holding a channel they can view. */
+  private async filterVisibleCategories<T extends { id: string }>(
+    userId: string,
+    serverId: string,
+    categories: T[],
+    viewableChannels: Array<{ categoryId: string | null }>,
+  ) {
+    if (await this.permissions.hasServerPermission(userId, serverId, Permission.ManageChannels)) {
+      return categories;
+    }
+    const visibleCategoryIds = new Set(viewableChannels.map((channel) => channel.categoryId));
+    return categories.filter((category) => visibleCategoryIds.has(category.id));
   }
 
   async updateServer(userId: string, serverId: string, dto: UpdateServerDto) {
@@ -190,29 +212,6 @@ export class ServersService {
     });
     await this.writeAuditLog(serverId, userId, 'MEMBER_NICKNAME_UPDATE', member.id, { nickname });
     return { member: updated };
-  }
-
-  async removeMember(userId: string, serverId: string, memberId: string) {
-    await this.permissions.requireServerPermission(userId, serverId, Permission.KickMembers);
-    const [actor, target] = await Promise.all([
-      this.requireMembership(userId, serverId),
-      this.prisma.serverMember.findFirst({
-        where: { id: memberId, serverId },
-        include: { user: { select: { id: true, username: true, displayName: true } } },
-      }),
-    ]);
-    if (!target) throw new NotFoundException('Member not found');
-    if (target.kind === 'OWNER') throw new ForbiddenException('Cannot kick the server owner');
-    if (target.id === actor.id) throw new ForbiddenException('Cannot kick yourself');
-
-    await this.prisma.serverMember.delete({ where: { id: target.id } });
-    await this.writeAuditLog(serverId, userId, 'MEMBER_KICK', target.id, {
-      userId: target.userId,
-      username: target.user.username,
-      displayName: target.user.displayName,
-    });
-
-    return { ok: true };
   }
 
   async createInvite(userId: string, serverId: string, dto: CreateInviteDto) {
@@ -295,6 +294,14 @@ export class ServersService {
 
     if (invite.maxUses && invite.usedCount >= invite.maxUses) {
       throw new ForbiddenException('Invite usage limit reached');
+    }
+
+    const ban = await this.prisma.serverBan.findUnique({
+      where: { serverId_userId: { serverId: invite.serverId, userId } },
+      select: { id: true },
+    });
+    if (ban) {
+      throw new ForbiddenException('You are banned from this server');
     }
 
     const { member, joinedNow } = await this.prisma.$transaction(async (tx) => {

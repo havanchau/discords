@@ -1,18 +1,24 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/current-user.decorator';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateBanDto } from './dto/create-ban.dto';
 import { CreateInviteDto } from './dto/create-invite.dto';
+import { TimeoutMemberDto } from './dto/timeout-member.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { ServerModerationService } from './server-moderation.service';
 import { ServersService } from './servers.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class ServersController {
-  constructor(private readonly servers: ServersService) {}
+  constructor(
+    private readonly servers: ServersService,
+    private readonly moderation: ServerModerationService,
+  ) {}
 
   @RateLimit({ keyPrefix: 'server-create', limit: 5, windowMs: 60_000 })
   @Post('servers')
@@ -61,7 +67,43 @@ export class ServersController {
     @Param('serverId') serverId: string,
     @Param('memberId') memberId: string,
   ) {
-    return this.servers.removeMember(user.id, serverId, memberId);
+    return this.moderation.kick(user.id, serverId, memberId);
+  }
+
+  @RateLimit({ keyPrefix: 'member-timeout', limit: 30, windowMs: 60_000 })
+  @Put('servers/:serverId/members/:memberId/timeout')
+  timeoutMember(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: TimeoutMemberDto,
+  ) {
+    return this.moderation.timeout(user.id, serverId, memberId, dto);
+  }
+
+  @Get('servers/:serverId/bans')
+  listBans(@CurrentUser() user: RequestUser, @Param('serverId') serverId: string) {
+    return this.moderation.listBans(user.id, serverId);
+  }
+
+  @RateLimit({ keyPrefix: 'member-ban', limit: 20, windowMs: 60_000 })
+  @Post('servers/:serverId/bans')
+  ban(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Body() dto: CreateBanDto,
+  ) {
+    return this.moderation.ban(user.id, serverId, dto);
+  }
+
+  @RateLimit({ keyPrefix: 'member-unban', limit: 20, windowMs: 60_000 })
+  @Delete('servers/:serverId/bans/:userId')
+  unban(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.moderation.unban(user.id, serverId, targetUserId);
   }
 
   @RateLimit({ keyPrefix: 'invite-create', limit: 10, windowMs: 60_000 })

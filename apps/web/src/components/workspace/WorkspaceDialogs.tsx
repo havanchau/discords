@@ -8,7 +8,11 @@ interface WorkspaceDialogsProps {
   serverAction: ServerAction | null;
   setServerAction: (action: ServerAction | null) => void;
   channelCreateType: ChannelCreateType | null;
+  channelCreateCategoryId: string | null;
   setChannelCreateType: (type: ChannelCreateType | null) => void;
+  isCreateCategoryOpen: boolean;
+  setIsCreateCategoryOpen: (open: boolean) => void;
+  createCategory: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
   pendingAction: string | null;
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   joinInvite: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -19,7 +23,11 @@ export function WorkspaceDialogs({
   serverAction,
   setServerAction,
   channelCreateType,
+  channelCreateCategoryId,
   setChannelCreateType,
+  isCreateCategoryOpen,
+  setIsCreateCategoryOpen,
+  createCategory,
   pendingAction,
   createServer,
   joinInvite,
@@ -33,6 +41,11 @@ export function WorkspaceDialogs({
   async function submitJoinInvite(event: FormEvent<HTMLFormElement>) {
     await joinInvite(event);
     setServerAction(null);
+  }
+
+  async function submitCreateCategory(event: FormEvent<HTMLFormElement>) {
+    const created = await createCategory(event);
+    if (created) setIsCreateCategoryOpen(false);
   }
 
   async function submitCreateChannel(event: FormEvent<HTMLFormElement>) {
@@ -114,6 +127,9 @@ export function WorkspaceDialogs({
               required
             />
             <input name="type" type="hidden" value={channelCreateType ?? 'TEXT'} readOnly />
+            {channelCreateCategoryId ? (
+              <input name="categoryId" type="hidden" value={channelCreateCategoryId} readOnly />
+            ) : null}
             <Button
               type="submit"
               fullWidth
@@ -124,6 +140,33 @@ export function WorkspaceDialogs({
                 <Loader2 className="spin" size={16} aria-hidden="true" />
               ) : (
                 'Create channel'
+              )}
+            </Button>
+          </form>
+        </DialogContent>
+      </DialogRoot>
+
+      <DialogRoot open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
+        <DialogContent title="Create category">
+          <form onSubmit={submitCreateCategory} className={styles.form}>
+            <TextField
+              name="name"
+              label="Category name"
+              placeholder="New category"
+              maxLength={80}
+              required
+              data-testid="create-category-input"
+            />
+            <Button
+              type="submit"
+              fullWidth
+              data-testid="create-category-button"
+              disabled={pendingAction === 'create-category'}
+            >
+              {pendingAction === 'create-category' ? (
+                <Loader2 className="spin" size={16} aria-hidden="true" />
+              ) : (
+                'Create category'
               )}
             </Button>
           </form>

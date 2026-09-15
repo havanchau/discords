@@ -1,0 +1,49 @@
+.picker {
+  width: 196px;
+  max-height: 320px;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  overflow-y: auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.grid button {
+  width: 40px;
+  height: var(--control-height-sm);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+}
+
+.grid button:hover {
+  background: var(--surface-hover);
+}
+
+.grid img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.sectionTitle {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reactionImage {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}

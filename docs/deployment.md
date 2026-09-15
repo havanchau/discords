@@ -34,6 +34,7 @@ PORT=3000
 DATABASE_URL=<Render PostgreSQL External Database URL or Internal Database URL>
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=15m
+TWO_FACTOR_ENCRYPTION_KEY=replace-with-at-least-32-random-characters
 WEB_ORIGIN=https://your-vercel-domain.vercel.app,https://*.vercel.app
 STORAGE_DRIVER=cloudinary
 UPLOAD_MAX_BYTES=104857600
@@ -74,6 +75,14 @@ npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
 ```
 
 If the live database was originally created with `db:push` and does not have Prisma migration history, prefer `db:push` for this release.
+
+Discord parity release (2026-09-15) schema and configuration notes:
+
+- New migrations, in order: `20260915000000_add_user_blocks` (also converts legacy `BLOCKED` friend requests into blocks), `20260915001000_add_dm_message_actions`, `20260915002000_add_group_dms`, `20260915003000_add_server_bans`, `20260915004000_add_timeout_and_slowmode`, `20260915005000_add_channel_categories`, `20260915006000_add_server_emojis`, `20260915007000_add_password_reset_tokens`, `20260915008000_add_session_activity`, `20260915009000_add_two_factor_auth`, `20260915010000_add_server_events`.
+- Apply them before deploying the API. On a large `Message` table, build `Message_channelId_authorId_createdAt_idx` with `CREATE INDEX CONCURRENTLY` first.
+- `TWO_FACTOR_ENCRYPTION_KEY` is required in production (at least 32 characters); the API refuses to start without it. Keep it stable: rotating it invalidates enrolled authenticators.
+- Password reset emails need `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`; `WEB_ORIGIN`'s first origin is used in reset links.
+- Link previews need outbound HTTP/HTTPS egress from the API host.
 
 ## 2. Vercel Web
 

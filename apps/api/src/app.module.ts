@@ -5,8 +5,11 @@ import { RateLimitGuard } from './common/rate-limit.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
+import { EmojisModule } from './modules/emojis/emojis.module';
+import { EventsModule } from './modules/events/events.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { HealthModule } from './modules/health/health.module';
+import { LinkPreviewsModule } from './modules/link-previews/link-previews.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
@@ -30,6 +33,9 @@ import { UsersModule } from './modules/users/users.module';
     ServersModule,
     ChannelsModule,
     MessagesModule,
+    EmojisModule,
+    EventsModule,
+    LinkPreviewsModule,
     NotificationsModule,
     PermissionsModule,
     RolesModule,

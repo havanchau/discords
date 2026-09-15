@@ -25,6 +25,33 @@ export class RealtimePublisher {
     target.emit(event, payload);
   }
 
+  /** Moves every connected socket of these users into a room, e.g. after joining a group DM. */
+  joinUsersToRoom(userIds: string[], room: string) {
+    if (!this.server || !userIds.length) return;
+    this.server.in(userIds.map((userId) => this.userRoom(userId))).socketsJoin(room);
+  }
+
+  removeUsersFromRooms(userIds: string[], rooms: string[]) {
+    if (!this.server || !userIds.length || !rooms.length) return;
+    this.server.in(userIds.map((userId) => this.userRoom(userId))).socketsLeave(rooms);
+  }
+
+  /** Disconnects the user's sockets that authenticated with one of these sessions. */
+  async disconnectSessions(userId: string, sessionIds: string[]) {
+    if (!this.server || !sessionIds.length) return;
+    const sockets = await this.server.in(this.userRoom(userId)).fetchSockets();
+    sockets
+      .filter((socket) => {
+        const socketUser = socket.data.user as { sessionId?: string } | undefined;
+        return Boolean(socketUser?.sessionId && sessionIds.includes(socketUser.sessionId));
+      })
+      .forEach((socket) => socket.disconnect(true));
+  }
+
+  serverRoom(serverId: string) {
+    return `server:${serverId}`;
+  }
+
   channelRoom(channelId: string) {
     return `channel:${channelId}`;
   }

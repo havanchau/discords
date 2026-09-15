@@ -19,6 +19,8 @@ import { ReactionDto } from '../messages/dto/reaction.dto';
 import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { countChannelUnread } from '../messages/unread-counts';
+import { DmCallMode } from './dm-call-rings';
+import { DmCallsService, parseDmCallKey } from './dm-calls.service';
 
 interface SocketUser {
   id: string;
@@ -65,6 +67,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     private readonly permissions: PermissionsService,
     private readonly config: ConfigService,
     private readonly publisher: RealtimePublisher,
+    private readonly dmCalls: DmCallsService,
   ) {}
 
   afterInit(server: Server) {
@@ -129,11 +132,19 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   ) {
     this.assertSocketRateLimit(client, 'message:create', 20, 60_000);
     const user = this.getUser(client);
-    const result = await this.messages.createMessage(user.id, body.channelId, {
-      content: body.content,
-      replyToMessageId: body.replyToMessageId,
-      attachments: body.attachments,
-    });
+    let result: Awaited<ReturnType<MessagesService['createMessage']>>;
+    try {
+      result = await this.messages.createMessage(user.id, body.channelId, {
+        content: body.content,
+        replyToMessageId: body.replyToMessageId,
+        attachments: body.attachments,
+      });
+    } catch (error) {
+      // Business refusals (timeout, slowmode, permissions) are acknowledged so the client can show
+      // the reason; anything else still fails the event as before.
+      if (error instanceof HttpException) return { error: error.message };
+      throw error;
+    }
     this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
     await this.emitUnreadUpdated(result.message);
     return result;
@@ -279,15 +290,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   ) {
     this.assertSocketRateLimit(client, 'voice:join', 10, 60_000);
     const user = this.getUser(client);
-    const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
-    const member = await this.prisma.serverMember.findUnique({
-      where: { userId_serverId: { userId: user.id, serverId: channel.serverId } },
-      include: { user: true },
-    });
-
-    if (!member) {
-      throw new UnauthorizedException('Not a channel member');
-    }
+    const profile = await this.authorizeCallJoin(user.id, body.channelId);
 
     const room = this.callRoom(body.channelId);
     const participants = this.getCallParticipants(body.channelId);
@@ -297,8 +300,8 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     const participant: CallParticipant = {
       socketId: client.id,
       userId: user.id,
-      username: member.user.username,
-      displayName: member.user.displayName,
+      username: profile.username,
+      displayName: profile.displayName,
       mode: body.mode,
       isMuted: Boolean(body.isMuted),
       isCameraOff: Boolean(body.isCameraOff),
@@ -313,7 +316,40 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     await client.join(room);
     client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
     this.emitActiveCall(body.channelId);
+    const dmConversationId = parseDmCallKey(body.channelId);
+    if (dmConversationId) this.dmCalls.participantJoined(dmConversationId, user.id);
     return { participants: existingParticipants };
+  }
+
+  @SubscribeMessage('dm:call:ring')
+  async ringDirectCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { conversationId: string; mode: DmCallMode },
+  ) {
+    this.assertSocketRateLimit(client, 'dm:call:ring', 10, 60_000);
+    const user = this.getUser(client);
+    if (body.mode !== 'voice' && body.mode !== 'video') {
+      throw new UnauthorizedException('Invalid call mode');
+    }
+    return this.dmCalls.ring(user.id, body.conversationId, body.mode);
+  }
+
+  @SubscribeMessage('dm:call:decline')
+  declineDirectCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { conversationId: string },
+  ) {
+    this.assertSocketRateLimit(client, 'dm:call:decline', 20, 60_000);
+    return this.dmCalls.decline(this.getUser(client).id, body.conversationId);
+  }
+
+  @SubscribeMessage('dm:call:cancel')
+  cancelDirectCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { conversationId: string },
+  ) {
+    this.assertSocketRateLimit(client, 'dm:call:cancel', 20, 60_000);
+    return this.dmCalls.cancel(this.getUser(client).id, body.conversationId);
   }
 
   @SubscribeMessage('voice:state')
@@ -411,6 +447,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     const payload = await this.jwt.verifyAsync<{ sub: string; sid: string }>(token, {
       secret: this.config.get<string>('JWT_SECRET', 'dev-secret-change-me'),
     });
+    if (typeof payload.sub !== 'string' || typeof payload.sid !== 'string') {
+      throw new UnauthorizedException('Invalid token');
+    }
 
     const session = await this.prisma.session.findFirst({
       where: {
@@ -518,13 +557,39 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
     return { channelId, mode, participants, screenSharer };
   }
 
+  // Channel calls announce to the channel room; DM calls to the conversation room.
   private emitActiveCall(channelId: string) {
+    const dmConversationId = parseDmCallKey(channelId);
+    const room = dmConversationId
+      ? this.conversationRoom(dmConversationId)
+      : this.channelRoom(channelId);
     const activeCall = this.getActiveCallSummary(channelId);
     if (activeCall) {
-      this.server.to(this.channelRoom(channelId)).emit('voice:active', activeCall);
+      this.server.to(room).emit('voice:active', activeCall);
       return;
     }
-    this.server.to(this.channelRoom(channelId)).emit('voice:ended', { channelId });
+    this.server.to(room).emit('voice:ended', { channelId });
+  }
+
+  /** Authorizes a call id (channel id or `dm:<conversationId>`) and returns the joiner's names. */
+  private async authorizeCallJoin(userId: string, callId: string) {
+    const dmConversationId = parseDmCallKey(callId);
+    if (dmConversationId) {
+      await this.dmCalls.authorizeCall(userId, dmConversationId);
+    } else {
+      const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: callId } });
+      const member = await this.prisma.serverMember.findUnique({
+        where: { userId_serverId: { userId, serverId: channel.serverId } },
+        select: { id: true },
+      });
+      if (!member) {
+        throw new UnauthorizedException('Not a channel member');
+      }
+    }
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { username: true, displayName: true },
+    });
   }
 
   private async emitUnreadUpdated(message: {

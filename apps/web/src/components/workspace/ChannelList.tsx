@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Channel } from '../../api';
 import type { ActiveCallSummary } from '../../helpers';
@@ -22,6 +22,60 @@ export function ChannelGroup({ title, createLabel, onCreate, children }: Channel
         <IconButton label={createLabel} size="sm" onClick={onCreate}>
           <Plus size={16} aria-hidden="true" />
         </IconButton>
+      </h2>
+      <div className={styles.channelList}>{children}</div>
+    </section>
+  );
+}
+
+interface CategorySectionProps {
+  name: string;
+  isCollapsed: boolean;
+  createLabel: string | null;
+  onToggle: () => void;
+  onCreate: () => void;
+  /** Present only for members who can manage channels. */
+  onEdit?: () => void;
+  children: ReactNode;
+}
+
+export function CategorySection({
+  name,
+  isCollapsed,
+  createLabel,
+  onToggle,
+  onCreate,
+  onEdit,
+  children,
+}: CategorySectionProps) {
+  return (
+    <section className={styles.group}>
+      <h2 className={styles.groupTitle}>
+        <button
+          type="button"
+          className={styles.categoryToggle}
+          aria-expanded={!isCollapsed}
+          onClick={onToggle}
+        >
+          <ChevronDown
+            size={12}
+            aria-hidden="true"
+            className={cn(styles.categoryChevron, isCollapsed && styles.categoryChevronCollapsed)}
+          />
+          <span>{name}</span>
+        </button>
+        <span className={styles.categoryActions}>
+          {onEdit ? (
+            <IconButton label={`Edit ${name}`} size="sm" onClick={onEdit}>
+              <Pencil size={14} aria-hidden="true" />
+            </IconButton>
+          ) : null}
+          {createLabel ? (
+            <IconButton label={createLabel} size="sm" onClick={onCreate}>
+              <Plus size={16} aria-hidden="true" />
+            </IconButton>
+          ) : null}
+        </span>
       </h2>
       <div className={styles.channelList}>{children}</div>
     </section>

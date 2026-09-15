@@ -35,7 +35,7 @@ interface ChatHeaderProps {
   panels: ChatPanelPanels;
   isChannelEncrypted: boolean;
   channelAvatar: ChatPanelChannelAvatar;
-  startCall: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<void>;
+  startCall: (mode: CallMode, options?: { receiveOnly?: boolean }) => Promise<unknown>;
 }
 
 // Below this width only the voice call stays inline; the other call actions move into the menu.

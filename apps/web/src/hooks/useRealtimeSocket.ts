@@ -24,6 +24,8 @@ interface UseRealtimeSocketOptions {
   setServer: Dispatch<SetStateAction<ServerDetail | null>>;
   setActiveCalls: Dispatch<SetStateAction<Record<string, ActiveCallSummary>>>;
   setChannelBadges: Dispatch<SetStateAction<Record<string, ChannelBadgeState>>>;
+  applyDirectMessageUpdate: (message: DirectMessage) => void;
+  removeDirectConversation: (conversationId: string) => void;
   loadFriends: (token?: string) => Promise<void>;
   loadDirectConversations: (token?: string) => Promise<void>;
   pushNotification: (notification: NotificationItem, unreadCount: number) => void;
@@ -44,6 +46,8 @@ export function useRealtimeSocket({
   setServer,
   setActiveCalls,
   setChannelBadges,
+  applyDirectMessageUpdate,
+  removeDirectConversation,
   loadFriends,
   loadDirectConversations,
   pushNotification,
@@ -174,6 +178,21 @@ export function useRealtimeSocket({
         ];
       });
     });
+
+    nextSocket.on(RealtimeEvents.DmUpdated, applyDirectMessageUpdate);
+    nextSocket.on(RealtimeEvents.DmDeleted, applyDirectMessageUpdate);
+    nextSocket.on(RealtimeEvents.DmReactionUpdated, applyDirectMessageUpdate);
+
+    nextSocket.on(RealtimeEvents.DmConversationUpdated, () => {
+      void loadDirectConversations(auth.accessToken);
+    });
+
+    nextSocket.on(
+      RealtimeEvents.DmConversationRemoved,
+      (payload: { conversationId: string }) => {
+        removeDirectConversation(payload.conversationId);
+      },
+    );
 
     nextSocket.on(RealtimeEvents.FriendRequest, () => {
       void loadFriends(auth.accessToken);

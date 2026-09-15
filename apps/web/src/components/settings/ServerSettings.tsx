@@ -1,11 +1,25 @@
 import { Clipboard, Trash2 } from 'lucide-react';
 import { Button, IconButton, TextField } from '../ui';
+import { memberHasServerPermission } from '../../utils/serverPermissions';
+import { ServerBansSection } from './ServerBansSection';
+import { ServerEmojiSection } from './ServerEmojiSection';
 import type { SettingsModalFields } from './types';
 import styles from '../SettingsModal.module.css';
 import { cn } from '../../utils/cn';
 
 type ServerSettingsProps = Pick<
   SettingsModalFields,
+  | 'auth'
+  | 'bans'
+  | 'isLoadingBans'
+  | 'bansError'
+  | 'loadBans'
+  | 'unbanUser'
+  | 'emojis'
+  | 'isLoadingEmojis'
+  | 'emojisError'
+  | 'createEmoji'
+  | 'deleteEmoji'
   | 'auditLogs'
   | 'createInviteFromSettings'
   | 'invites'
@@ -17,6 +31,17 @@ type ServerSettingsProps = Pick<
 >;
 
 export function ServerSettings({
+  auth,
+  bans,
+  isLoadingBans,
+  bansError,
+  loadBans,
+  unbanUser,
+  emojis,
+  isLoadingEmojis,
+  emojisError,
+  createEmoji,
+  deleteEmoji,
   auditLogs,
   createInviteFromSettings,
   invites,
@@ -106,6 +131,28 @@ export function ServerSettings({
           )}
         </div>
       </section>
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerEmojiSection
+          emojis={emojis}
+          isLoadingEmojis={isLoadingEmojis}
+          emojisError={emojisError}
+          createEmoji={createEmoji}
+          deleteEmoji={deleteEmoji}
+        />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'BAN_MEMBERS') ? (
+        <ServerBansSection
+          server={server}
+          bans={bans}
+          isLoadingBans={isLoadingBans}
+          bansError={bansError}
+          loadBans={loadBans}
+          unbanUser={unbanUser}
+          pendingAction={pendingAction}
+        />
+      ) : null}
 
       <section className={cn(styles.settingsSection, 'audit-section')}>
         <div className={styles.settingsSectionHeading}>

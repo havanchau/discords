@@ -1,7 +1,22 @@
-import { FileAudio2, FileText, Image, Loader2, Mic, Paperclip, Reply, Send, Slash, Square, X } from 'lucide-react';
+import { useState } from 'react';
+import {
+  FileAudio2,
+  FileText,
+  Image,
+  Loader2,
+  Mic,
+  Paperclip,
+  Reply,
+  Send,
+  Slash,
+  SmilePlus,
+  Square,
+  X,
+} from 'lucide-react';
 import { Channel } from '../../api';
 import { formatBytes } from '../../helpers';
-import { Button, IconButton, TextField } from '../ui';
+import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, TextField } from '../ui';
+import { EmojiPicker } from './EmojiPicker';
 import styles from './MessageComposer.module.css';
 import { cn } from '../../utils/cn';
 import { getSlashCommandSuggestions, parseSlashCommand } from '../../utils/slashCommands';
@@ -18,7 +33,19 @@ export function MessageComposer({
   composer,
   messageActions,
 }: MessageComposerProps) {
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const isMessageSending = composer.pendingAction === 'send-message';
+  const { disabledReason, slowmodeSeconds, retryAfterSeconds } = composer.restriction;
+  const isComposerDisabled = !channel || isMessageSending || Boolean(disabledReason);
+  const placeholder = !channel
+    ? 'Select a channel'
+    : disabledReason
+      ? disabledReason
+      : retryAfterSeconds > 0
+        ? `Slowmode is enabled. Wait ${retryAfterSeconds}s`
+        : slowmodeSeconds > 0
+          ? `Message #${channel.name} (slowmode ${slowmodeSeconds}s)`
+          : `Message #${channel.name}, type / for commands`;
   const commandSuggestions = getSlashCommandSuggestions(composer.draft).slice(0, 4);
   const parsedCommand = parseSlashCommand(composer.draft);
 
@@ -96,14 +123,14 @@ export function MessageComposer({
         multiple
         accept="image/*,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm,application/pdf,text/plain,application/zip,.zip"
         onChange={composer.selectFiles}
-        disabled={!channel || isMessageSending}
+        disabled={isComposerDisabled}
       />
 
       <IconButton
         label="Attach file"
         className={styles.attachButton}
         onClick={() => composer.fileInputRef.current?.click()}
-        disabled={!channel || isMessageSending}
+        disabled={isComposerDisabled}
       >
         <Paperclip size={18} aria-hidden="true" />
       </IconButton>
@@ -112,20 +139,41 @@ export function MessageComposer({
         label={composer.isRecordingVoice ? 'Stop voice message' : 'Record voice message'}
         className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
         onClick={composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording}
-        disabled={!channel || (isMessageSending && !composer.isRecordingVoice)}
+        disabled={
+          !channel || Boolean(disabledReason) || (isMessageSending && !composer.isRecordingVoice)
+        }
       >
         {composer.isRecordingVoice ? <Square size={15} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
       </IconButton>
+
+      <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
+        <PopoverTrigger asChild>
+          <IconButton
+            label="Insert emoji"
+            className={styles.attachButton}
+            disabled={isComposerDisabled}
+          >
+            <SmilePlus size={18} aria-hidden="true" />
+          </IconButton>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start">
+          <EmojiPicker
+            onSelect={(emoji) => {
+              const separator = composer.draft && !composer.draft.endsWith(' ') ? ' ' : '';
+              composer.setDraft(`${composer.draft}${separator}${emoji} `);
+              setIsEmojiOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </PopoverRoot>
 
       <TextField
         name="content"
         className={styles.composerInput}
         data-testid="composer-input"
         value={composer.draft}
-        placeholder={
-          channel ? `Message #${channel.name}, type / for commands` : 'Select a channel'
-        }
-        disabled={!channel || isMessageSending}
+        placeholder={placeholder}
+        disabled={isComposerDisabled}
         onChange={(event) => {
           composer.setDraft(event.target.value);
           composer.handleInput();
@@ -137,7 +185,7 @@ export function MessageComposer({
         type="submit"
         label="Send message"
         className={styles.sendButton}
-        disabled={!channel || isMessageSending}
+        disabled={isComposerDisabled || retryAfterSeconds > 0}
         data-testid="composer-send"
       >
         {isMessageSending ? (

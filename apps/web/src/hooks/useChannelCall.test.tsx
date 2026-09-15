@@ -106,4 +106,31 @@ describe('useChannelCall', () => {
 
     expect(result.current.remoteMedia).toEqual([]);
   });
+
+  it('joins a direct message call by call id without a selected channel', async () => {
+    const socketMock = createSocketMock();
+    const joinEmit = vi.fn(
+      (_event: string, _payload: unknown, callback: (err: Error | null) => void) => callback(null),
+    );
+    vi.mocked(socketMock.socket.timeout).mockReturnValue({ emit: joinEmit } as never);
+    const { result } = renderHook(() =>
+      useChannelCall({
+        auth,
+        channel: null,
+        socket: socketMock.socket,
+        setWorkspaceError: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startCall('voice', { receiveOnly: true, callId: 'dm:c1', label: 'Bob' });
+    });
+
+    expect(joinEmit).toHaveBeenCalledWith(
+      'voice:join',
+      expect.objectContaining({ channelId: 'dm:c1' }),
+      expect.any(Function),
+    );
+    expect(result.current.callState).toMatchObject({ channelId: 'dm:c1', label: 'Bob' });
+  });
 });

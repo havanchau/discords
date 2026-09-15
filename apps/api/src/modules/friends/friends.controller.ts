@@ -3,6 +3,7 @@ import { CurrentUser } from '../../common/current-user.decorator';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { BlockUserDto } from './dto/block-user.dto';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
 import { RespondFriendRequestDto } from './dto/respond-friend-request.dto';
 import { FriendsService } from './friends.service';
@@ -35,6 +36,17 @@ export class FriendsController {
   @Delete('requests/:requestId')
   remove(@CurrentUser() user: RequestUser, @Param('requestId') requestId: string) {
     return this.friends.remove(user.id, requestId);
+  }
+
+  @RateLimit({ keyPrefix: 'user-block', limit: 30, windowMs: 60_000 })
+  @Post('blocks')
+  block(@CurrentUser() user: RequestUser, @Body() dto: BlockUserDto) {
+    return this.friends.block(user.id, dto.userId);
+  }
+
+  @Delete('blocks/:userId')
+  unblock(@CurrentUser() user: RequestUser, @Param('userId') blockedUserId: string) {
+    return this.friends.unblock(user.id, blockedUserId);
   }
 
   @Post(':userId/dm')

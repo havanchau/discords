@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { apiRequest, Channel, ServerDetail, ServerSummary } from '../api';
+import { apiRequest, Channel, ChannelCategory, ServerDetail, ServerSummary } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
 
 interface UseWorkspaceNavigationProps {
@@ -152,13 +152,14 @@ export function useWorkspaceNavigation({
       const formData = new FormData(event.currentTarget);
       const name = String(formData.get('name') ?? '').trim();
       const type = (formData.get('type') ?? 'TEXT') as 'TEXT' | 'VOICE';
+      const categoryId = String(formData.get('categoryId') ?? '') || undefined;
       if (!name) return;
       setPendingAction('create-channel');
       setWorkspaceError(null);
       try {
         const data = await apiRequest<{ channel: Channel }>(
           `/servers/${server.id}/channels`,
-          { method: 'POST', body: JSON.stringify({ name, type }) },
+          { method: 'POST', body: JSON.stringify({ name, type, categoryId }) },
           auth.accessToken,
         );
         setServer((current) =>
@@ -178,6 +179,97 @@ export function useWorkspaceNavigation({
       }
     },
     [auth, server, setActiveDialog, setPendingAction, setWorkspaceError],
+  );
+
+  const createCategory = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!auth || !server) return false;
+      const name = String(new FormData(event.currentTarget).get('name') ?? '').trim();
+      if (!name) return false;
+      setPendingAction('create-category');
+      setWorkspaceError(null);
+      try {
+        const data = await apiRequest<{ category: ChannelCategory }>(
+          `/servers/${server.id}/categories`,
+          { method: 'POST', body: JSON.stringify({ name }) },
+          auth.accessToken,
+        );
+        setServer((current) =>
+          current?.id === data.category.serverId
+            ? { ...current, categories: [...(current.categories ?? []), data.category] }
+            : current,
+        );
+        return true;
+      } catch (err) {
+        setWorkspaceError(err instanceof Error ? err.message : 'Cannot create category');
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, server, setPendingAction, setWorkspaceError],
+  );
+
+  const updateCategory = useCallback(
+    async (categoryId: string, changes: { name: string; position: number }) => {
+      if (!auth) return false;
+      setPendingAction(`category-${categoryId}`);
+      setWorkspaceError(null);
+      try {
+        const data = await apiRequest<{ category: ChannelCategory }>(
+          `/categories/${categoryId}`,
+          { method: 'PATCH', body: JSON.stringify(changes) },
+          auth.accessToken,
+        );
+        setServer((current) =>
+          current
+            ? {
+                ...current,
+                categories: (current.categories ?? []).map((category) =>
+                  category.id === categoryId ? data.category : category,
+                ),
+              }
+            : current,
+        );
+        return true;
+      } catch (err) {
+        setWorkspaceError(err instanceof Error ? err.message : 'Cannot update category');
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, setPendingAction, setWorkspaceError],
+  );
+
+  const deleteCategory = useCallback(
+    async (categoryId: string) => {
+      if (!auth) return false;
+      setPendingAction(`category-${categoryId}`);
+      setWorkspaceError(null);
+      try {
+        await apiRequest(`/categories/${categoryId}`, { method: 'DELETE' }, auth.accessToken);
+        setServer((current) =>
+          current
+            ? {
+                ...current,
+                categories: (current.categories ?? []).filter((category) => category.id !== categoryId),
+                channels: current.channels.map((item) =>
+                  item.categoryId === categoryId ? { ...item, categoryId: null } : item,
+                ),
+              }
+            : current,
+        );
+        return true;
+      } catch (err) {
+        setWorkspaceError(err instanceof Error ? err.message : 'Cannot delete category');
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, setPendingAction, setWorkspaceError],
   );
 
   const textChannels = useMemo(
@@ -224,5 +316,8 @@ export function useWorkspaceNavigation({
     createServer,
     joinInvite,
     createChannel,
+    createCategory,
+    updateCategory,
+    deleteCategory,
   };
 }

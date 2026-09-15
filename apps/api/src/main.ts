@@ -9,6 +9,7 @@ import { join } from 'path';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { assertTwoFactorKeyConfigured } from './modules/auth/two-factor-config';
 import { defaultWebOrigin, isAllowedWebOrigin, parseWebOrigins } from './common/web-origins';
 
 async function bootstrap() {
@@ -21,6 +22,7 @@ async function bootstrap() {
   if (config.get<string>('NODE_ENV') === 'production' && jwtSecret === 'dev-secret-change-me') {
     throw new Error('JWT_SECRET must be set to a non-default value in production');
   }
+  assertTwoFactorKeyConfigured(config);
 
   if (!existsSync(uploadsDir)) {
     mkdirSync(uploadsDir, { recursive: true });

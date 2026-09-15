@@ -8,6 +8,20 @@ This document defines the top-level product scope. Delivery order lives in [impl
 - **Voice & WebRTC Signaling**: [voice-webrtc.md](features/voice-webrtc.md)
 - **Media & File Uploads**: [media-uploads.md](features/media-uploads.md)
 - **UI Overhaul & De-duplication**: [ui-overhaul.md](features/ui-overhaul.md)
+- **User Blocking**: [user-blocking.md](features/user-blocking.md)
+- **Direct Message Actions**: [dm-message-actions.md](features/dm-message-actions.md)
+- **Group Direct Messages**: [group-dm.md](features/group-dm.md)
+- **Direct Message Calls**: [dm-calls.md](features/dm-calls.md)
+- **Member Bans**: [member-bans.md](features/member-bans.md)
+- **Member Timeout & Slowmode**: [member-timeout-and-slowmode.md](features/member-timeout-and-slowmode.md)
+- **Channel Categories**: [channel-categories.md](features/channel-categories.md)
+- **Message Markdown**: [message-markdown.md](features/message-markdown.md)
+- **Server Custom Emoji**: [custom-emoji.md](features/custom-emoji.md)
+- **Link Previews**: [link-previews.md](features/link-previews.md)
+- **Password Reset**: [password-reset.md](features/password-reset.md)
+- **Session Management**: [session-management.md](features/session-management.md)
+- **Two-Factor Authentication**: [two-factor-auth.md](features/two-factor-auth.md)
+- **Server Events**: [server-events.md](features/server-events.md)
 
 
 
@@ -135,15 +149,16 @@ The API should remain resource-oriented and guarded by auth and permission check
 
 | Area     | Representative Routes                                                        |
 | -------- | ---------------------------------------------------------------------------- |
-| Auth     | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me` |
+| Auth     | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/sessions`, `/auth/2fa` |
 | Users    | `/users/me`, `/users/:userId`                                                |
-| Servers  | `/servers`, `/servers/:serverId`                                             |
-| Channels | `/servers/:serverId/channels`, `/channels/:channelId`                        |
-| Messages | `/channels/:channelId/messages`, `/messages/:messageId`                      |
-| DMs      | `/conversations`, `/conversations/:conversationId/messages`                  |
+| Servers  | `/servers`, `/servers/:serverId`, `/servers/:serverId/bans`, `/servers/:serverId/members/:memberId/timeout`, `/servers/:serverId/emojis`, `/servers/:serverId/events` |
+| Channels | `/servers/:serverId/channels`, `/channels/:channelId`, `/servers/:serverId/categories`, `/categories/:categoryId` |
+| Messages | `/channels/:channelId/messages`, `/messages/:messageId`, `/link-previews`    |
+| DMs      | `/direct-conversations`, `/direct-conversations/:conversationId/messages`, `/direct-conversations/:conversationId/members`, `/direct-messages/:messageId` |
 | Friends  | `/friends`, `/friends/requests`, `/friends/blocks`                           |
 | Roles    | `/servers/:serverId/roles`, `/roles/:roleId`                                 |
 | Invites  | `/servers/:serverId/invites`, `/invites/:code`                               |
+| Events   | `/events/:eventId`, `/events/:eventId/interest`                              |
 | Uploads  | `/uploads`, chunked upload endpoints                                         |
 
 ## Realtime Events
@@ -160,7 +175,11 @@ Event names should be explicit and payloads should be typed in `packages/shared`
 | Presence   | Presence set/update command when supported                                                                | `presence:update`                                                             |
 | Voice      | `voice:join`, `voice:leave`, `voice:state`                                                                | `voice:user-joined`, `voice:user-updated`, `voice:user-left`                  |
 | WebRTC     | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`                                                   | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate` to target peer        |
-| Future     | Add DM, notification, read-state, and moderation events here only after adding them to `packages/shared`. | Add paired broadcast events here only after adding them to `packages/shared`. |
+| DMs        | REST writes                                                                                               | `dm:created`, `dm:updated`, `dm:deleted`, `dm:reaction-updated`, `dm:conversation-updated`, `dm:conversation-removed` |
+| DM calls   | `dm:call:ring`, `dm:call:decline`, `dm:call:cancel`, `voice:join` with a `dm:<conversationId>` call id    | `dm:call:incoming`, `dm:call:declined`, `dm:call:ring-stopped`                |
+| Moderation | REST writes                                                                                               | `server:member-removed`, `server:member-updated`                              |
+| Server     | REST writes                                                                                               | `server:emojis-updated`, `server:events-updated`                              |
+| Future     | Add notification and read-state events here only after adding them to `packages/shared`.                  | Add paired broadcast events here only after adding them to `packages/shared`. |
 
 ## UI Surfaces
 

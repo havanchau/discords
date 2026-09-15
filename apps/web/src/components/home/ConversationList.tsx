@@ -1,29 +1,49 @@
+import { Plus, Users } from 'lucide-react';
 import type { DirectConversation } from '../../api';
-import { Button } from '../ui';
+import { Button, IconButton } from '../ui';
 import { cn } from '../../utils/cn';
+import { conversationDisplayName, conversationPartners } from './conversationDisplay';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
 import { handleListKeyboardNavigation } from './keyboardNavigation';
 
 type ConversationListProps = {
+  viewerId: string;
   conversations: DirectConversation[];
   activeConversationId?: string;
   onOpenConversation: (conversation: DirectConversation) => Promise<void>;
+  onCreateGroup: () => void;
 };
 
-export function ConversationList({ conversations, activeConversationId, onOpenConversation }: ConversationListProps) {
-  const visibleConversations = conversations.filter((conversation) => conversation.members[0]?.user);
+export function ConversationList({
+  viewerId,
+  conversations,
+  activeConversationId,
+  onOpenConversation,
+  onCreateGroup,
+}: ConversationListProps) {
+  const visibleConversations = conversations.filter(
+    (conversation) => conversation.isGroup || conversationPartners(conversation, viewerId).length,
+  );
 
   return (
     <section aria-labelledby="home-recent-dms-title">
-      <h2 id="home-recent-dms-title" className={styles.sectionTitle}>
+      <h2 id="home-recent-dms-title" className={cn(styles.sectionTitle, styles.sectionTitleRow)}>
         Recent DMs
+        <IconButton label="New group DM" size="sm" onClick={onCreateGroup}>
+          <Plus size={14} aria-hidden="true" />
+        </IconButton>
       </h2>
       <div className={styles.list} role="list" onKeyDown={handleListKeyboardNavigation}>
         {visibleConversations.length ? (
           visibleConversations.map((conversation) => {
-            const partner = conversation.members[0].user;
+            const partners = conversationPartners(conversation, viewerId);
             const selected = activeConversationId === conversation.id;
+            const lastMessage = conversation.messages[0];
+            const meta = lastMessage?.deletedAt
+              ? 'Message deleted'
+              : (lastMessage?.content ??
+                (conversation.isGroup ? `${partners.length + 1} members` : 'No messages yet'));
 
             return (
               <Button
@@ -35,10 +55,18 @@ export function ConversationList({ conversations, activeConversationId, onOpenCo
                 aria-current={selected ? 'page' : undefined}
                 onClick={() => void onOpenConversation(conversation)}
               >
-                <UserAvatar user={partner} />
+                {conversation.isGroup || !partners[0] ? (
+                  <span className={styles.groupAvatar} aria-hidden="true">
+                    <Users size={16} />
+                  </span>
+                ) : (
+                  <UserAvatar user={partners[0]} />
+                )}
                 <span className={styles.rowText}>
-                  <span className={styles.rowTitle}>{partner.displayName}</span>
-                  <span className={styles.rowMeta}>{conversation.messages[0]?.content ?? 'No messages yet'}</span>
+                  <span className={styles.rowTitle}>
+                    {conversationDisplayName(conversation, viewerId)}
+                  </span>
+                  <span className={styles.rowMeta}>{meta}</span>
                 </span>
                 {Boolean(conversation.unreadCount) && (
                   <span

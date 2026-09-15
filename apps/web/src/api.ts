@@ -42,9 +42,83 @@ export interface ServerSummary {
   channels: Channel[];
 }
 
+export interface ServerMemberDetail {
+  id: string;
+  user: User;
+  kind: string;
+  nickname?: string | null;
+  timeoutUntil?: string | null;
+  roles?: Array<{ role: Role }>;
+}
+
+export interface ChannelCategory {
+  id: string;
+  serverId: string;
+  name: string;
+  position: number;
+}
+
 export interface ServerDetail extends ServerSummary {
-  members: Array<{ id: string; user: User; kind: string; roles?: Array<{ role: Role }> }>;
+  members: ServerMemberDetail[];
   roles: Role[];
+  categories?: ChannelCategory[];
+}
+
+export interface AuthSessionEntry {
+  id: string;
+  userAgent: string | null;
+  createdAt: string;
+  lastActiveAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export interface LinkPreview {
+  url: string;
+  hostname: string;
+  siteName: string | null;
+  title: string | null;
+  description: string | null;
+}
+
+export interface ServerEventView {
+  id: string;
+  serverId: string;
+  channelId: string | null;
+  name: string;
+  description: string | null;
+  location: string | null;
+  startAt: string;
+  endAt: string | null;
+  status: 'SCHEDULED' | 'ACTIVE' | 'ENDED';
+  creator: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  interestedCount: number;
+  interested: boolean;
+}
+
+export interface CreateServerEventInput {
+  name: string;
+  description?: string;
+  location?: string;
+  channelId?: string;
+  startAt: string;
+  endAt?: string;
+}
+
+export interface ServerEmoji {
+  id: string;
+  name: string;
+  url: string;
+  creatorId: string;
+  createdAt: string;
+}
+
+export interface ServerBanEntry {
+  id: string;
+  reason?: string | null;
+  createdAt: string;
+  user: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
+  bannedBy: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
 }
 
 export interface Role {
@@ -57,12 +131,14 @@ export interface Role {
 export interface Channel {
   id: string;
   serverId: string;
+  categoryId?: string | null;
   name: string;
   type: 'TEXT' | 'VOICE';
   topic?: string | null;
   avatarUrl?: string | null;
   position?: number;
   isPrivate?: boolean;
+  slowmodeSeconds?: number;
   unreadCount?: number;
 }
 
@@ -175,15 +251,23 @@ export interface FriendRequestEntry {
   receiver?: PublicUser;
 }
 
+export interface BlockedUserEntry {
+  user: PublicUser;
+  createdAt: string;
+}
+
 export interface FriendsSummary {
   friends: FriendEntry[];
   pendingIncoming: FriendRequestEntry[];
   pendingOutgoing: FriendRequestEntry[];
-  blocked: FriendRequestEntry[];
+  blocked: BlockedUserEntry[];
 }
 
 export interface DirectConversation {
   id: string;
+  isGroup?: boolean;
+  name?: string | null;
+  ownerId?: string | null;
   members: Array<{ user: PublicUser }>;
   messages: DirectMessage[];
   updatedAt?: string;
@@ -204,6 +288,20 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export interface DirectMessageReaction {
+  emoji: string;
+  count: number;
+  userIds: string[];
+}
+
+export interface DirectMessageReplyPreview {
+  id: string;
+  authorId: string;
+  author?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
+  content: string;
+  deletedAt?: string | null;
+}
+
 export interface DirectMessage {
   id: string;
   conversationId: string;
@@ -213,6 +311,11 @@ export interface DirectMessage {
   editedAt?: string | null;
   deletedAt?: string | null;
   createdAt: string;
+  replyToMessageId?: string | null;
+  replyToMessage?: DirectMessageReplyPreview | null;
+  pinnedAt?: string | null;
+  pinnedById?: string | null;
+  reactions?: DirectMessageReaction[];
 }
 
 export async function apiRequest<T>(

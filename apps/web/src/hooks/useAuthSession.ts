@@ -2,6 +2,21 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { apiRequest, AuthState, configureAuthRefresh } from '../api';
 import { AUTH_KEY } from '../helpers';
 
+export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'two-factor';
+
+interface VerificationRequiredResponse {
+  verificationRequired: true;
+  message?: string;
+  verificationToken?: string;
+}
+
+interface TwoFactorRequiredResponse {
+  twoFactorRequired: true;
+  challengeToken: string;
+}
+
+type AuthResponse = AuthState | VerificationRequiredResponse | TwoFactorRequiredResponse;
+
 interface UseAuthSessionOptions {
   onClearAuth: () => void;
 }
@@ -11,10 +26,22 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     const raw = localStorage.getItem(AUTH_KEY);
     return raw ? JSON.parse(raw) : null;
   });
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setModeState] = useState<AuthMode>('login');
   const [verificationToken, setVerificationToken] = useState('');
   const [verificationHint, setVerificationHint] = useState<string | null>(null);
+  const [resetToken, setResetToken] = useState('');
+  // Success messages for password recovery; kept apart from verificationHint, which opens the
+  // email verification form.
+  const [notice, setNotice] = useState<string | null>(null);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setMode = useCallback((nextMode: AuthMode) => {
+    setError(null);
+    setNotice(null);
+    setModeState(nextMode);
+  }, []);
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem(AUTH_KEY);
@@ -31,7 +58,13 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       setMode('login');
       window.history.replaceState({}, '', '/');
     }
-  }, []);
+    // The reset token is a credential; keep it out of the address bar and history.
+    if (window.location.pathname === '/reset-password' && token) {
+      setResetToken(token);
+      setMode('reset');
+      window.history.replaceState({}, '', '/');
+    }
+  }, [setMode]);
 
   useEffect(() => {
     configureAuthRefresh({
@@ -64,7 +97,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     };
 
     try {
-      const result = await apiRequest<AuthState>(
+      const result = await apiRequest<AuthResponse>(
         mode === 'login' ? '/auth/login' : '/auth/register',
         {
           method: 'POST',
@@ -73,11 +106,15 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
           ),
         },
       );
+      if ('twoFactorRequired' in result) {
+        setTwoFactorChallenge(result.challengeToken);
+        setMode('two-factor');
+        return;
+      }
       if ('verificationRequired' in result) {
-        const verification = result as AuthState & { verificationToken?: string; message?: string };
-        setVerificationHint(verification.message || 'Check your email to verify this account.');
-        if (verification.verificationToken) {
-          setVerificationToken(verification.verificationToken);
+        setVerificationHint(result.message || 'Check your email to verify this account.');
+        if (result.verificationToken) {
+          setVerificationToken(result.verificationToken);
         }
         setMode('login');
         return;
@@ -104,6 +141,66 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     }
   }
 
+  async function submitTwoFactorLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const result = await apiRequest<AuthState>('/auth/2fa/verify-login', {
+        method: 'POST',
+        body: JSON.stringify({
+          challengeToken: twoFactorChallenge,
+          code: String(new FormData(event.currentTarget).get('code') ?? '').trim(),
+        }),
+      });
+      setTwoFactorChallenge('');
+      setAuth(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid two-factor code');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitForgotPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const result = await apiRequest<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: String(new FormData(event.currentTarget).get('email')) }),
+      });
+      setNotice(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Cannot request a password reset');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitResetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await apiRequest('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          token: resetToken,
+          password: String(new FormData(event.currentTarget).get('password')),
+        }),
+      });
+      setResetToken('');
+      setMode('login');
+      setNotice('Password updated. Sign in with your new password.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Cannot reset password');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return {
     auth,
     setAuth,
@@ -116,5 +213,20 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     submitAuth,
     submitVerification,
     clearAuth,
+    authScreen: {
+      error,
+      mode,
+      setMode,
+      isSubmitting,
+      submitAuth,
+      submitVerification,
+      submitForgotPassword,
+      submitResetPassword,
+      submitTwoFactorLogin,
+      notice,
+      verificationHint,
+      verificationToken,
+      setVerificationToken,
+    },
   };
 }

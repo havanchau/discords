@@ -1,0 +1,88 @@
+.markdown {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.markdown a {
+  color: var(--text-link);
+  text-decoration: none;
+}
+
+.markdown a:hover {
+  text-decoration: underline;
+}
+
+.inlineCode {
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+  font-family: var(--font-family-mono);
+  font-size: 0.875em;
+}
+
+/* Long lines scroll inside the block instead of widening the message list. */
+.codeBlock {
+  max-width: min(720px, 100%);
+  margin: 4px 0;
+  overflow-x: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-sunken);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  white-space: pre;
+}
+
+.blockquote {
+  margin: 2px 0;
+  border-left: 4px solid var(--border-strong);
+  padding-left: var(--space-3);
+}
+
+.mention {
+  padding: 0 3px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  font-weight: var(--font-weight-bold);
+}
+
+.mention:hover {
+  color: var(--text-on-accent);
+  background: var(--accent);
+}
+
+.spoiler {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
+  color: transparent;
+  background: var(--surface-active);
+  font: inherit;
+  cursor: pointer;
+}
+
+.spoiler * {
+  visibility: hidden;
+}
+
+.spoilerRevealed {
+  color: inherit;
+  background: var(--surface-hover);
+  cursor: text;
+}
+
+.spoilerRevealed * {
+  visibility: visible;
+}
+
+.customEmoji {
+  width: 22px;
+  height: 22px;
+  vertical-align: bottom;
+  object-fit: contain;
+}

@@ -25,6 +25,10 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
+      // Only session access tokens carry `sid`; any other signed token must not authenticate.
+      if (typeof payload.sub !== 'string' || typeof payload.sid !== 'string') {
+        throw new UnauthorizedException('Invalid bearer token');
+      }
       const session = await this.prisma.session.findFirst({
         where: {
           id: payload.sid,
@@ -42,7 +46,8 @@ export class JwtAuthGuard implements CanActivate {
       request.user = {
         id: session.user.id,
         email: session.user.email,
-        username: session.user.username
+        username: session.user.username,
+        sessionId: session.id
       };
       return true;
     } catch {

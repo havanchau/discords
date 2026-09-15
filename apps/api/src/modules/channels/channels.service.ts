@@ -18,6 +18,7 @@ export class ChannelsService {
   async createChannel(userId: string, serverId: string, dto: CreateChannelDto) {
     await this.permissions.requireServerPermission(userId, serverId, Permission.ManageChannels);
     const name = this.servers.normalizeChannelName(dto.name);
+    if (dto.categoryId) await this.requireCategoryInServer(serverId, dto.categoryId);
     const channelCount = await this.prisma.channel.count({ where: { serverId } });
 
     const channel = await this.prisma.channel.create({
@@ -26,6 +27,7 @@ export class ChannelsService {
         name,
         type: dto.type || 'TEXT',
         topic: dto.topic,
+        categoryId: dto.categoryId,
         position: channelCount,
       },
     });
@@ -75,6 +77,7 @@ export class ChannelsService {
       existing.serverId,
       Permission.ManageChannels,
     );
+    if (dto.categoryId) await this.requireCategoryInServer(existing.serverId, dto.categoryId);
     const channel = await this.prisma.channel.update({
       where: { id: channelId },
       data: {
@@ -83,12 +86,16 @@ export class ChannelsService {
         avatarUrl: dto.avatarUrl,
         isPrivate: dto.isPrivate,
         position: dto.position,
+        slowmodeSeconds: dto.slowmodeSeconds,
+        categoryId: dto.categoryId,
       },
     });
     await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_UPDATE', channel.id, {
       name: channel.name,
       isPrivate: channel.isPrivate,
       position: channel.position,
+      slowmodeSeconds: channel.slowmodeSeconds,
+      categoryId: channel.categoryId,
     });
     return { channel };
   }
@@ -156,6 +163,14 @@ export class ChannelsService {
       Permission.ViewChannel,
     );
     return channel;
+  }
+
+  private async requireCategoryInServer(serverId: string, categoryId: string) {
+    const category = await this.prisma.channelCategory.findFirst({
+      where: { id: categoryId, serverId },
+      select: { id: true },
+    });
+    if (!category) throw new NotFoundException('Category not found');
   }
 
   private async writeAuditLog(

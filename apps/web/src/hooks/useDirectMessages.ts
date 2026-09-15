@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
   apiRequest,
   AuthState,
@@ -27,6 +27,9 @@ export function useDirectMessages({
   const [directConversations, setDirectConversations] = useState<DirectConversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<DirectConversation | null>(null);
   const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
+  const [replyingToDirectMessage, setReplyingToDirectMessage] = useState<DirectMessage | null>(
+    null,
+  );
   const directDrafts = usePersistentDrafts({ storageKey: 'discord-clone-direct-drafts' });
   const activeDraftKey = activeConversation ? `conversation:${activeConversation.id}` : null;
   const directMessageDraft = directDrafts.getDraft(activeDraftKey);
@@ -36,6 +39,7 @@ export function useDirectMessages({
     setDirectConversations([]);
     setActiveConversation(null);
     setDirectMessages([]);
+    setReplyingToDirectMessage(null);
   }, []);
 
   async function loadFriends(token = auth?.accessToken) {
@@ -57,10 +61,31 @@ export function useDirectMessages({
         token,
       );
       setDirectConversations(result.conversations);
+      // Keep the open conversation's name and members current after group changes.
+      setActiveConversation((current) =>
+        current
+          ? (result.conversations.find((conversation) => conversation.id === current.id) ?? current)
+          : current,
+      );
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot load direct messages');
     }
   }
+
+  const activeConversationIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversation?.id ?? null;
+  }, [activeConversation?.id]);
+
+  const removeDirectConversation = useCallback((conversationId: string) => {
+    setDirectConversations((current) =>
+      current.filter((conversation) => conversation.id !== conversationId),
+    );
+    if (activeConversationIdRef.current !== conversationId) return;
+    setActiveConversation(null);
+    setDirectMessages([]);
+    setReplyingToDirectMessage(null);
+  }, []);
 
   async function requestFriend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,7 +115,7 @@ export function useDirectMessages({
 
   async function respondFriendRequest(
     request: FriendRequestEntry,
-    status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED',
+    status: 'ACCEPTED' | 'REJECTED',
   ) {
     if (!auth) return;
     setPendingAction(`friend-${request.id}`);
@@ -122,9 +147,7 @@ export function useDirectMessages({
     try {
       await apiRequest(`/friends/requests/${request.id}`, { method: 'DELETE' }, auth.accessToken);
       await loadFriends(auth.accessToken);
-      setWorkspaceNotice(
-        request.status === 'BLOCKED' ? 'User unblocked.' : 'Friend request removed.',
-      );
+      setWorkspaceNotice('Friend request removed.');
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove friend request');
     } finally {
@@ -142,6 +165,40 @@ export function useDirectMessages({
       setWorkspaceNotice('Friend removed.');
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove friend');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function blockUser(userId: string) {
+    if (!auth) return;
+    setPendingAction(`block-${userId}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest(
+        '/friends/blocks',
+        { method: 'POST', body: JSON.stringify({ userId }) },
+        auth.accessToken,
+      );
+      await Promise.all([loadFriends(auth.accessToken), loadDirectConversations(auth.accessToken)]);
+      setWorkspaceNotice('User blocked.');
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot block user');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function unblockUser(userId: string) {
+    if (!auth) return;
+    setPendingAction(`unblock-${userId}`);
+    setWorkspaceError(null);
+    try {
+      await apiRequest(`/friends/blocks/${userId}`, { method: 'DELETE' }, auth.accessToken);
+      await loadFriends(auth.accessToken);
+      setWorkspaceNotice('User unblocked.');
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : 'Cannot unblock user');
     } finally {
       setPendingAction(null);
     }
@@ -167,6 +224,9 @@ export function useDirectMessages({
 
   async function openDirectConversation(conversation: DirectConversation) {
     if (!auth) return;
+    if (activeConversation?.id !== conversation.id) setReplyingToDirectMessage(null);
+    // Set eagerly so a slower response for a previously opened conversation is ignored.
+    activeConversationIdRef.current = conversation.id;
     setActiveConversation(conversation);
     setWorkspaceError(null);
     try {
@@ -175,6 +235,7 @@ export function useDirectMessages({
         {},
         auth.accessToken,
       );
+      if (activeConversationIdRef.current !== conversation.id) return;
       setDirectMessages(result.messages);
       setDirectConversations((current) =>
         current.map((item) => (item.id === conversation.id ? { ...item, unreadCount: 0 } : item)),
@@ -206,19 +267,31 @@ export function useDirectMessages({
   async function sendDirectMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!auth || !activeConversation) return;
+    const conversationId = activeConversation.id;
+    const draftKey = activeDraftKey;
     const content = directMessageDraft.trim();
     if (!content) return;
     setPendingAction('direct-message');
     setWorkspaceError(null);
     try {
       const result = await apiRequest<{ message: DirectMessage }>(
-        `/direct-conversations/${activeConversation.id}/messages`,
-        { method: 'POST', body: JSON.stringify({ content }) },
+        `/direct-conversations/${conversationId}/messages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ content, replyToMessageId: replyingToDirectMessage?.id }),
+        },
         auth.accessToken,
       );
-      directDrafts.clearDraft(activeDraftKey);
-      setDirectMessages((current) => [...current, result.message]);
+      directDrafts.clearDraft(draftKey);
       await loadDirectConversations(auth.accessToken);
+      // The user may have switched conversations while the request was in flight.
+      if (activeConversationIdRef.current !== conversationId) return;
+      setReplyingToDirectMessage(null);
+      setDirectMessages((current) =>
+        current.some((item) => item.id === result.message.id)
+          ? current
+          : [...current, result.message],
+      );
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : 'Cannot send direct message');
     } finally {
@@ -232,17 +305,22 @@ export function useDirectMessages({
     activeConversation,
     directMessages,
     directMessageDraft,
+    replyingToDirectMessage,
+    setReplyingToDirectMessage,
     setActiveConversation,
     setDirectMessages,
     setDirectConversations,
     setDirectMessageDraft: (value: string) => directDrafts.updateDraft(activeDraftKey, value),
     clearDirectMessages,
+    removeDirectConversation,
     loadFriends,
     loadDirectConversations,
     requestFriend,
     respondFriendRequest,
     removeFriend,
     removeFriendRequest,
+    blockUser,
+    unblockUser,
     openDirectConversation,
     markDirectConversationRead,
     startDirectConversation,

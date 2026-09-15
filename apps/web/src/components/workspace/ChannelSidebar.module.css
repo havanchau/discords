@@ -265,3 +265,56 @@
     display: none;
   }
 }
+
+.categoryToggle {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.categoryToggle:hover {
+  color: var(--text-primary);
+}
+
+.categoryToggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categoryChevron {
+  flex: none;
+  transition: transform var(--motion-fast);
+}
+
+.categoryChevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.eventsRow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height-sm);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-2);
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.categoryActions {
+  display: inline-flex;
+  align-items: center;
+}
