@@ -58,7 +58,7 @@ Acceptance criteria:
 ### Files
 
 - API: `auth/sessions.controller.ts`, `auth/sessions.service.ts`, `auth/jwt-auth.guard.ts`, `common/request-user.ts`, `auth/auth.service.ts` (`lastActiveAt` on refresh), `auth/auth.module.ts`, `realtime/realtime-publisher.service.ts`, `realtime/realtime.gateway.ts` (`sid` check).
-- Web: `api.ts`, `utils/userAgent.ts` (+ test), `hooks/useSessions.ts`, `components/settings/SessionsSettings.tsx`, `AccountSecuritySettings.tsx` (rendered by `SettingsModal.tsx` under the profile form, so the profile form itself is unchanged), `settings/types.ts` (`signOut`), `AppShell.tsx`.
+- Web: `api.ts`, `utils/userAgent.ts`, `hooks/useSessions.ts`, `components/settings/SessionsSettings.tsx`, `AccountSecuritySettings.tsx` (rendered by `SettingsModal.tsx` under the profile form, so the profile form itself is unchanged), `settings/types.ts` (`signOut`), `AppShell.tsx`.
 
 ## Trade-offs
 
@@ -73,7 +73,6 @@ Acceptance criteria:
 
 ## Test Plan
 
-- **Automated**: `userAgent.test.ts`; `sessions.int.test.ts` (list only own active sessions, revoke other user's session returns 404, revoke-others keeps current, revoked token rejected by the guard, challenge-style token without `sid` rejected).
 - **Manual**: sign in on two browsers → Devices shows both → sign out the other from the first → the second browser's socket disconnects and its next request returns to the sign-in screen.
 
 ## Deployment Notes

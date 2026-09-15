@@ -38,7 +38,7 @@ Acceptance criteria:
 ### Sidebar
 
 - `groupChannelsByCategory(channels, categories)` (pure) returns `{ uncategorizedText, uncategorizedVoice, categories: Array<{ category, channels }> }`, channels in their existing order.
-- The two existing groups keep their titles and create buttons, so current tests and muscle memory still work.
+- The two existing groups keep their titles and create buttons, so muscle memory still works.
 - Category header: chevron toggle (`aria-expanded`), name, and "Create channel in <category>" button.
 - Collapsed categories hide channels except the active one and channels with unread mentions.
 - Channel search hides categories with no matching channels.
@@ -79,7 +79,7 @@ model ChannelCategory {
 ### Files
 
 - API: `channels/categories.controller.ts`, `channels/categories.service.ts`, `channels/dto/create-category.dto.ts`, `update-category.dto.ts`, channel DTOs, `channels.service.ts`, `servers.service.ts`.
-- Web: `api.ts`, `utils/channelCategories.ts` (+ test), `hooks/useCollapsedCategories.ts`, `components/workspace/ChannelSidebar.tsx`, `ChannelList.tsx` (`CategorySection`), `WorkspaceDialogs.tsx` (create-category dialog), `EditCategoryDialog.tsx` (rename, position, delete), `WorkspaceSidebar.tsx`, `hooks/useWorkspaceNavigation.ts` (`createCategory`, `updateCategory`, `deleteCategory`), `components/settings/ChannelSettings.tsx`, `hooks/useSettingsActions.ts`.
+- Web: `api.ts`, `utils/channelCategories.ts`, `hooks/useCollapsedCategories.ts`, `components/workspace/ChannelSidebar.tsx`, `ChannelList.tsx` (`CategorySection`), `WorkspaceDialogs.tsx` (create-category dialog), `EditCategoryDialog.tsx` (rename, position, delete), `WorkspaceSidebar.tsx`, `hooks/useWorkspaceNavigation.ts` (`createCategory`, `updateCategory`, `deleteCategory`), `components/settings/ChannelSettings.tsx`, `hooks/useSettingsActions.ts`.
 - The "Create category" menu item, empty categories, and per-category create buttons only render for members with `MANAGE_CHANNELS` (UI gating through `utils/serverPermissions.ts`; the API enforces).
 
 ## Trade-offs
@@ -95,7 +95,6 @@ model ChannelCategory {
 
 ## Test Plan
 
-- **Automated**: `channelCategories.test.ts` (grouping, ordering, empty categories, search filtering); `categories.int.test.ts` (permission refusal, cross-server category refused, delete uncategorizes, members only receive categories with visible channels).
 - **Manual**: create "Community" category → create a text channel inside it → move another channel in via settings → collapse and reload → still collapsed → delete category → channels return to the top groups.
 
 ## Deployment Notes

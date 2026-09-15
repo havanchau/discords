@@ -68,9 +68,6 @@ Provide high-concurrency, low-latency text chat within server channels and direc
 
 ## Test Plan
 
-- **Automated Tests**:
-  - Integration tests in `apps/api/src/modules/messages/messages.service.spec.ts` for permission and pagination correctness.
-  - Hook tests in `apps/web/src/hooks/useMessageHistory.test.tsx`.
 - **Manual Verification**:
   - Open two client sessions, join the same channel, verify real-time typing indicators, message delivery, edits, and reaction sync.
 

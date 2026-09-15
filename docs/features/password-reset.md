@@ -74,7 +74,7 @@ Migration `20260915007000_add_password_reset_tokens`.
 ### Files
 
 - API: `auth/password-reset.service.ts`, `auth/dto/forgot-password.dto.ts`, `reset-password.dto.ts`, `password-policy.ts` (shared regex and message, used by `register.dto.ts`), `auth.controller.ts`, `auth.module.ts`, `email.service.ts`.
-- Web: `hooks/useAuthSession.ts` (returns an `authScreen` props object so `AppShell.tsx` no longer lists each field), `components/auth/PasswordResetForms.tsx` (+ test), `components/AuthScreen.tsx`, `AuthScreen.module.css` (the "Forgot password?" link only), `components/app/AuthGate.tsx` (reuses `AuthScreenProps`).
+- Web: `hooks/useAuthSession.ts` (returns an `authScreen` props object so `AppShell.tsx` no longer lists each field), `components/auth/PasswordResetForms.tsx`, `components/AuthScreen.tsx`, `AuthScreen.module.css` (the "Forgot password?" link only), `components/app/AuthGate.tsx` (reuses `AuthScreenProps`).
 
 ## Trade-offs
 
@@ -89,7 +89,6 @@ Migration `20260915007000_add_password_reset_tokens`.
 
 ## Test Plan
 
-- **Automated**: `password-reset.int.test.ts` (unknown email gets the same response and no token row; token works once; expired token refused; older token invalidated by a new request; sessions revoked); `dto/reset-password.dto.test.ts` (password policy).
 - **Manual**: request reset → copy URL from API log → open → set a new password → old session in another tab is signed out on its next request → sign in with the new password.
 
 ## Deployment Notes

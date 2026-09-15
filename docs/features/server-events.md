@@ -97,8 +97,8 @@ Migration `20260915010000_add_server_events`.
 
 ### Files
 
-- API: `modules/events/events.module.ts`, `events.controller.ts`, `events.service.ts`, `event-status.ts` (+ test), `dto/create-event.dto.ts`, `update-event.dto.ts`, `set-interest.dto.ts`, `app.module.ts`.
-- Web: `api.ts`, `utils/serverPermissions.ts` (+ test, added with [member-timeout-and-slowmode.md](member-timeout-and-slowmode.md)), `hooks/useServerEvents.ts`, `components/events/ServerEventsDialog.tsx`, `EventCard.tsx`, `EventForm.tsx`, `ServerEvents.module.css`, `components/WorkspaceSidebar.tsx` (dialog state), `components/workspace/ChannelSidebar.tsx` (menu item and "Events" row), `components/workspace/types.ts`, `AppShell.tsx`.
+- API: `modules/events/events.module.ts`, `events.controller.ts`, `events.service.ts`, `event-status.ts`, `dto/create-event.dto.ts`, `update-event.dto.ts`, `set-interest.dto.ts`, `app.module.ts`.
+- Web: `api.ts`, `utils/serverPermissions.ts` (added with [member-timeout-and-slowmode.md](member-timeout-and-slowmode.md)), `hooks/useServerEvents.ts`, `components/events/ServerEventsDialog.tsx`, `EventCard.tsx`, `EventForm.tsx`, `ServerEvents.module.css`, `components/WorkspaceSidebar.tsx` (dialog state), `components/workspace/ChannelSidebar.tsx` (menu item and "Events" row), `components/workspace/types.ts`, `AppShell.tsx`.
 
 ## Trade-offs
 
@@ -113,7 +113,6 @@ Migration `20260915010000_add_server_events`.
 
 ## Test Plan
 
-- **Automated**: `event-status.test.ts` (scheduled, active with and without end, ended); `serverPermissions.test.ts`; `events.int.test.ts` (permission, time validation, cross-server channel refused, private channel events hidden, interest count).
 - **Manual**: owner creates an event in 10 minutes in a voice channel → member sees the sidebar row and dialog live → marks interested → count updates → owner cancels → it disappears.
 
 ## Deployment Notes

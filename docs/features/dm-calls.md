@@ -67,7 +67,7 @@ Rules:
 
 ### Files
 
-- API: `realtime/dm-call-rings.ts` (pending ring store with timers, unit-testable), `realtime.gateway.ts` (events, key authorization), `notifications` reuse.
+- API: `realtime/dm-call-rings.ts` (pending ring store with timers), `realtime.gateway.ts` (events, key authorization), `notifications` reuse.
 - Shared: new event constants.
 - Web: `hooks/useChannelCall.ts`, `hooks/useDirectCall.ts`, `components/home/IncomingCallDialog.tsx`, `components/home/HomeDirectMessageView.tsx`, `components/chat/CallStage.tsx`, `components/app/AuthenticatedWorkspace.tsx`, `AppShell.tsx` wiring.
 
@@ -84,7 +84,6 @@ Rules:
 
 ## Test Plan
 
-- **Automated**: unit tests for `dm-call-rings.ts` (replace, clear, timeout callback); `useDirectCall` state transitions with a fake socket.
 - **Manual**: two browsers → A rings B (voice) → B sees dialog → accept → both in call; A rings B → B declines → A sees declined; A rings and cancels → B gets missed call notification; group of three → one declines, another accepts.
 
 ## Deployment Notes

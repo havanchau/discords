@@ -296,7 +296,7 @@ four-theme union, and a stored `dark` remains valid under the old code.
 
 ## Test plan
 
-**Automated**
+**Checks**
 
 - `npm run lint`, `npm run typecheck`, `npm run build` after every phase.
 - `npm run check:file-size` — enforces the line limits the splits are meant to satisfy.
@@ -305,8 +305,6 @@ four-theme union, and a stored `dark` remains valid under the old code.
   from the deleted global stylesheets (`.file-input`, `.composer-reply`); both now use `data-testid`,
   matching the convention used by every other step.
 - `npm run docs:check` — for the documentation rewrites.
-- Unit tests for the `useTheme` legacy-value migration: each legacy value maps to `dark`, an
-  unrecognised value maps to `system`, and the mapped value is persisted once.
 
 `ui:smoke` has a pre-existing failure unrelated to this change: it clicks `button[title="Reply"]`,
 and no such button exists in `MessageRow.tsx` — at this commit or at the one before it. Every other

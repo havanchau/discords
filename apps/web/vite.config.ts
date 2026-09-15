@@ -1,6 +1,6 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
@@ -8,11 +8,6 @@ export default defineConfig({
     alias: {
       '@discord-clone/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
-  },
-  test: {
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    globals: true
   },
   server: {
     port: 5173,

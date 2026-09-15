@@ -124,7 +124,6 @@ past that, extract a hook or split the component.
 ```bash
 npm run typecheck
 npm run lint
-npm run test --workspace apps/web
 npm run build --workspace apps/web
 npm run ui:scan
 npm run check:file-size

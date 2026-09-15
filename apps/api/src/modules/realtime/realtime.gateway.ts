@@ -17,10 +17,13 @@ import { Permission, PermissionsService } from '../permissions/permissions.servi
 import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
 import { ReactionDto } from '../messages/dto/reaction.dto';
 import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
+import { FixedWindowLimiter } from '../../common/fixed-window-limiter';
+import { readLimitsConfig } from '../../common/limits-config';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { countChannelUnread } from '../messages/unread-counts';
 import { DmCallMode } from './dm-call-rings';
 import { DmCallsService, parseDmCallKey } from './dm-calls.service';
+import { SOCKET_MAX_PAYLOAD_BYTES, attachSocketGuards, socketLimitSubject } from './socket-guards';
 
 interface SocketUser {
   id: string;
@@ -50,6 +53,7 @@ interface ActiveCallSummary {
     origin: parseWebOrigins(process.env.WEB_ORIGIN || defaultWebOrigin),
     credentials: true,
   },
+  maxHttpBufferSize: SOCKET_MAX_PAYLOAD_BYTES,
 })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   @WebSocketServer()
@@ -58,7 +62,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   private readonly logger = new Logger(RealtimeGateway.name);
   private readonly callParticipants = new Map<string, Map<string, CallParticipant>>();
   private readonly socketCalls = new Map<string, Set<string>>();
-  private readonly socketRateLimits = new Map<string, { count: number; resetAt: number }>();
+  private readonly socketLimiter = new FixedWindowLimiter();
 
   constructor(
     private readonly jwt: JwtService,
@@ -72,6 +76,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
 
   afterInit(server: Server) {
     this.publisher.attach(server);
+    const limits = readLimitsConfig(this.config);
+    attachSocketGuards(server, this.socketLimiter, {
+      trustProxyHops: limits.trustProxyHops,
+      maxConnectionsPerIp: limits.socketMaxConnectionsPerIp,
+    });
   }
 
   async handleConnection(client: Socket) {
@@ -529,10 +538,6 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   private leaveAllCalls(client: Socket) {
     const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
     channelIds.forEach((channelId) => this.leaveCall(client, channelId));
-    const keysToDelete = [...this.socketRateLimits.keys()].filter((key) =>
-      key.startsWith(`${client.id}:`),
-    );
-    keysToDelete.forEach((key) => this.socketRateLimits.delete(key));
   }
 
   private assertCallPeer(client: Socket, channelId: string, targetSocketId: string) {
@@ -645,17 +650,8 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
   }
 
   private assertSocketRateLimit(client: Socket, event: string, limit: number, windowMs: number) {
-    const now = Date.now();
-    const key = `${client.id}:${event}`;
-    const bucket = this.socketRateLimits.get(key);
-
-    if (!bucket || bucket.resetAt <= now) {
-      this.socketRateLimits.set(key, { count: 1, resetAt: now + windowMs });
-      return;
-    }
-
-    bucket.count += 1;
-    if (bucket.count > limit) {
+    const key = `socket-event:${socketLimitSubject(client)}:${event}`;
+    if (!this.socketLimiter.hit(key, limit, windowMs).allowed) {
       throw new HttpException('Socket rate limit exceeded', HttpStatus.TOO_MANY_REQUESTS);
     }
   }

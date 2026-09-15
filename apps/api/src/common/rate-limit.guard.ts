@@ -1,12 +1,8 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+import { Request, Response } from 'express';
+import { FixedWindowLimiter } from './fixed-window-limiter';
 import { RATE_LIMIT_METADATA, RateLimitOptions } from './rate-limit.decorator';
-
-interface Bucket {
-  count: number;
-  resetAt: number;
-}
 
 const DEFAULT_RATE_LIMIT: RateLimitOptions = {
   limit: 120,
@@ -16,8 +12,7 @@ const DEFAULT_RATE_LIMIT: RateLimitOptions = {
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
-  private readonly buckets = new Map<string, Bucket>();
-  private lastSweepAt = Date.now();
+  private readonly limiter = new FixedWindowLimiter();
 
   constructor(private readonly reflector: Reflector) {}
 
@@ -28,43 +23,21 @@ export class RateLimitGuard implements CanActivate {
         context.getClass()
       ]) ?? DEFAULT_RATE_LIMIT;
 
-    const request = context.switchToHttp().getRequest<Request>();
-    const now = Date.now();
-    const key = `${options.keyPrefix ?? 'route'}:${this.getClientIp(request)}:${request.method}:${request.route?.path ?? request.path}`;
-    const bucket = this.buckets.get(key);
+    const http = context.switchToHttp();
+    const request = http.getRequest<Request>();
+    // request.ip honours `trust proxy`; the raw X-Forwarded-For header is client-controlled.
+    const clientIp = request.ip ?? request.socket.remoteAddress ?? 'unknown';
+    const key = `${options.keyPrefix ?? 'route'}:${clientIp}:${request.method}:${request.route?.path ?? request.path}`;
+    const result = this.limiter.hit(key, options.limit, options.windowMs);
 
-    if (now - this.lastSweepAt > 60_000) {
-      this.sweep(now);
-    }
-
-    if (!bucket || bucket.resetAt <= now) {
-      this.buckets.set(key, { count: 1, resetAt: now + options.windowMs });
-      return true;
-    }
-
-    bucket.count += 1;
-    if (bucket.count > options.limit) {
-      const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
-      throw new HttpException(`Rate limit exceeded. Retry after ${retryAfter}s.`, HttpStatus.TOO_MANY_REQUESTS);
+    if (!result.allowed) {
+      http.getResponse<Response>().setHeader('Retry-After', String(result.retryAfterSeconds));
+      throw new HttpException(
+        `Rate limit exceeded. Retry after ${result.retryAfterSeconds}s.`,
+        HttpStatus.TOO_MANY_REQUESTS
+      );
     }
 
     return true;
-  }
-
-  private getClientIp(request: Request) {
-    const forwardedFor = request.headers['x-forwarded-for'];
-    const firstForwardedIp = Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : forwardedFor?.split(',')[0]?.trim();
-    return firstForwardedIp || request.ip || request.socket.remoteAddress || 'unknown';
-  }
-
-  private sweep(now: number) {
-    for (const [key, bucket] of this.buckets) {
-      if (bucket.resetAt <= now) {
-        this.buckets.delete(key);
-      }
-    }
-    this.lastSweepAt = now;
   }
 }

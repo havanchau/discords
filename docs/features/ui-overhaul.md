@@ -71,7 +71,7 @@ This specification covers the visual overhaul of the Discord clone web client in
 
 ## Test Plan
 
-- **Automated Tests**:
+- **Checks**:
   - `npm run docs:check`: Validate all relative links and markdown structure.
   - `npm run typecheck`: Ensure zero TypeScript errors across all web components and hooks.
   - `npm run check:file-size`: Verify no file exceeds 1000 lines.

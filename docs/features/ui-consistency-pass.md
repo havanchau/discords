@@ -168,9 +168,8 @@ Not enforced yet: primitive token references from components. `AttachmentPreview
 
 ## Test Plan
 
-- **Automated**:
-  - `npm run ui:scan` (new rules + new contrast pair), `npm run typecheck`, `npm run lint`, `npm run test --workspace apps/web`, `npm run build --workspace apps/web`, `npm run check:file-size`.
-  - Existing primitive tests (`components/ui/primitives.test.tsx`) keep passing.
+- **Checks**:
+  - `npm run ui:scan` (new rules + new contrast pair), `npm run typecheck`, `npm run lint`, `npm run build --workspace apps/web`, `npm run check:file-size`.
 - **Manual / scripted** (headless Chrome, both themes, 1440 px and 390 px): re-measure every control on the screens in the acceptance criteria and confirm heights are only 32 / 38 / 44 px, one active rail button, switch off/on colours, settings cards readable in light; compare before/after screenshots.
 
 ## Deployment Notes

@@ -125,7 +125,7 @@ Acceptance criteria:
 - Users without `channel.manage` cannot create, edit, or delete channels.
 - Users without `message.manage` cannot moderate other users' messages.
 - Owners cannot be kicked by non-owners.
-- Permission behavior has focused automated tests.
+- Permission behavior is verified manually for each case above.
 
 ## Sprint 5: Better Chat
 
@@ -226,28 +226,30 @@ The first public MVP should be cut after Sprint 3.
 
 ## Test Strategy
 
-Backend unit tests:
+The repository keeps no automated test files (see `RULE.md`). Verify with typecheck, lint, build, and these manual scenarios.
+
+Backend:
 
 - Auth service: password hashing, login, refresh, revoke.
 - Permission service: owner, admin, member, and no-access cases.
 - Message service: create, edit, delete, membership required.
 - Invite service: expired invite, max uses, already joined.
 
-Backend integration tests:
+API flows:
 
 - Auth API flow.
 - Server creation transaction.
 - Channel message pagination.
 - Permission-protected endpoints.
 
-Socket tests:
+Realtime:
 
 - Authenticated connection.
 - Unauthorized connection rejection.
 - Channel room join membership checks.
 - Message broadcasts only to authorized room members.
 
-Frontend and smoke tests:
+Frontend (manual and `npm run ui:smoke`):
 
 - Auth form validation.
 - Server and channel empty states.

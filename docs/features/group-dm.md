@@ -89,7 +89,6 @@ Migration `20260915002000_add_group_dms` (additive; existing rows become 1-1 con
 
 ## Test Plan
 
-- **Automated** (`group-dm.int.test.ts`): create requires friends; size limit; non-owner cannot remove others; owner leave transfers ownership; last leave deletes; `startDm` ignores groups. Web unit tests for `conversationDisplayName`.
 - **Manual**: A creates a group with B and C → all three see it live; A renames; C leaves → A and B update, C loses it; A removes B; A adds a new friend D.
 
 ## Deployment Notes

@@ -59,7 +59,7 @@ type MarkdownNode =
 
 ### Files
 
-- `apps/web/src/utils/markdown.ts`, `utils/markdown.test.ts`.
+- `apps/web/src/utils/markdown.ts`.
 - `apps/web/src/components/chat/MarkdownContent.tsx`, `MarkdownContent.module.css`.
 - `apps/web/src/components/chat/MessageRow.tsx` (replace inline split rendering; keep the reply preview, thread preview, and link chips).
 - `apps/web/src/components/chat/ThreadPanel.tsx`, `ThreadPanel.module.css` (thread messages).
@@ -70,7 +70,7 @@ No API or schema change.
 
 ## Trade-offs
 
-- **Hand-written parser vs. `marked` / `react-markdown`**: those implement CommonMark (headings, lists, HTML passthrough) rather than Discord's subset, would need sanitization configuration, and add bundle weight. The subset here is small enough to test exhaustively.
+- **Hand-written parser vs. `marked` / `react-markdown`**: those implement CommonMark (headings, lists, HTML passthrough) rather than Discord's subset, would need sanitization configuration, and add bundle weight. The subset here is small enough to verify by hand.
 - **Parse on render vs. memoized parse**: `MessageRow` is memoized per message and content is capped at 4000 characters, so parsing is cheap; `useMemo` keyed by content avoids reparsing on unrelated row renders.
 
 ## Risks & Rollback
@@ -80,7 +80,6 @@ No API or schema change.
 
 ## Test Plan
 
-- **Automated**: parser tests for each syntax, nesting, snake_case, unclosed markers, code block with language, block quote grouping, link trailing punctuation, HTML-like text staying text; renderer test that a spoiler toggles and that `<img onerror>` content renders as text.
 - **Manual**: send a message using every syntax in a channel and a DM, check both themes and a 390px viewport; verify a long code block scrolls horizontally inside the message instead of widening the page.
 
 ## Deployment Notes

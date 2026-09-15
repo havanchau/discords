@@ -8,9 +8,18 @@ import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
+import type { Server } from 'http';
 import { AppModule } from './app.module';
+import { FixedWindowLimiter } from './common/fixed-window-limiter';
+import { createGlobalRateLimitMiddleware } from './common/global-rate-limit.middleware';
+import { readLimitsConfig } from './common/limits-config';
 import { assertTwoFactorKeyConfigured } from './modules/auth/two-factor-config';
 import { defaultWebOrigin, isAllowedWebOrigin, parseWebOrigins } from './common/web-origins';
+
+// Slow-client (slowloris) protection; keep-alive outlives the usual 60s load balancer idle timeout.
+const HTTP_HEADERS_TIMEOUT_MS = 20_000;
+const HTTP_REQUEST_TIMEOUT_MS = 120_000;
+const HTTP_KEEP_ALIVE_TIMEOUT_MS = 65_000;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -23,12 +32,14 @@ async function bootstrap() {
     throw new Error('JWT_SECRET must be set to a non-default value in production');
   }
   assertTwoFactorKeyConfigured(config);
+  const limits = readLimitsConfig(config);
 
   if (!existsSync(uploadsDir)) {
     mkdirSync(uploadsDir, { recursive: true });
   }
 
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  app.getHttpAdapter().getInstance().set('trust proxy', limits.trustProxyHops);
+  app.use(createGlobalRateLimitMiddleware(new FixedWindowLimiter(), limits.globalRequestsPerMinute));
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -80,6 +91,10 @@ async function bootstrap() {
   );
 
   const port = config.get<number>('PORT', 3000);
+  const httpServer = app.getHttpServer() as Server;
+  httpServer.headersTimeout = HTTP_HEADERS_TIMEOUT_MS;
+  httpServer.requestTimeout = HTTP_REQUEST_TIMEOUT_MS;
+  httpServer.keepAliveTimeout = HTTP_KEEP_ALIVE_TIMEOUT_MS;
   await app.listen(port);
 }
 

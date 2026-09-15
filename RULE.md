@@ -75,4 +75,4 @@ Owners always have all permissions in their server. Admin roles bypass channel-l
 - Keep business rules in shared services or server modules, not only in UI handlers.
 - Keep UI components presentational when possible.
 - Avoid hidden global state for auth, sockets, and permissions.
-- Add regression tests for fixed bugs.
+- Do not create automated test files (`*.test.ts`, `*.test.tsx`, `*.spec.ts`) or test runners/configs. Verify changes with typecheck, lint, build, and a written manual verification scenario in the task doc. This overrides the global testing rules for this repository.

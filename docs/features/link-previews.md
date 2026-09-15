@@ -62,8 +62,8 @@ A hostname is rejected if any resolved address is not public.
 
 ### Files
 
-- API: `modules/link-previews/link-previews.module.ts`, `link-previews.controller.ts`, `link-previews.service.ts` (cache and orchestration), `safe-fetch.ts` (validated lookup, redirects, limits), `address-policy.ts` (+ test), `html-metadata.ts` (+ test), `dto/link-preview-query.dto.ts`, `app.module.ts`.
-- Web: `api.ts`, `hooks/useLinkPreview.ts`, `components/chat/LinkPreviewCard.tsx` (+ test; renders the chip until a preview exists), `LinkPreviewCard.module.css` (chip styles move here from `MessageRow.module.css`), `MessageRow.tsx`, `components/home/DirectMessageRow.tsx`, `DirectMessageTimeline.tsx`.
+- API: `modules/link-previews/link-previews.module.ts`, `link-previews.controller.ts`, `link-previews.service.ts` (cache and orchestration), `safe-fetch.ts` (validated lookup, redirects, limits), `address-policy.ts`, `html-metadata.ts`, `dto/link-preview-query.dto.ts`, `app.module.ts`.
+- Web: `api.ts`, `hooks/useLinkPreview.ts`, `components/chat/LinkPreviewCard.tsx` (renders the chip until a preview exists), `LinkPreviewCard.module.css` (chip styles move here from `MessageRow.module.css`), `MessageRow.tsx`, `components/home/DirectMessageRow.tsx`, `DirectMessageTimeline.tsx`.
 
 No new dependency: Node `http`, `https`, and `dns` cover fetching.
 
@@ -80,7 +80,6 @@ No new dependency: Node `http`, `https`, and `dns` cover fetching.
 
 ## Test Plan
 
-- **Automated**: `address-policy.test.ts` (each range, mapped IPv6, public addresses allowed); `html-metadata.test.ts` (priority order, entities, truncation, missing tags, attribute order); `safe-fetch.test.ts` with a local HTTP server proving IP-literal and DNS-resolved loopback targets are refused, redirects to private addresses are refused, non-HTML returns null, and the byte limit holds. Node skips the custom `lookup` for IP-literal hosts, so those are validated before connecting.
 - **Manual**: post `https://example.com` → card appears; post `http://127.0.0.1:3000/health` and `http://localhost` → only the chip appears; encrypted channel → no request in the network panel.
 
 ## Deployment Notes

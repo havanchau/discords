@@ -84,6 +84,12 @@ Discord parity release (2026-09-15) schema and configuration notes:
 - Password reset emails need `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`; `WEB_ORIGIN`'s first origin is used in reset links.
 - Link previews need outbound HTTP/HTTPS egress from the API host.
 
+DDoS and abuse protection (see `docs/features/ddos-protection.md`):
+
+- Optional API variables, defaults shown: `TRUST_PROXY_HOPS=1`, `RATE_LIMIT_GLOBAL_PER_MINUTE=600`, `SOCKET_MAX_CONNECTIONS_PER_IP=50`. `TRUST_PROXY_HOPS` must equal the number of proxies in front of the API (Render: 1); an invalid value stops the API at startup.
+- Expose the API only through its proxy. With the API port reachable directly, a client controls the address used for rate limiting.
+- For volumetric DDoS, rely on Render's edge or put the API domain behind Cloudflare with rate-limiting rules for `/auth/*`.
+
 ## 2. Vercel Web
 
 Create a Vercel project connected to this GitHub repository.

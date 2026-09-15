@@ -77,7 +77,7 @@ Migration `20260915006000_add_server_emojis`.
 ### Files
 
 - API: `modules/emojis/emojis.module.ts`, `emojis.controller.ts`, `emojis.service.ts`, `dto/create-emoji.dto.ts`, `app.module.ts`, `messages/dto/reaction.dto.ts`.
-- Web: `api.ts`, `hooks/useServerEmojis.ts`, `contexts/ServerEmojiContext.tsx` (provided in `components/app/AuthenticatedWorkspace.tsx`), `components/chat/EmojiPicker.tsx` (+ test; also exports `ReactionEmoji`), `MessageRow.tsx`, `ThreadPanel.tsx`, `MessageComposer.tsx` (+ one grid column in `MessageComposer.module.css`), `MarkdownContent.tsx`, `components/settings/ServerEmojiSection.tsx`, `ServerSettings.tsx`, `AppShell.tsx`. The emoji section only renders for members with `MANAGE_SERVER`.
+- Web: `api.ts`, `hooks/useServerEmojis.ts`, `contexts/ServerEmojiContext.tsx` (provided in `components/app/AuthenticatedWorkspace.tsx`), `components/chat/EmojiPicker.tsx` (also exports `ReactionEmoji`), `MessageRow.tsx`, `ThreadPanel.tsx`, `MessageComposer.tsx` (+ one grid column in `MessageComposer.module.css`), `MarkdownContent.tsx`, `components/settings/ServerEmojiSection.tsx`, `ServerSettings.tsx`, `AppShell.tsx`. The emoji section only renders for members with `MANAGE_SERVER`.
 
 ## Trade-offs
 
@@ -92,7 +92,6 @@ Migration `20260915006000_add_server_emojis`.
 
 ## Test Plan
 
-- **Automated**: `emojis.int.test.ts` (permission, duplicate name, limit, cross-server delete refused); web tests for emoji node resolution in `MarkdownContent` and picker insertion.
 - **Manual**: upload `party.gif` as `party` → send `hello :party:` → image renders for another member live; react with it; delete it → message shows `:party:` text.
 
 ## Deployment Notes

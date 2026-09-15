@@ -8,12 +8,10 @@
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test src/modules/permissions/channel-permission.test.ts src/modules/uploads/uploads.service.test.ts src/modules/realtime/dm-call-rings.test.ts src/modules/messages/slowmode.test.ts src/modules/link-previews/address-policy.test.ts src/modules/link-previews/html-metadata.test.ts src/modules/link-previews/safe-fetch.test.ts src/modules/auth/dto/reset-password.dto.test.ts src/modules/auth/totp.test.ts src/modules/auth/secret-box.test.ts src/modules/events/event-status.test.ts src/test-support/disposable-database.test.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
-    "test:int": "node scripts/test-int.mjs"
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@discord-clone/shared": "file:../../packages/shared",

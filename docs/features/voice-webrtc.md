@@ -56,8 +56,6 @@ Provide real-time voice channel participation, participant state tracking (mute,
 
 ## Test Plan
 
-- **Automated Tests**:
-  - `apps/web/src/hooks/useChannelCall.test.tsx` testing call state machine and track teardown logic.
 - **Manual Verification**:
   - Test 2-player and 3-player call flows with microphone mute, camera toggle, and screen share.
 

@@ -57,8 +57,6 @@ Enable multi-format file uploads attached to channel messages and direct message
 
 ## Test Plan
 
-- **Automated Tests**:
-  - Unit tests in `apps/api/src/modules/uploads/uploads.service.spec.ts` testing MIME allowlist validation.
 - **Manual Verification**:
   - Upload images, MP4 videos, and audio voice messages; verify preview rendering in chat.
 

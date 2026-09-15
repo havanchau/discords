@@ -72,10 +72,7 @@ Use this checklist before adding any roadmap item or new product feature. It kee
 
 ### Testing And Documentation
 
-- [x] Add unit tests for pure helpers, reducers, parsers, permission aggregation, and payload transforms.
-- [x] Add API tests for auth, permission, validation, persistence, and error paths.
-- [x] Add Socket.IO tests for authorized delivery and blocked delivery when realtime behavior changes.
-- [x] Add web component or hook tests for client state that can regress.
+- [x] Verify changes with typecheck, lint, build, and a manual scenario in the feature doc; the repository keeps no automated test files (see `RULE.md`).
 - [x] Add UI smoke coverage for the main happy path and one failure or empty state when practical.
 - [x] Run lint, typecheck, build, and focused tests for touched workspaces.
 - [x] Run `npm run docs:check` when documentation changes.
@@ -100,7 +97,7 @@ The realtime DM, channel message edit/delete broadcast, DM author payload, socke
 ### CI, Tests, And Verification
 
 - [x] **ISSUE-06 — Production smoke tests:** add `npm run ui:smoke` to CI after build prerequisites are available, add post-deploy smoke coverage in `deploy.yml`, and document required deployed URL secrets.
-- [x] **ISSUE-08 — Backend API tests:** add backend unit/integration tests for permissions, auth/session lifecycle, message create/edit/delete validation, and protected endpoint 401/403 behavior.
+- [x] **ISSUE-08 — Backend API tests:** superseded. Automated tests were removed from the repository (see `RULE.md`); permissions, auth/session lifecycle, message validation, and 401/403 behavior are verified manually.
 - [x] **ISSUE-09 — Frontend realtime/state tests:** add tests for `useRealtimeSocket`, `useDirectMessages`, invalid socket auth disconnect behavior, and ChatPanel loading/empty/error states.
 - [x] **ISSUE-12 — Message service search extraction:** split `MessageSearchFilters`, search normalization, date parsing, and Prisma where-builder helpers from `messages.service.ts` into a focused `messages.search.ts` module before the service grows further.
 
@@ -280,7 +277,7 @@ Second roadmap wave. Each item has a feature spec under `docs/features/`; the sp
 
 ### Checklist
 
-Status 2026-09-15: every item below is implemented, with typecheck, lint, build, web tests, and API unit tests passing. Items stay unchecked until the API integration tests (`npm run test:int --workspace apps/api`, needs a disposable `TEST_DATABASE_URL`) and a manual pass have run.
+Status 2026-09-15: every item below is implemented, with typecheck, lint, and build passing. The repository no longer keeps automated tests (see `RULE.md`); items stay unchecked until a manual pass has run.
 
 - [ ] Block and unblock users with enforcement on friend requests, DM creation, and 1-1 DM sends.
 - [ ] Edit, delete, reply, react to, and pin direct messages.

@@ -93,6 +93,15 @@ Apply rate limits or abuse controls to:
 - Reactions.
 - WebRTC signaling events.
 
+Flood and DDoS controls in place (details: `docs/features/ddos-protection.md`):
+
+- Client IP comes from `request.ip` with `TRUST_PROXY_HOPS`; the raw `X-Forwarded-For` header is never used as a limit key.
+- Global per-IP HTTP cap (`RATE_LIMIT_GLOBAL_PER_MINUTE`, default 600/min) before body parsing and routing; per-route `@RateLimit` limits on top. `429` responses carry `Retry-After`.
+- HTTP server timeouts against slow clients: headers 20s, request 120s, keep-alive 65s.
+- Socket.IO: 30 handshakes/min and `SOCKET_MAX_CONNECTIONS_PER_IP` (default 50) open sockets per IP, 300 events/min per user, 256 KB max payload, per-event limits keyed by user.
+- The API must only be reachable through its proxy; direct access lets a client choose the rightmost `X-Forwarded-For` entry.
+- Volumetric (L3/L4) attacks are handled at the edge (Render, or Cloudflare in front of the API), not in the app.
+
 ## Server Administration
 
 - Use least privilege for bots, deploy tokens, and cloud credentials.
@@ -133,8 +142,8 @@ If a server is raided or spammed:
 - [x] Private endpoints are guarded.
 - [x] Permissions are centralized in backend services.
 - [x] Refresh-token based auth flow exists.
-- [ ] Rate-limit coverage is tested for high-abuse endpoints.
-- [ ] Permission tests cover channel overrides.
-- [ ] Upload authorization is covered by integration tests.
-- [ ] Realtime room authorization is covered by socket tests.
+- [x] Rate limits (route, global per IP, socket connect) verified manually against a running API.
+- [ ] Channel permission overrides verified manually.
+- [ ] Upload authorization verified manually.
+- [ ] Realtime room authorization verified manually.
 - [ ] Production secrets are rotated and documented outside source control.

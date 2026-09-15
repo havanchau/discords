@@ -97,7 +97,6 @@ Migration `20260915000000_add_user_blocks`: create table, copy legacy rows with 
 
 ## Test Plan
 
-- **Automated** (`friends.int.test.ts`, runs against a disposable database): block removes friendship; blocked user cannot unblock; friend request and accept are refused with a block in either direction; 1-1 DM send is refused; block is idempotent; self-block is refused.
 - **Manual**: user A blocks friend B from the Friends list → B disappears for both, B cannot re-add A, the existing A/B DM refuses new messages for both; A unblocks from the Blocked list → B can send a request again.
 
 ## Deployment Notes

@@ -81,7 +81,7 @@ Migration `20260915009000_add_two_factor_auth`.
 
 ### Files
 
-- API: `auth/totp.ts` (+ test with RFC 6238 vectors), `auth/secret-box.ts` (+ test), `auth/two-factor-config.ts` (key lookup and production guard), `auth/two-factor-challenge.service.ts` (challenge signing, separate so `AuthService` and `TwoFactorService` do not depend on each other), `auth/two-factor.service.ts`, `auth/two-factor.controller.ts`, `dto/two-factor.dto.ts`, `auth.service.ts` (login branch; `createSession` becomes public), `auth.module.ts`, `jwt-auth.guard.ts`, `realtime.gateway.ts`, `main.ts`, `docs/deployment.md` (environment variable). `.env.example` is not readable in this environment, so the variable still needs to be added there.
+- API: `auth/totp.ts`, `auth/secret-box.ts`, `auth/two-factor-config.ts` (key lookup and production guard), `auth/two-factor-challenge.service.ts` (challenge signing, separate so `AuthService` and `TwoFactorService` do not depend on each other), `auth/two-factor.service.ts`, `auth/two-factor.controller.ts`, `dto/two-factor.dto.ts`, `auth.service.ts` (login branch; `createSession` becomes public), `auth.module.ts`, `jwt-auth.guard.ts`, `realtime.gateway.ts`, `main.ts`, `docs/deployment.md` (environment variable). `.env.example` is not readable in this environment, so the variable still needs to be added there.
 - Web: `hooks/useAuthSession.ts` (typed auth response union), `components/auth/TwoFactorLoginForm.tsx`, `AuthScreen.tsx`, `hooks/useTwoFactor.ts`, `components/settings/TwoFactorSettings.tsx`, `AccountSecuritySettings.tsx`, `SettingsModal.module.css` (recovery code list).
 
 ## Trade-offs
@@ -97,7 +97,6 @@ Migration `20260915009000_add_two_factor_auth`.
 
 ## Test Plan
 
-- **Automated**: `totp.test.ts` (RFC 6238 SHA-1 vectors, window, base32 round trip); `secret-box.test.ts` (round trip, tamper detection); `two-factor.int.test.ts` (enable requires valid code; login returns challenge; verify with code; replayed code refused; recovery code works once; challenge token refused by the guard; disable requires password).
 - **Manual**: enable with an authenticator app → sign out → sign in → enter code → signed in; use a recovery code once; disable.
 
 ## Deployment Notes

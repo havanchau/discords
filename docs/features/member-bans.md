@@ -94,7 +94,6 @@ Migration `20260915003000_add_server_bans`.
 
 ## Test Plan
 
-- **Automated** (`server-moderation.int.test.ts`): ban removes membership; banned user cannot join by invite and the invite count is unchanged; owner/self ban refused; missing permission refused; unban allows rejoin; audit rows written.
 - **Manual**: owner bans member B with a reason → B's client returns Home with a notice; B's invite join fails; ban appears in Server settings → Unban → B can join again.
 
 ## Deployment Notes

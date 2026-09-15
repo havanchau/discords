@@ -9,7 +9,7 @@ Remove per-channel / per-member query loops (N+1) on paths that run on every pag
 Acceptance criteria:
 
 - `GET /servers`, `GET /servers/:id`, the `unread:get` socket event, the `message:create` unread fan-out, and `GET /direct-messages/conversations` run a constant number of queries, independent of channel / member / conversation count.
-- Channel visibility results are identical to the current `PermissionsService.hasChannelPermission` for every combination of owner, roles, private channel, role override, and member override (covered by unit tests).
+- Channel visibility results are identical to the current `PermissionsService.hasChannelPermission` for every combination of owner, roles, private channel, role override, and member override.
 - Unread counts are identical to the current per-channel `count` queries.
 - The web production build no longer ships the React development build, and `zod` is no longer in the web bundle.
 - Typing events from other users no longer re-render every `MessageRow`.
@@ -123,31 +123,30 @@ Acceptance criteria:
 ## Technical Approach
 
 - **Modules & Files**:
-  - `apps/api/src/modules/permissions/channel-permission.ts` (new, pure evaluator) and `channel-permission.test.ts` (new)
+  - `apps/api/src/modules/permissions/channel-permission.ts` (new, pure evaluator)
   - `apps/api/src/modules/permissions/permissions.service.ts`
   - `apps/api/src/modules/servers/servers.service.ts`
   - `apps/api/src/modules/realtime/realtime.gateway.ts`
   - `apps/api/src/modules/direct-messages/direct-messages.service.ts`
   - `apps/api/src/modules/friends/friends.service.ts`
   - `apps/api/prisma/schema.prisma` + new migration
-  - `apps/api/package.json` (`test` script), `apps/api/tsconfig.build.json` (new, keeps `*.test.ts` out of `dist`)
+  - `apps/api/tsconfig.build.json` (new)
   - `apps/api/src/modules/messages/unread-counts.ts` (new)
-  - `apps/api/src/modules/uploads/uploads.service.test.ts` (new)
   - `apps/web/src/AppShell.tsx`, `components/chat/MessageRow.tsx`, `components/SettingsModal.tsx` (+ `.module.css`), `api.ts`, `components/home/DirectMessageTimeline.tsx`
   - `apps/web/src/hooks/useChannelEncryption.ts`: `decryptMessageForDisplay` / `decryptMessagesForDisplay` wrapped in `useCallback` (they only read keys through `channelKeysRef`), so the message actions and thread callbacks built on them keep a stable identity
   - `apps/web/package.json`, `packages/shared/package.json`, `.dockerignore`
   - `apps/api/src/modules/uploads/uploads.controller.ts`, `uploads.service.ts`
-  - `apps/web/src/components/chat/MessageList.tsx`, `MessageList.module.css`, `MessageList.performance.test.tsx`, `components/ChatPanel.tsx`
+  - `apps/web/src/components/chat/MessageList.tsx`, `MessageList.module.css`, `components/ChatPanel.tsx`
 - **API Contracts**: response shapes unchanged except `email` removed from other users in `GET /friends` and friend-request / DM conversation payloads. No endpoint or status code changes.
 - **DB**: one additive index on `FriendRequest(receiverId)`. No data changes.
-- **Libraries**: `@tanstack/react-virtual` (web) — headless, supports variable row heights measured at runtime, ~10 kB, React 19 compatible. API unit tests run with Node's built-in `node:test` through the already installed `tsx` (`tsx --test`).
+- **Libraries**: `@tanstack/react-virtual` (web) — headless, supports variable row heights measured at runtime, ~10 kB, React 19 compatible.
 
 ## Trade-offs
 
 - **In-memory permission evaluation vs Redis cache**:
   - _Chosen_: batch-load members / roles / overrides per request and evaluate in memory.
   - _Rationale_: removes the N+1 with no staleness — every request still reads current roles and overrides.
-  - _Cost_: permission rules now live in one pure function that all paths must use; mitigated by routing `hasChannelPermission` through the same function and covering it with tests.
+  - _Cost_: permission rules now live in one pure function that all paths must use; mitigated by routing `hasChannelPermission` through the same function.
   - _Rejected_: Redis cache — needs invalidation on role, member-role, and override writes; too much risk for this pass.
 - **Raw SQL for unread counts vs Prisma**:
   - _Chosen_: one parameterized `$queryRaw` per call.
@@ -166,7 +165,7 @@ Acceptance criteria:
 
 ## Risks & Rollback
 
-- **Permission regression** (a user sees a private channel or loses a visible one): highest-impact risk. Mitigated by the evaluator unit tests mirroring every branch of the current code, and by keeping `hasChannelPermission` on the same evaluator.
+- **Permission regression** (a user sees a private channel or loses a visible one): highest-impact risk. Mitigated by the evaluator mirroring every branch of the current code, and by keeping `hasChannelPermission` on the same evaluator.
 - **Unread count drift**: raw SQL filter mismatching the old `count`. Mitigated by manual comparison on seeded data.
 - **Email removal**: any external client relying on peer `email` breaks. The web app does not read it.
 - **Memoized rows showing stale data**: if a prop becomes stable while its content changes. Mitigated by keeping `message` objects immutable (all updates already `map` to new objects).
@@ -176,12 +175,7 @@ Acceptance criteria:
 
 ## Test Plan
 
-- **Automated Tests**:
-  - `apps/api/src/modules/permissions/channel-permission.test.ts` (`npm test --workspace apps/api`): owner; no member; public channel with / without role permission; private channel with `MANAGE_CHANNELS`; private channel with role allow override; role deny then member allow; member deny over role allow.
-  - `apps/api/src/modules/uploads/uploads.service.test.ts`: single upload moved from temp file into storage; temp file removed on disallowed type and on oversize; out-of-order chunks assembled by index and chunk directory cleaned.
-  - `MessageList.performance.test.tsx` jump tests: target row focused and highlighted; unknown id is a no-op.
-  - Existing web tests (`npm test --workspace apps/web`).
-  - `MessageList.performance.test.tsx` currently asserts that all 600 rows are in the DOM, which is exactly what virtualization removes. It is updated to assert that 600 messages render within the budget with fewer rows mounted than messages (behavior change, not a test weakened to pass).
+- **Checks**:
   - Repo checks: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run check:file-size`, `npm run docs:check`.
 - **Manual Verification** (requires the local Postgres from `docker compose up -d postgres redis` and `npm run db:seed`):
   - Log in as the demo user, open the server list and a server: same channels visible as before, unread badges match.

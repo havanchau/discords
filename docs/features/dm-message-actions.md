@@ -112,7 +112,6 @@ New shared constants in `packages/shared/src/realtime-events.ts`, emitted to `co
 
 ## Test Plan
 
-- **Automated** (`direct-messages.int.test.ts`): edit/delete by non-author is refused; delete clears pin; reply to a message in another conversation is refused; reaction toggles and aggregates `userIds`; pin limit; non-member gets 404. Web unit test for reaction `me` derivation.
 - **Manual**: two browsers in the same DM → edit, delete, reply, react, pin from one; the other updates live; pinned popover lists and jumps to the message.
 
 ## Deployment Notes

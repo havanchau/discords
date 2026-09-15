@@ -73,8 +73,8 @@ Migration `20260915004000_add_timeout_and_slowmode`. Adding a column with a defa
 
 ### Files
 
-- API: `permissions/permissions.service.ts`, `messages/slowmode.ts` (+ test), `messages/messages.service.ts`, `servers/server-moderation.service.ts`, `servers/dto/timeout-member.dto.ts`, `channels/dto/update-channel.dto.ts`, `channels/channels.service.ts`, `realtime/realtime.gateway.ts`.
-- Web: `api.ts`, `hooks/useServerModeration.ts` (also subscribes to `server:member-updated`), `hooks/useComposerRestrictions.ts` (+ test), `utils/serverPermissions.ts` (+ test, shared with [server-events.md](server-events.md)), `components/settings/MemberModerationSection.tsx`, `MemberRolesSettings.tsx`, `ChannelSettings.tsx`, `hooks/useSettingsActions.ts`, `components/chat/MessageComposer.tsx`, `AppShell.tsx` (ack error). `hooks/useChannelMessageActions.ts` holds the channel edit/delete/react actions moved out of `AppShell.tsx` to keep it under the 1000-line limit.
+- API: `permissions/permissions.service.ts`, `messages/slowmode.ts`, `messages/messages.service.ts`, `servers/server-moderation.service.ts`, `servers/dto/timeout-member.dto.ts`, `channels/dto/update-channel.dto.ts`, `channels/channels.service.ts`, `realtime/realtime.gateway.ts`.
+- Web: `api.ts`, `hooks/useServerModeration.ts` (also subscribes to `server:member-updated`), `hooks/useComposerRestrictions.ts`, `utils/serverPermissions.ts` (shared with [server-events.md](server-events.md)), `components/settings/MemberModerationSection.tsx`, `MemberRolesSettings.tsx`, `ChannelSettings.tsx`, `hooks/useSettingsActions.ts`, `components/chat/MessageComposer.tsx`, `AppShell.tsx` (ack error). `hooks/useChannelMessageActions.ts` holds the channel edit/delete/react actions moved out of `AppShell.tsx` to keep it under the 1000-line limit.
 
 ## Trade-offs
 
@@ -89,7 +89,6 @@ Migration `20260915004000_add_timeout_and_slowmode`. Adding a column with a defa
 
 ## Test Plan
 
-- **Automated**: `slowmode.test.ts` (no previous message, inside window, boundary, rounding); `server-moderation.int.test.ts` (timeout blocks send and reaction, clear restores, owner refused, slowmode 429 and bypass for managers).
 - **Manual**: owner times out B for 60s → B's composer is disabled and a forced send fails; after expiry B can send. Set slowmode 10s → B sends twice → second is refused with a countdown; owner can send freely.
 
 ## Deployment Notes
