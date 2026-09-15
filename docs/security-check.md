@@ -22,6 +22,8 @@ This document defines security expectations for this Discord-like application. I
 - Return consistent `401` responses for unauthenticated requests.
 - Never expose password hashes, refresh tokens, provider tokens, or session secrets to the client.
 - Rate-limit login, register, refresh, and verification endpoints.
+- Never return email verification or password reset tokens from the API; they travel only by email.
+- OAuth sign-in: validate `state` against the httpOnly flow cookie, use PKCE, keep access/refresh tokens out of URLs (one-time login code only), and link a provider to an existing account only when the provider proves the email is verified (Google), never on Facebook email matches.
 
 ## Authorization
 

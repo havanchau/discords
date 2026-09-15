@@ -79,7 +79,7 @@ Migration `20260915007000_add_password_reset_tokens`.
 ## Trade-offs
 
 - **SHA-256 lookup vs. bcrypt like verification tokens**: the token has 256 bits of entropy, so a fast hash is not brute-forceable, and a unique index lookup avoids scanning every token with bcrypt. Cost: two token styles in the auth module.
-- **Not returning the token without SMTP**: registration does this for convenience, but for reset it would let anyone take over any account. Local development reads the link from the API log instead.
+- **Not returning the token without SMTP**: returning it would let anyone take over any account. Local development reads the link from the API log instead; email verification follows the same rule (see `email-verification-delivery.md`).
 - **Revoking all sessions**: a reset usually means the password may be compromised; staying signed in elsewhere would defeat it.
 
 ## Risks & Rollback

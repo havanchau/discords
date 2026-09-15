@@ -39,6 +39,8 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/message-markdown.md` | Safe Discord-style markdown rendering. |
 | `features/custom-emoji.md` | Server custom emoji in messages and reactions. |
 | `features/link-previews.md` | SSRF-safe link preview cards. |
+| `features/email-verification-delivery.md` | Verification links delivered only by email, with resend. |
+| `features/oauth-login.md` | Google and Facebook sign-in with PKCE and one-time login codes. |
 | `features/password-reset.md` | Email-based password reset. |
 | `features/session-management.md` | Listing and revoking active sessions. |
 | `features/two-factor-auth.md` | TOTP two-factor authentication and recovery codes. |

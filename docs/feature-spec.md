@@ -21,6 +21,8 @@ This document defines the top-level product scope. Delivery order lives in [impl
 - **Message Markdown**: [message-markdown.md](features/message-markdown.md)
 - **Server Custom Emoji**: [custom-emoji.md](features/custom-emoji.md)
 - **Link Previews**: [link-previews.md](features/link-previews.md)
+- **Email Verification Delivery**: [email-verification-delivery.md](features/email-verification-delivery.md)
+- **Google & Facebook Sign-in**: [oauth-login.md](features/oauth-login.md)
 - **Password Reset**: [password-reset.md](features/password-reset.md)
 - **Session Management**: [session-management.md](features/session-management.md)
 - **Two-Factor Authentication**: [two-factor-auth.md](features/two-factor-auth.md)
@@ -75,7 +77,8 @@ Build a Discord-inspired realtime communication app that demonstrates full-stack
 - Log out and revoke refresh tokens.
 - Fetch the current user.
 - Update profile fields and avatar.
-- Support email verification when SMTP is configured.
+- Verify email by a link sent to the registered address; the token is never returned by the API, and a new link can be requested.
+- Sign in or sign up with Google or Facebook.
 
 ### Servers and Channels
 
@@ -150,7 +153,7 @@ The API should remain resource-oriented and guarded by auth and permission check
 
 | Area     | Representative Routes                                                        |
 | -------- | ---------------------------------------------------------------------------- |
-| Auth     | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/sessions`, `/auth/2fa` |
+| Auth     | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me`, `/auth/resend-verification`, `/auth/verify-email`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/sessions`, `/auth/2fa`, `/auth/oauth` |
 | Users    | `/users/me`, `/users/:userId`                                                |
 | Servers  | `/servers`, `/servers/:serverId`, `/servers/:serverId/bans`, `/servers/:serverId/members/:memberId/timeout`, `/servers/:serverId/emojis`, `/servers/:serverId/events` |
 | Channels | `/servers/:serverId/channels`, `/channels/:channelId`, `/servers/:serverId/categories`, `/categories/:categoryId` |

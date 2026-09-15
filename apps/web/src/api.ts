@@ -1,4 +1,11 @@
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+export type OAuthProviderName = 'google' | 'facebook';
+
+/* Provider sign-in starts with a full-page navigation so the API can set its flow cookie and redirect. */
+export function oauthStartUrl(provider: OAuthProviderName) {
+  return `${API_URL}/auth/oauth/${provider}`;
+}
 export const API_ORIGIN =
   API_URL === '/api' ? window.location.origin : API_URL.replace(/\/api\/?$/, '');
 

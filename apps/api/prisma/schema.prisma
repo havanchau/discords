@@ -51,6 +51,8 @@ model User {
   sessions                  Session[]
   emailVerificationTokens   EmailVerificationToken[]
   passwordResetTokens       PasswordResetToken[]
+  oauthAccounts             OAuthAccount[]
+  oauthLoginCodes           OAuthLoginCode[]
   twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
   memberships               ServerMember[]
   messages                  Message[]
@@ -91,6 +93,35 @@ model EmailVerificationToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK
+}
+
+model OAuthAccount {
+  id                String        @id @default(cuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+  createdAt         DateTime      @default(now())
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model OAuthLoginCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model PasswordResetToken {

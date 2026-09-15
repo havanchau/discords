@@ -9,7 +9,9 @@ import {
   Zap,
 } from 'lucide-react';
 import { FormEvent } from 'react';
+import type { OAuthProviderName } from '../api';
 import type { AuthMode } from '../hooks/useAuthSession';
+import type { OAuthProviderAvailability } from '../hooks/useOAuthSignIn';
 import { cn } from '../utils/cn';
 import { ForgotPasswordForm, ResetPasswordForm } from './auth/PasswordResetForms';
 import { TwoFactorLoginForm } from './auth/TwoFactorLoginForm';
@@ -29,7 +31,24 @@ export interface AuthScreenProps {
   notice: string | null;
   verificationHint: string | null;
   verificationToken: string;
-  setVerificationToken: (value: string) => void;
+  canResendVerification: boolean;
+  resendVerification: () => void;
+  oauthProviders: OAuthProviderAvailability;
+  startOAuth: (provider: OAuthProviderName) => void;
+}
+
+const OAUTH_BUTTONS: { provider: OAuthProviderName; label: string }[] = [
+  { provider: 'google', label: 'Google' },
+  { provider: 'facebook', label: 'Facebook' },
+];
+
+function oauthButtonTitle(
+  availability: OAuthProviderAvailability,
+  provider: OAuthProviderName,
+  label: string,
+) {
+  if (availability === 'unavailable') return 'Sign-in providers could not be loaded';
+  return availability[provider] ? `Continue with ${label}` : `${label} sign-in is not configured`;
 }
 
 const HEADINGS: Record<AuthMode, { title: string; description: string }> = {
@@ -68,12 +87,15 @@ export function AuthScreen({
   notice,
   verificationHint,
   verificationToken,
-  setVerificationToken,
+  canResendVerification,
+  resendVerification,
+  oauthProviders,
+  startOAuth,
 }: AuthScreenProps) {
   const isLogin = mode === 'login';
   const isPasswordRecovery = mode === 'forgot' || mode === 'reset' || mode === 'two-factor';
-  const showVerification =
-    !isPasswordRecovery && Boolean(verificationHint || verificationToken.trim());
+  // The token only arrives through the emailed link, so there is nothing to confirm without it.
+  const showVerification = !isPasswordRecovery && Boolean(verificationToken);
   const heading = HEADINGS[mode];
   const feedback = (
     <>
@@ -247,32 +269,42 @@ export function AuthScreen({
                 <Button type="submit" fullWidth>
                   {isLogin ? 'Sign in' : 'Create account'}
                 </Button>
+                {isLogin && canResendVerification ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    fullWidth
+                    disabled={isSubmitting}
+                    onClick={resendVerification}
+                  >
+                    Resend verification email
+                  </Button>
+                ) : null}
               </form>
 
               <p className={styles.divider}>
                 <span>Or continue with</span>
               </p>
               <div className={styles.socialRow}>
-                <Button variant="secondary" disabled title="Google sign-in is not configured">
-                  Google
-                </Button>
-                <Button variant="secondary" disabled title="Facebook sign-in is not configured">
-                  Facebook
-                </Button>
+                {OAUTH_BUTTONS.map(({ provider, label }) => (
+                  <Button
+                    key={provider}
+                    variant="secondary"
+                    disabled={oauthProviders === 'unavailable' || !oauthProviders[provider]}
+                    title={oauthButtonTitle(oauthProviders, provider, label)}
+                    onClick={() => startOAuth(provider)}
+                  >
+                    {label}
+                  </Button>
+                ))}
               </div>
             </>
           ) : null}
 
           {showVerification ? (
             <form onSubmit={submitVerification} className={styles.verifyBox}>
-              <TextField
-                label="Verification token"
-                value={verificationToken}
-                onChange={(event) => setVerificationToken(event.target.value)}
-                placeholder="Paste the token from your email"
-                leadingIcon={<BadgeCheck size={18} aria-hidden="true" />}
-              />
-              <Button type="submit" fullWidth disabled={!verificationToken.trim()}>
+              <Button type="submit" fullWidth>
+                <BadgeCheck size={18} aria-hidden="true" />
                 Verify email
               </Button>
             </form>

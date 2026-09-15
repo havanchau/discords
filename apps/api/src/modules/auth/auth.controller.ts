@@ -8,6 +8,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -36,6 +37,13 @@ export class AuthController {
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto, @Req() request: Request) {
     return this.auth.verifyEmail(dto.token, request.headers['user-agent']);
+  }
+
+  @RateLimit({ keyPrefix: 'auth-resend-verification', limit: 5, windowMs: 15 * 60_000 })
+  @HttpCode(200)
+  @Post('resend-verification')
+  resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.auth.resendVerification(dto.email);
   }
 
   @RateLimit({ keyPrefix: 'auth-forgot-password', limit: 5, windowMs: 15 * 60_000 })

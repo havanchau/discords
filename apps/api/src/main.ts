@@ -13,6 +13,7 @@ import { AppModule } from './app.module';
 import { FixedWindowLimiter } from './common/fixed-window-limiter';
 import { createGlobalRateLimitMiddleware } from './common/global-rate-limit.middleware';
 import { readLimitsConfig } from './common/limits-config';
+import { assertOAuthConfigured } from './modules/auth/oauth/oauth-config';
 import { assertTwoFactorKeyConfigured } from './modules/auth/two-factor-config';
 import { defaultWebOrigin, isAllowedWebOrigin, parseWebOrigins } from './common/web-origins';
 
@@ -32,6 +33,7 @@ async function bootstrap() {
     throw new Error('JWT_SECRET must be set to a non-default value in production');
   }
   assertTwoFactorKeyConfigured(config);
+  assertOAuthConfigured(config);
   const limits = readLimitsConfig(config);
 
   if (!existsSync(uploadsDir)) {

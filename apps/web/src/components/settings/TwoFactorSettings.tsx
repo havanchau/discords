@@ -170,6 +170,7 @@ export function TwoFactorSettings({ accessToken }: TwoFactorSettingsProps) {
                 label="Current password"
                 required
                 autoComplete="current-password"
+                hint="Signed up with Google or Facebook? Set a password with “Forgot password?” on the sign-in screen first."
               />
               <TextField
                 name="code"

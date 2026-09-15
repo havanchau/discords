@@ -81,8 +81,17 @@ Discord parity release (2026-09-15) schema and configuration notes:
 - New migrations, in order: `20260915000000_add_user_blocks` (also converts legacy `BLOCKED` friend requests into blocks), `20260915001000_add_dm_message_actions`, `20260915002000_add_group_dms`, `20260915003000_add_server_bans`, `20260915004000_add_timeout_and_slowmode`, `20260915005000_add_channel_categories`, `20260915006000_add_server_emojis`, `20260915007000_add_password_reset_tokens`, `20260915008000_add_session_activity`, `20260915009000_add_two_factor_auth`, `20260915010000_add_server_events`.
 - Apply them before deploying the API. On a large `Message` table, build `Message_channelId_authorId_createdAt_idx` with `CREATE INDEX CONCURRENTLY` first.
 - `TWO_FACTOR_ENCRYPTION_KEY` is required in production (at least 32 characters); the API refuses to start without it. Keep it stable: rotating it invalidates enrolled authenticators.
-- Password reset emails need `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`; `WEB_ORIGIN`'s first origin is used in reset links.
+- Verification and password reset emails need `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`; `WEB_ORIGIN`'s first non-wildcard origin is used in the links. Without SMTP in production, new accounts cannot be verified.
+- Gmail: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER` = the Gmail address, `SMTP_PASS` = a Google App Password (requires 2-Step Verification), `SMTP_FROM` = the same Gmail address. Roughly 500 recipients/day on a personal account.
+- `POST /auth/register` no longer returns `verificationToken`/`verificationUrl`; deploy the API and web together.
 - Link previews need outbound HTTP/HTTPS egress from the API host.
+
+Google and Facebook sign-in (see `docs/features/oauth-login.md`):
+
+- Run migration `20260916000000_add_oauth_accounts` before deploying the API.
+- Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` and/or `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET`; a provider without both stays disabled on the sign-in screen.
+- Set `OAUTH_REDIRECT_BASE_URL` to the API's public base URL (the API will not start in production without it once a provider is configured) and register `{OAUTH_REDIRECT_BASE_URL}/auth/oauth/google/callback` and `…/facebook/callback` in the provider consoles.
+- Outbound HTTPS from the API to `oauth2.googleapis.com`, `openidconnect.googleapis.com`, and `graph.facebook.com` is required.
 
 DDoS and abuse protection (see `docs/features/ddos-protection.md`):
 

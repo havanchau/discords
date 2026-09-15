@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -12,8 +12,15 @@ import {
   TwoFactorChallengeService
 } from './two-factor-challenge.service';
 
+export const RESEND_VERIFICATION_RESPONSE = {
+  ok: true,
+  message: 'If that account is waiting for verification, a new link has been sent.'
+} as const;
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -43,14 +50,29 @@ export class AuthService {
     });
 
     const verification = await this.createVerificationToken(user.id);
-    const mail = await this.email.sendVerificationEmail(user.email, verification.token);
+    this.deliverVerificationEmail(this.email.sendVerificationEmail(user.email, verification.token));
 
+    // The token only ever travels by email: returning it would let anyone verify an address they do not own.
     return {
       verificationRequired: true,
       email: user.email,
-      message: 'Verification email sent. Verify your email before logging in.',
-      ...(mail.sent ? {} : { verificationToken: verification.token, verificationUrl: mail.verifyUrl })
+      message: 'Check your inbox for a verification link.'
     };
+  }
+
+  /*
+   * Same response whether or not the account exists or is pending, and the bcrypt token work runs after
+   * responding, so neither the body nor the response time reveals the account state.
+   */
+  async resendVerification(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { id: true, email: true, emailVerifiedAt: true }
+    });
+    if (user && !user.emailVerifiedAt) {
+      this.deliverVerificationEmail(this.reissueVerificationEmail(user.id, user.email));
+    }
+    return RESEND_VERIFICATION_RESPONSE;
   }
 
   async login(dto: LoginDto, userAgent?: string) {
@@ -66,6 +88,11 @@ export class AuthService {
       throw new UnauthorizedException('Email is not verified');
     }
 
+    return this.completeSignIn(user, userAgent);
+  }
+
+  /* Final step shared by password and provider sign-in: hand off to 2FA when enabled, else open a session. */
+  async completeSignIn(user: { id: string; twoFactorEnabledAt: Date | null }, userAgent?: string) {
     if (user.twoFactorEnabledAt) {
       return {
         twoFactorRequired: true,
@@ -214,6 +241,22 @@ export class AuthService {
       sub: userId,
       sid: sessionId
     });
+  }
+
+  // Delivery is not awaited: a slow or failing SMTP server must not block or break the request. The user
+  // can ask for a new link, so a failure is logged without the address or the token.
+  private deliverVerificationEmail(delivery: Promise<unknown>) {
+    delivery.catch((error: unknown) => {
+      this.logger.error(
+        'Verification email delivery failed',
+        error instanceof Error ? error.stack : undefined
+      );
+    });
+  }
+
+  private async reissueVerificationEmail(userId: string, email: string) {
+    const verification = await this.createVerificationToken(userId);
+    return this.email.sendVerificationEmail(email, verification.token);
   }
 
   private async createVerificationToken(userId: string) {

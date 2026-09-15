@@ -1,19 +1,18 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { apiRequest, AuthState, configureAuthRefresh } from '../api';
 import { AUTH_KEY } from '../helpers';
+import { TwoFactorRequiredResponse, useOAuthSignIn } from './useOAuthSignIn';
 
 export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'two-factor';
 
 interface VerificationRequiredResponse {
   verificationRequired: true;
-  message?: string;
-  verificationToken?: string;
+  email: string;
+  message: string;
 }
 
-interface TwoFactorRequiredResponse {
-  twoFactorRequired: true;
-  challengeToken: string;
-}
+// Must match the API's unverified-login message in auth.service.ts.
+const EMAIL_NOT_VERIFIED_MESSAGE = 'Email is not verified';
 
 type AuthResponse = AuthState | VerificationRequiredResponse | TwoFactorRequiredResponse;
 
@@ -29,6 +28,8 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
   const [mode, setModeState] = useState<AuthMode>('login');
   const [verificationToken, setVerificationToken] = useState('');
   const [verificationHint, setVerificationHint] = useState<string | null>(null);
+  // Address a new verification link can be requested for, after register or an unverified sign in.
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState('');
   // Success messages for password recovery; kept apart from verificationHint, which opens the
   // email verification form.
@@ -42,6 +43,20 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     setNotice(null);
     setModeState(nextMode);
   }, []);
+
+  const requireTwoFactor = useCallback(
+    (challengeToken: string) => {
+      setTwoFactorChallenge(challengeToken);
+      setMode('two-factor');
+    },
+    [setMode],
+  );
+  const oauth = useOAuthSignIn({
+    isSignedOut: auth === null,
+    onSignedIn: setAuth,
+    onTwoFactorRequired: requireTwoFactor,
+    onError: setError,
+  });
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem(AUTH_KEY);
@@ -112,16 +127,36 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
         return;
       }
       if ('verificationRequired' in result) {
-        setVerificationHint(result.message || 'Check your email to verify this account.');
-        if (result.verificationToken) {
-          setVerificationToken(result.verificationToken);
-        }
+        setVerificationHint(`Check your inbox at ${result.email} for a verification link.`);
+        setPendingVerificationEmail(result.email);
         setMode('login');
         return;
       }
       setAuth(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      const message = err instanceof Error ? err.message : 'Authentication failed';
+      if (mode === 'login' && message === EMAIL_NOT_VERIFIED_MESSAGE) {
+        setPendingVerificationEmail(payload.email);
+      }
+      setError(message);
+    }
+  }
+
+  async function resendVerification() {
+    if (!pendingVerificationEmail) return;
+    setError(null);
+    setNotice(null);
+    setIsSubmitting(true);
+    try {
+      const result = await apiRequest<{ message: string }>('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email: pendingVerificationEmail }),
+      });
+      setNotice(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Cannot resend the verification email');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -135,6 +170,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       });
       setVerificationToken('');
       setVerificationHint(null);
+      setPendingVerificationEmail(null);
       setAuth(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
@@ -208,7 +244,6 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     setMode,
     verificationToken,
     verificationHint,
-    setVerificationToken,
     error,
     submitAuth,
     submitVerification,
@@ -226,7 +261,10 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       notice,
       verificationHint,
       verificationToken,
-      setVerificationToken,
+      canResendVerification: Boolean(pendingVerificationEmail),
+      resendVerification,
+      oauthProviders: oauth.oauthProviders,
+      startOAuth: oauth.startOAuth,
     },
   };
 }

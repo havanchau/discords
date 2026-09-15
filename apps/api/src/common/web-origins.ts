@@ -19,4 +19,9 @@ export function isAllowedWebOrigin(origin: string | undefined, webOrigins: strin
   }
 }
 
+// WEB_ORIGIN may list several origins, including wildcards for CORS; links and redirects need one real origin.
+export function primaryWebOrigin(rawOrigin = defaultWebOrigin) {
+  return parseWebOrigins(rawOrigin).find((origin) => !origin.includes('*')) ?? defaultWebOrigin;
+}
+
 export { defaultWebOrigin };

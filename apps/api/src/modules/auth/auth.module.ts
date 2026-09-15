@@ -7,6 +7,9 @@ import { AuthController } from './auth.controller';
 import { EmailService } from './email.service';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OAuthAccountService } from './oauth/oauth-account.service';
+import { OAuthController } from './oauth/oauth.controller';
+import { OAuthService } from './oauth/oauth.service';
 import { PasswordResetService } from './password-reset.service';
 import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
@@ -28,11 +31,13 @@ import { TwoFactorService } from './two-factor.service';
       })
     })
   ],
-  controllers: [AuthController, SessionsController, TwoFactorController],
+  controllers: [AuthController, OAuthController, SessionsController, TwoFactorController],
   providers: [
     AuthService,
     EmailService,
     JwtAuthGuard,
+    OAuthAccountService,
+    OAuthService,
     PasswordResetService,
     SessionsService,
     TwoFactorChallengeService,
