@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Role } from '@discord-clone/shared';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
@@ -12,7 +13,7 @@ export class RolesService {
     private readonly permissions: PermissionsService
   ) {}
 
-  async listRoles(userId: string, serverId: string) {
+  async listRoles(userId: string, serverId: string): Promise<{ roles: Role[] }> {
     await this.permissions.requireMembership(userId, serverId);
     const roles = await this.prisma.role.findMany({
       where: { serverId },

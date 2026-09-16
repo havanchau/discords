@@ -1,5 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { DirectConversation } from '@discord-clone/shared';
+import type { DirectMessage } from '@discord-clone/shared';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -20,7 +22,7 @@ export class DirectMessagesService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async listConversations(userId: string) {
+  async listConversations(userId: string): Promise<{ conversations: DirectConversation[] }> {
     const conversations = await this.prisma.directConversation.findMany({
       where: { members: { some: { userId } } },
       include: directConversationInclude(userId),
@@ -40,7 +42,11 @@ export class DirectMessagesService {
     return { conversations: conversationsWithUnread };
   }
 
-  async listMessages(userId: string, conversationId: string, cursor?: string) {
+  async listMessages(
+    userId: string,
+    conversationId: string,
+    cursor?: string,
+  ): Promise<{ messages: DirectMessage[]; nextCursor: string | null }> {
     await this.requireConversationMember(userId, conversationId);
     const messages = await this.prisma.directMessage.findMany({
       where: { conversationId },

@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import { copyFile, mkdir, open, readFile, readdir, rename, rm, writeFile } from 'fs/promises';
+import { copyFile, mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from 'fs/promises';
 import { basename, extname, join } from 'path';
 import { randomUUID } from 'crypto';
+
+/** An abandoned resumable upload leaves its chunks behind; they are swept on the next chunk write. */
+const CHUNK_DIR_TTL_MS = 6 * 60 * 60 * 1000;
 
 const allowedMimeExtensions = new Map<string, string[]>([
   ['image/jpeg', ['.jpg', '.jpeg']],
@@ -55,6 +58,14 @@ export type IncomingDiskUpload = Pick<
   'path' | 'mimetype' | 'originalname' | 'size'
 >;
 
+/** Ids come from the database, but they still become path segments, so they are checked here too. */
+function safePathSegment(value: string) {
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(value)) {
+    throw new InternalServerErrorException('Cannot build upload path');
+  }
+  return value;
+}
+
 function hasErrorCode(error: unknown, code: string) {
   return error instanceof Error && 'code' in error && error.code === code;
 }
@@ -102,6 +113,11 @@ export class UploadsService {
     return this.config.get<number>('UPLOAD_CHUNK_BYTES', 2 * 1024 * 1024);
   }
 
+  /** One spare chunk so a client whose chunk size does not divide the limit evenly still fits. */
+  get maxChunkCount() {
+    return Math.ceil(this.maxUploadBytes / this.maxChunkBytes) + 1;
+  }
+
   isAllowedFile(file: Pick<Express.Multer.File, 'mimetype' | 'originalname'>) {
     return Boolean(detectAllowedMimeType(file));
   }
@@ -126,6 +142,7 @@ export class UploadsService {
   }
 
   async uploadChunk(
+    userId: string,
     file: IncomingUploadChunk,
     metadata: {
       uploadId?: string;
@@ -144,6 +161,12 @@ export class UploadsService {
 
     if (!Number.isInteger(chunkIndex) || !Number.isInteger(totalChunks) || totalChunks < 1) {
       throw new BadRequestException('Invalid upload chunk metadata');
+    }
+
+    // Without this cap the declared chunk count alone decides how much disk a caller can claim:
+    // `fileSize` is client-supplied and never matches the bytes actually written.
+    if (totalChunks > this.maxChunkCount) {
+      throw new BadRequestException('Too many upload chunks');
     }
 
     if (chunkIndex < 0 || chunkIndex >= totalChunks) {
@@ -169,7 +192,8 @@ export class UploadsService {
       throw new BadRequestException('Unsupported file type');
     }
 
-    const uploadDir = this.chunkUploadDir(uploadId);
+    const uploadDir = this.chunkUploadDir(userId, uploadId);
+    await this.sweepExpiredChunkDirs(userId);
     await mkdir(uploadDir, { recursive: true });
     await writeFile(join(uploadDir, `${chunkIndex}.part`), file.buffer);
     const receivedChunks = (await readdir(uploadDir)).filter((name) =>
@@ -188,11 +212,18 @@ export class UploadsService {
     try {
       const assembledPath = join(uploadDir, fileName);
       await this.assembleChunks(uploadDir, totalChunks, assembledPath);
+      // The real size is only known once the chunks are joined; `fileSize` was just a claim.
+      const assembledSize = (await stat(assembledPath)).size;
+
+      if (assembledSize > this.maxUploadBytes) {
+        throw new BadRequestException('File is too large');
+      }
+
       const attachment = await this.uploadFromPath({
         path: assembledPath,
         originalname: fileName,
         mimetype: normalizedMimeType,
-        size: fileSize,
+        size: assembledSize,
       });
 
       return {
@@ -299,8 +330,32 @@ export class UploadsService {
     return result.secure_url;
   }
 
-  private chunkUploadDir(uploadId: string) {
-    return join(this.uploadTmpDir, uploadId);
+  /** Scoped by user so one caller can never write into another caller's in-progress upload. */
+  private chunkUploadDir(userId: string, uploadId: string) {
+    return join(this.uploadTmpDir, safePathSegment(userId), uploadId);
+  }
+
+  private async sweepExpiredChunkDirs(userId: string) {
+    const userDir = join(this.uploadTmpDir, safePathSegment(userId));
+    let entries: string[];
+
+    try {
+      entries = await readdir(userDir);
+    } catch (error) {
+      if (hasErrorCode(error, 'ENOENT')) return;
+      throw error;
+    }
+
+    const expiresBefore = Date.now() - CHUNK_DIR_TTL_MS;
+    await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = join(userDir, entry);
+        const stats = await stat(entryPath).catch(() => null);
+        if (stats && stats.mtimeMs < expiresBefore) {
+          await rm(entryPath, { recursive: true, force: true });
+        }
+      }),
+    );
   }
 
   private safeUploadId(uploadId: string) {

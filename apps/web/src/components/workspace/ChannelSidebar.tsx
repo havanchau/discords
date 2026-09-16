@@ -66,7 +66,7 @@ export function ChannelSidebar({
     activeCalls,
     channelBadges,
   } = workspace;
-  const { openHome, createInvite, updateProfileAvatar, logout, setChannel, setChannelQuery, setActiveDialog } =
+  const { openHome, createInvite, updateProfileAvatar, logout, selectChannel, setChannelQuery, setActiveDialog } =
     actions;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { collapsedIds, toggleCategory } = useCollapsedCategories();
@@ -111,7 +111,7 @@ export function ChannelSidebar({
         active={channel?.id === item.id}
         badge={channelBadges[item.id]}
         activeCall={activeCalls[item.id]}
-        onClick={() => setChannel(item)}
+        onClick={() => selectChannel(item)}
       />
     );
   }

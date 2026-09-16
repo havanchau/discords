@@ -5,11 +5,13 @@ import {
   SetStateAction,
   useEffect,
   useRef,
-  useState,
 } from 'react';
 import { parseLocale } from '@discord-clone/shared';
 import { useLocale } from '../i18n/LocaleProvider';
-import { invalidateUserProfile } from './useUserProfile';
+import { useInvalidateUserProfile } from './useUserProfile';
+import { queryKeys } from '../query/queryKeys';
+import type { PatchServer, PatchServers, SelectChannel } from '../query/useWorkspaceStore';
+import { useLazyResource } from '../query/useLazyResource';
 import {
   apiRequest,
   AuthState,
@@ -20,7 +22,6 @@ import {
   NotificationPreference,
   Role,
   ServerDetail,
-  ServerSummary,
   uploadFile,
 } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
@@ -34,9 +35,9 @@ interface UseSettingsActionsOptions {
   activeDialog: string | null;
   uiTheme: UiTheme;
   setAuth: (auth: AuthState) => void;
-  setServer: Dispatch<SetStateAction<ServerDetail | null>>;
-  setServers: Dispatch<SetStateAction<ServerSummary[]>>;
-  setChannel: Dispatch<SetStateAction<Channel | null>>;
+  patchServer: PatchServer;
+  patchServers: PatchServers;
+  selectChannel: SelectChannel;
   setActiveDialog: (dialog: null) => void;
   setUiTheme: (theme: UiTheme) => void;
   setPendingAction: (action: string | null) => void;
@@ -49,6 +50,11 @@ interface UseSettingsActionsOptions {
   ) => Promise<void>;
 }
 
+const noOverrides: ChannelPermissionOverride[] = [];
+const noAuditLogs: AuditLogEntry[] = [];
+const noInvites: Invite[] = [];
+const noPreferences: NotificationPreference[] = [];
+
 export function useSettingsActions({
   auth,
   server,
@@ -56,9 +62,9 @@ export function useSettingsActions({
   activeDialog,
   uiTheme,
   setAuth,
-  setServer,
-  setServers,
-  setChannel,
+  patchServer,
+  patchServers,
+  selectChannel,
   setActiveDialog,
   setUiTheme,
   setPendingAction,
@@ -67,39 +73,69 @@ export function useSettingsActions({
   openServer,
 }: UseSettingsActionsOptions) {
   const { locale, setLocale, t } = useLocale();
-  const [channelOverrides, setChannelOverrides] = useState<ChannelPermissionOverride[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreference[]>(
-    [],
-  );
-  const [invites, setInvites] = useState<Invite[]>([]);
+  const invalidateUserProfile = useInvalidateUserProfile();
+  const token = auth?.accessToken;
+
+  // Settings panels read their data when they open; the cache is keyed by the id they asked for.
+  const overridesResource = useLazyResource<ChannelPermissionOverride[]>({
+    buildKey: queryKeys.channelOverrides,
+    enabled: Boolean(token),
+    fetch: (channelId) =>
+      apiRequest<{ overrides: ChannelPermissionOverride[] }>(
+        `/channels/${channelId}/overrides`,
+        {},
+        token,
+      ).then((result) => result.overrides),
+  });
+  const auditLogsResource = useLazyResource<AuditLogEntry[]>({
+    buildKey: queryKeys.auditLogs,
+    enabled: Boolean(token),
+    fetch: (serverId) =>
+      apiRequest<{ logs: AuditLogEntry[] }>(`/servers/${serverId}/audit-logs`, {}, token).then(
+        (result) => result.logs,
+      ),
+  });
+  const invitesResource = useLazyResource<Invite[]>({
+    buildKey: queryKeys.serverInvites,
+    enabled: Boolean(token),
+    fetch: (serverId) =>
+      apiRequest<{ invites: Invite[] }>(`/servers/${serverId}/invites`, {}, token).then(
+        (result) => result.invites,
+      ),
+  });
+  const notificationPreferencesResource = useLazyResource<NotificationPreference[]>({
+    buildKey: queryKeys.notificationPreferences,
+    enabled: Boolean(token),
+    fetch: () =>
+      apiRequest<{ preferences: NotificationPreference[] }>(
+        '/users/me/notification-preferences',
+        {},
+        token,
+      ).then((result) => result.preferences),
+  });
+
+  const channelOverrides = overridesResource.data ?? noOverrides;
+  const auditLogs = auditLogsResource.data ?? noAuditLogs;
+  const invites = invitesResource.data ?? noInvites;
+  const notificationPreferences = notificationPreferencesResource.data ?? noPreferences;
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const profileBannerInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!auth || !channel || activeDialog !== 'channel-settings') return;
-    void loadChannelOverrides(channel.id, auth.accessToken);
+    void loadChannelOverrides(channel.id);
   }, [activeDialog, channel?.id, auth?.accessToken]);
 
   useEffect(() => {
     if (!auth || !server || activeDialog !== 'server-settings') return;
-    void loadAuditLogs(server.id, auth.accessToken);
-    void loadInvites(server.id, auth.accessToken);
+    void loadAuditLogs(server.id);
+    void loadInvites(server.id);
   }, [activeDialog, server?.id, auth?.accessToken]);
 
-  async function loadNotificationPreferences(token = auth?.accessToken) {
-    if (!token) return;
-    try {
-      const result = await apiRequest<{ preferences: NotificationPreference[] }>(
-        '/users/me/notification-preferences',
-        {},
-        token,
-      );
-      setNotificationPreferences(result.preferences);
-    } catch {
-      setNotificationPreferences([]);
-    }
+  async function loadNotificationPreferences() {
+    if (!auth) return;
+    await notificationPreferencesResource.load(auth.user.id);
   }
 
   async function updateNotificationPreference(
@@ -126,9 +162,9 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setNotificationPreferences((current) => [
+      notificationPreferencesResource.write((current) => [
         result.preference,
-        ...current.filter((item) => item.id !== result.preference.id),
+        ...(current ?? []).filter((item) => item.id !== result.preference.id),
       ]);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-notifications'));
@@ -137,46 +173,19 @@ export function useSettingsActions({
     }
   }
 
-  async function loadChannelOverrides(channelId: string, token = auth?.accessToken) {
+  async function loadChannelOverrides(channelId: string) {
     if (!token) return;
-    try {
-      const result = await apiRequest<{ overrides: ChannelPermissionOverride[] }>(
-        `/channels/${channelId}/overrides`,
-        {},
-        token,
-      );
-      setChannelOverrides(result.overrides);
-    } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-channel-permissions'));
-    }
+    await overridesResource.load(channelId);
   }
 
-  async function loadAuditLogs(serverId: string, token = auth?.accessToken) {
+  async function loadAuditLogs(serverId: string) {
     if (!token) return;
-    try {
-      const result = await apiRequest<{ logs: AuditLogEntry[] }>(
-        `/servers/${serverId}/audit-logs`,
-        {},
-        token,
-      );
-      setAuditLogs(result.logs);
-    } catch {
-      setAuditLogs([]);
-    }
+    await auditLogsResource.load(serverId);
   }
 
-  async function loadInvites(serverId: string, token = auth?.accessToken) {
+  async function loadInvites(serverId: string) {
     if (!token) return;
-    try {
-      const result = await apiRequest<{ invites: Invite[] }>(
-        `/servers/${serverId}/invites`,
-        {},
-        token,
-      );
-      setInvites(result.invites);
-    } catch {
-      setInvites([]);
-    }
+    await invitesResource.load(serverId);
   }
 
   async function createInviteFromSettings(event?: FormEvent<HTMLFormElement>) {
@@ -201,9 +210,9 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setInvites((current) => [
+      invitesResource.write((current) => [
         result.invite,
-        ...current.filter((invite) => invite.id !== result.invite.id),
+        ...(current ?? []).filter((invite) => invite.id !== result.invite.id),
       ]);
       if (event) event.currentTarget.reset();
     } catch (err) {
@@ -223,7 +232,7 @@ export function useSettingsActions({
         { method: 'DELETE' },
         auth.accessToken,
       );
-      setInvites((current) => current.filter((invite) => invite.id !== inviteId));
+      invitesResource.write((current) => (current ?? []).filter((invite) => invite.id !== inviteId));
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-revoke-invite'));
     } finally {
@@ -291,8 +300,8 @@ export function useSettingsActions({
         { method: 'PATCH', body: JSON.stringify(changes) },
         auth.accessToken,
       );
-      setServer((current) =>
-        current?.id === server.id
+      patchServer((current) =>
+        current.id === server.id
           ? {
               ...current,
               members: current.members.map((member) =>
@@ -336,13 +345,13 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setChannel(result.channel);
-      setServer({
-        ...server,
-        channels: server.channels.map((item) =>
+      patchServer((current) => ({
+        ...current,
+        channels: current.channels.map((item) =>
           item.id === result.channel.id ? result.channel : item,
         ),
-      });
+      }));
+      selectChannel(result.channel.id);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-avatar'));
     } finally {
@@ -381,18 +390,14 @@ export function useSettingsActions({
       setLocale(nextLocale);
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
       invalidateUserProfile(auth.user.id);
-      setServer((current) =>
-        current
-          ? {
-              ...current,
-              members: current.members.map((member) =>
-                member.user.id === auth.user.id
-                  ? { ...member, user: { ...member.user, ...result.user } }
-                  : member,
-              ),
-            }
-          : current,
-      );
+      patchServer((current) => ({
+        ...current,
+        members: current.members.map((member) =>
+          member.user.id === auth.user.id
+            ? { ...member, user: { ...member.user, ...result.user } }
+            : member,
+        ),
+      }));
       setActiveDialog(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-profile'));
@@ -419,9 +424,9 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setServer(result.server);
+      patchServer(() => result.server);
       hydratePersistentChannelBadges(result.server);
-      setServers((current) =>
+      patchServers((current) =>
         current.map((item) =>
           item.id === result.server.id
             ? {
@@ -467,13 +472,13 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setChannel(result.channel);
-      setServer({
-        ...server,
-        channels: server.channels.map((item) =>
+      patchServer((current) => ({
+        ...current,
+        channels: current.channels.map((item) =>
           item.id === result.channel.id ? result.channel : item,
         ),
-      });
+      }));
+      selectChannel(result.channel.id);
       setActiveDialog(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel'));
@@ -501,7 +506,7 @@ export function useSettingsActions({
       },
       auth.accessToken,
     );
-    setChannelOverrides(result.overrides);
+    overridesResource.write(() => result.overrides);
     await openServer(channel.serverId, auth.accessToken, channel.id);
   }
 

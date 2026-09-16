@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ServerEmoji } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateEmojiDto } from './dto/create-emoji.dto';
 
@@ -28,7 +29,7 @@ export class EmojisService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  async list(userId: string, serverId: string) {
+  async list(userId: string, serverId: string): Promise<{ emojis: ServerEmoji[] }> {
     await this.permissions.requireMembership(userId, serverId);
     const emojis = await this.prisma.serverEmoji.findMany({
       where: { serverId },

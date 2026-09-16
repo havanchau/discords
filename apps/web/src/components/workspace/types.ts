@@ -36,7 +36,7 @@ export interface WorkspaceSidebarActions {
   createInvite: () => Promise<void>;
   updateProfileAvatar: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   logout: () => void;
-  setChannel: (channel: Channel) => void;
+  selectChannel: (channel: Channel) => void;
   setChannelQuery: (query: string) => void;
   setActiveDialog: (dialog: ActiveDialog) => void;
 }

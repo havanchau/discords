@@ -1,50 +1,53 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { apiRequest, type AuthSessionEntry } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import { queryKeys } from '../query/queryKeys';
 
 interface UseSessionsOptions {
   accessToken: string;
   onCurrentSessionRevoked: () => void;
 }
 
+interface SessionsResult {
+  sessions: AuthSessionEntry[];
+}
+
+const noSessions: AuthSessionEntry[] = [];
+
 export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSessionsOptions) {
   const t = useTranslation();
-  const [sessions, setSessions] = useState<AuthSessionEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = queryKeys.sessions(accessToken ? 'me' : 'anonymous');
   const [error, setError] = useState<string | null>(null);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
 
-  const loadSessions = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await apiRequest<{ sessions: AuthSessionEntry[] }>(
-        '/auth/sessions',
-        {},
-        accessToken,
-      );
-      setSessions(result.sessions);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-devices'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken]);
+  const { data, isLoading } = useQuery({
+    queryKey,
+    queryFn: () => apiRequest<SessionsResult>('/auth/sessions', {}, accessToken),
+  });
 
-  useEffect(() => {
-    void loadSessions();
-  }, [loadSessions]);
+  const revokeMutation = useMutation({
+    mutationFn: (sessionId: string) =>
+      apiRequest(`/auth/sessions/${sessionId}`, { method: 'DELETE' }, accessToken),
+  });
+
+  const revokeOthersMutation = useMutation({
+    mutationFn: () => apiRequest('/auth/sessions/revoke-others', { method: 'POST' }, accessToken),
+  });
 
   async function revokeSession(session: AuthSessionEntry) {
     setPendingSessionId(session.id);
     setError(null);
     try {
-      await apiRequest(`/auth/sessions/${session.id}`, { method: 'DELETE' }, accessToken);
+      await revokeMutation.mutateAsync(session.id);
       if (session.current) {
         onCurrentSessionRevoked();
         return;
       }
-      setSessions((current) => current.filter((item) => item.id !== session.id));
+      queryClient.setQueryData<SessionsResult>(queryKey, (current) =>
+        current ? { sessions: current.sessions.filter((item) => item.id !== session.id) } : current,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-that-device'));
     } finally {
@@ -56,14 +59,25 @@ export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSession
     setPendingSessionId('others');
     setError(null);
     try {
-      await apiRequest('/auth/sessions/revoke-others', { method: 'POST' }, accessToken);
-      setSessions((current) => current.filter((item) => item.current));
+      await revokeOthersMutation.mutateAsync();
+      queryClient.setQueryData<SessionsResult>(queryKey, (current) =>
+        current ? { sessions: current.sessions.filter((item) => item.current) } : current,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-other-devices'));
+      setError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-other-devices'),
+      );
     } finally {
       setPendingSessionId(null);
     }
   }
 
-  return { sessions, isLoading, error, pendingSessionId, revokeSession, revokeOtherSessions };
+  return {
+    sessions: data?.sessions ?? noSessions,
+    isLoading,
+    error,
+    pendingSessionId,
+    revokeSession,
+    revokeOtherSessions,
+  };
 }

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { apiRequest, type UserProfile } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import { queryKeys } from '../query/queryKeys';
 
 interface UseUserProfileOptions {
   accessToken: string;
@@ -10,60 +12,42 @@ interface UseUserProfileOptions {
   enabled: boolean;
 }
 
-// Cards reopen constantly while browsing a member list, so a resolved profile is kept for the
-// session. It is cleared by a reload, which is the same lifetime as the rest of the workspace state.
-const cache = new Map<string, UserProfile>();
-
-function cacheKey(userId: string, serverId?: string | null) {
-  return `${userId}::${serverId ?? ''}`;
-}
-
+/**
+ * Cards reopen constantly while browsing a member list, so a resolved profile stays in the query
+ * cache rather than in a module-level map: it is then scoped to the app instance and invalidated
+ * through the same mechanism as every other cached read.
+ */
 export function useUserProfile({ accessToken, userId, serverId, enabled }: UseUserProfileOptions) {
   const t = useTranslation();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    const key = cacheKey(userId, serverId);
-    const cached = cache.get(key);
-    if (cached) {
-      setProfile(cached);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    try {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.userProfile(userId ?? 'none', serverId ?? null),
+    enabled: enabled && Boolean(userId),
+    queryFn: () => {
       const query = serverId ? `?serverId=${encodeURIComponent(serverId)}` : '';
-      const result = await apiRequest<{ profile: UserProfile }>(
-        `/users/${userId}/profile${query}`,
-        {},
-        accessToken,
-      );
-      cache.set(key, result.profile);
-      setProfile(result.profile);
-    } catch (err) {
-      setProfile(null);
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-profile'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken, userId, serverId, t]);
+      return apiRequest<{ profile: UserProfile }>(`/users/${userId}/profile${query}`, {}, accessToken);
+    },
+  });
 
-  useEffect(() => {
-    if (!enabled) return;
-    void load();
-  }, [enabled, load]);
+  const reload = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
-  return { profile, isLoading, error, reload: load };
+  return {
+    profile: data?.profile ?? null,
+    isLoading,
+    error: error ? (error instanceof Error ? error.message : t('error.fallback.cannot-load-profile')) : null,
+    reload,
+  };
 }
 
 /** Called after a profile write so the next card open shows the new values. */
-export function invalidateUserProfile(userId: string) {
-  for (const key of [...cache.keys()]) {
-    if (key.startsWith(`${userId}::`)) cache.delete(key);
-  }
+export function useInvalidateUserProfile() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (userId: string) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userProfilesOf(userId) });
+    },
+    [queryClient],
+  );
 }

@@ -10,7 +10,10 @@
     "sourceMap": true,
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
-    "typeRoots": ["../../node_modules/@types", "node_modules/@types"]
+    "typeRoots": ["../../node_modules/@types", "node_modules/@types"],
+    "paths": {
+      "@discord-clone/shared": ["../../packages/shared/dist/index.d.ts"]
+    }
   },
 
   "include": ["src/**/*.ts"]

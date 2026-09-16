@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ServerBanEntry } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateBanDto } from './dto/create-ban.dto';
 import { TimeoutMemberDto } from './dto/timeout-member.dto';
@@ -86,7 +87,7 @@ export class ServerModerationService {
     return { member };
   }
 
-  async listBans(userId: string, serverId: string) {
+  async listBans(userId: string, serverId: string): Promise<{ bans: ServerBanEntry[] }> {
     await this.permissions.requireServerPermission(userId, serverId, Permission.BanMembers);
     const bans = await this.prisma.serverBan.findMany({
       where: { serverId },

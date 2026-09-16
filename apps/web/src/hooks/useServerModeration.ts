@@ -1,23 +1,24 @@
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import {
   apiRequest,
   AuthState,
-  Channel,
   ServerBanEntry,
   ServerDetail,
-  ServerSummary,
 } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import type { PatchServer, PatchServers } from '../query/useWorkspaceStore';
+import { queryKeys } from '../query/queryKeys';
 
 interface UseServerModerationOptions {
   auth: AuthState | null;
   socket: Socket | null;
   server: ServerDetail | null;
-  setServer: Dispatch<SetStateAction<ServerDetail | null>>;
-  setServers: Dispatch<SetStateAction<ServerSummary[]>>;
-  setChannel: Dispatch<SetStateAction<Channel | null>>;
+  patchServer: PatchServer;
+  patchServers: PatchServers;
+  openHome: () => void;
   setPendingAction: (action: string | null) => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
@@ -28,6 +29,8 @@ interface MemberRemovedPayload {
   userId: string;
   reason: 'KICK' | 'BAN';
 }
+
+const noBans: ServerBanEntry[] = [];
 
 /** Partial by design: a publisher sends only the fields its change touched. */
 interface MemberUpdatedPayload {
@@ -43,17 +46,38 @@ export function useServerModeration({
   auth,
   socket,
   server,
-  setServer,
-  setServers,
-  setChannel,
+  patchServer,
+  patchServers,
+  openHome,
   setPendingAction,
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseServerModerationOptions) {
   const t = useTranslation();
-  const [bans, setBans] = useState<ServerBanEntry[]>([]);
-  const [isLoadingBans, setIsLoadingBans] = useState(false);
+  const queryClient = useQueryClient();
+  // The bans list is only fetched once the moderation panel asks for a specific server.
+  const [bansServerId, setBansServerId] = useState<string | null>(null);
   const [bansError, setBansError] = useState<string | null>(null);
+  const bansQueryKey = queryKeys.serverBans(bansServerId ?? 'none');
+
+  const bansQuery = useQuery({
+    queryKey: bansQueryKey,
+    enabled: Boolean(auth && bansServerId),
+    queryFn: () =>
+      apiRequest<{ bans: ServerBanEntry[] }>(
+        `/servers/${bansServerId}/bans`,
+        {},
+        auth?.accessToken,
+      ),
+  });
+  const bans = bansQuery.data?.bans ?? noBans;
+  const isLoadingBans = bansQuery.isFetching;
+
+  const writeBans = (update: (current: ServerBanEntry[]) => ServerBanEntry[]) => {
+    queryClient.setQueryData<{ bans: ServerBanEntry[] }>(bansQueryKey, (current) =>
+      current ? { bans: update(current.bans) } : current,
+    );
+  };
   const viewerIdRef = useRef<string | null>(null);
   const serverRef = useRef<ServerDetail | null>(null);
   const noticeRef = useRef(setWorkspaceNotice);
@@ -70,10 +94,9 @@ export function useServerModeration({
     const handleMemberRemoved = (payload: MemberRemovedPayload) => {
       if (payload.userId === viewerIdRef.current) {
         const removedFrom = serverRef.current?.id === payload.serverId ? serverRef.current : null;
-        setServers((current) => current.filter((item) => item.id !== payload.serverId));
+        patchServers((current) => current.filter((item) => item.id !== payload.serverId));
         if (removedFrom) {
-          setServer(null);
-          setChannel(null);
+          openHome();
           noticeRef.current(
             payload.reason === 'BAN'
               ? `You were banned from ${removedFrom.name}.`
@@ -82,8 +105,8 @@ export function useServerModeration({
         }
         return;
       }
-      setServer((current) =>
-        current?.id === payload.serverId
+      patchServer((current) =>
+        current.id === payload.serverId
           ? {
               ...current,
               members: current.members.filter((member) => member.user.id !== payload.userId),
@@ -93,8 +116,8 @@ export function useServerModeration({
     };
 
     const handleMemberUpdated = (payload: MemberUpdatedPayload) => {
-      setServer((current) =>
-        current?.id === payload.serverId
+      patchServer((current) =>
+        current.id === payload.serverId
           ? {
               ...current,
               // A partial payload: only the keys the change carried are merged, so a nickname
@@ -122,26 +145,16 @@ export function useServerModeration({
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
     };
-  }, [socket, setChannel, setServer, setServers]);
+  }, [socket, openHome, patchServer, patchServers]);
 
+  // The server id is part of the query key, so a slow response for the previous server can no
+  // longer land on the current one; the manual ref guard this used to need is gone.
   async function loadBans(serverId: string) {
     if (!auth) return;
-    setIsLoadingBans(true);
     setBansError(null);
-    try {
-      const result = await apiRequest<{ bans: ServerBanEntry[] }>(
-        `/servers/${serverId}/bans`,
-        {},
-        auth.accessToken,
-      );
-      if (serverRef.current?.id === serverId) setBans(result.bans);
-    } catch (err) {
-      if (serverRef.current?.id !== serverId) return;
-      setBans([]);
-      setBansError(err instanceof Error ? err.message : t('error.fallback.cannot-load-bans'));
-    } finally {
-      if (serverRef.current?.id === serverId) setIsLoadingBans(false);
-    }
+    setBansServerId(serverId);
+    const result = await queryClient.refetchQueries({ queryKey: queryKeys.serverBans(serverId) });
+    void result;
   }
 
   async function banMember(userId: string, reason: string) {
@@ -155,9 +168,9 @@ export function useServerModeration({
         { method: 'POST', body: JSON.stringify({ userId, reason: reason.trim() || undefined }) },
         auth.accessToken,
       );
-      setBans((current) => [result.ban, ...current.filter((ban) => ban.id !== result.ban.id)]);
-      setServer((current) =>
-        current?.id === serverId
+      writeBans((current) => [result.ban, ...current.filter((ban) => ban.id !== result.ban.id)]);
+      patchServer((current) =>
+        current.id === serverId
           ? { ...current, members: current.members.filter((member) => member.user.id !== userId) }
           : current,
       );
@@ -181,7 +194,7 @@ export function useServerModeration({
         { method: 'DELETE' },
         auth.accessToken,
       );
-      setBans((current) => current.filter((ban) => ban.user.id !== userId));
+      writeBans((current) => current.filter((ban) => ban.user.id !== userId));
     } catch (err) {
       setBansError(err instanceof Error ? err.message : t('error.fallback.cannot-unban-user'));
     } finally {
@@ -200,8 +213,8 @@ export function useServerModeration({
         { method: 'PUT', body: JSON.stringify({ durationMinutes }) },
         auth.accessToken,
       );
-      setServer((current) =>
-        current?.id === serverId
+      patchServer((current) =>
+        current.id === serverId
           ? {
               ...current,
               members: current.members.map((member) =>

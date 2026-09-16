@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { FriendsSummary } from '@discord-clone/shared';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
@@ -19,7 +20,7 @@ export class FriendsService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  async list(userId: string) {
+  async list(userId: string): Promise<FriendsSummary> {
     const [requests, blocks] = await Promise.all([
       this.prisma.friendRequest.findMany({
         where: {
@@ -44,7 +45,8 @@ export class FriendsService {
         .map((request) => ({
           id: request.id,
           user: request.requesterId === userId ? request.receiver : request.requester,
-          status: request.status,
+          // The filter above already restricted this list; the enum type does not narrow with it.
+          status: 'ACCEPTED' as const,
         })),
       pendingIncoming: requests.filter(
         (request) => request.status === 'PENDING' && request.receiverId === userId,

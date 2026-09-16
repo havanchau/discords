@@ -12,8 +12,11 @@ import { randomUUID } from 'crypto';
 import { mkdir } from 'fs/promises';
 import { diskStorage, memoryStorage } from 'multer';
 import { join } from 'path';
+import { CurrentUser } from '../../common/current-user.decorator';
 import { RateLimit } from '../../common/rate-limit.decorator';
+import { RequestUser } from '../../common/request-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UploadChunkDto } from './dto/upload-chunk.dto';
 import { UploadsService } from './uploads.service';
 
 const maxUploadBytes = Number(process.env.UPLOAD_MAX_BYTES || 10 * 1024 * 1024);
@@ -90,28 +93,21 @@ export class UploadsController {
     }),
   )
   async uploadChunk(
+    @CurrentUser() user: RequestUser,
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body()
-    body: {
-      uploadId?: string;
-      chunkIndex?: string;
-      totalChunks?: string;
-      fileName?: string;
-      mimeType?: string;
-      fileSize?: string;
-    },
+    @Body() body: UploadChunkDto,
   ) {
     if (!file) {
       throw new BadRequestException('Upload chunk is required');
     }
 
-    return this.uploads.uploadChunk(file, {
+    return this.uploads.uploadChunk(user.id, file, {
       uploadId: body.uploadId,
-      chunkIndex: Number(body.chunkIndex),
-      totalChunks: Number(body.totalChunks),
+      chunkIndex: body.chunkIndex,
+      totalChunks: body.totalChunks,
       fileName: body.fileName || file.originalname,
       mimeType: body.mimeType || file.mimetype,
-      fileSize: Number(body.fileSize),
+      fileSize: body.fileSize,
     });
   }
 }

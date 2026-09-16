@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ServerEventView } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -28,7 +29,7 @@ export class EventsService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  async list(userId: string, serverId: string) {
+  async list(userId: string, serverId: string): Promise<{ events: ServerEventView[] }> {
     await this.permissions.requireMembership(userId, serverId);
     const now = new Date();
     const { endAtAfter, openEndedStartAfter } = activeEventCutoffs(now);
