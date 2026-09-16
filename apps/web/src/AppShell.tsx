@@ -64,18 +64,18 @@ export function AppShell() {
 
   const {
     servers,
-    setServers,
     server,
-    setServer,
     channel,
-    setChannel,
     isLoadingServers,
+    openHome,
+    selectChannel,
+    patchServer,
+    patchServers,
     inviteCode,
     channelQuery,
     setChannelQuery,
     visibleTextChannels,
     visibleVoiceChannels,
-    loadServers,
     openServer,
     createServer,
     joinInvite,
@@ -229,9 +229,9 @@ export function AppShell() {
     activeDialog,
     uiTheme,
     setAuth,
-    setServer,
-    setServers,
-    setChannel,
+    patchServer,
+    patchServers,
+    selectChannel,
     setActiveDialog,
     setUiTheme,
     setPendingAction,
@@ -251,7 +251,7 @@ export function AppShell() {
     setDirectMessages,
     setDirectConversations,
     setTypingUsers,
-    setServer,
+    patchServer,
     setActiveCalls,
     setChannelBadges,
     applyDirectMessageUpdate,
@@ -277,9 +277,9 @@ export function AppShell() {
     auth,
     socket,
     server,
-    setServer,
-    setServers,
-    setChannel,
+    patchServer,
+    patchServers,
+    openHome,
     setPendingAction,
     setWorkspaceError,
     setWorkspaceNotice,
@@ -349,7 +349,6 @@ export function AppShell() {
 
   useEffect(() => {
     if (!auth) return;
-    void loadServers(auth.accessToken);
     void loadFriends(auth.accessToken);
     void loadDirectConversations(auth.accessToken);
     void loadNotificationPreferences();
@@ -565,7 +564,7 @@ export function AppShell() {
     workspaceNotice,
     pendingAction,
     openServer,
-    selectChannel: setChannel,
+    selectChannel,
     setActivePanel,
     setActiveDialog,
     clearWorkspaceError: () => setWorkspaceError(null),
@@ -598,10 +597,7 @@ export function AppShell() {
           profileAvatarInputRef,
           serverEvents,
           actions: {
-            openHome: () => {
-              setServer(null);
-              setChannel(null);
-            },
+            openHome,
             openServer,
             createServer,
             joinInvite,
@@ -614,7 +610,7 @@ export function AppShell() {
             },
             updateProfileAvatar,
             logout,
-            setChannel,
+            selectChannel,
             setChannelQuery,
             setActiveDialog,
           },

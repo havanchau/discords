@@ -1,25 +1,24 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import {
   apiRequest,
   AuthState,
-  Channel,
   ServerBanEntry,
   ServerDetail,
-  ServerSummary,
 } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import type { PatchServer, PatchServers } from '../query/useWorkspaceStore';
 import { queryKeys } from '../query/queryKeys';
 
 interface UseServerModerationOptions {
   auth: AuthState | null;
   socket: Socket | null;
   server: ServerDetail | null;
-  setServer: Dispatch<SetStateAction<ServerDetail | null>>;
-  setServers: Dispatch<SetStateAction<ServerSummary[]>>;
-  setChannel: Dispatch<SetStateAction<Channel | null>>;
+  patchServer: PatchServer;
+  patchServers: PatchServers;
+  openHome: () => void;
   setPendingAction: (action: string | null) => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
@@ -47,9 +46,9 @@ export function useServerModeration({
   auth,
   socket,
   server,
-  setServer,
-  setServers,
-  setChannel,
+  patchServer,
+  patchServers,
+  openHome,
   setPendingAction,
   setWorkspaceError,
   setWorkspaceNotice,
@@ -95,10 +94,9 @@ export function useServerModeration({
     const handleMemberRemoved = (payload: MemberRemovedPayload) => {
       if (payload.userId === viewerIdRef.current) {
         const removedFrom = serverRef.current?.id === payload.serverId ? serverRef.current : null;
-        setServers((current) => current.filter((item) => item.id !== payload.serverId));
+        patchServers((current) => current.filter((item) => item.id !== payload.serverId));
         if (removedFrom) {
-          setServer(null);
-          setChannel(null);
+          openHome();
           noticeRef.current(
             payload.reason === 'BAN'
               ? `You were banned from ${removedFrom.name}.`
@@ -107,8 +105,8 @@ export function useServerModeration({
         }
         return;
       }
-      setServer((current) =>
-        current?.id === payload.serverId
+      patchServer((current) =>
+        current.id === payload.serverId
           ? {
               ...current,
               members: current.members.filter((member) => member.user.id !== payload.userId),
@@ -118,8 +116,8 @@ export function useServerModeration({
     };
 
     const handleMemberUpdated = (payload: MemberUpdatedPayload) => {
-      setServer((current) =>
-        current?.id === payload.serverId
+      patchServer((current) =>
+        current.id === payload.serverId
           ? {
               ...current,
               // A partial payload: only the keys the change carried are merged, so a nickname
@@ -147,7 +145,7 @@ export function useServerModeration({
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
     };
-  }, [socket, setChannel, setServer, setServers]);
+  }, [socket, openHome, patchServer, patchServers]);
 
   // The server id is part of the query key, so a slow response for the previous server can no
   // longer land on the current one; the manual ref guard this used to need is gone.
@@ -171,8 +169,8 @@ export function useServerModeration({
         auth.accessToken,
       );
       writeBans((current) => [result.ban, ...current.filter((ban) => ban.id !== result.ban.id)]);
-      setServer((current) =>
-        current?.id === serverId
+      patchServer((current) =>
+        current.id === serverId
           ? { ...current, members: current.members.filter((member) => member.user.id !== userId) }
           : current,
       );
@@ -215,8 +213,8 @@ export function useServerModeration({
         { method: 'PUT', body: JSON.stringify({ durationMinutes }) },
         auth.accessToken,
       );
-      setServer((current) =>
-        current?.id === serverId
+      patchServer((current) =>
+        current.id === serverId
           ? {
               ...current,
               members: current.members.map((member) =>

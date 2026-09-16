@@ -1,6 +1,7 @@
 import { Dispatch, RefObject, SetStateAction, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Json, PresenceUpdatePayload, RealtimeEvents } from '@discord-clone/shared';
+import type { PatchServer } from '../query/useWorkspaceStore';
 
 // Socket payloads cross the same JSON boundary as HTTP responses, so dates arrive as strings.
 type PresenceUpdate = Json<PresenceUpdatePayload>;
@@ -10,7 +11,6 @@ import {
   DirectMessage,
   Message,
   NotificationItem,
-  ServerDetail,
 } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
 import { ActiveCallSummary, SOCKET_URL } from '../helpers';
@@ -31,7 +31,7 @@ interface UseRealtimeSocketOptions {
   setDirectMessages: Dispatch<SetStateAction<DirectMessage[]>>;
   setDirectConversations: Dispatch<SetStateAction<DirectConversation[]>>;
   setTypingUsers: Dispatch<SetStateAction<TypingUser[]>>;
-  setServer: Dispatch<SetStateAction<ServerDetail | null>>;
+  patchServer: PatchServer;
   setActiveCalls: Dispatch<SetStateAction<Record<string, ActiveCallSummary>>>;
   setChannelBadges: Dispatch<SetStateAction<Record<string, ChannelBadgeState>>>;
   applyDirectMessageUpdate: (message: DirectMessage) => void;
@@ -53,7 +53,7 @@ export function useRealtimeSocket({
   setDirectMessages,
   setDirectConversations,
   setTypingUsers,
-  setServer,
+  patchServer,
   setActiveCalls,
   setChannelBadges,
   applyDirectMessageUpdate,
@@ -255,27 +255,23 @@ export function useRealtimeSocket({
 
     // Partial: a connect/disconnect carries `status`, a profile save carries `customStatus`.
     nextSocket.on(RealtimeEvents.PresenceUpdate, (payload: PresenceUpdate) => {
-      setServer((current) =>
-        current
-          ? {
-              ...current,
-              members: current.members.map((member) =>
-                member.user.id === payload.userId
-                  ? {
-                      ...member,
-                      user: {
-                        ...member.user,
-                        ...(payload.status !== undefined ? { status: payload.status } : {}),
-                        ...(payload.customStatus !== undefined
-                          ? { customStatus: payload.customStatus }
-                          : {}),
-                      },
-                    }
-                  : member,
-              ),
-            }
-          : current,
-      );
+      patchServer((current) => ({
+        ...current,
+        members: current.members.map((member) =>
+          member.user.id === payload.userId
+            ? {
+                ...member,
+                user: {
+                  ...member.user,
+                  ...(payload.status !== undefined ? { status: payload.status } : {}),
+                  ...(payload.customStatus !== undefined
+                    ? { customStatus: payload.customStatus }
+                    : {}),
+                },
+              }
+            : member,
+        ),
+      }));
     });
 
     nextSocket.on(RealtimeEvents.VoiceActive, (activeCall: ActiveCallSummary) => {

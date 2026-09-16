@@ -1,10 +1,11 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { apiRequest, Channel, ChannelCategory, ServerDetail, ServerSummary } from '../api';
+import { apiRequest, AuthState, Channel, ChannelCategory, ServerDetail } from '../api';
 import { ActiveDialog } from '../components/chat/types';
 import { useTranslation } from '../i18n/LocaleProvider';
+import { useWorkspaceStore } from '../query/useWorkspaceStore';
 
 interface UseWorkspaceNavigationProps {
-  auth: { accessToken: string } | null;
+  auth: AuthState | null;
   clearAuth: () => void;
   setWorkspaceError: (error: string | null) => void;
   setWorkspaceNotice: (notice: string | null) => void;
@@ -21,62 +22,41 @@ export function useWorkspaceNavigation({
   setActiveDialog,
 }: UseWorkspaceNavigationProps) {
   const t = useTranslation();
-  const [servers, setServers] = useState<ServerSummary[]>([]);
-  const [server, setServer] = useState<ServerDetail | null>(null);
-  const [channel, setChannel] = useState<Channel | null>(null);
-  const [isLoadingServers, setIsLoadingServers] = useState(false);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteCode] = useState<string | null>(null);
   const [channelQuery, setChannelQuery] = useState('');
 
-  const loadServers = useCallback(
-    async (token: string) => {
-      setIsLoadingServers(true);
-      setWorkspaceError(null);
-      try {
-        const data = await apiRequest<{ servers: ServerSummary[] }>('/servers', {}, token);
-        setServers(data.servers);
-        if (data.servers.length > 0 && !server) {
-          const firstServer = await apiRequest<{ server: ServerDetail }>(
-            `/servers/${data.servers[0].id}`,
-            {},
-            token,
-          );
-          setServer(firstServer.server);
-          setChannel(firstServer.server.channels[0] ?? null);
-        }
-      } catch (err) {
-        if (err instanceof Error && err.message.includes('401')) {
-          clearAuth();
-          return;
-        }
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-servers'));
-      } finally {
-        setIsLoadingServers(false);
-      }
+  const reportLoadError = useCallback(
+    (message: string) => {
+      setWorkspaceError(message || t('error.fallback.cannot-load-servers'));
     },
-    [clearAuth, server, setWorkspaceError],
+    [setWorkspaceError, t],
   );
+
+  const store = useWorkspaceStore({
+    token: auth?.accessToken,
+    userId: auth?.user.id,
+    onUnauthorized: clearAuth,
+    onError: reportLoadError,
+  });
+  const {
+    servers,
+    server,
+    channel,
+    isLoadingServers,
+    openServer: openServerById,
+    openHome,
+    selectChannel,
+    patchServer,
+    patchServers,
+    seedServerDetail,
+    refreshServers,
+  } = store;
 
   const openServer = useCallback(
     async (serverId: string) => {
-      if (!auth) return;
-      setPendingAction(`server-${serverId}`);
-      setWorkspaceError(null);
-      try {
-        const data = await apiRequest<{ server: ServerDetail }>(
-          `/servers/${serverId}`,
-          {},
-          auth.accessToken,
-        );
-        setServer(data.server);
-        setChannel(data.server.channels[0] ?? null);
-      } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-open-server'));
-      } finally {
-        setPendingAction(null);
-      }
+      openServerById(serverId);
     },
-    [auth, setPendingAction, setWorkspaceError],
+    [openServerById],
   );
 
   const joinServerByInvite = useCallback(
@@ -90,9 +70,8 @@ export function useWorkspaceNavigation({
           { method: 'POST' },
           auth.accessToken,
         );
-        setServer(data.server);
-        setChannel(data.server.channels[0] ?? null);
-        await loadServers(auth.accessToken);
+        seedServerDetail(data.server);
+        await refreshServers();
         setActiveDialog(null);
         setWorkspaceNotice(`Joined ${data.server.name}`);
       } catch (err) {
@@ -101,7 +80,16 @@ export function useWorkspaceNavigation({
         setPendingAction(null);
       }
     },
-    [auth, loadServers, setActiveDialog, setPendingAction, setWorkspaceError, setWorkspaceNotice],
+    [
+      auth,
+      refreshServers,
+      seedServerDetail,
+      setActiveDialog,
+      setPendingAction,
+      setWorkspaceError,
+      setWorkspaceNotice,
+      t,
+    ],
   );
 
   const createServer = useCallback(
@@ -120,9 +108,8 @@ export function useWorkspaceNavigation({
           { method: 'POST', body: JSON.stringify({ name, description }) },
           auth.accessToken,
         );
-        setServer(data.server);
-        setChannel(data.server.channels[0] ?? null);
-        await loadServers(auth.accessToken);
+        seedServerDetail(data.server);
+        await refreshServers();
         setActiveDialog(null);
         setWorkspaceNotice(`Created server ${data.server.name}`);
       } catch (err) {
@@ -131,7 +118,16 @@ export function useWorkspaceNavigation({
         setPendingAction(null);
       }
     },
-    [auth, loadServers, setActiveDialog, setPendingAction, setWorkspaceError, setWorkspaceNotice],
+    [
+      auth,
+      refreshServers,
+      seedServerDetail,
+      setActiveDialog,
+      setPendingAction,
+      setWorkspaceError,
+      setWorkspaceNotice,
+      t,
+    ],
   );
 
   const joinInvite = useCallback(
@@ -162,15 +158,11 @@ export function useWorkspaceNavigation({
           { method: 'POST', body: JSON.stringify({ name, type, categoryId }) },
           auth.accessToken,
         );
-        setServer((current) =>
-          current
-            ? {
-                ...current,
-                channels: [...current.channels, data.channel],
-              }
-            : null,
-        );
-        setChannel(data.channel);
+        patchServer((current) => ({
+          ...current,
+          channels: [...current.channels, data.channel],
+        }));
+        selectChannel(data.channel);
         setActiveDialog(null);
       } catch (err) {
         setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-channel'));
@@ -178,7 +170,7 @@ export function useWorkspaceNavigation({
         setPendingAction(null);
       }
     },
-    [auth, server, setActiveDialog, setPendingAction, setWorkspaceError],
+    [auth, server, patchServer, selectChannel, setActiveDialog, setPendingAction, setWorkspaceError, t],
   );
 
   const createCategory = useCallback(
@@ -195,8 +187,8 @@ export function useWorkspaceNavigation({
           { method: 'POST', body: JSON.stringify({ name }) },
           auth.accessToken,
         );
-        setServer((current) =>
-          current?.id === data.category.serverId
+        patchServer((current) =>
+          current.id === data.category.serverId
             ? { ...current, categories: [...(current.categories ?? []), data.category] }
             : current,
         );
@@ -208,7 +200,7 @@ export function useWorkspaceNavigation({
         setPendingAction(null);
       }
     },
-    [auth, server, setPendingAction, setWorkspaceError],
+    [auth, server, patchServer, setPendingAction, setWorkspaceError, t],
   );
 
   const updateCategory = useCallback(
@@ -222,16 +214,12 @@ export function useWorkspaceNavigation({
           { method: 'PATCH', body: JSON.stringify(changes) },
           auth.accessToken,
         );
-        setServer((current) =>
-          current
-            ? {
-                ...current,
-                categories: (current.categories ?? []).map((category) =>
-                  category.id === categoryId ? data.category : category,
-                ),
-              }
-            : current,
-        );
+        patchServer((current) => ({
+          ...current,
+          categories: (current.categories ?? []).map((category) =>
+            category.id === categoryId ? data.category : category,
+          ),
+        }));
         return true;
       } catch (err) {
         setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-category'));
@@ -240,7 +228,7 @@ export function useWorkspaceNavigation({
         setPendingAction(null);
       }
     },
-    [auth, setPendingAction, setWorkspaceError],
+    [auth, patchServer, setPendingAction, setWorkspaceError, t],
   );
 
   const deleteCategory = useCallback(
@@ -250,17 +238,13 @@ export function useWorkspaceNavigation({
       setWorkspaceError(null);
       try {
         await apiRequest(`/categories/${categoryId}`, { method: 'DELETE' }, auth.accessToken);
-        setServer((current) =>
-          current
-            ? {
-                ...current,
-                categories: (current.categories ?? []).filter((category) => category.id !== categoryId),
-                channels: current.channels.map((item) =>
-                  item.categoryId === categoryId ? { ...item, categoryId: null } : item,
-                ),
-              }
-            : current,
-        );
+        patchServer((current) => ({
+          ...current,
+          categories: (current.categories ?? []).filter((category) => category.id !== categoryId),
+          channels: current.channels.map((item) =>
+            item.categoryId === categoryId ? { ...item, categoryId: null } : item,
+          ),
+        }));
         return true;
       } catch (err) {
         setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-category'));
@@ -269,7 +253,7 @@ export function useWorkspaceNavigation({
         setPendingAction(null);
       }
     },
-    [auth, setPendingAction, setWorkspaceError],
+    [auth, patchServer, setPendingAction, setWorkspaceError, t],
   );
 
   const textChannels = useMemo(
@@ -296,21 +280,21 @@ export function useWorkspaceNavigation({
 
   return {
     servers,
-    setServers,
     server,
-    setServer,
     channel,
-    setChannel,
     isLoadingServers,
+    openHome,
+    selectChannel,
+    patchServer,
+    patchServers,
+    seedServerDetail,
     inviteCode,
-    setInviteCode,
     channelQuery,
     setChannelQuery,
     textChannels,
     visibleTextChannels,
     voiceChannels,
     visibleVoiceChannels,
-    loadServers,
     openServer,
     joinServerByInvite,
     createServer,

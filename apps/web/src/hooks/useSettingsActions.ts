@@ -10,6 +10,7 @@ import { parseLocale } from '@discord-clone/shared';
 import { useLocale } from '../i18n/LocaleProvider';
 import { useInvalidateUserProfile } from './useUserProfile';
 import { queryKeys } from '../query/queryKeys';
+import type { PatchServer, PatchServers, SelectChannel } from '../query/useWorkspaceStore';
 import { useLazyResource } from '../query/useLazyResource';
 import {
   apiRequest,
@@ -21,7 +22,6 @@ import {
   NotificationPreference,
   Role,
   ServerDetail,
-  ServerSummary,
   uploadFile,
 } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
@@ -35,9 +35,9 @@ interface UseSettingsActionsOptions {
   activeDialog: string | null;
   uiTheme: UiTheme;
   setAuth: (auth: AuthState) => void;
-  setServer: Dispatch<SetStateAction<ServerDetail | null>>;
-  setServers: Dispatch<SetStateAction<ServerSummary[]>>;
-  setChannel: Dispatch<SetStateAction<Channel | null>>;
+  patchServer: PatchServer;
+  patchServers: PatchServers;
+  selectChannel: SelectChannel;
   setActiveDialog: (dialog: null) => void;
   setUiTheme: (theme: UiTheme) => void;
   setPendingAction: (action: string | null) => void;
@@ -62,9 +62,9 @@ export function useSettingsActions({
   activeDialog,
   uiTheme,
   setAuth,
-  setServer,
-  setServers,
-  setChannel,
+  patchServer,
+  patchServers,
+  selectChannel,
   setActiveDialog,
   setUiTheme,
   setPendingAction,
@@ -300,8 +300,8 @@ export function useSettingsActions({
         { method: 'PATCH', body: JSON.stringify(changes) },
         auth.accessToken,
       );
-      setServer((current) =>
-        current?.id === server.id
+      patchServer((current) =>
+        current.id === server.id
           ? {
               ...current,
               members: current.members.map((member) =>
@@ -345,13 +345,13 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setChannel(result.channel);
-      setServer({
-        ...server,
-        channels: server.channels.map((item) =>
+      patchServer((current) => ({
+        ...current,
+        channels: current.channels.map((item) =>
           item.id === result.channel.id ? result.channel : item,
         ),
-      });
+      }));
+      selectChannel(result.channel.id);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-avatar'));
     } finally {
@@ -390,18 +390,14 @@ export function useSettingsActions({
       setLocale(nextLocale);
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
       invalidateUserProfile(auth.user.id);
-      setServer((current) =>
-        current
-          ? {
-              ...current,
-              members: current.members.map((member) =>
-                member.user.id === auth.user.id
-                  ? { ...member, user: { ...member.user, ...result.user } }
-                  : member,
-              ),
-            }
-          : current,
-      );
+      patchServer((current) => ({
+        ...current,
+        members: current.members.map((member) =>
+          member.user.id === auth.user.id
+            ? { ...member, user: { ...member.user, ...result.user } }
+            : member,
+        ),
+      }));
       setActiveDialog(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-profile'));
@@ -428,9 +424,9 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setServer(result.server);
+      patchServer(() => result.server);
       hydratePersistentChannelBadges(result.server);
-      setServers((current) =>
+      patchServers((current) =>
         current.map((item) =>
           item.id === result.server.id
             ? {
@@ -476,13 +472,13 @@ export function useSettingsActions({
         },
         auth.accessToken,
       );
-      setChannel(result.channel);
-      setServer({
-        ...server,
-        channels: server.channels.map((item) =>
+      patchServer((current) => ({
+        ...current,
+        channels: current.channels.map((item) =>
           item.id === result.channel.id ? result.channel : item,
         ),
-      });
+      }));
+      selectChannel(result.channel.id);
       setActiveDialog(null);
     } catch (err) {
       setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel'));

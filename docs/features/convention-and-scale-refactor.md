@@ -33,9 +33,11 @@ Acceptance criteria:
   8. React Query introduced, with `useNotifications`, `useServerEvents` and `useServerEmojis` migrated.
   9. Every read surface of the API annotated against the shared contract.
   10. Socket authentication moved into the handshake, fixing a race that predates this change.
+  11. Workspace state consolidated behind one owner and moved into the query cache.
 - **Out of Scope**:
-  - Moving `server`, `servers`, `channel` and the message lists into React Query — see
+  - Moving the message lists into React Query — see
     [What stays on useState, and why](#what-stays-on-usestate-and-why).
+  - Splitting `AppShell`, which this change unblocks but does not attempt.
   - Making the API horizontally scalable. Presence, call state and rate-limit counters are still
     process-local, so the API remains single-instance by design.
   - Code-splitting the 746 kB web bundle.
@@ -200,6 +202,43 @@ Migrated, each keeping its exact public API so no consumer changed:
 that fills a cache entry keyed by `id`, so reopening a panel is free and a slow response for a
 previous id can no longer land on the current one.
 
+### Workspace ownership
+
+`server`, `servers` and `channel` used to be `useState` in `useWorkspaceNavigation`, whose setters
+were handed to `useRealtimeSocket`, `useServerModeration` and `useSettingsActions` as props. Four
+hooks could reshape the same object however they liked, which is why the data could not move into a
+cache: no single place knew the cache key.
+
+`query/useWorkspaceStore.ts` is now the only owner. It holds two queries — the server list and the
+open server's detail — plus `activeServerId` and `activeChannelId` as navigation state, and exposes
+a named write API instead of raw setters:
+
+| Before | After |
+|---|---|
+| `setServer(updater)` | `patchServer(update)` — writes the open server's cache entry |
+| `setServers(updater)` | `patchServers(update)` — writes the list cache entry |
+| `setServer(detail)` | `seedServerDetail(detail)` — after create or join |
+| `setServer(null); setChannel(null)` | `openHome()` |
+| `setChannel(channel)` | `selectChannel(id)` |
+
+**`channel` is now derived**, not stored. It used to be a second copy of a channel object held beside
+`server.channels`, so a rename updated one and left the other stale unless every write remembered to
+update both. Selecting a channel records an id, and the channel is read from the open server.
+
+Two behaviours are preserved deliberately:
+
+- Opening the first server on first load is a one-time convenience guarded by a ref, not a rule. The
+  list refetches, and without the guard every refetch would drag the user out of the home view.
+- The open channel is re-selected whenever it is missing from the open server, which covers both a
+  freshly loaded server and a channel deleted underneath the user.
+
+The mutators have **stable identities** — they read the active key from a ref rather than a closure.
+This is required, not stylistic: the socket effect in `useRealtimeSocket` subscribes once, with
+`[auth?.accessToken]` as its dependency, so it captures the mutator from the first render. A
+key-dependent `patchServer` was captured while no server was open and wrote presence updates into an
+unused cache entry — the member list silently stopped updating. This was caught by driving a second
+user's socket and reading the ONLINE count in the browser.
+
 ### What stays on useState, and why
 
 Not every hook holding data is holding *server* state, and moving those into a server cache would be
@@ -214,12 +253,8 @@ wrong rather than merely unnecessary.
   fetch and then mutated in place by socket events. Caching the decrypted form would put derived
   client state in a server cache; caching the ciphertext instead means decrypting at render, which is
   a separate design decision about the E2EE pipeline.
-- **`server`, `servers`, `channel`** — `useWorkspaceNavigation` owns these, but `setServer` and
-  `setServers` are passed as props into `useRealtimeSocket`, `useServerModeration` and
-  `useSettingsActions`, which all write to them. Moving them into the query cache means changing
-  every one of those writers in the same step. That is a consolidation of ownership, not a hook
-  migration, and it should come **before** the `AppShell` split rather than after it — the opposite
-  of the order this document originally suggested.
+
+Everything else now has one owner; see [Workspace ownership](#workspace-ownership).
 
 ## Technical approach
 
@@ -302,6 +337,12 @@ Verified:
   errors and zero failed requests, with `/servers`, `/servers/:id/emojis`, `/servers/:id/events`,
   `/users/me/notification-preferences` and `/auth/sessions` all returning 200 through the migrated
   hooks, including a "sign out all other devices" mutation.
+- **Navigation, in the browser.** First load opens a server and a channel; clicking another channel
+  changes the header; the home view opens and is still there two seconds later, after the server list
+  has refetched. Zero console errors.
+- **Presence through the new write path.** With the app open as one user, connecting a second user's
+  socket moves the member list from `ONLINE - 1` to `ONLINE - 2`, and closing it moves back to
+  `ONLINE - 1`.
 
 Not verified:
 
@@ -327,10 +368,9 @@ Not verified:
 
 ## Remaining work
 
-**Ownership consolidation, then the `AppShell` split.** `server`, `servers`, `channel` and the
-message lists are written by four hooks through setter props. Until one owner holds each of them,
-neither the query cache nor a smaller `AppShell` can be introduced safely. This is the next piece of
-work, and it is a design change rather than a migration.
+**The `AppShell` split**, which the workspace store unblocks: the component no longer threads
+`setServer` / `setServers` / `setChannel` through to three hooks, so the sections can be lifted out
+one at a time. It is 800 lines today.
 
 **E2EE and caching.** Deciding whether messages are cached as ciphertext and decrypted at render
 would let the message lists join the query cache. Today they cannot, because what the hooks hold is

@@ -3,6 +3,8 @@
  * instead of showing the previous one's data.
  */
 export const queryKeys = {
+  servers: (userId: string) => ['servers', userId] as const,
+  serverDetail: (serverId: string) => ['server-detail', serverId] as const,
   notifications: (userId: string) => ['notifications', userId] as const,
   serverEvents: (serverId: string) => ['server-events', serverId] as const,
   serverEmojis: (serverId: string) => ['server-emojis', serverId] as const,
