@@ -624,11 +624,10 @@ export class MessagesService {
       rootMessageId: thread.rootMessageId,
       channelId: thread.channelId,
       replyCount: thread._count.messages,
-      lastReplyAt: (lastReply?.createdAt ?? thread.updatedAt).toISOString(),
+      lastReplyAt: lastReply?.createdAt ?? thread.updatedAt,
       participants: thread.participants.map((participant) => ({
         user: participant.user,
-        lastReadAt:
-          participant.userId === userId ? (participant.lastReadAt?.toISOString() ?? null) : null,
+        lastReadAt: participant.userId === userId ? participant.lastReadAt : null,
       })),
     };
   }
@@ -705,9 +704,9 @@ export class MessagesService {
       serverId: message.serverId,
       authorId: message.authorId,
       content: message.content,
-      createdAt: message.createdAt.toISOString(),
-      editedAt: message.editedAt?.toISOString() ?? null,
-      deletedAt: message.deletedAt?.toISOString() ?? null,
+      createdAt: message.createdAt,
+      editedAt: message.editedAt,
+      deletedAt: message.deletedAt,
       author: message.author,
       attachments: message.attachments.map((attachment) => ({
         id: attachment.id,

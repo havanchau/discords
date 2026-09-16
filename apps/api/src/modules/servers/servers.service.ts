@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { slugifyChannelName } from '../../common/slugify';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuditLogEntry, Invite, ServerDetail, ServerSummary } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { countChannelUnread } from '../messages/unread-counts';
 import { CreateInviteDto } from './dto/create-invite.dto';
@@ -77,7 +78,7 @@ export class ServersService {
     return this.getServerForUser(userId, server.id);
   }
 
-  async listForUser(userId: string) {
+  async listForUser(userId: string): Promise<{ servers: ServerSummary[] }> {
     const servers = await this.prisma.server.findMany({
       where: {
         deletedAt: null,
@@ -103,7 +104,7 @@ export class ServersService {
     return { servers: visibleServers };
   }
 
-  async getServerForUser(userId: string, serverId: string) {
+  async getServerForUser(userId: string, serverId: string): Promise<{ server: ServerDetail }> {
     await this.requireMembership(userId, serverId);
     const server = await this.prisma.server.findFirstOrThrow({
       where: { id: serverId, deletedAt: null },
@@ -179,7 +180,7 @@ export class ServersService {
     return this.getServerForUser(userId, serverId);
   }
 
-  async listAuditLogs(userId: string, serverId: string) {
+  async listAuditLogs(userId: string, serverId: string): Promise<{ logs: AuditLogEntry[] }> {
     await this.permissions.requireServerPermission(userId, serverId, Permission.ManageServer);
     const logs = await this.prisma.auditLog.findMany({
       where: { serverId },
@@ -196,7 +197,9 @@ export class ServersService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
-    return { logs };
+    return {
+      logs: logs.map((log) => ({ ...log, metadata: toMetadataObject(log.metadata) })),
+    };
   }
 
   async updateMyMembership(userId: string, serverId: string, dto: UpdateNicknameDto) {
@@ -274,7 +277,7 @@ export class ServersService {
     return { invite };
   }
 
-  async listInvites(userId: string, serverId: string) {
+  async listInvites(userId: string, serverId: string): Promise<{ invites: Invite[] }> {
     await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
     const now = new Date();
     const invites = await this.prisma.invite.findMany({
@@ -407,4 +410,16 @@ export class ServersService {
       data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
     });
   }
+}
+
+/**
+ * `metadata` is a JSON column, so the database can hand back a scalar or an array even though
+ * `writeAuditLog` only ever stores an object. Narrowing here keeps the response honest instead of
+ * asserting a shape the column does not guarantee.
+ */
+function toMetadataObject(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
 }

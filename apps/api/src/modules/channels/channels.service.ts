@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Channel, ChannelPermissionOverride } from '@discord-clone/shared';
 import { ServersService } from '../servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
@@ -38,7 +39,7 @@ export class ChannelsService {
     return { channel };
   }
 
-  async listChannels(userId: string, serverId: string) {
+  async listChannels(userId: string, serverId: string): Promise<{ channels: Channel[] }> {
     await this.servers.requireMembership(userId, serverId);
     const channels = await this.prisma.channel.findMany({
       where: { serverId },
@@ -53,7 +54,7 @@ export class ChannelsService {
     return { channels: visibleChannels };
   }
 
-  async getChannel(userId: string, channelId: string) {
+  async getChannel(userId: string, channelId: string): Promise<{ channel: Channel }> {
     const channel = await this.prisma.channel.findUnique({ where: { id: channelId } });
     if (!channel) {
       throw new NotFoundException('Channel not found');
@@ -100,7 +101,10 @@ export class ChannelsService {
     return { channel };
   }
 
-  async listPermissionOverrides(userId: string, channelId: string) {
+  async listPermissionOverrides(
+    userId: string,
+    channelId: string,
+  ): Promise<{ overrides: ChannelPermissionOverride[] }> {
     const channel = await this.prisma.channel.findUnique({
       where: { id: channelId },
       include: { permissionOverrides: true },

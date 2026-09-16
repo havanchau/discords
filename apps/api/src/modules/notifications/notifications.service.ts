@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import type { NotificationItem } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 
 const actorSelect = {
@@ -17,7 +18,7 @@ export class NotificationsService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  async list(userId: string) {
+  async list(userId: string): Promise<{ items: NotificationItem[]; unreadCount: number }> {
     const [items, unreadCount] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
         where: { userId },

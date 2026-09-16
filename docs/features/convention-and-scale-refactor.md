@@ -31,11 +31,11 @@ Acceptance criteria:
   6. `realtime.gateway.ts` split into three gateways and six services.
   7. API response contract moved to `packages/shared/src/api-contract.ts`; `formatMessage` annotated with it.
   8. React Query introduced, with `useNotifications`, `useServerEvents` and `useServerEmojis` migrated.
+  9. Every read surface of the API annotated against the shared contract.
+  10. Socket authentication moved into the handshake, fixing a race that predates this change.
 - **Out of Scope**:
-  - Annotating the remaining API surfaces (servers, channels, DMs, friends, notifications) against the
-    shared contract — see [Remaining work](#remaining-work).
-  - Migrating the other 30 web hooks to React Query, in particular the message and DM paths, which are
-    coupled to socket-driven optimistic updates.
+  - Moving `server`, `servers`, `channel` and the message lists into React Query — see
+    [What stays on useState, and why](#what-stays-on-usestate-and-why).
   - Making the API horizontally scalable. Presence, call state and rate-limit counters are still
     process-local, so the API remains single-instance by design.
   - Code-splitting the 746 kB web bundle.
@@ -100,6 +100,16 @@ parameter is dropped.
 - Directories older than 6 hours are swept on the next chunk write by that user.
 - `POST /uploads/chunks` takes an `UploadChunkDto`, so the global `ValidationPipe` applies to it.
 
+### Socket authentication
+
+`handleConnection` used to `await` the JWT verification and session lookup before setting
+`client.data.user`. A client that emits inside its own `connect` handler — which the web client does,
+with `unread:get` — could therefore arrive before the socket was authenticated and be rejected with
+"Unauthenticated socket", silently losing that call's result. Authentication now runs as a handshake
+middleware, so the user is attached before the socket is considered connected and before any event
+can be dispatched. An unauthenticated socket now fails the handshake instead of connecting and then
+being disconnected.
+
 ### Presence
 
 `PresenceService` keeps a `Map<userId, Set<socketId>>`. The first socket sets `ONLINE`, and only the
@@ -130,7 +140,19 @@ No gateway touches Prisma any more.
 
 ### Shared contract
 
-The 36 interfaces move to `packages/shared/src/api-contract.ts`. `apps/web/src/api.ts` re-exports
+The 36 interfaces move to `packages/shared/src/api-contract.ts`. They are declared **the way the
+server holds them**, so a timestamp is a `Date`. `Json<T>` in `packages/shared/src/json.ts` maps that
+same type to what a client actually receives, where a `Date` has become an ISO string, and
+`apps/web/src/api.ts` re-exports `Json<...>` of each one.
+
+This is what makes the binding cheap enough to apply everywhere: a service is annotated with the
+contract type and the Prisma rows satisfy it as they are, so **no runtime code changed** on any
+surface — only the declarations did. The alternative, rewriting every formatter to emit ISO strings
+explicitly, would have touched every response path at once with no test suite to catch a dropped
+field.
+
+Every read endpoint is now annotated: notifications, emoji, events, users, sessions, friends,
+channels, roles, servers, bans, audit logs, invites, direct conversations and messages. `apps/web/src/api.ts` re-exports
 them, so no consumer import changes. `AuthUser` is deleted as the unused duplicate of `User`;
 `Channel.type` reuses the existing `ChannelType`; `PresenceUpdatePayload` moves to
 `realtime-events.ts` with `status` typed as `UserStatus` rather than `string`.
@@ -138,9 +160,19 @@ them, so no consumer import changes. `AuthUser` is deleted as the unused duplica
 `Message` is corrected to match what the API actually sends: `serverId` and `replyToMessageId` are
 added, and the three E2EE fields are documented as client-side decoration.
 
-`messages.service.ts` imports the contract as a type and `formatMessage` is annotated
-`: Message`, listing every field explicitly and converting dates with `toISOString()`. The local
-`ThreadSummary` (which had `lastReplyAt: Date`) is deleted in favour of the shared one.
+`messages.service.ts` imports the contract as a type and `formatMessage` is annotated `: Message`,
+listing every field explicitly rather than spreading whatever the query selected. The local
+`ThreadSummary` and `CustomStatusView` are deleted in favour of the shared declarations.
+
+Annotating the services surfaced three places where the declared contract did not match the server:
+
+- `ServerMemberDetail.user` was typed `User`, which carries `email`. The API deliberately does not
+  send other members' email, so the client type promised a field that is never there. It is now
+  `PublicUser`.
+- `CustomStatus.expiresAt` is formatted to a string by the server, not left as a `Date`.
+- `AuditLogEntry.metadata` is a JSON column, so the database can return a scalar or an array even
+  though only `writeAuditLog` writes it and it only ever writes an object. `toMetadataObject` narrows
+  it at the boundary instead of asserting a shape the column does not guarantee.
 
 Because the API now resolves `@discord-clone/shared`, the shared package must be built first:
 `build:shared` is added, and both `build` and `typecheck` run it before the workspaces.
@@ -151,10 +183,43 @@ Because the API now resolves `@discord-clone/shared`, the shared package must be
 focus (socket events already keep lists live), 30s `staleTime`, and no retry on 4xx. Keys live in
 `query/queryKeys.ts` and include every parameter that affects the result.
 
-`useNotifications`, `useServerEvents` and `useServerEmojis` are migrated. Each keeps its exact public
-API, so no consumer changes. Socket events now call `invalidateQueries` instead of re-running a
-loader, and the `serverIdRef` race guards are gone because the server id is part of the query key.
-`useNotifications` stays lazy: the query is disabled until the notifications panel first asks for it.
+Migrated, each keeping its exact public API so no consumer changed:
+
+| Hook | What it gains |
+|---|---|
+| `useNotifications` | cache, dedupe; stays lazy until the panel opens |
+| `useServerEvents` | key-scoped per server, `serverIdRef` race guard removed |
+| `useServerEmojis` | same, plus socket updates now invalidate instead of re-running a loader |
+| `useSessions` | cache; revoke writes the cache directly |
+| `useUserProfile` | **module-level `Map` cache deleted** |
+| `useLinkPreview` | **two module-level `Map`s deleted** (cache + in-flight dedupe) |
+| `useServerModeration` | bans list key-scoped per server, ref guard removed |
+| `useSettingsActions` | audit logs, invites, channel overrides and notification preferences; the file no longer calls `useState` at all |
+
+`query/useLazyResource.ts` carries the shape those settings panels share: an imperative `load(id)`
+that fills a cache entry keyed by `id`, so reopening a panel is free and a slow response for a
+previous id can no longer land on the current one.
+
+### What stays on useState, and why
+
+Not every hook holding data is holding *server* state, and moving those into a server cache would be
+wrong rather than merely unnecessary.
+
+- **UI and device state** — `useTheme`, `useMediaQuery`, `useCollapsedCategories`,
+  `usePersistentDrafts`, `useComposerAttachments`, `useTypingIndicator`, `useChannelCall`,
+  `useDirectCall`, `useRealtimeSocket`, `useAuthSession`, `useChannelEncryption`. None of this comes
+  from a query.
+- **Decrypted message lists** — `useChatOrchestrator`, `useMessageHistory`, `useThreadPanel`,
+  `useDirectMessages`. What these hold is not the server's response: messages are decrypted after
+  fetch and then mutated in place by socket events. Caching the decrypted form would put derived
+  client state in a server cache; caching the ciphertext instead means decrypting at render, which is
+  a separate design decision about the E2EE pipeline.
+- **`server`, `servers`, `channel`** — `useWorkspaceNavigation` owns these, but `setServer` and
+  `setServers` are passed as props into `useRealtimeSocket`, `useServerModeration` and
+  `useSettingsActions`, which all write to them. Moving them into the query cache means changing
+  every one of those writers in the same step. That is a consolidation of ownership, not a hook
+  migration, and it should come **before** the `AppShell` split rather than after it — the opposite
+  of the order this document originally suggested.
 
 ## Technical approach
 
@@ -211,34 +276,43 @@ implying a dependency that does not exist.
 
 ## Test plan
 
-No automated tests: `RULE.md` forbids adding test files to this repository.
+No automated tests: `RULE.md` forbids adding test files to this repository. The checks below were run
+from throwaway scripts against a local API and Postgres, and the scripts were not committed.
 
 Verified:
 
 - `npm run lint` (zero warnings), `npm run typecheck`, `npm run build`, `check:file-size`,
   `docs:check`, `i18n:check`, `ui:scan` — all pass.
-- API boots against local Postgres; all 21 socket handlers register across `MessagesGateway` and
-  `VoiceGateway`; `/health` returns 200 with `database: ok`.
-- A throwaway socket script logged in as the seeded `demo` user, opened two sockets, and ran
-  `unread:get`, `channel:join`, `message:create`, `typing:start` and `voice:leave` successfully.
-  Closing one of the two sockets left the user `ONLINE`; closing the last one set `OFFLINE`.
-- `GET /channels/:id/messages` was captured before and after the `formatMessage` change: the sorted
-  key sets of the message, author, attachment, reaction and thread objects are identical, and only
-  JSON key order differs.
-- `npm run ui:smoke` returns `ok: true` — login, channel creation, sending a message with an
-  attachment, link preview, reaction and reply all work against the rebuilt API and web bundle.
+- **Response shapes unchanged.** A harness captured the key set of 29 endpoint responses before and
+  after the contract work and diffed them: identical, field for field.
+- **Realtime.** All 21 socket handlers register across `MessagesGateway` and `VoiceGateway`.
+  A two-user script covered `voice:join` peer lists, `webrtc:offer` / `answer` / `ice-candidate`
+  relay, `voice:state`, `voice:leave`, losing a socket mid-call, `dm:call:ring` and
+  `dm:call:decline` — 14 checks, all passing. Two authorization cases are covered: a socket that is
+  not in the call cannot relay into it, and ringing a conversation the caller is not a member of is
+  refused.
+- **Presence.** With two sockets open for one user, closing the first leaves the user `ONLINE`;
+  closing the last sets `OFFLINE`.
+- **Chunked upload limits.** Six checks, all passing: `totalChunks` above the cap is refused; a
+  declared `fileSize` over the limit is refused; 51 chunks of just under 2 MB with a declared
+  `fileSize` of 1 KB are refused at assembly with "File is too large"; a valid two-chunk upload
+  completes and reports the measured 2048 bytes rather than the claimed 1; two users sharing an
+  `uploadId` keep separate directories; `../../etc/passwd` as an `uploadId` is refused.
+- **Web.** `npm run ui:smoke` returns `ok: true`. A browser run driving the app recorded zero console
+  errors and zero failed requests, with `/servers`, `/servers/:id/emojis`, `/servers/:id/events`,
+  `/users/me/notification-preferences` and `/auth/sessions` all returning 200 through the migrated
+  hooks, including a "sign out all other devices" mutation.
 
 Not verified:
 
-- Chunked upload limits were not exercised end to end; only the single-file upload path ran, through
-  the smoke test.
-- Voice and WebRTC signaling beyond `voice:leave` — a real peer connection was not established.
-- DM ringing (`dm:call:*`).
-
-Manual scenario for the upload limits, for whoever picks this up: post to `/uploads/chunks` with
-`totalChunks` above `ceil(UPLOAD_MAX_BYTES / UPLOAD_CHUNK_BYTES) + 1` and expect 400 "Too many upload
-chunks"; then send chunks whose combined size exceeds `UPLOAD_MAX_BYTES` while declaring a small
-`fileSize`, and expect 400 "File is too large" at assembly.
+- The server settings panels (invites, audit logs, bans) were not opened in a browser; the menu that
+  reaches them is icon-driven and was not scriptable without adding test ids. They use the same
+  `useLazyResource` path as notification preferences, which is covered above.
+  Manual scenario: open a server's settings, check the Invites, Audit Log and Bans tabs each list
+  rows; create and revoke an invite and confirm the list updates without a reload; ban and unban a
+  member and confirm the bans list updates.
+- A real WebRTC peer connection. The signaling relay is covered, the media path is not.
+- Group DM management (`useGroupConversations`) and two-factor enrolment.
 
 ## Deployment notes
 
@@ -253,9 +327,18 @@ chunks"; then send chunks whose combined size exceeds `UPLOAD_MAX_BYTES` while d
 
 ## Remaining work
 
-Surfaces still to annotate against `packages/shared/src/api-contract.ts`, in rough order of churn:
-messages (done), direct messages, servers and channels, friends, notifications, events and emoji.
+**Ownership consolidation, then the `AppShell` split.** `server`, `servers`, `channel` and the
+message lists are written by four hooks through setter props. Until one owner holds each of them,
+neither the query cache nor a smaller `AppShell` can be introduced safely. This is the next piece of
+work, and it is a design change rather than a migration.
 
-Web hooks still on `useState`: 30 of 33, notably `useChatOrchestrator`, `useDirectMessages`,
-`useMessageHistory`, `useHomeWorkspace` and `useSettingsActions`. `AppShell.tsx` is 800 lines and
-still the orchestrator; splitting it should follow the hook migration, not precede it.
+**E2EE and caching.** Deciding whether messages are cached as ciphertext and decrypted at render
+would let the message lists join the query cache. Today they cannot, because what the hooks hold is
+already decrypted.
+
+**Horizontal scale.** Presence, call participants and the rate-limit counters are process-local
+`Map`s, and the stale-presence reset on boot assumes a single instance. Running two API instances
+needs a socket.io adapter and a shared limiter store first.
+
+**Test ids for the settings panels**, so the parts of the UI that are only reachable through icon
+menus can be covered by `ui:smoke`.

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { NotificationPreference, User, UserProfile } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -12,7 +13,7 @@ export class UsersService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  async getMe(userId: string) {
+  async getMe(userId: string): Promise<{ user: User }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { ...PROFILE_USER_SELECT, email: true, locale: true }
@@ -70,7 +71,11 @@ export class UsersService {
    * 404, including a block in either direction, so the endpoint cannot confirm that an account
    * exists for a guessed id.
    */
-  async getProfile(viewerId: string, targetId: string, serverId?: string) {
+  async getProfile(
+    viewerId: string,
+    targetId: string,
+    serverId?: string,
+  ): Promise<{ profile: UserProfile }> {
     if (!(await this.canViewProfile(viewerId, targetId))) {
       throw new NotFoundException('User not found');
     }
@@ -140,7 +145,7 @@ export class UsersService {
     return Boolean(sharedConversation);
   }
 
-  async listNotificationPreferences(userId: string) {
+  async listNotificationPreferences(userId: string): Promise<{ preferences: NotificationPreference[] }> {
     const preferences = await this.prisma.notificationPreference.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },

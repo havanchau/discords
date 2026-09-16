@@ -1,4 +1,3 @@
-import type { MessageAttachment, User } from '@discord-clone/shared';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -65,47 +64,87 @@ export function configureAuthRefresh(config: AuthRefreshConfig) {
 }
 
 /**
- * Response shapes live in `@discord-clone/shared` so the API and this client cannot drift apart.
- * They are re-exported here because callers already import them from `./api` alongside the
- * request helpers.
+ * Response shapes live in `@discord-clone/shared`, declared the way the server holds them. `Json<T>`
+ * is the same type after JSON serialization, which is what a client actually receives: a `Date` has
+ * become an ISO string. Both ends come from one declaration and cannot drift.
+ *
+ * They are re-exported here because callers already import them from `./api` next to the request
+ * helpers.
  */
-export type {
-  AuditLogEntry,
-  AuthSessionEntry,
-  BlockedUserEntry,
-  Channel,
-  ChannelCategory,
-  ChannelPermissionOverride,
-  CreateServerEventInput,
-  CustomStatus,
-  DirectConversation,
-  DirectMessage,
-  DirectMessageReaction,
-  DirectMessageReplyPreview,
-  FriendEntry,
-  FriendRequestEntry,
-  FriendsSummary,
-  Invite,
-  LinkPreview,
-  Message,
-  MessageAttachment,
-  MessageReaction,
-  NotificationItem,
-  NotificationPreference,
-  PublicUser,
-  Role,
-  ServerBanEntry,
-  ServerDetail,
-  ServerEmoji,
-  ServerEventView,
-  ServerMemberDetail,
-  ServerSummary,
-  ThreadMessageResult,
-  ThreadSummary,
-  User,
-  UserProfile,
-  UserProfileServerContext,
+import type {
+  Json,
+  AuditLogEntry as ServerAuditLogEntry,
+  AuthSessionEntry as ServerAuthSessionEntry,
+  BlockedUserEntry as ServerBlockedUserEntry,
+  Channel as ServerChannel,
+  ChannelCategory as ServerChannelCategory,
+  ChannelPermissionOverride as ServerChannelPermissionOverride,
+  CreateServerEventInput as ServerCreateServerEventInput,
+  CustomStatus as ServerCustomStatus,
+  DirectConversation as ServerDirectConversation,
+  DirectMessage as ServerDirectMessage,
+  DirectMessageReaction as ServerDirectMessageReaction,
+  DirectMessageReplyPreview as ServerDirectMessageReplyPreview,
+  FriendEntry as ServerFriendEntry,
+  FriendRequestEntry as ServerFriendRequestEntry,
+  FriendsSummary as ServerFriendsSummary,
+  Invite as ServerInvite,
+  LinkPreview as ServerLinkPreview,
+  Message as ServerMessage,
+  MessageAttachment as ServerMessageAttachment,
+  MessageReaction as ServerMessageReaction,
+  NotificationItem as ServerNotificationItem,
+  NotificationPreference as ServerNotificationPreference,
+  PublicUser as ServerPublicUser,
+  Role as ServerRole,
+  ServerBanEntry as ServerServerBanEntry,
+  ServerDetail as ServerServerDetail,
+  ServerEmoji as ServerServerEmoji,
+  ServerEventView as ServerServerEventView,
+  ServerMemberDetail as ServerServerMemberDetail,
+  ServerSummary as ServerServerSummary,
+  ThreadMessageResult as ServerThreadMessageResult,
+  ThreadSummary as ServerThreadSummary,
+  User as ServerUser,
+  UserProfile as ServerUserProfile,
+  UserProfileServerContext as ServerUserProfileServerContext,
 } from '@discord-clone/shared';
+
+export type AuditLogEntry = Json<ServerAuditLogEntry>;
+export type AuthSessionEntry = Json<ServerAuthSessionEntry>;
+export type BlockedUserEntry = Json<ServerBlockedUserEntry>;
+export type Channel = Json<ServerChannel>;
+export type ChannelCategory = Json<ServerChannelCategory>;
+export type ChannelPermissionOverride = Json<ServerChannelPermissionOverride>;
+export type CreateServerEventInput = Json<ServerCreateServerEventInput>;
+export type CustomStatus = Json<ServerCustomStatus>;
+export type DirectConversation = Json<ServerDirectConversation>;
+export type DirectMessage = Json<ServerDirectMessage>;
+export type DirectMessageReaction = Json<ServerDirectMessageReaction>;
+export type DirectMessageReplyPreview = Json<ServerDirectMessageReplyPreview>;
+export type FriendEntry = Json<ServerFriendEntry>;
+export type FriendRequestEntry = Json<ServerFriendRequestEntry>;
+export type FriendsSummary = Json<ServerFriendsSummary>;
+export type Invite = Json<ServerInvite>;
+export type LinkPreview = Json<ServerLinkPreview>;
+export type Message = Json<ServerMessage>;
+export type MessageAttachment = Json<ServerMessageAttachment>;
+export type MessageReaction = Json<ServerMessageReaction>;
+export type NotificationItem = Json<ServerNotificationItem>;
+export type NotificationPreference = Json<ServerNotificationPreference>;
+export type PublicUser = Json<ServerPublicUser>;
+export type Role = Json<ServerRole>;
+export type ServerBanEntry = Json<ServerServerBanEntry>;
+export type ServerDetail = Json<ServerServerDetail>;
+export type ServerEmoji = Json<ServerServerEmoji>;
+export type ServerEventView = Json<ServerServerEventView>;
+export type ServerMemberDetail = Json<ServerServerMemberDetail>;
+export type ServerSummary = Json<ServerServerSummary>;
+export type ThreadMessageResult = Json<ServerThreadMessageResult>;
+export type ThreadSummary = Json<ServerThreadSummary>;
+export type User = Json<ServerUser>;
+export type UserProfile = Json<ServerUserProfile>;
+export type UserProfileServerContext = Json<ServerUserProfileServerContext>;
 
 export async function apiRequest<T>(
   path: string,

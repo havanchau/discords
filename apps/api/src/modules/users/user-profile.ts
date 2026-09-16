@@ -1,3 +1,5 @@
+import type { CustomStatus } from '@discord-clone/shared';
+
 import type { Prisma } from '@prisma/client';
 
 /** Everything the profile card and the session user need; `email` is added only for the owner. */
@@ -16,11 +18,7 @@ export const PROFILE_USER_SELECT = {
   createdAt: true,
 } satisfies Prisma.UserSelect;
 
-export interface CustomStatusView {
-  text: string | null;
-  emoji: string | null;
-  expiresAt: string | null;
-}
+export type CustomStatusView = CustomStatus;
 
 interface CustomStatusSource {
   customStatusText: string | null;

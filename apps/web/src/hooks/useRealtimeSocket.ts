@@ -1,6 +1,9 @@
 import { Dispatch, RefObject, SetStateAction, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { PresenceUpdatePayload, RealtimeEvents } from '@discord-clone/shared';
+import { Json, PresenceUpdatePayload, RealtimeEvents } from '@discord-clone/shared';
+
+// Socket payloads cross the same JSON boundary as HTTP responses, so dates arrive as strings.
+type PresenceUpdate = Json<PresenceUpdatePayload>;
 import {
   AuthState,
   DirectConversation,
@@ -251,7 +254,7 @@ export function useRealtimeSocket({
     });
 
     // Partial: a connect/disconnect carries `status`, a profile save carries `customStatus`.
-    nextSocket.on(RealtimeEvents.PresenceUpdate, (payload: PresenceUpdatePayload) => {
+    nextSocket.on(RealtimeEvents.PresenceUpdate, (payload: PresenceUpdate) => {
       setServer((current) =>
         current
           ? {

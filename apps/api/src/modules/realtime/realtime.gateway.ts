@@ -16,6 +16,7 @@ import { PresenceService } from './presence.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { SocketAuthService } from './socket-auth.service';
+import { SocketUser } from './socket-user';
 import { SOCKET_MAX_PAYLOAD_BYTES, attachSocketGuards } from './socket-guards';
 
 /**
@@ -52,24 +53,42 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       trustProxyHops: limits.trustProxyHops,
       maxConnectionsPerIp: limits.socketMaxConnectionsPerIp,
     });
+
+    // Authentication runs in the handshake, not in handleConnection: a client that emits inside its
+    // own `connect` handler would otherwise race the async lookup and hit an unauthenticated socket.
+    server.use((socket, next) => {
+      this.socketAuth
+        .authenticate(socket)
+        .then((user) => {
+          socket.data.user = user;
+          next();
+        })
+        .catch(() => next(new Error('Unauthorized')));
+    });
+
     void this.presence.resetStalePresence();
   }
 
   async handleConnection(client: Socket) {
+    const user = client.data.user as SocketUser | undefined;
+    if (!user) {
+      client.disconnect(true);
+      return;
+    }
+
     try {
-      const user = await this.socketAuth.authenticate(client);
-      client.data.user = user;
       await client.join(this.publisher.userRoom(user.id));
       await this.joinDirectConversationRooms(client, user.id);
       await this.presence.socketConnected(user.id, client.id);
-    } catch {
+    } catch (error) {
+      this.logger.error(`Could not set up socket for user ${user.id}`, error);
       client.disconnect(true);
     }
   }
 
   async handleDisconnect(client: Socket) {
     this.calls.leaveAll(client);
-    const user = client.data.user as { id: string } | undefined;
+    const user = client.data.user as SocketUser | undefined;
     if (!user) return;
 
     try {

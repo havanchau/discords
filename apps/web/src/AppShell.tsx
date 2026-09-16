@@ -352,7 +352,7 @@ export function AppShell() {
     void loadServers(auth.accessToken);
     void loadFriends(auth.accessToken);
     void loadDirectConversations(auth.accessToken);
-    void loadNotificationPreferences(auth.accessToken);
+    void loadNotificationPreferences();
   }, [auth]);
 
   useEffect(() => {

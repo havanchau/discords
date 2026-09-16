@@ -10,7 +10,7 @@ import { ChannelType, UserStatus } from './types.js';
 export interface CustomStatus {
   text: string | null;
   emoji: string | null;
-  /** ISO timestamp; null means the status has no expiry. */
+  /** Already formatted as an ISO timestamp by the server; null means no expiry. */
   expiresAt: string | null;
 }
 
@@ -26,8 +26,8 @@ export interface User {
   customStatus?: CustomStatus | null;
   locale?: string | null;
   status?: UserStatus;
-  createdAt?: string;
-  emailVerifiedAt?: string | null;
+  createdAt?: Date;
+  emailVerifiedAt?: Date | null;
 }
 
 /** A member's identity inside one server, plus the roles that decorate it on the profile card. */
@@ -35,12 +35,12 @@ export interface UserProfileServerContext {
   serverId: string;
   nickname: string | null;
   avatarUrl: string | null;
-  joinedAt: string;
+  joinedAt: Date;
   roles: Array<{ id: string; name: string; color?: string | null }>;
 }
 
 export interface UserProfile extends PublicUser {
-  createdAt: string;
+  createdAt: Date;
   server: UserProfileServerContext | null;
 }
 
@@ -56,11 +56,12 @@ export interface ServerSummary {
 
 export interface ServerMemberDetail {
   id: string;
-  user: User;
+  /** Other members' email is deliberately not sent, so this is the public projection. */
+  user: PublicUser;
   kind: string;
   nickname?: string | null;
   avatarUrl?: string | null;
-  timeoutUntil?: string | null;
+  timeoutUntil?: Date | null;
   roles?: Array<{ role: Role }>;
 }
 
@@ -80,9 +81,9 @@ export interface ServerDetail extends ServerSummary {
 export interface AuthSessionEntry {
   id: string;
   userAgent: string | null;
-  createdAt: string;
-  lastActiveAt: string;
-  expiresAt: string;
+  createdAt: Date;
+  lastActiveAt: Date;
+  expiresAt: Date;
   current: boolean;
 }
 
@@ -101,8 +102,8 @@ export interface ServerEventView {
   name: string;
   description: string | null;
   location: string | null;
-  startAt: string;
-  endAt: string | null;
+  startAt: Date;
+  endAt: Date | null;
   status: 'SCHEDULED' | 'ACTIVE' | 'ENDED';
   creator: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
   interestedCount: number;
@@ -123,13 +124,13 @@ export interface ServerEmoji {
   name: string;
   url: string;
   creatorId: string;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export interface ServerBanEntry {
   id: string;
   reason?: string | null;
-  createdAt: string;
+  createdAt: Date;
   user: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
   bannedBy: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
 }
@@ -181,9 +182,9 @@ export interface Invite {
   creatorId: string;
   maxUses?: number | null;
   usedCount: number;
-  expiresAt?: string | null;
-  revokedAt?: string | null;
-  createdAt: string;
+  expiresAt?: Date | null;
+  revokedAt?: Date | null;
+  createdAt: Date;
 }
 
 export interface AuditLogEntry {
@@ -193,7 +194,7 @@ export interface AuditLogEntry {
   action: string;
   targetId?: string | null;
   metadata?: Record<string, unknown> | null;
-  createdAt: string;
+  createdAt: Date;
   actor?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
 }
 
@@ -207,9 +208,9 @@ export interface Message {
   isEncrypted?: boolean;
   encryptedContent?: string;
   decryptionFailed?: boolean;
-  createdAt: string;
-  editedAt?: string | null;
-  deletedAt?: string | null;
+  createdAt: Date;
+  editedAt?: Date | null;
+  deletedAt?: Date | null;
   author: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
   attachments: MessageAttachment[];
   reactions: MessageReaction[];
@@ -224,10 +225,10 @@ export interface ThreadSummary {
   rootMessageId: string;
   channelId: string;
   replyCount: number;
-  lastReplyAt: string;
+  lastReplyAt: Date;
   participants: Array<{
     user: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
-    lastReadAt?: string | null;
+    lastReadAt?: Date | null;
   }>;
 }
 
@@ -269,7 +270,7 @@ export interface FriendRequestEntry {
 
 export interface BlockedUserEntry {
   user: PublicUser;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export interface FriendsSummary {
@@ -286,7 +287,7 @@ export interface DirectConversation {
   ownerId?: string | null;
   members: Array<{ user: PublicUser }>;
   messages: DirectMessage[];
-  updatedAt?: string;
+  updatedAt?: Date;
   unreadCount?: number;
 }
 
@@ -300,8 +301,8 @@ export interface NotificationItem {
   channelId?: string | null;
   messageId?: string | null;
   conversationId?: string | null;
-  readAt?: string | null;
-  createdAt: string;
+  readAt?: Date | null;
+  createdAt: Date;
 }
 
 export interface DirectMessageReaction {
@@ -315,7 +316,7 @@ export interface DirectMessageReplyPreview {
   authorId: string;
   author?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
   content: string;
-  deletedAt?: string | null;
+  deletedAt?: Date | null;
 }
 
 export interface DirectMessage {
@@ -324,12 +325,12 @@ export interface DirectMessage {
   authorId: string;
   author?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
   content: string;
-  editedAt?: string | null;
-  deletedAt?: string | null;
-  createdAt: string;
+  editedAt?: Date | null;
+  deletedAt?: Date | null;
+  createdAt: Date;
   replyToMessageId?: string | null;
   replyToMessage?: DirectMessageReplyPreview | null;
-  pinnedAt?: string | null;
+  pinnedAt?: Date | null;
   pinnedById?: string | null;
   reactions?: DirectMessageReaction[];
 }

@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
@@ -10,6 +11,7 @@ import {
   ServerSummary,
 } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import { queryKeys } from '../query/queryKeys';
 
 interface UseServerModerationOptions {
   auth: AuthState | null;
@@ -28,6 +30,8 @@ interface MemberRemovedPayload {
   userId: string;
   reason: 'KICK' | 'BAN';
 }
+
+const noBans: ServerBanEntry[] = [];
 
 /** Partial by design: a publisher sends only the fields its change touched. */
 interface MemberUpdatedPayload {
@@ -51,9 +55,30 @@ export function useServerModeration({
   setWorkspaceNotice,
 }: UseServerModerationOptions) {
   const t = useTranslation();
-  const [bans, setBans] = useState<ServerBanEntry[]>([]);
-  const [isLoadingBans, setIsLoadingBans] = useState(false);
+  const queryClient = useQueryClient();
+  // The bans list is only fetched once the moderation panel asks for a specific server.
+  const [bansServerId, setBansServerId] = useState<string | null>(null);
   const [bansError, setBansError] = useState<string | null>(null);
+  const bansQueryKey = queryKeys.serverBans(bansServerId ?? 'none');
+
+  const bansQuery = useQuery({
+    queryKey: bansQueryKey,
+    enabled: Boolean(auth && bansServerId),
+    queryFn: () =>
+      apiRequest<{ bans: ServerBanEntry[] }>(
+        `/servers/${bansServerId}/bans`,
+        {},
+        auth?.accessToken,
+      ),
+  });
+  const bans = bansQuery.data?.bans ?? noBans;
+  const isLoadingBans = bansQuery.isFetching;
+
+  const writeBans = (update: (current: ServerBanEntry[]) => ServerBanEntry[]) => {
+    queryClient.setQueryData<{ bans: ServerBanEntry[] }>(bansQueryKey, (current) =>
+      current ? { bans: update(current.bans) } : current,
+    );
+  };
   const viewerIdRef = useRef<string | null>(null);
   const serverRef = useRef<ServerDetail | null>(null);
   const noticeRef = useRef(setWorkspaceNotice);
@@ -124,24 +149,14 @@ export function useServerModeration({
     };
   }, [socket, setChannel, setServer, setServers]);
 
+  // The server id is part of the query key, so a slow response for the previous server can no
+  // longer land on the current one; the manual ref guard this used to need is gone.
   async function loadBans(serverId: string) {
     if (!auth) return;
-    setIsLoadingBans(true);
     setBansError(null);
-    try {
-      const result = await apiRequest<{ bans: ServerBanEntry[] }>(
-        `/servers/${serverId}/bans`,
-        {},
-        auth.accessToken,
-      );
-      if (serverRef.current?.id === serverId) setBans(result.bans);
-    } catch (err) {
-      if (serverRef.current?.id !== serverId) return;
-      setBans([]);
-      setBansError(err instanceof Error ? err.message : t('error.fallback.cannot-load-bans'));
-    } finally {
-      if (serverRef.current?.id === serverId) setIsLoadingBans(false);
-    }
+    setBansServerId(serverId);
+    const result = await queryClient.refetchQueries({ queryKey: queryKeys.serverBans(serverId) });
+    void result;
   }
 
   async function banMember(userId: string, reason: string) {
@@ -155,7 +170,7 @@ export function useServerModeration({
         { method: 'POST', body: JSON.stringify({ userId, reason: reason.trim() || undefined }) },
         auth.accessToken,
       );
-      setBans((current) => [result.ban, ...current.filter((ban) => ban.id !== result.ban.id)]);
+      writeBans((current) => [result.ban, ...current.filter((ban) => ban.id !== result.ban.id)]);
       setServer((current) =>
         current?.id === serverId
           ? { ...current, members: current.members.filter((member) => member.user.id !== userId) }
@@ -181,7 +196,7 @@ export function useServerModeration({
         { method: 'DELETE' },
         auth.accessToken,
       );
-      setBans((current) => current.filter((ban) => ban.user.id !== userId));
+      writeBans((current) => current.filter((ban) => ban.user.id !== userId));
     } catch (err) {
       setBansError(err instanceof Error ? err.message : t('error.fallback.cannot-unban-user'));
     } finally {

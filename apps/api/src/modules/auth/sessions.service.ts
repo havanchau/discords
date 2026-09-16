@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuthSessionEntry } from '@discord-clone/shared';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 
 @Injectable()
@@ -9,7 +10,7 @@ export class SessionsService {
     private readonly realtime: RealtimePublisher,
   ) {}
 
-  async list(userId: string, currentSessionId: string) {
+  async list(userId: string, currentSessionId: string): Promise<{ sessions: AuthSessionEntry[] }> {
     const sessions = await this.prisma.session.findMany({
       where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
       select: { id: true, userAgent: true, createdAt: true, lastActiveAt: true, expiresAt: true },
