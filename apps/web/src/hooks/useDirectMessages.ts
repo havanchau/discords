@@ -9,6 +9,7 @@ import {
   FriendsSummary,
 } from '../api';
 import { usePersistentDrafts } from './usePersistentDrafts';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseDirectMessagesOptions {
   auth: AuthState | null;
@@ -23,6 +24,7 @@ export function useDirectMessages({
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseDirectMessagesOptions) {
+  const t = useTranslation();
   const [friendsSummary, setFriendsSummary] = useState<FriendsSummary | null>(null);
   const [directConversations, setDirectConversations] = useState<DirectConversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<DirectConversation | null>(null);
@@ -48,7 +50,7 @@ export function useDirectMessages({
       const result = await apiRequest<FriendsSummary>('/friends', {}, token);
       setFriendsSummary(result);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load friends');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-friends'));
     }
   }
 
@@ -68,7 +70,7 @@ export function useDirectMessages({
           : current,
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load direct messages');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-direct-messages'));
     }
   }
 
@@ -87,30 +89,32 @@ export function useDirectMessages({
     setReplyingToDirectMessage(null);
   }, []);
 
-  async function requestFriend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!auth) return;
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
+  /** Shared by the add-friend form and the profile card, which knows a username but no form. */
+  async function sendFriendRequest(usernameOrEmail: string, onSent?: () => void) {
+    if (!auth || !usernameOrEmail.trim()) return;
     setPendingAction('friend-request');
     setWorkspaceError(null);
     try {
       await apiRequest(
         '/friends/requests',
-        {
-          method: 'POST',
-          body: JSON.stringify({ usernameOrEmail: String(form.get('usernameOrEmail') || '') }),
-        },
+        { method: 'POST', body: JSON.stringify({ usernameOrEmail }) },
         auth.accessToken,
       );
-      formElement.reset();
+      onSent?.();
       await loadFriends(auth.accessToken);
-      setWorkspaceNotice('Friend request sent.');
+      setWorkspaceNotice(t('notice.friendRequestSent'));
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send friend request');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-send-friend-request'));
     } finally {
       setPendingAction(null);
     }
+  }
+
+  async function requestFriend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    await sendFriendRequest(String(form.get('usernameOrEmail') || ''), () => formElement.reset());
   }
 
   async function respondFriendRequest(
@@ -134,7 +138,7 @@ export function useDirectMessages({
         status === 'ACCEPTED' ? 'Friend request accepted.' : 'Friend request updated.',
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update friend request');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-friend-request'));
     } finally {
       setPendingAction(null);
     }
@@ -147,9 +151,9 @@ export function useDirectMessages({
     try {
       await apiRequest(`/friends/requests/${request.id}`, { method: 'DELETE' }, auth.accessToken);
       await loadFriends(auth.accessToken);
-      setWorkspaceNotice('Friend request removed.');
+      setWorkspaceNotice(t('notice.friendRequestRemoved'));
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove friend request');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-remove-friend-request'));
     } finally {
       setPendingAction(null);
     }
@@ -162,9 +166,9 @@ export function useDirectMessages({
     try {
       await apiRequest(`/friends/requests/${friend.id}`, { method: 'DELETE' }, auth.accessToken);
       await Promise.all([loadFriends(auth.accessToken), loadDirectConversations(auth.accessToken)]);
-      setWorkspaceNotice('Friend removed.');
+      setWorkspaceNotice(t('notice.friendRemoved'));
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove friend');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-remove-friend'));
     } finally {
       setPendingAction(null);
     }
@@ -181,9 +185,9 @@ export function useDirectMessages({
         auth.accessToken,
       );
       await Promise.all([loadFriends(auth.accessToken), loadDirectConversations(auth.accessToken)]);
-      setWorkspaceNotice('User blocked.');
+      setWorkspaceNotice(t('notice.userBlocked'));
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot block user');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-block-user'));
     } finally {
       setPendingAction(null);
     }
@@ -196,9 +200,9 @@ export function useDirectMessages({
     try {
       await apiRequest(`/friends/blocks/${userId}`, { method: 'DELETE' }, auth.accessToken);
       await loadFriends(auth.accessToken);
-      setWorkspaceNotice('User unblocked.');
+      setWorkspaceNotice(t('notice.userUnblocked'));
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot unblock user');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-unblock-user'));
     } finally {
       setPendingAction(null);
     }
@@ -218,7 +222,7 @@ export function useDirectMessages({
         ),
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot mark direct message read');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-mark-direct-message-read'));
     }
   }
 
@@ -241,7 +245,7 @@ export function useDirectMessages({
         current.map((item) => (item.id === conversation.id ? { ...item, unreadCount: 0 } : item)),
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot open conversation');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-open-conversation'));
     }
   }
 
@@ -258,7 +262,7 @@ export function useDirectMessages({
       await loadDirectConversations(auth.accessToken);
       await openDirectConversation(result.conversation);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start direct message');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-start-direct-message'));
     } finally {
       setPendingAction(null);
     }
@@ -293,7 +297,7 @@ export function useDirectMessages({
           : [...current, result.message],
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send direct message');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-send-direct-message'));
     } finally {
       setPendingAction(null);
     }
@@ -316,6 +320,7 @@ export function useDirectMessages({
     loadFriends,
     loadDirectConversations,
     requestFriend,
+    sendFriendRequest,
     respondFriendRequest,
     removeFriend,
     removeFriendRequest,

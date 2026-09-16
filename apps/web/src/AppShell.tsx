@@ -1,5 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChannelBadgeState } from './components/WorkspaceSidebar';
+import { useSyncAccountLocale, useTranslation } from './i18n/LocaleProvider';
+import { buildMemberIdentityMap } from './utils/memberIdentity';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useChannelEncryption } from './hooks/useChannelEncryption';
 import { useChannelReadState } from './hooks/useChannelReadState';
@@ -39,6 +41,7 @@ import { conversationDisplayName } from './components/home/conversationDisplay';
 const NO_PINNED_MESSAGE_IDS: string[] = [];
 
 export function AppShell() {
+  const t = useTranslation();
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
@@ -57,6 +60,9 @@ export function AppShell() {
   const { auth, setAuth, clearAuth, authScreen } = useAuthSession({
     onClearAuth: clearWorkspaceState,
   });
+
+  // Signing in on a new device adopts the language stored on the account.
+  useSyncAccountLocale(auth?.user.locale);
 
   const {
     servers,
@@ -143,6 +149,7 @@ export function AppShell() {
     loadDirectConversations,
     markDirectConversationRead,
     startDirectConversation,
+    sendFriendRequest,
     applyDirectMessageUpdate,
     homeProps,
   } = useHomeWorkspace({
@@ -202,12 +209,16 @@ export function AppShell() {
     invites,
     notificationPreferences,
     profileAvatarInputRef,
+    profileBannerInputRef,
     channelAvatarInputRef,
     loadNotificationPreferences,
     updateNotificationPreference,
     createInviteFromSettings,
     revokeInvite,
     updateProfileAvatar,
+    updateProfileBanner,
+    updateServerProfile,
+    updateServerProfileAvatar,
     updateChannelAvatar,
     updateProfile,
     updateServerSettings,
@@ -386,7 +397,7 @@ export function AppShell() {
         void markChannelRead(channel.id, lastMessage?.id);
       })
       .catch((err) =>
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot load messages'),
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-messages')),
       )
       .finally(() => setIsLoadingMessages(false));
     void loadPinnedMessages(channel.id, auth.accessToken);
@@ -414,6 +425,9 @@ export function AppShell() {
     );
     updateFaviconBadge(totalUnread);
   }, [channelBadges]);
+
+  // Per-server nicknames and avatars, resolved once per member list change rather than per row.
+  const memberIdentities = useMemo(() => buildMemberIdentityMap(server?.members), [server?.members]);
 
   const selectedMember = useMemo(
     () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
@@ -484,7 +498,7 @@ export function AppShell() {
       markMessageSent(channel.id);
       return true;
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot send message');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-send-message'));
       return false;
     } finally {
       setPendingAction(null);
@@ -506,6 +520,7 @@ export function AppShell() {
       clearDraft: channelDraft.clear,
       setWorkspaceError,
       setWorkspaceNotice,
+      t,
     });
     if (commandResult.handled) return;
     content = commandResult.content;
@@ -616,7 +631,7 @@ export function AppShell() {
           },
         }}
         chat={{
-          session: { auth, channel },
+          session: { auth, channel, memberIdentities },
           messages: {
             all: messages,
             visible: visibleMessages,
@@ -667,7 +682,11 @@ export function AppShell() {
             toggleCamera,
             end: endDirectCall,
           },
-          messageActions,
+          messageActions: {
+            ...messageActions,
+            startDirectConversation: (userId: string) => void startDirectConversation(userId),
+            sendFriendRequest: (usernameOrEmail: string) => void sendFriendRequest(usernameOrEmail),
+          },
           composer: {
             restriction: composerRestriction,
             replyingToMessage,
@@ -692,12 +711,17 @@ export function AppShell() {
         }}
         members={{
           assetUrl,
+          accessToken: auth.accessToken,
+          viewerId: auth.user.id,
           onManageMember: (memberId) => {
             setSelectedMemberId(memberId);
             setActiveDialog('member-roles');
           },
           onDirectMessage: (userId) => {
             void startDirectConversation(userId);
+          },
+          onAddFriend: (usernameOrEmail) => {
+            void sendFriendRequest(usernameOrEmail);
           },
           server,
         }}
@@ -748,6 +772,7 @@ export function AppShell() {
           },
           refs: {
             profileAvatarInputRef,
+            profileBannerInputRef,
             channelAvatarInputRef,
           },
           theme: {
@@ -759,6 +784,9 @@ export function AppShell() {
             createInviteFromSettings,
             revokeInvite,
             updateProfile,
+            updateProfileBanner,
+            updateServerProfile,
+            updateServerProfileAvatar,
             updateNotificationPreference,
             updateServerSettings,
             updateChannelSettings,

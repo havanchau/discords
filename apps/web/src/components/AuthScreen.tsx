@@ -12,6 +12,7 @@ import { FormEvent } from 'react';
 import type { OAuthProviderName } from '../api';
 import type { AuthMode } from '../hooks/useAuthSession';
 import type { OAuthProviderAvailability } from '../hooks/useOAuthSignIn';
+import { useTranslation, type Translate } from '../i18n/LocaleProvider';
 import { cn } from '../utils/cn';
 import { ForgotPasswordForm, ResetPasswordForm } from './auth/PasswordResetForms';
 import { TwoFactorLoginForm } from './auth/TwoFactorLoginForm';
@@ -43,36 +44,41 @@ const OAUTH_BUTTONS: { provider: OAuthProviderName; label: string }[] = [
 ];
 
 function oauthButtonTitle(
+  t: Translate,
   availability: OAuthProviderAvailability,
   provider: OAuthProviderName,
   label: string,
 ) {
-  if (availability === 'unavailable') return 'Sign-in providers could not be loaded';
-  return availability[provider] ? `Continue with ${label}` : `${label} sign-in is not configured`;
+  if (availability === 'unavailable') return t('auth.oauth.unavailable');
+  return availability[provider]
+    ? t('auth.oauth.continueWith', { provider: label })
+    : t('auth.oauth.notConfigured', { provider: label });
 }
 
-const HEADINGS: Record<AuthMode, { title: string; description: string }> = {
-  login: { title: 'Sign in', description: 'Sign in with your email address.' },
-  register: {
-    title: 'Create your account',
-    description: 'Set up an account and jump into the server.',
-  },
-  forgot: {
-    title: 'Reset your password',
-    description: 'Enter your email and we will send you a reset link.',
-  },
-  reset: { title: 'Choose a new password', description: 'Other devices will be signed out.' },
-  'two-factor': {
-    title: 'Two-factor authentication',
-    description: 'Confirm it is you to finish signing in.',
-  },
-};
+function headings(t: Translate): Record<AuthMode, { title: string; description: string }> {
+  return {
+    login: { title: t('auth.heading.login.title'), description: t('auth.heading.login.description') },
+    register: {
+      title: t('auth.heading.register.title'),
+      description: t('auth.heading.register.description'),
+    },
+    forgot: {
+      title: t('auth.heading.forgot.title'),
+      description: t('auth.heading.forgot.description'),
+    },
+    reset: { title: t('auth.heading.reset.title'), description: t('auth.heading.reset.description') },
+    'two-factor': {
+      title: t('auth.heading.twoFactor.title'),
+      description: t('auth.heading.twoFactor.description'),
+    },
+  };
+}
 
 const HIGHLIGHTS = [
-  { icon: MessagesSquare, label: 'Realtime channels, threads, and direct messages' },
-  { icon: Zap, label: 'Voice rooms with presence and screen sharing' },
-  { icon: ShieldCheck, label: 'Roles and per-channel permissions' },
-];
+  { icon: MessagesSquare, key: 'auth.highlight.channels' },
+  { icon: Zap, key: 'auth.highlight.voice' },
+  { icon: ShieldCheck, key: 'auth.highlight.roles' },
+] as const;
 
 export function AuthScreen({
   error,
@@ -92,11 +98,12 @@ export function AuthScreen({
   oauthProviders,
   startOAuth,
 }: AuthScreenProps) {
+  const t = useTranslation();
   const isLogin = mode === 'login';
   const isPasswordRecovery = mode === 'forgot' || mode === 'reset' || mode === 'two-factor';
   // The token only arrives through the emailed link, so there is nothing to confirm without it.
   const showVerification = !isPasswordRecovery && Boolean(verificationToken);
-  const heading = HEADINGS[mode];
+  const heading = headings(t)[mode];
   const feedback = (
     <>
       {notice ? (
@@ -125,19 +132,19 @@ export function AuthScreen({
             D
           </span>
           <span className={styles.brandName}>
-            <strong>Discords</strong>
-            <small>Realtime</small>
+            <strong>Discords</strong> {/* i18n-ignore: product name */}
+            <small>{t('auth.brand.tagline')}</small>
           </span>
         </div>
 
         <div className={styles.pitch}>
-          <h2>Your team, in one place.</h2>
-          <p>Channels, calls, and threads for the conversations that need to keep moving.</p>
+          <h2>{t('auth.pitch.title')}</h2>
+          <p>{t('auth.pitch.body')}</p>
           <ul className={styles.highlights}>
-            {HIGHLIGHTS.map(({ icon: Icon, label }) => (
-              <li key={label}>
+            {HIGHLIGHTS.map(({ icon: Icon, key }) => (
+              <li key={key}>
                 <Icon size={18} aria-hidden="true" />
-                {label}
+                {t(key)}
               </li>
             ))}
           </ul>
@@ -185,14 +192,14 @@ export function AuthScreen({
 
           {!isPasswordRecovery ? (
             <>
-              <div className={styles.modeSwitch} role="group" aria-label="Authentication mode">
+              <div className={styles.modeSwitch} role="group" aria-label={t('auth.modeGroup')}>
                 <Button
                   variant="ghost"
                   className={styles.modeButton}
                   aria-pressed={isLogin}
                   onClick={() => setMode('login')}
                 >
-                  Sign in
+                  {t('auth.action.signIn')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -200,42 +207,42 @@ export function AuthScreen({
                   aria-pressed={!isLogin}
                   onClick={() => setMode('register')}
                 >
-                  Register
+                  {t('auth.action.register')}
                 </Button>
               </div>
 
               <form onSubmit={submitAuth} className={styles.fields}>
                 <TextField
-                  label="Email"
+                  label={t('auth.field.email')}
                   name="email"
                   type="email"
                   required
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={t('auth.field.emailPlaceholder')}
                   leadingIcon={<Mail size={18} aria-hidden="true" />}
                 />
                 {!isLogin ? (
                   <>
                     <TextField
-                      label="Username"
+                      label={t('auth.field.username')}
                       name="username"
                       required
                       minLength={3}
                       autoComplete="username"
-                      placeholder="demo"
+                      placeholder={t('auth.field.usernamePlaceholder')}
                       leadingIcon={<User size={18} aria-hidden="true" />}
                     />
                     <TextField
-                      label="Display name"
+                      label={t('auth.field.displayName')}
                       name="displayName"
                       autoComplete="nickname"
-                      placeholder="Demo User"
+                      placeholder={t('auth.field.displayNamePlaceholder')}
                       leadingIcon={<UserRound size={18} aria-hidden="true" />}
                     />
                   </>
                 ) : null}
                 <TextField
-                  label="Password"
+                  label={t('auth.field.password')}
                   name="password"
                   type="password"
                   required
@@ -245,7 +252,7 @@ export function AuthScreen({
                   hint={
                     isLogin
                       ? undefined
-                      : 'At least 8 characters, with uppercase, lowercase, a number, and a symbol.'
+                      : t('auth.field.passwordHint')
                   }
                   pattern={
                     isLogin ? undefined : '(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}'
@@ -260,14 +267,14 @@ export function AuthScreen({
                     className={styles.forgotLink}
                     onClick={() => setMode('forgot')}
                   >
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </Button>
                 ) : null}
 
                 {feedback}
 
                 <Button type="submit" fullWidth>
-                  {isLogin ? 'Sign in' : 'Create account'}
+                  {isLogin ? t('auth.action.signIn') : t('auth.action.createAccount')}
                 </Button>
                 {isLogin && canResendVerification ? (
                   <Button
@@ -277,13 +284,13 @@ export function AuthScreen({
                     disabled={isSubmitting}
                     onClick={resendVerification}
                   >
-                    Resend verification email
+                    {t('auth.action.resendVerification')}
                   </Button>
                 ) : null}
               </form>
 
               <p className={styles.divider}>
-                <span>Or continue with</span>
+                <span>{t('auth.orContinueWith')}</span>
               </p>
               <div className={styles.socialRow}>
                 {OAUTH_BUTTONS.map(({ provider, label }) => (
@@ -291,7 +298,7 @@ export function AuthScreen({
                     key={provider}
                     variant="secondary"
                     disabled={oauthProviders === 'unavailable' || !oauthProviders[provider]}
-                    title={oauthButtonTitle(oauthProviders, provider, label)}
+                    title={oauthButtonTitle(t, oauthProviders, provider, label)}
                     onClick={() => startOAuth(provider)}
                   >
                     {label}
@@ -305,7 +312,7 @@ export function AuthScreen({
             <form onSubmit={submitVerification} className={styles.verifyBox}>
               <Button type="submit" fullWidth>
                 <BadgeCheck size={18} aria-hidden="true" />
-                Verify email
+                {t('auth.action.verifyEmail')}
               </Button>
             </form>
           ) : null}

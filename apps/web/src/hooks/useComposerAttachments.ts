@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { AuthState, Channel } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseComposerAttachmentsOptions {
   auth: AuthState | null;
@@ -14,6 +15,7 @@ export function useComposerAttachments({
   sendChatMessage,
   setWorkspaceError,
 }: UseComposerAttachmentsOptions) {
+  const t = useTranslation();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -47,7 +49,7 @@ export function useComposerAttachments({
   async function startVoiceRecording() {
     if (!auth || !channel) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setWorkspaceError('Voice recording is not supported in this browser.');
+      setWorkspaceError(t('voice.notSupported'));
       return;
     }
 
@@ -102,7 +104,7 @@ export function useComposerAttachments({
       };
 
       recorder.onerror = () => {
-        setWorkspaceError('Voice recording failed. Check microphone permission and try again.');
+        setWorkspaceError(t('voice.recordingFailed'));
         cancelVoiceRecordingRef.current = true;
         setIsRecordingVoice(false);
         stream.getTracks().forEach((track) => track.stop());
@@ -111,7 +113,7 @@ export function useComposerAttachments({
       recorder.start();
       setIsRecordingVoice(true);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start voice recording');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-start-voice-recording'));
     }
   }
 

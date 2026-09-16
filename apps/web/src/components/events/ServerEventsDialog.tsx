@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CalendarPlus, Loader2 } from 'lucide-react';
 import type { ServerDetail } from '../../api';
 import type { ServerEventsState } from '../../hooks/useServerEvents';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, DialogContent, DialogRoot } from '../ui';
 import { EventCard } from './EventCard';
 import { EventForm } from './EventForm';
@@ -22,6 +23,7 @@ export function ServerEventsDialog({
   serverEvents,
   onOpenChange,
 }: ServerEventsDialogProps) {
+  const t = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const { events, isLoading, error, pendingEventId } = serverEvents;
   const channelsById = new Map(server.channels.map((channel) => [channel.id, channel]));
@@ -34,12 +36,15 @@ export function ServerEventsDialog({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent title="Events" description={`Upcoming events in ${server.name}`}>
+      <DialogContent
+        title={t('events.title')}
+        description={t('events.dialogDescription', { server: server.name })}
+      >
         <div className={styles.dialogBody}>
           {canManage && !isCreating ? (
             <Button type="button" variant="secondary" onClick={() => setIsCreating(true)}>
               <CalendarPlus size={16} aria-hidden="true" />
-              Create event
+              {t('events.action.create')}
             </Button>
           ) : null}
           {isCreating ? (
@@ -57,7 +62,7 @@ export function ServerEventsDialog({
           ) : null}
           {isLoading && !events.length ? (
             <p className="empty-note" role="status">
-              <Loader2 className="spin" size={14} aria-hidden="true" /> Loading events
+              <Loader2 className="spin" size={14} aria-hidden="true" /> {t('events.loading')}
             </p>
           ) : events.length ? (
             <div className={styles.list}>
@@ -74,7 +79,7 @@ export function ServerEventsDialog({
               ))}
             </div>
           ) : (
-            <p className="empty-note">No upcoming events.</p>
+            <p className="empty-note">{t('events.empty')}</p>
           )}
         </div>
       </DialogContent>

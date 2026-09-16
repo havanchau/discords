@@ -9,6 +9,7 @@ import {
   IconButton,
 } from '../ui';
 import { UserAvatar } from './UserAvatar';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import styles from './HomePanel.module.css';
 import { handleListKeyboardNavigation } from './keyboardNavigation';
 
@@ -25,10 +26,12 @@ export function FriendsList({
   onRemoveFriend,
   onBlock,
 }: FriendsListProps) {
+  const t = useTranslation();
+
   return (
     <section aria-labelledby="home-friends-title">
       <h2 id="home-friends-title" className={styles.sectionTitle}>
-        Friends
+        {t('home.friends.title')}
       </h2>
       <div className={styles.list} role="list" onKeyDown={handleListKeyboardNavigation}>
         {friends.length ? (
@@ -47,22 +50,25 @@ export function FriendsList({
                   className={styles.requestButton}
                   onClick={() => void onStartConversation(friend.user.id)}
                 >
-                  Message
+                  {t('home.friends.message')}
                 </Button>
                 <DropdownMenuRoot>
                   <DropdownMenuTrigger asChild>
-                    <IconButton label={`More actions for ${friend.user.displayName}`} size="sm">
+                    <IconButton
+                      label={t('home.friends.moreActions', { name: friend.user.displayName })}
+                      size="sm"
+                    >
                       <MoreVertical size={16} aria-hidden="true" />
                     </IconButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="bottom">
                     <DropdownMenuItem onSelect={() => void onRemoveFriend(friend)}>
                       <UserMinus size={16} aria-hidden="true" />
-                      Remove friend
+                      {t('home.friends.remove')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => void onBlock(friend.user.id)}>
                       <Ban size={16} aria-hidden="true" />
-                      Block
+                      {t('home.friends.block')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenuRoot>
@@ -70,7 +76,7 @@ export function FriendsList({
             </article>
           ))
         ) : (
-          <p className="empty-note">No friends yet.</p>
+          <p className="empty-note">{t('home.friends.empty')}</p>
         )}
       </div>
     </section>

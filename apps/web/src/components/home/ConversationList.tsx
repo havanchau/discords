@@ -1,5 +1,6 @@
 import { Plus, Users } from 'lucide-react';
 import type { DirectConversation } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, IconButton } from '../ui';
 import { cn } from '../../utils/cn';
 import { conversationDisplayName, conversationPartners } from './conversationDisplay';
@@ -22,6 +23,7 @@ export function ConversationList({
   onOpenConversation,
   onCreateGroup,
 }: ConversationListProps) {
+  const t = useTranslation();
   const visibleConversations = conversations.filter(
     (conversation) => conversation.isGroup || conversationPartners(conversation, viewerId).length,
   );
@@ -29,8 +31,8 @@ export function ConversationList({
   return (
     <section aria-labelledby="home-recent-dms-title">
       <h2 id="home-recent-dms-title" className={cn(styles.sectionTitle, styles.sectionTitleRow)}>
-        Recent DMs
-        <IconButton label="New group DM" size="sm" onClick={onCreateGroup}>
+        {t('home.recentDms.title')}
+        <IconButton label={t('home.recentDms.newGroup')} size="sm" onClick={onCreateGroup}>
           <Plus size={14} aria-hidden="true" />
         </IconButton>
       </h2>
@@ -41,9 +43,11 @@ export function ConversationList({
             const selected = activeConversationId === conversation.id;
             const lastMessage = conversation.messages[0];
             const meta = lastMessage?.deletedAt
-              ? 'Message deleted'
+              ? t('message.deleted')
               : (lastMessage?.content ??
-                (conversation.isGroup ? `${partners.length + 1} members` : 'No messages yet'));
+                (conversation.isGroup
+                  ? t('home.recentDms.memberCount', { count: partners.length + 1 })
+                  : t('home.recentDms.noMessages')));
 
             return (
               <Button
@@ -71,7 +75,7 @@ export function ConversationList({
                 {Boolean(conversation.unreadCount) && (
                   <span
                     className={styles.unreadBadge}
-                    aria-label={`${conversation.unreadCount} unread direct messages`}
+                    aria-label={t('home.recentDms.unread', { count: conversation.unreadCount ?? 0 })}
                   >
                     {conversation.unreadCount && conversation.unreadCount > 99
                       ? '99+'
@@ -82,7 +86,7 @@ export function ConversationList({
             );
           })
         ) : (
-          <p className="empty-note">No direct messages yet.</p>
+          <p className="empty-note">{t('home.recentDms.empty')}</p>
         )}
       </div>
     </section>

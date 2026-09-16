@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import type { SettingsModalProps } from './settings/types';
+import { ServerProfileSection } from './settings/ServerProfileSection';
 import { DialogContent, DialogRoot, Skeleton } from './ui';
+import { useTranslation, type Translate } from '../i18n/LocaleProvider';
 import { cn } from '../utils/cn';
 import styles from './SettingsModal.module.css';
 
@@ -29,8 +31,10 @@ const MemberRolesSettings = lazy(() =>
 );
 
 function SettingsPanelFallback() {
+  const t = useTranslation();
+
   return (
-    <div className={styles.panelLoading} role="status" aria-label="Loading settings">
+    <div className={styles.panelLoading} role="status" aria-label={t('settings.loading')}>
       <Skeleton />
       <Skeleton />
       <Skeleton />
@@ -38,15 +42,19 @@ function SettingsPanelFallback() {
   );
 }
 
-function getSettingsTitle(activeDialog: SettingsModalProps['dialog']['activeDialog']) {
-  if (activeDialog === 'profile') return 'Edit profile';
-  if (activeDialog === 'server-settings') return 'Server settings';
-  if (activeDialog === 'channel-settings') return 'Channel settings';
-  if (activeDialog === 'roles') return 'Roles';
-  return 'Member roles';
+function getSettingsTitle(
+  t: Translate,
+  activeDialog: SettingsModalProps['dialog']['activeDialog'],
+) {
+  if (activeDialog === 'profile') return t('settings.title.profile');
+  if (activeDialog === 'server-settings') return t('settings.title.server');
+  if (activeDialog === 'channel-settings') return t('settings.title.channel');
+  if (activeDialog === 'roles') return t('settings.title.roles');
+  return t('settings.title.memberRoles');
 }
 
 export function SettingsModal(props: SettingsModalProps) {
+  const t = useTranslation();
   const { dialog } = props;
   const { activeDialog, setActiveDialog } = dialog;
   const settingsProps = {
@@ -63,8 +71,8 @@ export function SettingsModal(props: SettingsModalProps) {
       onOpenChange={(open) => !open && setActiveDialog(null)}
     >
       <DialogContent
-        title={getSettingsTitle(activeDialog)}
-        description="Tune profile, server, channel, role, and notification preferences."
+        title={getSettingsTitle(t, activeDialog)}
+        description={t('settings.description')}
         className={cn(styles.settingsModal, activeDialog === 'roles' && styles.rolesModal)}
         bodyClassName={styles.settingsModalBody}
       >
@@ -72,6 +80,13 @@ export function SettingsModal(props: SettingsModalProps) {
           {activeDialog === 'profile' ? (
             <>
               <ProfileSettings {...settingsProps} />
+              <ServerProfileSection
+                auth={settingsProps.auth}
+                server={settingsProps.server}
+                pendingAction={settingsProps.pendingAction}
+                updateServerProfile={settingsProps.updateServerProfile}
+                updateServerProfileAvatar={settingsProps.updateServerProfileAvatar}
+              />
               <AccountSecuritySettings {...settingsProps} />
             </>
           ) : null}

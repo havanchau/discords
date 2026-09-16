@@ -1,6 +1,7 @@
 import { Loader2, Pin } from 'lucide-react';
 import type { DirectMessage } from '../../api';
-import { formatDate } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { IconButton, PopoverContent, PopoverRoot, PopoverTrigger } from '../ui';
 import styles from './HomePanel.module.css';
 
@@ -19,19 +20,22 @@ export function DirectPinnedMessages({
   onOpen,
   onJumpToMessage,
 }: DirectPinnedMessagesProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
+
   return (
     <PopoverRoot onOpenChange={(open) => open && onOpen()}>
       <PopoverTrigger asChild>
-        <IconButton label="Pinned messages">
+        <IconButton label={t('pinned.title')}>
           <Pin size={18} aria-hidden="true" />
         </IconButton>
       </PopoverTrigger>
       <PopoverContent align="end" side="bottom">
-        <div className={styles.pinnedPanel} aria-label="Pinned messages">
-          <strong className={styles.pinnedTitle}>Pinned messages</strong>
+        <div className={styles.pinnedPanel} aria-label={t('pinned.title')}>
+          <strong className={styles.pinnedTitle}>{t('pinned.title')}</strong>
           {isLoading ? (
             <p className={styles.pinnedState} role="status">
-              <Loader2 className="spin" size={16} aria-hidden="true" /> Loading pinned messages
+              <Loader2 className="spin" size={16} aria-hidden="true" /> {t('pinned.loading')}
             </p>
           ) : error ? (
             <p className={styles.pinnedState} role="alert">
@@ -42,15 +46,15 @@ export function DirectPinnedMessages({
               {pinnedMessages.map((message) => (
                 <li key={message.id}>
                   <button type="button" onClick={() => onJumpToMessage(message.id)}>
-                    <strong>{message.author?.displayName ?? 'Message'}</strong>
-                    <small>{formatDate(message.createdAt)}</small>
+                    <strong>{message.author?.displayName ?? t('message.fallbackAuthor')}</strong>
+                    <small>{dates.dateTime(message.createdAt)}</small>
                     <span>{message.content}</span>
                   </button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className={styles.pinnedState}>No pinned messages yet.</p>
+            <p className={styles.pinnedState}>{t('pinned.empty')}</p>
           )}
         </div>
       </PopoverContent>

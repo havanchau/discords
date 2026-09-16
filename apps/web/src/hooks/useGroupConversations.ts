@@ -1,4 +1,5 @@
 import { apiRequest, AuthState, DirectConversation } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseGroupConversationsOptions {
   auth: AuthState | null;
@@ -19,6 +20,7 @@ export function useGroupConversations({
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseGroupConversationsOptions) {
+  const t = useTranslation();
   async function runGroupAction<T>(
     pendingKey: string,
     request: (token: string) => Promise<T>,
@@ -97,7 +99,7 @@ export function useGroupConversations({
     if (result && isLeaving) {
       // Do not rely on the realtime event alone; the socket may be disconnected.
       removeDirectConversation(conversationId);
-      setWorkspaceNotice('You left the group.');
+      setWorkspaceNotice(t('notice.leftGroup'));
     }
   }
 

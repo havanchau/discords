@@ -1,13 +1,27 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { Bell, CheckCheck, ExternalLink, FileText, Image as ImageIcon, Link, Pin } from 'lucide-react';
 import { Channel, Message, NotificationItem } from '../../api';
-import { formatDate, previewText } from '../../helpers';
+import { previewText } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { buildMessageSearchSnippet } from '../../utils/messageSearch';
 import { Button, TextField } from '../ui';
 import { buildMediaCollections } from '../../utils/mediaCollections';
 import type { ActivePanel } from './types';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 import styles from './UtilityPanel.module.css';
+
+const MEDIA_TAB_LABEL_KEYS = {
+  media: 'media.tab.media',
+  files: 'media.tab.files',
+  links: 'media.tab.links',
+} as const;
+
+const MEDIA_TAB_EMPTY_KEYS = {
+  media: 'media.empty.media',
+  files: 'media.empty.files',
+  links: 'media.empty.links',
+} as const;
 
 interface UtilityPanelProps {
   activePanel: ActivePanel;
@@ -50,6 +64,8 @@ export function UtilityPanel({
   configureChannelEncryption,
   clearChannelEncryption,
 }: UtilityPanelProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const trimmedSearch = searchQuery.trim();
   const canShowSearchResults =
@@ -127,12 +143,12 @@ export function UtilityPanel({
               setActiveResultIndex(0);
               setSearchQuery(event.target.value);
             }}
-            label="Search messages"
-            placeholder="from:chau has:link before:2026-06-01"
+            label={t('search.label')}
+            placeholder={t('search.placeholder')}
             data-testid="search-input"
           />
           {parsedSearch.tokens.length > 0 && (
-            <div className={styles.searchFilters} aria-label="Parsed search filters">
+            <div className={styles.searchFilters} aria-label={t('search.filtersLabel')}>
               {parsedSearch.tokens.map((token) => (
                 <span key={`${token.label}:${token.value}`} className={styles.searchFilter}>
                   <strong>{token.label}</strong>
@@ -149,14 +165,14 @@ export function UtilityPanel({
           {canShowSearchResults && parsedSearch.invalid.length === 0 && (
             <div className={styles.searchResults} onKeyDown={handleSearchResultKeyDown}>
               <div className={styles.searchResultsHeader}>
-                <strong>Results</strong>
-                <span>{searchResults.length} found</span>
+                <strong>{t('search.results')}</strong>
+                <span>{t('search.found', { count: searchResults.length })}</span>
               </div>
               {renderedSearchResults.length ? (
                 <div
                   className={styles.searchResultList}
                   role="listbox"
-                  aria-label="Message search results"
+                  aria-label={t('search.resultsLabel')}
                 >
                   {renderedSearchResults.map((message, index) => {
                     const snippet = buildMessageSearchSnippet(message.content, searchQuery);
@@ -173,9 +189,9 @@ export function UtilityPanel({
                         onClick={() => onJumpToMessage(message.id)}
                       >
                         <span className={styles.searchResultMeta}>
-                          <strong>#{channel?.name ?? 'channel'}</strong>
+                          <strong>#{channel?.name ?? t('search.fallbackChannel')}</strong>
                           <span>{message.author.displayName}</span>
-                          <time dateTime={message.createdAt}>{formatDate(message.createdAt)}</time>
+                          <time dateTime={message.createdAt}>{dates.dateTime(message.createdAt)}</time>
                         </span>
                         <span className={styles.searchResultSnippet}>
                           {snippet.fallback ? (
@@ -191,8 +207,9 @@ export function UtilityPanel({
                         {message.attachments.length > 0 && (
                           <span className={styles.searchResultAttachment}>
                             <FileText size={12} aria-hidden="true" />
-                            {message.attachments.length} attachment
-                            {message.attachments.length === 1 ? '' : 's'}
+                            {message.attachments.length === 1
+                              ? t('search.attachmentCountOne')
+                              : t('search.attachmentCount', { count: message.attachments.length })}
                           </span>
                         )}
                       </button>
@@ -200,7 +217,7 @@ export function UtilityPanel({
                   })}
                 </div>
               ) : (
-                <div className={styles.searchEmpty}>No matching messages in this channel.</div>
+                <div className={styles.searchEmpty}>{t('search.empty')}</div>
               )}
             </div>
           )}
@@ -211,10 +228,10 @@ export function UtilityPanel({
       {activePanel === 'media' && (
         <div className={styles.mediaPanel}>
           <div className={styles.mediaHeader}>
-            <strong>Media, Files & Links</strong>
-            <span>Current channel collection</span>
+            <strong>{t('media.title')}</strong>
+            <span>{t('media.subtitle')}</span>
           </div>
-          <div className={styles.mediaTabs} role="tablist" aria-label="Channel media categories">
+          <div className={styles.mediaTabs} role="tablist" aria-label={t('media.tabsLabel')}>
             {(['media', 'files', 'links'] as const).map((tab) => (
               <button
                 key={tab}
@@ -224,7 +241,7 @@ export function UtilityPanel({
                 className={mediaTab === tab ? styles.mediaTabActive : ''}
                 onClick={() => setMediaTab(tab)}
               >
-                {tab === 'media' ? 'Media' : tab === 'files' ? 'Files' : 'Links'}
+                {t(MEDIA_TAB_LABEL_KEYS[tab])}
               </button>
             ))}
           </div>
@@ -236,7 +253,10 @@ export function UtilityPanel({
                   type="button"
                   className={mediaTab === 'media' ? styles.mediaTile : styles.mediaRow}
                   onClick={() => onJumpToMessage(item.messageId)}
-                  aria-label={`Jump to ${item.category} from ${item.author.displayName}`}
+                  aria-label={t('media.jumpTo', {
+                    category: item.category,
+                    author: item.author.displayName,
+                  })}
                 >
                   {item.attachment && (item.category === 'image' || item.category === 'video') ? (
                     <span className={styles.mediaThumb}>
@@ -253,14 +273,16 @@ export function UtilityPanel({
                   )}
                   <span>
                     <strong>{item.attachment?.fileName ?? item.hostname ?? item.url}</strong>
-                    <small>{item.author.displayName} · {formatDate(item.createdAt)}</small>
+                    <small>
+                      {item.author.displayName} · {dates.dateTime(item.createdAt)}
+                    </small>
                   </span>
                   {item.url ? <ExternalLink size={13} aria-hidden="true" /> : null}
                 </button>
               ))}
             </div>
           ) : (
-            <div className={styles.notificationEmpty}>No {mediaTab} found in this channel yet.</div>
+            <div className={styles.notificationEmpty}>{t(MEDIA_TAB_EMPTY_KEYS[mediaTab])}</div>
           )}
         </div>
       )}
@@ -269,8 +291,12 @@ export function UtilityPanel({
         <div className={styles.notificationPanel}>
           <div className={styles.notificationHeader}>
             <div>
-              <strong>Notifications</strong>
-              <span>{notificationUnreadCount} unread inbox item{notificationUnreadCount === 1 ? '' : 's'}</span>
+              <strong>{t('notifications.title')}</strong>
+              <span>
+                {notificationUnreadCount === 1
+                  ? t('notifications.unreadCountOne')
+                  : t('notifications.unreadCount', { count: notificationUnreadCount })}
+              </span>
             </div>
             <Button
               size="sm"
@@ -279,14 +305,14 @@ export function UtilityPanel({
               disabled={!notificationUnreadCount}
             >
               <CheckCheck size={14} aria-hidden="true" />
-              Mark all read
+              {t('notifications.markAllRead')}
             </Button>
           </div>
 
           {isLoadingNotifications ? (
-            <div className={styles.notificationEmpty}>Loading notifications…</div>
+            <div className={styles.notificationEmpty}>{t('notifications.loading')}</div>
           ) : notifications.length ? (
-            <div className={styles.notificationList} role="list" aria-label="Recent notifications">
+            <div className={styles.notificationList} role="list" aria-label={t('notifications.listLabel')}>
               {notifications.map((notification) => (
                 <button
                   type="button"
@@ -301,17 +327,17 @@ export function UtilityPanel({
                   <span className={styles.notificationText}>
                     <strong>{notification.title}</strong>
                     {notification.body && <span>{notification.body}</span>}
-                    <time dateTime={notification.createdAt}>{formatDate(notification.createdAt)}</time>
+                    <time dateTime={notification.createdAt}>{dates.dateTime(notification.createdAt)}</time>
                   </span>
                 </button>
               ))}
             </div>
           ) : (
-            <div className={styles.notificationEmpty}>No notifications yet.</div>
+            <div className={styles.notificationEmpty}>{t('notifications.empty')}</div>
           )}
 
           <div className={styles.pinnedSection}>
-            <strong>Pinned messages</strong>
+            <strong>{t('pinned.title')}</strong>
             {pinnedMessages.length ? (
               pinnedMessages.map((message) => (
                 <Button
@@ -325,7 +351,7 @@ export function UtilityPanel({
                 </Button>
               ))
             ) : (
-              <div className={styles.notificationEmpty}>No pinned messages in this channel.</div>
+              <div className={styles.notificationEmpty}>{t('pinned.channelEmpty')}</div>
             )}
           </div>
         </div>
@@ -333,26 +359,25 @@ export function UtilityPanel({
 
       {activePanel === 'encryption' && (
         <form className={styles.encryptionPanel} onSubmit={handleEncryptionSubmit}>
-          <strong>{isChannelEncrypted ? 'Encrypted channel session' : 'Enable E2EE'}</strong>
-          <span>
-            Messages are encrypted in this browser before they are sent. Share the passphrase
-            out-of-band with trusted members.
-          </span>
+          <strong>
+            {isChannelEncrypted ? t('encryption.titleActive') : t('encryption.titleInactive')}
+          </strong>
+          <span>{t('encryption.hint')}</span>
           <TextField
             name="passphrase"
             type="password"
             minLength={8}
-            placeholder="Channel passphrase"
+            placeholder={t('encryption.passphrasePlaceholder')}
             autoComplete="off"
             required
           />
           <div className={styles.encryptionActions}>
             <Button size="sm" type="submit">
-              {isChannelEncrypted ? 'Update key' : 'Enable'}
+              {isChannelEncrypted ? t('encryption.action.update') : t('encryption.action.enable')}
             </Button>
             {isChannelEncrypted && (
               <Button size="sm" variant="ghost" onClick={clearChannelEncryption}>
-                Forget key
+                {t('encryption.action.forget')}
               </Button>
             )}
           </div>

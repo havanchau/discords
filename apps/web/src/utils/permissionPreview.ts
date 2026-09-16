@@ -1,5 +1,6 @@
 import type { Channel, Role, ServerDetail } from '../api';
-import { PERMISSION_OPTIONS } from '../helpers';
+import { PERMISSION_VALUES } from '../helpers';
+import type { Translate } from '../i18n/LocaleProvider';
 
 export interface PermissionPreviewAction {
   value: string;
@@ -13,13 +14,18 @@ export interface PermissionPreviewChannel {
   actions: PermissionPreviewAction[];
 }
 
-export function buildRolePermissionPreview(role: Role, channels: Channel[]): PermissionPreviewChannel[] {
+export function buildRolePermissionPreview(
+  role: Role,
+  channels: Channel[],
+  t: Translate,
+): PermissionPreviewChannel[] {
   return channels.map((channel) => ({
     channel,
     canView: role.permissions.includes('VIEW_CHANNEL'),
-    actions: PERMISSION_OPTIONS.map((permission) => ({
-      ...permission,
-      allowed: role.permissions.includes(permission.value),
+    actions: PERMISSION_VALUES.map((permission) => ({
+      value: permission,
+      label: t(`permission.${permission}`),
+      allowed: role.permissions.includes(permission),
     })),
   }));
 }
@@ -27,19 +33,21 @@ export function buildRolePermissionPreview(role: Role, channels: Channel[]): Per
 export function buildMemberPermissionPreview(
   member: ServerDetail['members'][number],
   channels: Channel[],
+  t: Translate,
 ): PermissionPreviewChannel[] {
   const permissions = new Set(
     member.kind === 'OWNER'
-      ? PERMISSION_OPTIONS.map((permission) => permission.value)
+      ? [...PERMISSION_VALUES]
       : member.roles?.flatMap(({ role }) => role.permissions) ?? [],
   );
 
   return channels.map((channel) => ({
     channel,
     canView: permissions.has('VIEW_CHANNEL'),
-    actions: PERMISSION_OPTIONS.map((permission) => ({
-      ...permission,
-      allowed: permissions.has(permission.value),
+    actions: PERMISSION_VALUES.map((permission) => ({
+      value: permission,
+      label: t(`permission.${permission}`),
+      allowed: permissions.has(permission),
     })),
   }));
 }

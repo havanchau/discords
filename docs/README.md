@@ -45,6 +45,8 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/session-management.md` | Listing and revoking active sessions. |
 | `features/two-factor-auth.md` | TOTP two-factor authentication and recovery codes. |
 | `features/server-events.md` | Scheduled server events with interest tracking. |
+| `features/i18n-localization.md` | English and Vietnamese localization across web, email, push, and API errors. |
+| `features/user-profile.md` | Profile banner, pronouns, custom status, per-server identity, and the profile card. |
 
 ## Root Documents
 

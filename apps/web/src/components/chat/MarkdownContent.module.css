@@ -19,7 +19,9 @@
   color: var(--text-primary);
   background: var(--surface-sunken);
   font-family: var(--font-family-mono);
-  font-size: 0.875em;
+  /* Was 0.875em of the 14px message body, i.e. 12.25px. The token is 12px and matches .codeBlock
+     below, so inline and block code render at the same size. */
+  font-size: var(--font-size-sm);
 }
 
 /* Long lines scroll inside the block instead of widening the message list. */

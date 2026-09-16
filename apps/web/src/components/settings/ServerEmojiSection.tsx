@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import { assetUrl } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, IconButton, TextField } from '../ui';
 import type { SettingsModalFields } from './types';
 import styles from '../SettingsModal.module.css';
@@ -26,6 +27,7 @@ export function ServerEmojiSection({
   createEmoji,
   deleteEmoji,
 }: ServerEmojiSectionProps) {
+  const t = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
@@ -48,16 +50,16 @@ export function ServerEmojiSection({
     <section className={styles.settingsSection} aria-labelledby="server-emoji-title">
       <div className={styles.settingsSectionHeading}>
         <strong id="server-emoji-title">
-          Emoji ({emojis.length}/{MAX_EMOJIS})
+          {t('emoji.section.title', { count: emojis.length, max: MAX_EMOJIS })}
         </strong>
-        <span>PNG, GIF, WEBP, or JPEG up to 256 KB. Members use them as :name:.</span>
+        <span>{t('emoji.section.hint')}</span>
       </div>
       <form className={styles.moderationRow} onSubmit={submit}>
         <TextField
-          label="Emoji name"
+          label={t('emoji.field.name')}
           value={name}
           pattern="[a-zA-Z0-9_]{2,32}"
-          title="2-32 letters, numbers, or underscores"
+          title={t('emoji.field.nameRule')}
           onChange={(event) => setName(event.target.value)}
           disabled={isFull}
           required
@@ -67,7 +69,7 @@ export function ServerEmojiSection({
           className={styles.hiddenInput}
           type="file"
           accept="image/png,image/gif,image/webp,image/jpeg"
-          aria-label="Emoji image"
+          aria-label={t('emoji.field.image')}
           onChange={(event) => {
             const selected = event.target.files?.[0] ?? null;
             setFile(selected);
@@ -80,11 +82,11 @@ export function ServerEmojiSection({
           disabled={isFull}
           onClick={() => fileInputRef.current?.click()}
         >
-          {file ? file.name : 'Choose image'}
+          {file ? file.name : t('emoji.action.chooseImage')}
         </Button>
         <Button type="submit" disabled={isFull || !file || !name || isUploading}>
           {isUploading ? <Loader2 className="spin" size={16} aria-hidden="true" /> : null}
-          Upload
+          {t('emoji.action.upload')}
         </Button>
       </form>
       {emojisError ? (
@@ -95,7 +97,7 @@ export function ServerEmojiSection({
       <div className={styles.inviteList}>
         {isLoadingEmojis ? (
           <p className="empty-note" role="status">
-            <Loader2 className="spin" size={14} aria-hidden="true" /> Loading emoji
+            <Loader2 className="spin" size={14} aria-hidden="true" /> {t('emoji.loading')}
           </p>
         ) : emojis.length ? (
           emojis.map((emoji) => (
@@ -106,7 +108,7 @@ export function ServerEmojiSection({
               </div>
               <span />
               <IconButton
-                label={`Delete emoji ${emoji.name}`}
+                label={t('emoji.action.delete', { name: emoji.name })}
                 variant="danger"
                 size="sm"
                 onClick={() => void deleteEmoji(emoji.id)}
@@ -116,7 +118,7 @@ export function ServerEmojiSection({
             </div>
           ))
         ) : (
-          <p className="empty-note">No custom emoji yet.</p>
+          <p className="empty-note">{t('emoji.empty')}</p>
         )}
       </div>
     </section>

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { apiRequest, Channel, Message } from '../api';
 import { buildMessageSearchParams, parseMessageSearchQuery } from '../utils/messageSearch';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseChatOrchestratorProps {
   auth: { accessToken: string } | null;
@@ -15,6 +16,7 @@ export function useChatOrchestrator({
   setPendingAction,
   setWorkspaceError,
 }: UseChatOrchestratorProps) {
+  const t = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
   const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<
@@ -80,7 +82,7 @@ export function useChatOrchestrator({
           await loadPinnedMessages(channel.id, auth.accessToken);
         }
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot toggle pin');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-toggle-pin'));
       } finally {
         setPendingAction(null);
       }
@@ -104,7 +106,7 @@ export function useChatOrchestrator({
           current.map((item) => (item.id === messageId ? data.message : item)),
         );
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot toggle reaction');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-toggle-reaction'));
       }
     },
     [auth, setWorkspaceError],

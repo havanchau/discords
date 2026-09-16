@@ -7,6 +7,9 @@ import {
   useRef,
   useState,
 } from 'react';
+import { parseLocale } from '@discord-clone/shared';
+import { useLocale } from '../i18n/LocaleProvider';
+import { invalidateUserProfile } from './useUserProfile';
 import {
   apiRequest,
   AuthState,
@@ -63,6 +66,7 @@ export function useSettingsActions({
   setChannelBadges,
   openServer,
 }: UseSettingsActionsOptions) {
+  const { locale, setLocale, t } = useLocale();
   const [channelOverrides, setChannelOverrides] = useState<ChannelPermissionOverride[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreference[]>(
@@ -70,6 +74,7 @@ export function useSettingsActions({
   );
   const [invites, setInvites] = useState<Invite[]>([]);
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
+  const profileBannerInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -126,7 +131,7 @@ export function useSettingsActions({
         ...current.filter((item) => item.id !== result.preference.id),
       ]);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update notifications');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-notifications'));
     } finally {
       setPendingAction(null);
     }
@@ -142,7 +147,7 @@ export function useSettingsActions({
       );
       setChannelOverrides(result.overrides);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot load channel permissions');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-channel-permissions'));
     }
   }
 
@@ -202,7 +207,7 @@ export function useSettingsActions({
       ]);
       if (event) event.currentTarget.reset();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot create invite');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-invite'));
     } finally {
       setPendingAction(null);
     }
@@ -220,7 +225,7 @@ export function useSettingsActions({
       );
       setInvites((current) => current.filter((invite) => invite.id !== inviteId));
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot revoke invite');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-revoke-invite'));
     } finally {
       setPendingAction(null);
     }
@@ -244,10 +249,75 @@ export function useSettingsActions({
       );
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update avatar');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-avatar'));
     } finally {
       setPendingAction(null);
     }
+  }
+
+  async function updateProfileBanner(event: ChangeEvent<HTMLInputElement>) {
+    if (!auth) return;
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setPendingAction('profile-banner');
+    try {
+      const attachment = await uploadFile(file, auth.accessToken);
+      const result = await apiRequest<{ user: AuthState['user'] }>(
+        '/users/me',
+        { method: 'PATCH', body: JSON.stringify({ bannerUrl: attachment.url }) },
+        auth.accessToken,
+      );
+      setAuth({ ...auth, user: { ...auth.user, ...result.user } });
+      invalidateUserProfile(auth.user.id);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-banner'));
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  /** Per-server nickname and avatar; the account-level values stay untouched. */
+  async function updateServerProfile(changes: {
+    nickname?: string | null;
+    avatarUrl?: string | null;
+  }) {
+    if (!auth || !server) return;
+    setPendingAction('server-profile');
+    setWorkspaceError(null);
+    try {
+      const result = await apiRequest<{ member: ServerDetail['members'][number] }>(
+        `/servers/${server.id}/members/me`,
+        { method: 'PATCH', body: JSON.stringify(changes) },
+        auth.accessToken,
+      );
+      setServer((current) =>
+        current?.id === server.id
+          ? {
+              ...current,
+              members: current.members.map((member) =>
+                member.id === result.member.id ? { ...member, ...result.member } : member,
+              ),
+            }
+          : current,
+      );
+      invalidateUserProfile(auth.user.id);
+    } catch (err) {
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-server-profile'),
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function updateServerProfileAvatar(event: ChangeEvent<HTMLInputElement>) {
+    if (!auth) return;
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const attachment = await uploadFile(file, auth.accessToken);
+    await updateServerProfile({ avatarUrl: attachment.url });
   }
 
   async function updateChannelAvatar(event: ChangeEvent<HTMLInputElement>) {
@@ -274,7 +344,7 @@ export function useSettingsActions({
         ),
       });
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel avatar');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-avatar'));
     } finally {
       setPendingAction(null);
     }
@@ -285,6 +355,7 @@ export function useSettingsActions({
     if (!auth) return;
     const form = new FormData(event.currentTarget);
     const nextTheme = String(form.get('uiTheme') || uiTheme) as UiTheme;
+    const nextLocale = parseLocale(String(form.get('locale') || '')) ?? locale;
     setPendingAction('profile-update');
     setWorkspaceError(null);
     try {
@@ -295,13 +366,21 @@ export function useSettingsActions({
           body: JSON.stringify({
             displayName: String(form.get('displayName') || '').trim(),
             bio: String(form.get('bio') || '').trim(),
+            // An emptied field is sent as null so the column is cleared, not set to ''.
+            pronouns: String(form.get('pronouns') || '').trim() || null,
+            customStatusText: String(form.get('customStatusText') || '').trim() || null,
+            customStatusEmoji: String(form.get('customStatusEmoji') || '').trim() || null,
+            customStatusExpiresAt: customStatusExpiry(String(form.get('customStatusExpiry') || '')),
             status: String(form.get('status') || auth.user.status || 'ONLINE'),
+            locale: nextLocale,
           }),
         },
         auth.accessToken,
       );
       setUiTheme(nextTheme);
+      setLocale(nextLocale);
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
+      invalidateUserProfile(auth.user.id);
       setServer((current) =>
         current
           ? {
@@ -316,7 +395,7 @@ export function useSettingsActions({
       );
       setActiveDialog(null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update profile');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-profile'));
     } finally {
       setPendingAction(null);
     }
@@ -356,7 +435,7 @@ export function useSettingsActions({
       );
       setActiveDialog(null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update server');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-server'));
     } finally {
       setPendingAction(null);
     }
@@ -397,7 +476,7 @@ export function useSettingsActions({
       });
       setActiveDialog(null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel'));
     } finally {
       setPendingAction(null);
     }
@@ -447,7 +526,7 @@ export function useSettingsActions({
         nextOverride,
       ]);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update channel permission');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-permission'));
     } finally {
       setPendingAction(null);
     }
@@ -486,7 +565,7 @@ export function useSettingsActions({
       ]);
     } catch (err) {
       setWorkspaceError(
-        err instanceof Error ? err.message : 'Cannot update member channel permission',
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-member-channel-permission'),
       );
     } finally {
       setPendingAction(null);
@@ -521,7 +600,7 @@ export function useSettingsActions({
       formElement.reset();
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot create role');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-role'));
     } finally {
       setPendingAction(null);
     }
@@ -545,7 +624,7 @@ export function useSettingsActions({
       );
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update role');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-role'));
     } finally {
       setPendingAction(null);
     }
@@ -565,7 +644,7 @@ export function useSettingsActions({
       );
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot delete role');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-role'));
     } finally {
       setPendingAction(null);
     }
@@ -585,7 +664,7 @@ export function useSettingsActions({
       );
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update member roles');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-member-roles'));
     } finally {
       setPendingAction(null);
     }
@@ -604,7 +683,7 @@ export function useSettingsActions({
       setActiveDialog(null);
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot remove member');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-remove-member'));
     } finally {
       setPendingAction(null);
     }
@@ -629,12 +708,16 @@ export function useSettingsActions({
     notificationPreferences,
     invites,
     profileAvatarInputRef,
+    profileBannerInputRef,
     channelAvatarInputRef,
     loadNotificationPreferences,
     updateNotificationPreference,
     createInviteFromSettings,
     revokeInvite,
     updateProfileAvatar,
+    updateProfileBanner,
+    updateServerProfile,
+    updateServerProfileAvatar,
     updateChannelAvatar,
     updateProfile,
     updateServerSettings,
@@ -648,4 +731,22 @@ export function useSettingsActions({
     removeMember,
     hydratePersistentChannelBadges,
   };
+}
+
+/**
+ * The form offers presets, not a date picker: the client turns the chosen preset into an absolute
+ * UTC timestamp so the stored expiry does not depend on when the server processed the request.
+ */
+const CUSTOM_STATUS_PRESET_MINUTES: Record<string, number> = {
+  '30m': 30,
+  '1h': 60,
+  '4h': 240,
+  today: 24 * 60,
+};
+
+function customStatusExpiry(preset: string): string | null {
+  const minutes = CUSTOM_STATUS_PRESET_MINUTES[preset];
+  // 'never' and an unknown preset both mean "no expiry", which clears any stored one.
+  if (!minutes) return null;
+  return new Date(Date.now() + minutes * 60_000).toISOString();
 }

@@ -13,6 +13,8 @@ import { AppModule } from './app.module';
 import { FixedWindowLimiter } from './common/fixed-window-limiter';
 import { createGlobalRateLimitMiddleware } from './common/global-rate-limit.middleware';
 import { readLimitsConfig } from './common/limits-config';
+import { I18nService } from './common/i18n/i18n.service';
+import { TranslatingExceptionFilter } from './common/http-exception.filter';
 import { assertOAuthConfigured } from './modules/auth/oauth/oauth-config';
 import { assertTwoFactorKeyConfigured } from './modules/auth/two-factor-config';
 import { defaultWebOrigin, isAllowedWebOrigin, parseWebOrigins } from './common/web-origins';
@@ -84,6 +86,7 @@ async function bootstrap() {
     },
     credentials: true
   });
+  app.useGlobalFilters(new TranslatingExceptionFilter(app.get(I18nService)));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

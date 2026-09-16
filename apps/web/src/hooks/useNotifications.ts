@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { apiRequest, AuthState, NotificationItem } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseNotificationsOptions {
   auth: AuthState | null;
@@ -7,6 +8,7 @@ interface UseNotificationsOptions {
 }
 
 export function useNotifications({ auth, setWorkspaceError }: UseNotificationsOptions) {
+  const t = useTranslation();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
@@ -24,7 +26,7 @@ export function useNotifications({ auth, setWorkspaceError }: UseNotificationsOp
         setNotifications(result.items);
         setNotificationUnreadCount(result.unreadCount);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot load notifications');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-notifications'));
       } finally {
         setIsLoadingNotifications(false);
       }
@@ -46,7 +48,7 @@ export function useNotifications({ auth, setWorkspaceError }: UseNotificationsOp
         );
         setNotificationUnreadCount((count) => Math.max(0, count - 1));
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot update notification');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-notification'));
       }
     },
     [auth, setWorkspaceError],
@@ -61,7 +63,7 @@ export function useNotifications({ auth, setWorkspaceError }: UseNotificationsOp
       );
       setNotificationUnreadCount(0);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update notifications');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-notifications'));
     }
   }, [auth, setWorkspaceError]);
 

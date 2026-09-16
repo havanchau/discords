@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 export interface TwoFactorStatus {
   enabled: boolean;
@@ -13,6 +14,7 @@ export interface TwoFactorSetup {
 }
 
 export function useTwoFactor(accessToken: string) {
+  const t = useTranslation();
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
   const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
@@ -23,7 +25,7 @@ export function useTwoFactor(accessToken: string) {
     try {
       setStatus(await apiRequest<TwoFactorStatus>('/auth/2fa', {}, accessToken));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot load two-factor status');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-two-factor-status'));
     }
   }, [accessToken]);
 

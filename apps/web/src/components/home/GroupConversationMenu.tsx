@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Crown, LogOut, UserMinus, UserPlus, Users } from 'lucide-react';
 import type { DirectConversation, FriendEntry, PublicUser } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, TextField } from '../ui';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
@@ -28,6 +29,7 @@ export function GroupConversationMenu({
   onAddMember,
   onRemoveMember,
 }: GroupConversationMenuProps) {
+  const t = useTranslation();
   const [name, setName] = useState(conversation.name ?? '');
   const isOwner = conversation.ownerId === viewer.id;
   const members = [viewer, ...partners];
@@ -43,7 +45,7 @@ export function GroupConversationMenu({
   return (
     <PopoverRoot onOpenChange={(open) => open && setName(conversation.name ?? '')}>
       <PopoverTrigger asChild>
-        <IconButton label="Group settings">
+        <IconButton label={t('group.settings')}>
           <Users size={18} aria-hidden="true" />
         </IconButton>
       </PopoverTrigger>
@@ -51,10 +53,10 @@ export function GroupConversationMenu({
         <div className={styles.groupMenu}>
           <form className={styles.groupRename} onSubmit={submitRename}>
             <TextField
-              label="Group name"
+              label={t('group.field.name')}
               value={name}
               maxLength={100}
-              placeholder="Unnamed group"
+              placeholder={t('group.unnamed')}
               onChange={(event) => setName(event.target.value)}
             />
             <Button
@@ -62,27 +64,29 @@ export function GroupConversationMenu({
               size="sm"
               disabled={pendingAction === `group-rename-${conversation.id}`}
             >
-              Save
+              {t('common.save')}
             </Button>
           </form>
 
           <section aria-labelledby="group-members-title">
             <h3 id="group-members-title" className={styles.sectionTitle}>
-              Members — {members.length}/{MAX_GROUP_MEMBERS}
+              {t('group.members', { count: members.length, max: MAX_GROUP_MEMBERS })}
             </h3>
             <ul className={styles.groupMemberList}>
               {members.map((member) => (
                 <li key={member.id}>
                   <UserAvatar user={member} />
                   <span>
-                    {member.id === viewer.id ? `${member.displayName} (you)` : member.displayName}
+                    {member.id === viewer.id
+                      ? t('group.you', { name: member.displayName })
+                      : member.displayName}
                   </span>
                   {conversation.ownerId === member.id ? (
-                    <Crown size={14} aria-label="Group owner" className={styles.ownerIcon} />
+                    <Crown size={14} aria-label={t('group.owner')} className={styles.ownerIcon} />
                   ) : null}
                   {isOwner && member.id !== viewer.id ? (
                     <IconButton
-                      label={`Remove ${member.displayName}`}
+                      label={t('group.removeMember', { name: member.displayName })}
                       size="sm"
                       variant="danger"
                       disabled={pendingAction === `group-remove-${member.id}`}
@@ -99,7 +103,7 @@ export function GroupConversationMenu({
           {addableFriends.length && !isFull ? (
             <section aria-labelledby="group-add-title">
               <h3 id="group-add-title" className={styles.sectionTitle}>
-                Add friends
+                {t('group.addFriendsTitle')}
               </h3>
               <ul className={styles.groupMemberList}>
                 {addableFriends.map((friend) => (
@@ -107,7 +111,7 @@ export function GroupConversationMenu({
                     <UserAvatar user={friend.user} />
                     <span>{friend.user.displayName}</span>
                     <IconButton
-                      label={`Add ${friend.user.displayName}`}
+                      label={t('group.addFriend', { name: friend.user.displayName })}
                       size="sm"
                       disabled={pendingAction === `group-add-${friend.user.id}`}
                       onClick={() => void onAddMember(conversation.id, friend.user.id)}
@@ -128,7 +132,7 @@ export function GroupConversationMenu({
             onClick={() => void onRemoveMember(conversation.id, viewer.id)}
           >
             <LogOut size={14} aria-hidden="true" />
-            Leave group
+            {t('group.leave')}
           </Button>
         </div>
       </PopoverContent>

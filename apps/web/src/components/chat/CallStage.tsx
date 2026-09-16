@@ -1,5 +1,6 @@
 import { Mic, MicOff, MonitorUp, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
 import { accentClass, initials } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { cn } from '../../utils/cn';
 import { RemoteVideoTile } from '../RemoteVideoTile';
 import { Avatar, Button, IconButton } from '../ui';
@@ -14,6 +15,7 @@ interface CallStageProps {
 }
 
 export function CallStage({ session, call, contextLabel }: CallStageProps) {
+  const t = useTranslation();
   const { auth, channel } = session;
   const { active, state, remoteMedia } = call;
 
@@ -95,7 +97,7 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
                   <Video size={17} aria-hidden="true" />
                 )}
               </IconButton>
-              <IconButton label="Leave call" variant="danger" onClick={call.end}>
+              <IconButton label={t('call.leave')} variant="danger" onClick={call.end}>
                 <PhoneOff size={17} aria-hidden="true" />
               </IconButton>
             </div>

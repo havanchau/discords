@@ -1,5 +1,7 @@
 import { Clipboard, Trash2 } from 'lucide-react';
 import { Button, IconButton, TextField } from '../ui';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { memberHasServerPermission } from '../../utils/serverPermissions';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
@@ -51,16 +53,19 @@ export function ServerSettings({
   setActiveDialog,
   updateServerSettings,
 }: ServerSettingsProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
+
   if (!server) return null;
 
   return (
     <div className={styles.settingsForm}>
       <form className={styles.settingsSection} onSubmit={updateServerSettings}>
         <Button type="button" variant="secondary" fullWidth onClick={() => setActiveDialog('roles')}>
-          Manage roles, permissions, and member assignments
+          {t('serverSettings.manageRoles')}
         </Button>
         <TextField
-          label="Server name"
+          label={t('serverSettings.field.name')}
           name="name"
           defaultValue={server.name}
           minLength={2}
@@ -68,31 +73,45 @@ export function ServerSettings({
           required
         />
         <TextField
-          label="Description"
+          label={t('serverSettings.field.description')}
           name="description"
           defaultValue={server.description ?? ''}
           maxLength={200}
         />
         <footer className={styles.settingsModalFooter}>
           <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={pendingAction === 'server-update'}>
-            Save changes
+            {t('common.saveChanges')}
           </Button>
         </footer>
       </form>
 
       <section className={cn(styles.settingsSection, 'invite-section')}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Invite links</strong>
-          <span>Create expiring invite codes and revoke active links.</span>
+          <strong>{t('invite.section.title')}</strong>
+          <span>{t('invite.section.hint')}</span>
         </div>
         <form className={styles.inviteCreateGrid} onSubmit={createInviteFromSettings}>
-          <TextField label="Expires in hours" name="expiresInHours" type="number" min={1} max={168} defaultValue="24" />
-          <TextField label="Max uses" name="maxUses" type="number" min={1} max={100} placeholder="100" />
+          <TextField
+            label={t('invite.field.expiresInHours')}
+            name="expiresInHours"
+            type="number"
+            min={1}
+            max={168}
+            defaultValue="24"
+          />
+          <TextField
+            label={t('invite.field.maxUses')}
+            name="maxUses"
+            type="number"
+            min={1}
+            max={100}
+            placeholder="100"
+          />
           <Button type="submit" disabled={pendingAction === 'invite-settings-create'}>
-            Create invite
+            {t('invite.action.create')}
           </Button>
         </form>
         <div className={styles.inviteList}>
@@ -102,8 +121,13 @@ export function ServerSettings({
                 <div>
                   <strong>{invite.code}</strong>
                   <small>
-                    {invite.usedCount}/{invite.maxUses ?? '∞'} uses · expires{' '}
-                    {invite.expiresAt ? new Date(invite.expiresAt).toLocaleString() : 'never'}
+                    {t('invite.usage', {
+                      used: invite.usedCount,
+                      max: invite.maxUses ?? '∞',
+                      expiry: invite.expiresAt
+                        ? dates.absolute(invite.expiresAt)
+                        : t('invite.neverExpires'),
+                    })}
                   </small>
                 </div>
                 <Button
@@ -113,10 +137,10 @@ export function ServerSettings({
                   onClick={() => void navigator.clipboard?.writeText(invite.code)}
                 >
                   <Clipboard size={14} aria-hidden="true" />
-                  Copy
+                  {t('invite.action.copy')}
                 </Button>
                 <IconButton
-                  label={`Revoke invite ${invite.code}`}
+                  label={t('invite.action.revoke', { code: invite.code })}
                   variant="danger"
                   size="sm"
                   disabled={pendingAction === `invite-${invite.id}`}
@@ -127,7 +151,7 @@ export function ServerSettings({
               </div>
             ))
           ) : (
-            <p className="empty-note">No active invites.</p>
+            <p className="empty-note">{t('invite.empty')}</p>
           )}
         </div>
       </section>
@@ -156,8 +180,8 @@ export function ServerSettings({
 
       <section className={cn(styles.settingsSection, 'audit-section')}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Audit log</strong>
-          <span>Recent moderation and configuration changes.</span>
+          <strong>{t('audit.section.title')}</strong>
+          <span>{t('audit.section.hint')}</span>
         </div>
         <div className={styles.auditLogList}>
           {auditLogs.length ? (
@@ -166,14 +190,14 @@ export function ServerSettings({
                 <summary>
                   <span>{log.action.replaceAll('_', ' ').toLowerCase()}</span>
                   <small>
-                    {log.actor?.displayName ?? 'System'} - {new Date(log.createdAt).toLocaleString()}
+                    {log.actor?.displayName ?? t('audit.system')} - {dates.absolute(log.createdAt)}
                   </small>
                 </summary>
                 {log.metadata ? <pre>{JSON.stringify(log.metadata, null, 2)}</pre> : null}
               </details>
             ))
           ) : (
-            <p className="empty-note">No audit events yet.</p>
+            <p className="empty-note">{t('audit.empty')}</p>
           )}
         </div>
       </section>

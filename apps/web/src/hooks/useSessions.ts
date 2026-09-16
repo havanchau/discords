@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest, type AuthSessionEntry } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseSessionsOptions {
   accessToken: string;
@@ -7,6 +8,7 @@ interface UseSessionsOptions {
 }
 
 export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSessionsOptions) {
+  const t = useTranslation();
   const [sessions, setSessions] = useState<AuthSessionEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSession
       );
       setSessions(result.sessions);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot load devices');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-devices'));
     } finally {
       setIsLoading(false);
     }
@@ -44,7 +46,7 @@ export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSession
       }
       setSessions((current) => current.filter((item) => item.id !== session.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot sign out that device');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-that-device'));
     } finally {
       setPendingSessionId(null);
     }
@@ -57,7 +59,7 @@ export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSession
       await apiRequest('/auth/sessions/revoke-others', { method: 'POST' }, accessToken);
       setSessions((current) => current.filter((item) => item.current));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot sign out other devices');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-other-devices'));
     } finally {
       setPendingSessionId(null);
     }

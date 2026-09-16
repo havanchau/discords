@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useCallback, useRef, useState } from 'react';
 import { apiRequest, AuthState, DirectConversation, DirectMessage } from '../api';
 import { replaceConversationPreview, replaceDirectMessage } from '../utils/directMessages';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseDirectMessageActionsOptions {
   auth: AuthState | null;
@@ -15,6 +16,7 @@ export function useDirectMessageActions({
   setDirectConversations,
   setWorkspaceError,
 }: UseDirectMessageActionsOptions) {
+  const t = useTranslation();
   const [pinnedDirectMessages, setPinnedDirectMessages] = useState<DirectMessage[]>([]);
   const [isLoadingPins, setIsLoadingPins] = useState(false);
   const [pinsError, setPinsError] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export function useDirectMessageActions({
         setPinnedDirectMessages(result.messages);
       }
     } catch (err) {
-      setPinsError(err instanceof Error ? err.message : 'Cannot load pinned messages');
+      setPinsError(err instanceof Error ? err.message : t('error.fallback.cannot-load-pinned-messages'));
     } finally {
       setIsLoadingPins(false);
     }

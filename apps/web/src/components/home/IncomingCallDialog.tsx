@@ -1,6 +1,7 @@
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import { assetUrl } from '../../api';
 import { accentClass, initials } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import type { IncomingDirectCall } from '../../hooks/useDirectCall';
 import { Avatar, Button, DialogContent, DialogRoot } from '../ui';
 import styles from './HomePanel.module.css';
@@ -18,17 +19,21 @@ export function IncomingCallDialog({
   onAccept,
   onDecline,
 }: IncomingCallDialogProps) {
+  const t = useTranslation();
   const caller = incomingCall?.caller;
   const isVideo = incomingCall?.mode === 'video';
 
   return (
     <DialogRoot open={Boolean(incomingCall)} onOpenChange={(open) => !open && onDecline()}>
       <DialogContent
-        title={isVideo ? 'Incoming video call' : 'Incoming voice call'}
+        title={isVideo ? t('call.incomingVideo') : t('call.incomingVoice')}
         description={
           caller && conversationLabel && conversationLabel !== caller.displayName
-            ? `${caller.displayName} is calling ${conversationLabel}`
-            : `${caller?.displayName ?? 'Someone'} is calling you`
+            ? t('call.callingConversation', {
+                caller: caller.displayName,
+                conversation: conversationLabel,
+              })
+            : t('call.callingYou', { caller: caller?.displayName ?? t('call.someone') })
         }
       >
         {caller ? (
@@ -43,7 +48,7 @@ export function IncomingCallDialog({
             <div className={styles.incomingCallActions}>
               <Button type="button" variant="danger" onClick={onDecline}>
                 <PhoneOff size={16} aria-hidden="true" />
-                Decline
+                {t('call.decline')}
               </Button>
               <Button
                 type="button"
@@ -55,7 +60,7 @@ export function IncomingCallDialog({
                 ) : (
                   <Phone size={16} aria-hidden="true" />
                 )}
-                Accept
+                {t('call.accept')}
               </Button>
             </div>
           </div>

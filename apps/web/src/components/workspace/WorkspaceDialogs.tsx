@@ -1,5 +1,6 @@
 import { Loader2, Plus, UserPlus } from 'lucide-react';
 import type { FormEvent } from 'react';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, DialogContent, DialogRoot, TextField } from '../ui';
 import styles from './WorkspaceDialogs.module.css';
 import type { ChannelCreateType, ServerAction } from './types';
@@ -33,6 +34,8 @@ export function WorkspaceDialogs({
   joinInvite,
   createChannel,
 }: WorkspaceDialogsProps) {
+  const t = useTranslation();
+
   async function submitCreateServer(event: FormEvent<HTMLFormElement>) {
     await createServer(event);
     setServerAction(null);
@@ -56,15 +59,17 @@ export function WorkspaceDialogs({
   return (
     <>
       <DialogRoot open={Boolean(serverAction)} onOpenChange={(open) => !open && setServerAction(null)}>
-        <DialogContent title={serverAction === 'join' ? 'Join a server' : 'Create a server'}>
-          <div className={styles.tabs} role="group" aria-label="Server action">
+        <DialogContent
+          title={serverAction === 'join' ? t('server.dialog.join') : t('server.dialog.create')}
+        >
+          <div className={styles.tabs} role="group" aria-label={t('server.dialog.actionGroup')}>
             <Button
               variant={serverAction === 'create' ? 'primary' : 'secondary'}
               aria-pressed={serverAction === 'create'}
               onClick={() => setServerAction('create')}
             >
               <Plus size={16} aria-hidden="true" />
-              Create
+              {t('server.dialog.tabCreate')}
             </Button>
             <Button
               variant={serverAction === 'join' ? 'primary' : 'secondary'}
@@ -72,13 +77,18 @@ export function WorkspaceDialogs({
               onClick={() => setServerAction('join')}
             >
               <UserPlus size={16} aria-hidden="true" />
-              Join
+              {t('server.dialog.tabJoin')}
             </Button>
           </div>
 
           {serverAction === 'join' ? (
             <form onSubmit={submitJoinInvite} className={styles.form}>
-              <TextField name="code" label="Invite code" placeholder="Paste invite code" required />
+              <TextField
+                name="code"
+                label={t('server.field.inviteCode')}
+                placeholder={t('server.field.inviteCodePlaceholder')}
+                required
+              />
               <Button
                 type="submit"
                 fullWidth
@@ -88,14 +98,23 @@ export function WorkspaceDialogs({
                 {pendingAction === 'join-invite' ? (
                   <Loader2 className="spin" size={16} aria-hidden="true" />
                 ) : (
-                  'Join server'
+                  t('server.action.join')
                 )}
               </Button>
             </form>
           ) : (
             <form onSubmit={submitCreateServer} className={styles.form}>
-              <TextField name="name" label="Server name" placeholder="New server" required />
-              <TextField name="description" label="Description" placeholder="Optional description" />
+              <TextField
+                name="name"
+                label={t('server.field.name')}
+                placeholder={t('server.field.namePlaceholder')}
+                required
+              />
+              <TextField
+                name="description"
+                label={t('server.field.description')}
+                placeholder={t('server.field.descriptionPlaceholder')}
+              />
               <Button
                 type="submit"
                 fullWidth
@@ -105,7 +124,7 @@ export function WorkspaceDialogs({
                 {pendingAction === 'create-server' ? (
                   <Loader2 className="spin" size={16} aria-hidden="true" />
                 ) : (
-                  'Create server'
+                  t('server.action.create')
                 )}
               </Button>
             </form>
@@ -117,13 +136,23 @@ export function WorkspaceDialogs({
         open={Boolean(channelCreateType)}
         onOpenChange={(open) => !open && setChannelCreateType(null)}
       >
-        <DialogContent title={`Create ${channelCreateType === 'VOICE' ? 'voice' : 'text'} channel`}>
+        <DialogContent
+          title={
+            channelCreateType === 'VOICE'
+              ? t('channel.dialog.createVoice')
+              : t('channel.dialog.createText')
+          }
+        >
           <form onSubmit={submitCreateChannel} className={styles.form}>
             <TextField
               data-testid={channelCreateType === 'VOICE' ? 'create-voice-input' : 'create-channel-input'}
               name="name"
-              label="Channel name"
-              placeholder={channelCreateType === 'VOICE' ? 'New voice' : 'new-channel'}
+              label={t('channel.field.name')}
+              placeholder={
+                channelCreateType === 'VOICE'
+                  ? t('channel.field.namePlaceholderVoice')
+                  : t('channel.field.namePlaceholderText')
+              }
               required
             />
             <input name="type" type="hidden" value={channelCreateType ?? 'TEXT'} readOnly />
@@ -139,7 +168,7 @@ export function WorkspaceDialogs({
               {pendingAction === 'create-channel' ? (
                 <Loader2 className="spin" size={16} aria-hidden="true" />
               ) : (
-                'Create channel'
+                t('channel.action.create')
               )}
             </Button>
           </form>
@@ -147,12 +176,12 @@ export function WorkspaceDialogs({
       </DialogRoot>
 
       <DialogRoot open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
-        <DialogContent title="Create category">
+        <DialogContent title={t('category.dialog.create')}>
           <form onSubmit={submitCreateCategory} className={styles.form}>
             <TextField
               name="name"
-              label="Category name"
-              placeholder="New category"
+              label={t('category.field.name')}
+              placeholder={t('category.field.namePlaceholder')}
               maxLength={80}
               required
               data-testid="create-category-input"
@@ -166,7 +195,7 @@ export function WorkspaceDialogs({
               {pendingAction === 'create-category' ? (
                 <Loader2 className="spin" size={16} aria-hidden="true" />
               ) : (
-                'Create category'
+                t('category.action.create')
               )}
             </Button>
           </form>

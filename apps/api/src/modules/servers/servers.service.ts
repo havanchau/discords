@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { slugifyChannelName } from '../../common/slugify';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { countChannelUnread } from '../messages/unread-counts';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
@@ -24,6 +25,7 @@ export class ServersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
+    private readonly realtime: RealtimePublisher,
   ) {}
 
   async createServer(userId: string, dto: CreateServerDto) {
@@ -199,10 +201,15 @@ export class ServersService {
 
   async updateMyMembership(userId: string, serverId: string, dto: UpdateNicknameDto) {
     const member = await this.requireMembership(userId, serverId);
-    const nickname = dto.nickname?.trim() || null;
+    // Only the fields the request carried are written, so updating the avatar cannot clear the
+    // nickname that `/nick` set, and vice versa. An empty string still means "clear this field".
+    const data: { nickname?: string | null; avatarUrl?: string | null } = {};
+    if (dto.nickname !== undefined) data.nickname = dto.nickname?.trim() || null;
+    if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl?.trim() || null;
+
     const updated = await this.prisma.serverMember.update({
       where: { id: member.id },
-      data: { nickname },
+      data,
       include: {
         user: {
           select: { id: true, username: true, displayName: true, avatarUrl: true, status: true },
@@ -210,7 +217,29 @@ export class ServersService {
         roles: { include: { role: true } },
       },
     });
-    await this.writeAuditLog(serverId, userId, 'MEMBER_NICKNAME_UPDATE', member.id, { nickname });
+
+    if (data.nickname !== undefined) {
+      await this.writeAuditLog(serverId, userId, 'MEMBER_NICKNAME_UPDATE', member.id, {
+        nickname: data.nickname,
+      });
+    }
+    if (data.avatarUrl !== undefined) {
+      // The URL itself is not logged: it points at an uploaded file and adds nothing to the audit.
+      await this.writeAuditLog(serverId, userId, 'MEMBER_PROFILE_UPDATE', member.id, {
+        avatarUrl: Boolean(data.avatarUrl),
+      });
+    }
+
+    // Only the fields this request changed are sent; the listener merges rather than replaces, so
+    // an unrelated field such as `timeoutUntil` is not cleared by a nickname change.
+    this.realtime.emitToRoom(this.realtime.serverRoom(serverId), 'server:member-updated', {
+      serverId,
+      memberId: updated.id,
+      userId: updated.userId,
+      ...(data.nickname !== undefined ? { nickname: updated.nickname } : {}),
+      ...(data.avatarUrl !== undefined ? { avatarUrl: updated.avatarUrl } : {}),
+    });
+
     return { member: updated };
   }
 

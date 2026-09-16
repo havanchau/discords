@@ -1,4 +1,5 @@
 import { Fragment, memo, useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { cn } from '../../utils/cn';
 import { parseMarkdown, type MarkdownNode } from '../../utils/markdown';
 import styles from './MarkdownContent.module.css';
@@ -85,6 +86,7 @@ function renderNode(node: MarkdownNode, resolveEmoji: EmojiResolver | undefined)
 }
 
 function Spoiler({ children }: { children: ReactNode }) {
+  const t = useTranslation();
   const [isRevealed, setIsRevealed] = useState(false);
 
   if (isRevealed) {
@@ -95,7 +97,7 @@ function Spoiler({ children }: { children: ReactNode }) {
     <button
       type="button"
       className={styles.spoiler}
-      aria-label="Spoiler, activate to reveal"
+      aria-label={t('markdown.spoiler')}
       aria-pressed={false}
       onClick={() => setIsRevealed(true)}
     >

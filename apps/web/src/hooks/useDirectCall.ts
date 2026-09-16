@@ -4,6 +4,7 @@ import { RealtimeEvents } from '@discord-clone/shared';
 import type { PublicUser } from '../api';
 import type { CallState, RemoteMedia } from '../helpers';
 import type { StartCallOptions } from './useChannelCall';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 export type DirectCallMode = 'voice' | 'video';
 
@@ -48,6 +49,7 @@ export function useDirectCall({
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseDirectCallOptions) {
+  const t = useTranslation();
   const [incomingCall, setIncomingCall] = useState<IncomingDirectCall | null>(null);
   const [outgoingCall, setOutgoingCall] = useState<OutgoingDirectCall | null>(null);
   const outgoingCallRef = useRef<OutgoingDirectCall | null>(null);
@@ -101,7 +103,7 @@ export function useDirectCall({
   async function startDirectCall(conversationId: string, mode: DirectCallMode, label: string) {
     if (!socket || !viewerId) return;
     if (callState) {
-      setWorkspaceError('Leave the current call before starting another one.');
+      setWorkspaceError(t('call.leaveCurrentFirst'));
       return;
     }
     // Join first: if media is denied nobody should be left ringing for an empty call.
@@ -118,7 +120,7 @@ export function useDirectCall({
     });
     if (!rang) {
       endCall();
-      setWorkspaceError('Cannot start the call. Try again.');
+      setWorkspaceError(t('call.cannotStart'));
       return;
     }
     setOutgoingCall({ conversationId, mode });

@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { apiRequest, Channel, ChannelCategory, ServerDetail, ServerSummary } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseWorkspaceNavigationProps {
   auth: { accessToken: string } | null;
@@ -21,6 +22,7 @@ export function useWorkspaceNavigation({
   setActiveDialog,
   setChannelBadges,
 }: UseWorkspaceNavigationProps) {
+  const t = useTranslation();
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
@@ -49,7 +51,7 @@ export function useWorkspaceNavigation({
           clearAuth();
           return;
         }
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot load servers');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-servers'));
       } finally {
         setIsLoadingServers(false);
       }
@@ -71,7 +73,7 @@ export function useWorkspaceNavigation({
         setServer(data.server);
         setChannel(data.server.channels[0] ?? null);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot open server');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-open-server'));
       } finally {
         setPendingAction(null);
       }
@@ -96,7 +98,7 @@ export function useWorkspaceNavigation({
         setActiveDialog(null);
         setWorkspaceNotice(`Joined ${data.server.name}`);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Invalid invite');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.invalid-invite'));
       } finally {
         setPendingAction(null);
       }
@@ -126,7 +128,7 @@ export function useWorkspaceNavigation({
         setActiveDialog(null);
         setWorkspaceNotice(`Created server ${data.server.name}`);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot create server');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-server'));
       } finally {
         setPendingAction(null);
       }
@@ -173,7 +175,7 @@ export function useWorkspaceNavigation({
         setChannel(data.channel);
         setActiveDialog(null);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot create channel');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-channel'));
       } finally {
         setPendingAction(null);
       }
@@ -202,7 +204,7 @@ export function useWorkspaceNavigation({
         );
         return true;
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot create category');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-category'));
         return false;
       } finally {
         setPendingAction(null);
@@ -234,7 +236,7 @@ export function useWorkspaceNavigation({
         );
         return true;
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot update category');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-category'));
         return false;
       } finally {
         setPendingAction(null);
@@ -263,7 +265,7 @@ export function useWorkspaceNavigation({
         );
         return true;
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot delete category');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-category'));
         return false;
       } finally {
         setPendingAction(null);

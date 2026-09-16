@@ -7,6 +7,8 @@ import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
+import { useTranslation } from '../i18n/LocaleProvider';
+import { resolveMemberIdentity } from '../utils/memberIdentity';
 import { Button } from './ui';
 import { cn } from '../utils/cn';
 import styles from './ChatPanel.module.css';
@@ -50,6 +52,7 @@ export function ChatPanel({
   thread,
   channelAvatar,
 }: ChatPanelProps) {
+  const t = useTranslation();
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
@@ -107,7 +110,7 @@ export function ChatPanel({
         <div className={cn(styles.banner, styles.errorBanner)} role="alert">
           {alerts.error}
           <Button variant="ghost" size="sm" onClick={() => alerts.setError(null)}>
-            Dismiss
+            {t('common.dismiss')}
           </Button>
         </div>
       )}
@@ -116,7 +119,7 @@ export function ChatPanel({
         <div className={cn(styles.banner, styles.noticeBanner)} role="status">
           {alerts.notice}
           <Button variant="ghost" size="sm" onClick={() => alerts.setNotice(null)}>
-            Dismiss
+            {t('common.dismiss')}
           </Button>
         </div>
       )}
@@ -138,6 +141,11 @@ export function ChatPanel({
             message={message}
             previousMessage={messages.visible[index - 1]}
             auth={session.auth}
+            serverId={session.channel?.serverId ?? null}
+            authorIdentity={
+              session.memberIdentities[message.authorId] ??
+              resolveMemberIdentity(message.author)
+            }
             pinnedMessageIds={messages.pinnedIds}
             actions={messageActions}
             onPreviewAttachment={setPreviewAttachment}

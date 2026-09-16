@@ -1,4 +1,5 @@
 import type { FriendRequestEntry } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button } from '../ui';
 import styles from './HomePanel.module.css';
 
@@ -13,26 +14,28 @@ type FriendRequestListProps = {
 
 export function FriendRequestList({
   requests,
-  title = 'Requests',
+  title,
   mode = 'incoming',
   onRespond,
   onBlock,
   onRemove,
 }: FriendRequestListProps) {
+  const t = useTranslation();
+
   if (!requests.length) return null;
 
   return (
     <section aria-labelledby={`home-${mode}-requests-title`}>
       <h2 id={`home-${mode}-requests-title`} className={styles.sectionTitle}>
-        {title}
+        {title ?? t('home.requests.title')}
       </h2>
       <div className={styles.list} role="list">
         {requests.map((request) => (
           <article key={request.id} className={styles.requestCard}>
             <span className={styles.requestName}>
               {mode === 'outgoing'
-                ? (request.receiver?.displayName ?? 'Outgoing request')
-                : (request.requester?.displayName ?? 'Friend request')}
+                ? (request.receiver?.displayName ?? t('home.requests.outgoingFallback'))
+                : (request.requester?.displayName ?? t('home.requests.incomingFallback'))}
             </span>
             <span className={styles.requestActions}>
               {mode === 'incoming' ? (
@@ -44,7 +47,7 @@ export function FriendRequestList({
                     className={styles.requestButton}
                     onClick={() => void onRespond(request, 'ACCEPTED')}
                   >
-                    Accept
+                    {t('home.requests.accept')}
                   </Button>
                   <Button
                     type="button"
@@ -53,7 +56,7 @@ export function FriendRequestList({
                     className={styles.requestButton}
                     onClick={() => void onRespond(request, 'REJECTED')}
                   >
-                    Decline
+                    {t('home.requests.decline')}
                   </Button>
                   {onBlock ? (
                     <Button
@@ -63,7 +66,7 @@ export function FriendRequestList({
                       className={styles.requestButton}
                       onClick={() => void onBlock(request.requesterId)}
                     >
-                      Block
+                      {t('home.friends.block')}
                     </Button>
                   ) : null}
                 </>
@@ -76,7 +79,7 @@ export function FriendRequestList({
                   className={styles.requestButton}
                   onClick={() => void onRemove(request)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               ) : null}
             </span>

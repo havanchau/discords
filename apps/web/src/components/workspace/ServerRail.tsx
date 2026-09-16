@@ -1,6 +1,7 @@
 import { MessageSquare, Plus } from 'lucide-react';
 import type { ServerDetail, ServerSummary } from '../../api';
 import { initials } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { cn } from '../../utils/cn';
 import { Button, Tooltip } from '../ui';
 import styles from './ServerRail.module.css';
@@ -14,14 +15,16 @@ interface ServerRailProps {
 }
 
 export function ServerRail({ servers, server, openHome, openServer, onAddServer }: ServerRailProps) {
+  const t = useTranslation();
+
   return (
-    <nav className={cn(styles.rail, 'server-rail')} aria-label="Servers">
-      <Tooltip content="Direct Messages" side="right">
+    <nav className={cn(styles.rail, 'server-rail')} aria-label={t('serverRail.label')}>
+      <Tooltip content={t('serverRail.directMessages')} side="right">
         <Button
           type="button"
           variant="ghost"
           className={cn(styles.serverButton, !server && styles.serverButtonActive)}
-          aria-label="Direct Messages"
+          aria-label={t('serverRail.directMessages')}
           aria-current={!server ? 'page' : undefined}
           onClick={openHome}
         >
@@ -46,12 +49,12 @@ export function ServerRail({ servers, server, openHome, openServer, onAddServer 
         </Tooltip>
       ))}
 
-      <Tooltip content="Add a server" side="right">
+      <Tooltip content={t('serverRail.addServer')} side="right">
         <Button
           type="button"
           variant="ghost"
           className={cn(styles.serverButton, styles.serverAdd)}
-          aria-label="Add a server"
+          aria-label={t('serverRail.addServer')}
           onClick={onAddServer}
         >
           <Plus size={22} aria-hidden="true" />

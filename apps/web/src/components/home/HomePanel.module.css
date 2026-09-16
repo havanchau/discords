@@ -493,3 +493,11 @@
   background: var(--surface-raised);
   font-size: var(--font-size-sm);
 }
+
+.headerAvatarButton {
+  display: inline-flex;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}

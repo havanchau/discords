@@ -1,5 +1,6 @@
 import { assetUrl } from '../../api';
 import { accentClass, initials } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Avatar, Badge, Button } from '../ui';
 import { CheckRow } from './SettingsRows';
 import { memberHasServerPermission } from '../../utils/serverPermissions';
@@ -32,6 +33,7 @@ export function MemberRolesSettings({
   setActiveDialog,
   toggleMemberRole,
 }: MemberRolesSettingsProps) {
+  const t = useTranslation();
   if (!server || !selectedMember) return null;
 
   const assignedRoles =
@@ -76,7 +78,9 @@ export function MemberRolesSettings({
                 </small>
               ))
             ) : (
-              <small className={cn(styles.memberRoleChip, styles.memberRoleChipMuted)}>No extra roles</small>
+              <small className={cn(styles.memberRoleChip, styles.memberRoleChipMuted)}>
+                {t('roles.noExtraRoles')}
+              </small>
             )}
           </div>
         </div>
@@ -135,7 +139,7 @@ export function MemberRolesSettings({
       ) : null}
       <footer className={styles.settingsModalFooter}>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
-          Done
+          {t('memberRoles.done')}
         </Button>
       </footer>
     </div>

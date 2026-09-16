@@ -293,3 +293,25 @@ Status 2026-09-15: every item below is implemented, with typecheck, lint, and bu
 - [ ] List and revoke active sessions.
 - [ ] Protect login with TOTP two-factor authentication and recovery codes.
 - [ ] Schedule server events with interest tracking.
+
+## Wave 3.1 Backlog — 2026-09-16
+
+Third roadmap wave, first slice. Specs are the contract; implementation starts only after they are reviewed. i18n is ordered first because every later feature adds user-facing strings, and `npm run i18n:check` is what stops those strings from being hardcoded.
+
+### Delivery Order
+
+1. Localization: [i18n-localization.md](features/i18n-localization.md).
+2. Identity: [user-profile.md](features/user-profile.md).
+
+### Checklist
+
+Status 2026-09-16: both specs are implemented, with typecheck, lint, build, `check:file-size`,
+`docs:check`, `ui:scan`, and the new `i18n:check` passing. The API paths were exercised against a
+local database (migrations applied, `prisma migrate diff` reports no drift). Items stay unchecked
+until a browser pass has run — see each spec's test plan.
+
+- [ ] Resolve every web, email, push, and API error string from an `en`/`vi` catalog, with `npm run i18n:check` failing on a missed literal or a missing key.
+- [ ] Persist the chosen locale on `User` and resolve it per request, per email, and per push notification.
+- [ ] Add profile banner, pronouns, about me, and expiring custom status to the account profile.
+- [ ] Add per-server nickname and avatar with one shared identity resolver.
+- [ ] Replace the inline member-sidebar popover with a reusable profile card opened from the member list, channel messages, and direct messages.

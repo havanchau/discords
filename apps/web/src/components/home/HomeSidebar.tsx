@@ -6,6 +6,7 @@ import type {
   FriendRequestEntry,
   FriendsSummary,
 } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, TextField } from '../ui';
 import { BlockedUsersList } from './BlockedUsersList';
 import { CreateGroupDialog } from './CreateGroupDialog';
@@ -50,22 +51,23 @@ export function HomeSidebar({
   onStartDirectConversation,
   onCreateGroup,
 }: HomeSidebarProps) {
+  const t = useTranslation();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
   return (
-    <aside className={styles.sidebar} aria-label="Direct messages navigation">
+    <aside className={styles.sidebar} aria-label={t('home.nav.label')}>
       <header className={styles.sidebarHeader}>
-        <strong className={styles.sidebarTitle}>Direct Messages</strong>
-        <span className={styles.sidebarKicker}>Friends and private chats</span>
+        <strong className={styles.sidebarTitle}>{t('home.title')}</strong>
+        <span className={styles.sidebarKicker}>{t('home.kicker')}</span>
       </header>
       <form className={styles.addFriendForm} onSubmit={onRequestFriend}>
         <TextField
           className={styles.addFriendInput}
           name="usernameOrEmail"
-          placeholder="Username or email"
+          placeholder={t('home.addFriend.placeholder')}
           minLength={3}
           required
-          aria-label="Username or email"
+          aria-label={t('home.addFriend.placeholder')}
         />
         <Button
           type="submit"
@@ -73,7 +75,7 @@ export function HomeSidebar({
           disabled={pendingAction === 'friend-request'}
         >
           <UserPlus size={15} aria-hidden="true" />
-          Add
+          {t('home.addFriend.action')}
         </Button>
       </form>
 
@@ -89,7 +91,7 @@ export function HomeSidebar({
         onBlock={onBlockUser}
       />
       <FriendRequestList
-        title="Pending sent"
+        title={t('home.requests.pendingSent')}
         mode="outgoing"
         requests={friendsSummary?.pendingOutgoing ?? []}
         onRespond={onRespondFriendRequest}

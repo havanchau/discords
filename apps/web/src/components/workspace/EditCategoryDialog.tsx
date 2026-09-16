@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { ChannelCategory } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, DialogContent, DialogRoot, TextField } from '../ui';
 import styles from './WorkspaceDialogs.module.css';
 
@@ -18,6 +19,7 @@ export function EditCategoryDialog({
   onSave,
   onDelete,
 }: EditCategoryDialogProps) {
+  const t = useTranslation();
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const isPending = Boolean(category && pendingAction === `category-${category.id}`);
 
@@ -52,25 +54,25 @@ export function EditCategoryDialog({
         if (!open) close();
       }}
     >
-      <DialogContent title="Edit category">
+      <DialogContent title={t('category.edit.title')}>
         {category ? (
           <form key={category.id} onSubmit={submit} className={styles.form}>
             <TextField
               name="name"
-              label="Category name"
+              label={t('category.field.name')}
               defaultValue={category.name}
               maxLength={80}
               required
             />
             <TextField
               name="position"
-              label="Position"
+              label={t('category.field.position')}
               type="number"
               min={0}
               defaultValue={category.position}
             />
             <Button type="submit" fullWidth disabled={isPending}>
-              Save category
+              {t('category.action.save')}
             </Button>
             {isConfirmingDelete ? (
               <Button
@@ -80,7 +82,7 @@ export function EditCategoryDialog({
                 disabled={isPending}
                 onClick={() => void confirmDelete()}
               >
-                Confirm delete — channels stay, uncategorized
+                {t('category.action.confirmDelete')}
               </Button>
             ) : (
               <Button
@@ -89,7 +91,7 @@ export function EditCategoryDialog({
                 fullWidth
                 onClick={() => setIsConfirmingDelete(true)}
               >
-                Delete category
+                {t('category.action.delete')}
               </Button>
             )}
           </form>

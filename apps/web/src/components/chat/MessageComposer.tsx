@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Channel } from '../../api';
 import { formatBytes } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, TextField } from '../ui';
 import { EmojiPicker } from './EmojiPicker';
 import styles from './MessageComposer.module.css';
@@ -33,19 +34,20 @@ export function MessageComposer({
   composer,
   messageActions,
 }: MessageComposerProps) {
+  const t = useTranslation();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const isMessageSending = composer.pendingAction === 'send-message';
   const { disabledReason, slowmodeSeconds, retryAfterSeconds } = composer.restriction;
   const isComposerDisabled = !channel || isMessageSending || Boolean(disabledReason);
   const placeholder = !channel
-    ? 'Select a channel'
+    ? t('composer.placeholder.selectChannel')
     : disabledReason
       ? disabledReason
       : retryAfterSeconds > 0
-        ? `Slowmode is enabled. Wait ${retryAfterSeconds}s`
+        ? t('composer.placeholder.slowmodeWait', { seconds: retryAfterSeconds })
         : slowmodeSeconds > 0
-          ? `Message #${channel.name} (slowmode ${slowmodeSeconds}s)`
-          : `Message #${channel.name}, type / for commands`;
+          ? t('composer.placeholder.slowmode', { channel: channel.name, seconds: slowmodeSeconds })
+          : t('composer.placeholder.default', { channel: channel.name });
   const commandSuggestions = getSlashCommandSuggestions(composer.draft).slice(0, 4);
   const parsedCommand = parseSlashCommand(composer.draft);
 
@@ -55,10 +57,11 @@ export function MessageComposer({
         <div className={styles.composerReply} data-testid="composer-reply">
           <Reply size={14} aria-hidden="true" />
           <span>
-            Replying to <strong>{composer.replyingToMessage.author.displayName}</strong>
+            {t('composer.replyingTo')}{' '}
+            <strong>{composer.replyingToMessage.author.displayName}</strong>
           </span>
           <IconButton
-            label="Cancel reply"
+            label={t('composer.cancelReply')}
             variant="ghost"
             onClick={() => messageActions.setReplyingToMessage(null)}
           >
@@ -68,7 +71,7 @@ export function MessageComposer({
       )}
 
       {commandSuggestions.length > 0 && (
-        <div className={styles.commandPopover} role="listbox" aria-label="Slash command suggestions">
+        <div className={styles.commandPopover} role="listbox" aria-label={t('composer.commandSuggestions')}>
           {commandSuggestions.map((command) => (
             <button
               type="button"
@@ -79,12 +82,16 @@ export function MessageComposer({
               <Slash size={14} aria-hidden="true" />
               <span>
                 <strong>/{command.name}</strong>
-                <small>{command.description}</small>
+                <small>{t(command.descriptionKey)}</small>
               </span>
               <code>{command.usage}</code>
             </button>
           ))}
-          {parsedCommand.error ? <div className={styles.commandError}>{parsedCommand.error}</div> : null}
+          {parsedCommand.errorKey ? (
+            <div className={styles.commandError}>
+              {t(parsedCommand.errorKey, parsedCommand.errorVars)}
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -98,7 +105,7 @@ export function MessageComposer({
                 key={`${file.name}-${file.lastModified}-${index}`}
                 className={styles.pendingFile}
                 onClick={() => composer.removeSelectedFile(index)}
-                title="Remove attachment"
+                title={t('composer.removeAttachment')}
               >
                 {isImage ? (
                   <Image size={17} aria-hidden="true" />
@@ -127,7 +134,7 @@ export function MessageComposer({
       />
 
       <IconButton
-        label="Attach file"
+        label={t('composer.attachFile')}
         className={styles.attachButton}
         onClick={() => composer.fileInputRef.current?.click()}
         disabled={isComposerDisabled}
@@ -136,7 +143,7 @@ export function MessageComposer({
       </IconButton>
 
       <IconButton
-        label={composer.isRecordingVoice ? 'Stop voice message' : 'Record voice message'}
+        label={composer.isRecordingVoice ? t('composer.stopVoice') : t('composer.recordVoice')}
         className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
         onClick={composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording}
         disabled={
@@ -149,7 +156,7 @@ export function MessageComposer({
       <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
         <PopoverTrigger asChild>
           <IconButton
-            label="Insert emoji"
+            label={t('composer.insertEmoji')}
             className={styles.attachButton}
             disabled={isComposerDisabled}
           >
@@ -183,7 +190,7 @@ export function MessageComposer({
 
       <IconButton
         type="submit"
-        label="Send message"
+        label={t('composer.sendMessage')}
         className={styles.sendButton}
         disabled={isComposerDisabled || retryAfterSeconds > 0}
         data-testid="composer-send"

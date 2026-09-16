@@ -1,7 +1,9 @@
 import { memo, useState } from 'react';
 import { Edit3, Pin, Reply, SmilePlus, Trash2 } from 'lucide-react';
 import type { DirectMessage } from '../../api';
-import { formatDate, QUICK_REACTIONS } from '../../helpers';
+import { QUICK_REACTIONS } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { extractMarkdownLinks } from '../../utils/markdown';
 import { cn } from '../../utils/cn';
 import { toViewerReactions } from '../../utils/directMessages';
@@ -44,6 +46,8 @@ export const DirectMessageRow = memo(function DirectMessageRow({
   authorName,
   actions,
 }: DirectMessageRowProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -68,10 +72,10 @@ export const DirectMessageRow = memo(function DirectMessageRow({
     >
       <header className={styles.meta}>
         <strong>{authorName}</strong>
-        <span>{formatDate(message.createdAt)}</span>
-        {message.editedAt && !isDeleted ? <span>edited</span> : null}
+        <span>{dates.dateTime(message.createdAt)}</span>
+        {message.editedAt && !isDeleted ? <span>{t('message.edited')}</span> : null}
         {message.pinnedAt && !isDeleted ? (
-          <Pin className={styles.pinnedIcon} size={12} aria-label="Pinned" />
+          <Pin className={styles.pinnedIcon} size={12} aria-label={t('message.pinnedIcon')} />
         ) : null}
       </header>
 
@@ -82,13 +86,13 @@ export const DirectMessageRow = memo(function DirectMessageRow({
           onClick={() => actions.onJumpToMessage(replyTo.id)}
         >
           <Reply size={12} aria-hidden="true" />
-          <strong>{replyTo.author?.displayName ?? 'Message'}</strong>
-          <span>{replyTo.deletedAt ? 'Message deleted' : replyTo.content}</span>
+          <strong>{replyTo.author?.displayName ?? t('message.fallbackAuthor')}</strong>
+          <span>{replyTo.deletedAt ? t('message.deleted') : replyTo.content}</span>
         </button>
       ) : null}
 
       {isDeleted ? (
-        <p className={cn(styles.body, styles.deleted)}>Message deleted</p>
+        <p className={cn(styles.body, styles.deleted)}>{t('message.deleted')}</p>
       ) : isEditing ? (
         <form
           className={styles.editRow}
@@ -103,16 +107,16 @@ export const DirectMessageRow = memo(function DirectMessageRow({
             onKeyDown={(event) => {
               if (event.key === 'Escape') setIsEditing(false);
             }}
-            aria-label="Edit message"
+            aria-label={t('message.edit.ariaLabel')}
             autoComplete="off"
             maxLength={4000}
             autoFocus
           />
           <Button type="submit" size="sm">
-            Save
+            {t('common.save')}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </form>
       ) : (
@@ -137,7 +141,10 @@ export const DirectMessageRow = memo(function DirectMessageRow({
               type="button"
               className={reaction.me ? styles.reactionActive : undefined}
               aria-pressed={reaction.me}
-              aria-label={`${reaction.emoji} ${reaction.count}`}
+              aria-label={t('message.reaction.ariaLabel', {
+                emoji: reaction.emoji,
+                count: reaction.count,
+              })}
               onClick={() => void actions.onReact(message.id, reaction.emoji)}
             >
               <span>{reaction.emoji}</span>
@@ -149,14 +156,18 @@ export const DirectMessageRow = memo(function DirectMessageRow({
 
       {!isDeleted && !isEditing ? (
         <div className={cn(styles.actions, isEmojiOpen && styles.actionsVisible)}>
-          <Tooltip content="Reply">
-            <IconButton label="Reply" size="sm" onClick={() => actions.onReply(message)}>
+          <Tooltip content={t('message.action.reply')}>
+            <IconButton
+              label={t('message.action.reply')}
+              size="sm"
+              onClick={() => actions.onReply(message)}
+            >
               <Reply size={14} aria-hidden="true" />
             </IconButton>
           </Tooltip>
           <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
             <PopoverTrigger asChild>
-              <IconButton label="Add reaction" size="sm">
+              <IconButton label={t('message.action.addReaction')} size="sm">
                 <SmilePlus size={14} aria-hidden="true" />
               </IconButton>
             </PopoverTrigger>
@@ -166,7 +177,7 @@ export const DirectMessageRow = memo(function DirectMessageRow({
                   <button
                     key={emoji}
                     type="button"
-                    aria-label={`React with ${emoji}`}
+                    aria-label={t('message.reaction.reactWith', { emoji })}
                     onClick={() => {
                       setIsEmojiOpen(false);
                       void actions.onReact(message.id, emoji);
@@ -178,9 +189,9 @@ export const DirectMessageRow = memo(function DirectMessageRow({
               </div>
             </PopoverContent>
           </PopoverRoot>
-          <Tooltip content={message.pinnedAt ? 'Unpin message' : 'Pin message'}>
+          <Tooltip content={message.pinnedAt ? t('message.action.unpin') : t('message.action.pin')}>
             <IconButton
-              label={message.pinnedAt ? 'Unpin message' : 'Pin message'}
+              label={message.pinnedAt ? t('message.action.unpin') : t('message.action.pin')}
               size="sm"
               aria-pressed={Boolean(message.pinnedAt)}
               onClick={() => void actions.onTogglePin(message.id)}
@@ -190,9 +201,9 @@ export const DirectMessageRow = memo(function DirectMessageRow({
           </Tooltip>
           {isMine ? (
             <>
-              <Tooltip content="Edit message">
+              <Tooltip content={t('message.action.edit')}>
                 <IconButton
-                  label="Edit message"
+                  label={t('message.action.edit')}
                   size="sm"
                   onClick={() => {
                     setEditDraft(message.content);
@@ -202,9 +213,9 @@ export const DirectMessageRow = memo(function DirectMessageRow({
                   <Edit3 size={14} aria-hidden="true" />
                 </IconButton>
               </Tooltip>
-              <Tooltip content="Delete message">
+              <Tooltip content={t('message.action.delete')}>
                 <IconButton
-                  label="Delete message"
+                  label={t('message.action.delete')}
                   size="sm"
                   variant="danger"
                   onClick={() => void actions.onDelete(message.id)}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiRequest, AuthState, OAuthProviderName, oauthStartUrl } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 export interface TwoFactorRequiredResponse {
   twoFactorRequired: true;
@@ -30,6 +31,7 @@ export function useOAuthSignIn({
   onTwoFactorRequired,
   onError,
 }: UseOAuthSignInOptions) {
+  const t = useTranslation();
   const [providers, setProviders] = useState<OAuthProviderAvailability>({
     google: false,
     facebook: false,
@@ -82,7 +84,7 @@ export function useOAuthSignIn({
         }
         onSignedIn(result);
       } catch (err) {
-        onError(err instanceof Error ? err.message : 'Sign-in failed');
+        onError(err instanceof Error ? err.message : t('error.fallback.sign-in-failed'));
       }
     }
     if (code) void exchangeCode(code);

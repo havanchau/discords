@@ -1,15 +1,22 @@
+import type { MessageKey } from '../i18n/LocaleProvider';
+
 export interface SlashCommandDefinition {
   name: string;
-  description: string;
+  descriptionKey: MessageKey;
   usage: string;
   owner: 'client' | 'server';
 }
 
 export const SLASH_COMMANDS: SlashCommandDefinition[] = [
-  { name: 'me', description: 'Send an action-style message.', usage: '/me waves hello', owner: 'client' },
-  { name: 'nick', description: 'Update your server nickname.', usage: '/nick New nickname', owner: 'server' },
-  { name: 'poll', description: 'Create a lightweight poll prompt.', usage: '/poll Favorite color? | Red | Blue', owner: 'client' },
-  { name: 'invite', description: 'Create and send an invite code.', usage: '/invite', owner: 'server' },
+  { name: 'me', descriptionKey: 'slash.me.description', usage: '/me waves hello', owner: 'client' },
+  { name: 'nick', descriptionKey: 'slash.nick.description', usage: '/nick New nickname', owner: 'server' },
+  {
+    name: 'poll',
+    descriptionKey: 'slash.poll.description',
+    usage: '/poll Favorite color? | Red | Blue',
+    owner: 'client',
+  },
+  { name: 'invite', descriptionKey: 'slash.invite.description', usage: '/invite', owner: 'server' },
 ];
 
 export interface ParsedSlashCommand {
@@ -17,7 +24,9 @@ export interface ParsedSlashCommand {
   name: string;
   args: string;
   definition?: SlashCommandDefinition;
-  error?: string;
+  /** Callers translate this; the parser has no locale of its own. */
+  errorKey?: MessageKey;
+  errorVars?: Record<string, string>;
 }
 
 export function parseSlashCommand(input: string): ParsedSlashCommand {
@@ -25,9 +34,10 @@ export function parseSlashCommand(input: string): ParsedSlashCommand {
   const [rawName = '', ...rest] = input.slice(1).trimStart().split(/\s+/);
   const name = rawName.toLowerCase();
   const args = rest.join(' ').trim();
-  if (!name) return { isCommand: true, name: '', args: '', error: 'Type a command name.' };
+  if (!name) return { isCommand: true, name: '', args: '', errorKey: 'slash.error.noName' };
   const definition = SLASH_COMMANDS.find((command) => command.name === name);
-  if (!definition) return { isCommand: true, name, args, error: `Unknown command /${name}.` };
+  if (!definition)
+    return { isCommand: true, name, args, errorKey: 'slash.error.unknown', errorVars: { name } };
   return { isCommand: true, name, args, definition };
 }
 

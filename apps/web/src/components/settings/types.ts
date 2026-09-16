@@ -1,4 +1,4 @@
-import type { FormEvent, RefObject } from 'react';
+import type { ChangeEvent, FormEvent, RefObject } from 'react';
 import type {
   AuditLogEntry,
   AuthState,
@@ -41,9 +41,16 @@ export interface SettingsModalFields {
   emojisError: string | null;
   uiTheme: UiTheme;
   profileAvatarInputRef: RefObject<HTMLInputElement | null>;
+  profileBannerInputRef: RefObject<HTMLInputElement | null>;
   channelAvatarInputRef: RefObject<HTMLInputElement | null>;
   setActiveDialog: (dialog: ActiveDialog) => void;
   updateProfile: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  updateProfileBanner: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
+  updateServerProfile: (changes: {
+    nickname?: string | null;
+    avatarUrl?: string | null;
+  }) => Promise<void>;
+  updateServerProfileAvatar: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   createInviteFromSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   revokeInvite: (inviteId: string) => Promise<void>;
   updateNotificationPreference: (
@@ -101,7 +108,10 @@ export interface SettingsModalProps {
     | 'isLoadingEmojis'
     | 'emojisError'
   >;
-  refs: Pick<SettingsModalFields, 'profileAvatarInputRef' | 'channelAvatarInputRef'>;
+  refs: Pick<
+    SettingsModalFields,
+    'profileAvatarInputRef' | 'profileBannerInputRef' | 'channelAvatarInputRef'
+  >;
   theme: Pick<SettingsModalFields, 'uiTheme'>;
   actions: Pick<
     SettingsModalFields,
@@ -110,6 +120,9 @@ export interface SettingsModalProps {
     | 'createInviteFromSettings'
     | 'revokeInvite'
     | 'updateProfile'
+    | 'updateProfileBanner'
+    | 'updateServerProfile'
+    | 'updateServerProfileAvatar'
     | 'updateNotificationPreference'
     | 'updateServerSettings'
     | 'updateChannelSettings'

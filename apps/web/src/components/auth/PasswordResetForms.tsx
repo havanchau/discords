@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, Lock, Mail } from 'lucide-react';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, TextField } from '../ui';
 import styles from '../AuthScreen.module.css';
 
@@ -12,23 +13,25 @@ interface ForgotPasswordFormProps {
 }
 
 export function ForgotPasswordForm({ isSubmitting, onSubmit, onBack }: ForgotPasswordFormProps) {
+  const t = useTranslation();
+
   return (
     <form onSubmit={onSubmit} className={styles.fields}>
       <TextField
-        label="Email"
+        label={t('auth.field.email')}
         name="email"
         type="email"
         required
         autoComplete="email"
-        placeholder="you@example.com"
+        placeholder={t('auth.field.emailPlaceholder')}
         leadingIcon={<Mail size={18} aria-hidden="true" />}
       />
       <Button type="submit" fullWidth disabled={isSubmitting}>
-        Send reset link
+        {t('auth.action.sendResetLink')}
       </Button>
       <Button type="button" variant="ghost" fullWidth onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" />
-        Back to sign in
+        {t('auth.backToSignIn')}
       </Button>
     </form>
   );
@@ -41,6 +44,7 @@ interface ResetPasswordFormProps {
 }
 
 export function ResetPasswordForm({ isSubmitting, onSubmit, onBack }: ResetPasswordFormProps) {
+  const t = useTranslation();
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const mismatch = Boolean(confirmation) && confirmation !== password;
@@ -48,7 +52,7 @@ export function ResetPasswordForm({ isSubmitting, onSubmit, onBack }: ResetPassw
   return (
     <form onSubmit={onSubmit} className={styles.fields}>
       <TextField
-        label="New password"
+        label={t('auth.field.newPassword')}
         name="password"
         type="password"
         required
@@ -56,27 +60,27 @@ export function ResetPasswordForm({ isSubmitting, onSubmit, onBack }: ResetPassw
         maxLength={128}
         autoComplete="new-password"
         pattern={PASSWORD_PATTERN}
-        hint="At least 8 characters, with uppercase, lowercase, a number, and a symbol."
+        hint={t('auth.field.passwordHint')}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         leadingIcon={<Lock size={18} aria-hidden="true" />}
       />
       <TextField
-        label="Confirm new password"
+        label={t('auth.field.confirmNewPassword')}
         type="password"
         required
         autoComplete="new-password"
         value={confirmation}
-        error={mismatch ? 'Passwords do not match.' : undefined}
+        error={mismatch ? t('auth.error.passwordMismatch') : undefined}
         onChange={(event) => setConfirmation(event.target.value)}
         leadingIcon={<Lock size={18} aria-hidden="true" />}
       />
       <Button type="submit" fullWidth disabled={isSubmitting || mismatch || !confirmation}>
-        Update password
+        {t('auth.action.updatePassword')}
       </Button>
       <Button type="button" variant="ghost" fullWidth onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" />
-        Back to sign in
+        {t('auth.backToSignIn')}
       </Button>
     </form>
   );

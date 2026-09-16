@@ -1,4 +1,5 @@
 import { apiRequest, type AuthState, type Channel, type ServerDetail } from '../api';
+import type { Translate } from '../i18n/LocaleProvider';
 import { parseSlashCommand } from './slashCommands';
 
 interface ExecuteSlashCommandOptions {
@@ -10,6 +11,7 @@ interface ExecuteSlashCommandOptions {
   clearDraft: () => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
+  t: Translate;
 }
 
 export type SlashCommandExecutionResult =
@@ -25,17 +27,21 @@ export async function executeSlashCommand({
   clearDraft,
   setWorkspaceError,
   setWorkspaceNotice,
+  t,
 }: ExecuteSlashCommandOptions): Promise<SlashCommandExecutionResult> {
   const command = parseSlashCommand(content);
   if (!command.isCommand) return { handled: false, content };
 
-  if (command.error) {
-    setWorkspaceError(command.error);
+  if (command.errorKey) {
+    setWorkspaceError(t(command.errorKey, command.errorVars));
     return { handled: true };
   }
 
   if (command.name === 'me') {
-    return { handled: false, content: `*${auth.user.displayName} ${command.args || 'is here.'}*` };
+    return {
+      handled: false,
+      content: `*${auth.user.displayName} ${command.args || t('slash.me.default')}*`,
+    };
   }
 
   if (command.name === 'poll') {
@@ -47,7 +53,7 @@ export async function executeSlashCommand({
       handled: false,
       content: options.length
         ? `📊 ${question}\n${options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`
-        : `📊 ${command.args || 'New poll'}`,
+        : `📊 ${command.args || t('slash.poll.default')}`,
     };
   }
 
@@ -60,7 +66,11 @@ export async function executeSlashCommand({
       auth.accessToken,
     );
     await openServer(server.id, auth.accessToken, channel?.id);
-    setWorkspaceNotice(command.args ? `Nickname updated to ${command.args}.` : 'Nickname cleared.');
+    setWorkspaceNotice(
+      command.args
+        ? t('slash.nick.updated', { nickname: command.args })
+        : t('slash.nick.cleared'),
+    );
     clearDraft();
     return { handled: true };
   }
@@ -71,7 +81,7 @@ export async function executeSlashCommand({
       { method: 'POST', body: JSON.stringify({ channelId: channel?.id }) },
       auth.accessToken,
     );
-    return { handled: false, content: `Invite code: ${result.invite.code}` };
+    return { handled: false, content: t('slash.invite.content', { code: result.invite.code }) };
   }
 
   return { handled: false, content };

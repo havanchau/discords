@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import { apiRequest, AuthState, ServerEmoji, uploadFile } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 export const MAX_EMOJI_BYTES = 256 * 1024;
 const EMOJI_MIME_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
@@ -14,6 +15,7 @@ interface UseServerEmojisOptions {
 
 /** The open server's custom emoji, refreshed when anyone adds or removes one. */
 export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptions) {
+  const t = useTranslation();
   const [emojis, setEmojis] = useState<ServerEmoji[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptio
         if (serverIdRef.current === targetServerId) setEmojis(result.emojis);
       } catch (err) {
         if (serverIdRef.current === targetServerId) {
-          setError(err instanceof Error ? err.message : 'Cannot load emoji');
+          setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-emoji'));
         }
       } finally {
         if (serverIdRef.current === targetServerId) setIsLoading(false);
@@ -65,11 +67,11 @@ export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptio
   async function createEmoji(file: File, name: string) {
     if (!token || !serverId) return false;
     if (!EMOJI_MIME_TYPES.includes(file.type)) {
-      setError('Emoji must be a PNG, GIF, WEBP, or JPEG image.');
+      setError(t('emoji.error.type'));
       return false;
     }
     if (file.size > MAX_EMOJI_BYTES) {
-      setError('Emoji images must be 256 KB or smaller.');
+      setError(t('emoji.error.size'));
       return false;
     }
     setError(null);
@@ -87,7 +89,7 @@ export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptio
       );
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot add emoji');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-add-emoji'));
       return false;
     }
   }
@@ -99,7 +101,7 @@ export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptio
       await apiRequest(`/servers/${serverId}/emojis/${emojiId}`, { method: 'DELETE' }, token);
       setEmojis((current) => current.filter((emoji) => emoji.id !== emojiId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot delete emoji');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-emoji'));
     }
   }
 

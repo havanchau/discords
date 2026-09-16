@@ -3,4 +3,5 @@ export interface RequestUser {
   email: string;
   username: string;
   sessionId: string;
+  locale: string | null;
 }

@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type { Socket } from 'socket.io-client';
 import { apiRequest, AuthState, Channel, Message } from '../api';
-import type { ChatPanelMessageActions } from '../components/chat/types';
+import type { ChannelMessageActions } from '../components/chat/types';
 import { encryptChannelMessage } from '../e2ee';
 
 interface UseChannelMessageActionsOptions {
@@ -130,7 +130,7 @@ export function useChannelMessageActions({
     [auth, socket, channel, decryptMessageForDisplay, setMessages],
   );
 
-  const messageActions = useMemo<ChatPanelMessageActions>(
+  const messageActions = useMemo<ChannelMessageActions>(
     () => ({
       editingMessageId,
       editingDraft,

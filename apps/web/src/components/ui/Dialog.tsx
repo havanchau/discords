@@ -2,6 +2,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { cn } from '../../utils/cn';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { IconButton } from './Button';
 import styles from './Dialog.module.css';
 
@@ -26,6 +27,8 @@ export function DialogContent({
   children,
   ...props
 }: DialogContentProps) {
+  const t = useTranslation();
+
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay className={styles.overlay} />
@@ -40,7 +43,7 @@ export function DialogContent({
             ) : null}
           </div>
           <RadixDialog.Close asChild>
-            <IconButton label="Close dialog">
+            <IconButton label={t('dialog.close')}>
               <X size={18} aria-hidden="true" />
             </IconButton>
           </RadixDialog.Close>

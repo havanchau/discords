@@ -1,10 +1,11 @@
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { MessageSquare, Phone, Users, Video } from 'lucide-react';
 import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '../../api';
 import { directCallId } from '../../hooks/useDirectCall';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { cn } from '../../utils/cn';
 import { CallStage } from '../chat/CallStage';
-import { Button, IconButton, Tooltip } from '../ui';
+import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, Tooltip } from '../ui';
 import { DirectMessageComposer } from './DirectMessageComposer';
 import type { DirectMessageRowActions } from './DirectMessageRow';
 import { DirectMessageTimeline, jumpToDirectMessage } from './DirectMessageTimeline';
@@ -12,6 +13,7 @@ import { DirectPinnedMessages } from './DirectPinnedMessages';
 import { conversationDisplayName, conversationPartners } from './conversationDisplay';
 import { GroupConversationMenu } from './GroupConversationMenu';
 import { UserAvatar } from './UserAvatar';
+import { ProfileCard } from '../profile/ProfileCard';
 import type { HomeDirectCall, HomePanelActions, HomePanelState } from './types';
 import styles from './HomePanel.module.css';
 
@@ -55,6 +57,8 @@ export function HomeDirectMessageView({
   call,
   onSendDirectMessage,
 }: HomeDirectMessageViewProps) {
+  const t = useTranslation();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const partners = activeConversation ? conversationPartners(activeConversation, auth.user.id) : [];
   const dmPartner = partners[0];
   const isGroup = Boolean(activeConversation?.isGroup);
@@ -84,7 +88,7 @@ export function HomeDirectMessageView({
   return (
     <main
       className={cn(styles.chat, !activeConversation && styles.chatEmpty)}
-      aria-label="Direct message thread"
+      aria-label={t('dm.threadLabel')}
     >
       {activeConversation && (isGroup || dmPartner) ? (
         <>
@@ -94,17 +98,40 @@ export function HomeDirectMessageView({
                 <Users size={16} />
               </span>
             ) : (
-              <UserAvatar user={dmPartner} />
+              <PopoverRoot open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={styles.headerAvatarButton}
+                    aria-label={t('members.viewProfile', { name: dmPartner.displayName })}
+                  >
+                    <UserAvatar user={dmPartner} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="start">
+                  <ProfileCard
+                    accessToken={auth.accessToken}
+                    userId={dmPartner.id}
+                    viewerId={auth.user.id}
+                    isOpen={isProfileOpen}
+                  />
+                </PopoverContent>
+              </PopoverRoot>
             )}
             <span className={styles.headerText}>
               <strong className={styles.headerName}>{title}</strong>
               <span className={styles.headerHandle}>
-                {isGroup ? `${partners.length + 1} members` : `@${dmPartner?.username}`}
+                {isGroup
+                  ? t('dm.header.memberCount', { count: partners.length + 1 })
+                  : `@${dmPartner?.username}`}
               </span>
             </span>
             <span className={styles.headerActions}>
               {(['voice', 'video'] as const).map((mode) => {
-                const label = mode === 'voice' ? 'Start voice call' : 'Start video call';
+                const label =
+                  mode === 'voice'
+                    ? t('chatHeader.startVoiceCall')
+                    : t('chatHeader.startVideoCall');
                 const Icon = mode === 'voice' ? Phone : Video;
                 return (
                   <Tooltip key={mode} content={label}>
@@ -142,15 +169,16 @@ export function HomeDirectMessageView({
           </header>
           {isRinging ? (
             <div className={styles.ringingBanner} role="status">
-              <span>Calling {title}…</span>
+              <span>{t('dm.calling', { name: title })}</span>
               <Button type="button" size="sm" variant="danger" onClick={call.end}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           ) : null}
           {isInThisCall || (activeCall && !call.state) ? (
             <CallStage
-              session={{ auth, channel: null }}
+              // Direct messages are not server-scoped, so there are no per-server identities.
+              session={{ auth, channel: null, memberIdentities: {} }}
               contextLabel={title}
               call={{
                 state: isInThisCall ? call.state : null,
@@ -186,8 +214,8 @@ export function HomeDirectMessageView({
       ) : (
         <div className={styles.statePanel}>
           <MessageSquare size={28} aria-hidden="true" />
-          <strong className={styles.statePanelTitle}>Your direct messages</strong>
-          <span className={styles.statePanelCopy}>Add a friend or select a recent DM.</span>
+          <strong className={styles.statePanelTitle}>{t('dm.emptyTitle')}</strong>
+          <span className={styles.statePanelCopy}>{t('dm.emptyCopy')}</span>
         </div>
       )}
     </main>

@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { assetUrl, type Channel, type ChannelCategory } from '../../api';
 import { accentClass, initials } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { cn } from '../../utils/cn';
 import {
   Badge,
@@ -51,6 +52,7 @@ export function ChannelSidebar({
   onOpenEvents,
   serverEvents,
 }: ChannelSidebarProps) {
+  const t = useTranslation();
   const {
     auth,
     server,
@@ -93,7 +95,7 @@ export function ChannelSidebar({
               {activeCalls[item.id].participants.map((participant) => (
                 <span key={participant.socketId}>
                   {participant.displayName}
-                  {participant.isMuted ? ' · muted' : ''}
+                  {participant.isMuted ? t('sidebar.voiceMutedSuffix') : ''}
                 </span>
               ))}
             </div>
@@ -117,7 +119,9 @@ export function ChannelSidebar({
   return (
     <aside
       className={cn(styles.sidebar, 'channel-sidebar')}
-      aria-label={server ? `${server.name} channels` : 'Direct messages'}
+      aria-label={
+        server ? t('sidebar.serverChannels', { server: server.name }) : t('sidebar.directMessages')
+      }
     >
       <div className={styles.header}>
         {server ? (
@@ -131,17 +135,17 @@ export function ChannelSidebar({
             <DropdownMenuContent align="start" side="bottom">
               <DropdownMenuItem onSelect={() => setTimeout(() => setActiveDialog('server-settings'), 0)}>
                 <Settings size={16} aria-hidden="true" />
-                Server settings
+                {t('sidebar.menu.serverSettings')}
               </DropdownMenuItem>
               {canManageChannels ? (
                 <DropdownMenuItem onSelect={() => setTimeout(onCreateCategory, 0)}>
                   <FolderPlus size={16} aria-hidden="true" />
-                  Create category
+                  {t('sidebar.menu.createCategory')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem onSelect={() => setTimeout(onOpenEvents, 0)}>
                 <CalendarDays size={16} aria-hidden="true" />
-                Events
+                {t('sidebar.menu.events')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={pendingAction === 'create-invite'}
@@ -152,12 +156,12 @@ export function ChannelSidebar({
                 ) : (
                   <UserPlus size={16} aria-hidden="true" />
                 )}
-                Invite people
+                {t('sidebar.menu.invitePeople')}
               </DropdownMenuItem>
               {inviteCode ? (
                 <>
                   <DropdownMenuSeparator />
-                  <span className={styles.menuHint}>Invite is ready to paste</span>
+                  <span className={styles.menuHint}>{t('sidebar.menu.inviteReady')}</span>
                 </>
               ) : null}
             </DropdownMenuContent>
@@ -170,7 +174,7 @@ export function ChannelSidebar({
             onClick={openHome}
           >
             <MessageSquare size={16} aria-hidden="true" />
-            <strong>Direct messages</strong>
+            <strong>{t('sidebar.directMessages')}</strong>
           </Button>
         )}
 
@@ -178,7 +182,7 @@ export function ChannelSidebar({
           <Loader2 className="spin" size={16} aria-hidden="true" />
         ) : server ? (
           <IconButton
-            label="Search channels"
+            label={t('sidebar.searchChannels')}
             aria-pressed={isSearchOpen}
             onClick={() => {
               // Closing the field also clears the filter, so the list never stays silently
@@ -197,8 +201,8 @@ export function ChannelSidebar({
           <TextField
             value={channelQuery}
             onChange={(event) => setChannelQuery(event.target.value)}
-            placeholder="Browse channels"
-            aria-label="Browse channels"
+            placeholder={t('sidebar.browseChannels')}
+            aria-label={t('sidebar.browseChannels')}
             autoFocus
             leadingIcon={<Search size={16} aria-hidden="true" />}
           />
@@ -217,35 +221,40 @@ export function ChannelSidebar({
                 data-testid="events-row"
               >
                 <CalendarDays size={16} aria-hidden="true" />
-                <span className={styles.channelName}>Events</span>
-                <Badge variant="neutral" aria-label={`${serverEvents.events.length} upcoming events`}>
+                <span className={styles.channelName}>{t('sidebar.menu.events')}</span>
+                <Badge
+                  variant="neutral"
+                  aria-label={t('sidebar.upcomingEvents', { count: serverEvents.events.length })}
+                >
                   {serverEvents.events.length}
                 </Badge>
               </Button>
             ) : null}
             <ChannelGroup
-              title="Text channels"
-              createLabel="Create text channel"
+              title={t('sidebar.textChannels')}
+              createLabel={t('sidebar.createTextChannel')}
               onCreate={() => onCreateChannel('TEXT')}
             >
               {grouped.uncategorizedText.length ? (
                 grouped.uncategorizedText.map(renderChannel)
               ) : (
                 <p className={styles.emptyNote}>
-                  {grouped.categories.length ? 'No uncategorized text channels.' : 'No text channels match.'}
+                  {grouped.categories.length
+                    ? t('sidebar.noUncategorizedText')
+                    : t('sidebar.noTextChannelsMatch')}
                 </p>
               )}
             </ChannelGroup>
 
             <ChannelGroup
-              title="Voice channels"
-              createLabel="Create voice channel"
+              title={t('sidebar.voiceChannels')}
+              createLabel={t('sidebar.createVoiceChannel')}
               onCreate={() => onCreateChannel('VOICE')}
             >
               {grouped.uncategorizedVoice.length ? (
                 grouped.uncategorizedVoice.map(renderChannel)
               ) : (
-                <p className={styles.emptyNote}>No voice channels yet.</p>
+                <p className={styles.emptyNote}>{t('sidebar.noVoiceChannels')}</p>
               )}
             </ChannelGroup>
 
@@ -261,7 +270,11 @@ export function ChannelSidebar({
                   key={category.id}
                   name={category.name}
                   isCollapsed={isCollapsed}
-                  createLabel={canManageChannels ? `Create channel in ${category.name}` : null}
+                  createLabel={
+                    canManageChannels
+                      ? t('sidebar.createChannelIn', { category: category.name })
+                      : null
+                  }
                   onToggle={() => toggleCategory(category.id)}
                   onCreate={() => onCreateChannel('TEXT', category.id)}
                   onEdit={canManageChannels ? () => onEditCategory(category) : undefined}
@@ -287,8 +300,8 @@ export function ChannelSidebar({
           variant="ghost"
           className={styles.avatarButton}
           onClick={() => profileAvatarInputRef.current?.click()}
-          title="Change profile avatar"
-          aria-label="Change profile avatar"
+          title={t('sidebar.changeAvatar')}
+          aria-label={t('sidebar.changeAvatar')}
           disabled={pendingAction === 'profile-avatar'}
         >
           {auth.user.avatarUrl ? (
@@ -303,10 +316,10 @@ export function ChannelSidebar({
           <strong>{auth.user.displayName}</strong>
           <span>@{auth.user.username}</span>
         </div>
-        <IconButton label="Edit profile" onClick={() => setActiveDialog('profile')}>
+        <IconButton label={t('sidebar.editProfile')} onClick={() => setActiveDialog('profile')}>
           <Edit3 size={16} aria-hidden="true" />
         </IconButton>
-        <IconButton label="Log out" onClick={logout}>
+        <IconButton label={t('sidebar.logOut')} onClick={logout}>
           <LogOut size={16} aria-hidden="true" />
         </IconButton>
       </div>

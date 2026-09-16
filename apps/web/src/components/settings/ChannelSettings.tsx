@@ -1,6 +1,7 @@
 import { Hash } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { assetUrl } from '../../api';
+import { useTranslation, type Translate } from '../../i18n/LocaleProvider';
 import { Button, TextArea, TextField } from '../ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
 import { SettingsSelect } from './SettingsSelect';
@@ -11,22 +12,24 @@ import { cn } from '../../utils/cn';
 type SlowmodeOption =
   | '0' | '5' | '10' | '15' | '30' | '60' | '120' | '300' | '600' | '900' | '1800' | '3600' | '7200' | '21600';
 
-const SLOWMODE_OPTIONS: SettingsSelectOption<SlowmodeOption>[] = [
-  { value: '0', label: 'Off' },
-  { value: '5', label: '5 seconds' },
-  { value: '10', label: '10 seconds' },
-  { value: '15', label: '15 seconds' },
-  { value: '30', label: '30 seconds' },
-  { value: '60', label: '1 minute' },
-  { value: '120', label: '2 minutes' },
-  { value: '300', label: '5 minutes' },
-  { value: '600', label: '10 minutes' },
-  { value: '900', label: '15 minutes' },
-  { value: '1800', label: '30 minutes' },
-  { value: '3600', label: '1 hour' },
-  { value: '7200', label: '2 hours' },
-  { value: '21600', label: '6 hours' },
-];
+function slowmodeOptions(t: Translate): SettingsSelectOption<SlowmodeOption>[] {
+  return [
+    { value: '0', label: t('channel.slowmode.off') },
+    { value: '5', label: t('channel.slowmode.5s') },
+    { value: '10', label: t('channel.slowmode.10s') },
+    { value: '15', label: t('channel.slowmode.15s') },
+    { value: '30', label: t('channel.slowmode.30s') },
+    { value: '60', label: t('channel.slowmode.1m') },
+    { value: '120', label: t('channel.slowmode.2m') },
+    { value: '300', label: t('channel.slowmode.5m') },
+    { value: '600', label: t('channel.slowmode.10m') },
+    { value: '900', label: t('channel.slowmode.15m') },
+    { value: '1800', label: t('channel.slowmode.30m') },
+    { value: '3600', label: t('channel.slowmode.1h') },
+    { value: '7200', label: t('channel.slowmode.2h') },
+    { value: '21600', label: t('channel.slowmode.6h') },
+  ];
+}
 
 type ChannelSettingsProps = Pick<
   SettingsModalFields,
@@ -52,6 +55,7 @@ export function ChannelSettings({
   toggleChannelMemberOverride,
   updateChannelSettings,
 }: ChannelSettingsProps) {
+  const t = useTranslation();
   const members = server?.members ?? [];
   const [selectedMemberId, setSelectedMemberId] = useState(() => members[0]?.id ?? '');
   const selectedMember = useMemo(
@@ -65,8 +69,8 @@ export function ChannelSettings({
     <form className={styles.settingsForm} onSubmit={updateChannelSettings}>
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Overview</strong>
-          <span>Basic channel identity and placement.</span>
+          <strong>{t('channel.section.overview')}</strong>
+          <span>{t('channel.section.overviewHint')}</span>
         </div>
         <div className={styles.settingsAvatarRow}>
           <Button
@@ -87,19 +91,19 @@ export function ChannelSettings({
             fullWidth
             onClick={() => channelAvatarInputRef.current?.click()}
           >
-            Change channel avatar
+            {t('channel.changeAvatar')}
           </Button>
         </div>
         <div className={styles.settingsGrid}>
           <TextField
-            label="Channel name"
+            label={t('channel.field.name')}
             name="name"
             defaultValue={channel.name}
             maxLength={80}
             required
           />
           <TextField
-            label="Position"
+            label={t('channel.field.position')}
             name="position"
             type="number"
             min={0}
@@ -109,39 +113,39 @@ export function ChannelSettings({
         {server?.categories?.length ? (
           <SettingsSelect
             name="categoryId"
-            label="Category"
+            label={t('channel.field.category')}
             defaultValue={channel.categoryId ?? ''}
             options={[
-              { value: '', label: 'No category' },
+              { value: '', label: t('channel.field.noCategory') },
               ...server.categories.map((category) => ({ value: category.id, label: category.name })),
             ]}
           />
         ) : null}
-        <TextArea label="Topic" name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
+        <TextArea label={t('channel.field.topic')} name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
         {channel.type === 'TEXT' ? (
           <SettingsSelect
             name="slowmodeSeconds"
-            label="Slowmode"
+            label={t('channel.field.slowmode')}
             defaultValue={String(channel.slowmodeSeconds ?? 0) as SlowmodeOption}
-            options={SLOWMODE_OPTIONS}
+            options={slowmodeOptions(t)}
           />
         ) : null}
       </section>
 
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Access</strong>
-          <span>Control channel visibility for regular members.</span>
+          <strong>{t('channel.section.access')}</strong>
+          <span>{t('channel.section.accessHint')}</span>
         </div>
         <SwitchRow
           name="isPrivate"
-          title="Private channel"
-          description="Hide this channel from members without view permission."
+          title={t('channel.private.title')}
+          description={t('channel.private.hint')}
           defaultChecked={Boolean(channel.isPrivate)}
         />
         <TextField
-          label="Channel type"
-          value={channel.type === 'VOICE' ? 'Voice channel' : 'Text channel'}
+          label={t('channel.field.type')}
+          value={channel.type === 'VOICE' ? t('channel.type.voice') : t('channel.type.text')}
           readOnly
           className={styles.readonlyInput}
         />
@@ -150,8 +154,8 @@ export function ChannelSettings({
       {server ? (
         <section className={styles.settingsSection}>
           <div className={styles.settingsSectionHeading}>
-            <strong>Role overrides</strong>
-            <span>Grant specific roles access to private or restricted channels.</span>
+            <strong>{t('channel.roleOverrides.title')}</strong>
+            <span>{t('channel.roleOverrides.hint')}</span>
           </div>
           <div className={styles.permissionOverrideList}>
             {server.roles.map((role) => {
@@ -164,29 +168,29 @@ export function ChannelSettings({
                 <div className={styles.permissionOverrideRow} key={role.id}>
                   <div>
                     <strong style={{ color: role.color || undefined }}>{role.name}</strong>
-                    <span>{role.name === '@everyone' ? 'Default role' : 'Role access'}</span>
+                    <span>{role.name === '@everyone' ? t('channel.role.default') : t('channel.role.access')}</span>
                   </div>
                   <CheckRow
                     className={styles.miniCheck}
-                    label={`Allow ${role.name} to view channel`}
+                    label={t('channel.override.allowView', { name: role.name })}
                     checked={canView}
                     disabled={disabled}
                     onCheckedChange={(checked) =>
                       void toggleChannelRoleOverride(role.id, 'VIEW_CHANNEL', checked)
                     }
                   >
-                    View
+                    {t('channel.override.view')}
                   </CheckRow>
                   <CheckRow
                     className={styles.miniCheck}
-                    label={`Allow ${role.name} to send messages`}
+                    label={t('channel.override.allowSend', { name: role.name })}
                     checked={canSend}
                     disabled={disabled}
                     onCheckedChange={(checked) =>
                       void toggleChannelRoleOverride(role.id, 'SEND_MESSAGES', checked)
                     }
                   >
-                    Send
+                    {t('channel.override.send')}
                   </CheckRow>
                 </div>
               );
@@ -194,17 +198,14 @@ export function ChannelSettings({
           </div>
 
           <div className={cn(styles.settingsSectionHeading, styles.memberOverrideHeading)}>
-            <strong>Member overrides</strong>
-            <span>
-              Allow or deny channel access for one member. Member rules take priority over role
-              rules.
-            </span>
+            <strong>{t('channel.memberOverrides.title')}</strong>
+            <span>{t('channel.memberOverrides.hint')}</span>
           </div>
           {members.length ? (
             <div className={styles.memberOverridePanel}>
               <SettingsSelect
                 name="channelOverrideMemberId"
-                label="Select member"
+                label={t('channel.memberOverrides.select')}
                 defaultValue={selectedMember?.id ?? members[0].id}
                 options={members.map((member) => ({
                   value: member.id,
@@ -232,22 +233,30 @@ export function ChannelSettings({
                           <strong>{memberName}</strong>
                           <span>
                             {override?.allow.length || override?.deny.length
-                              ? 'Custom channel permissions configured'
-                              : 'Using role permissions'}
+                              ? t('channel.memberOverrides.custom')
+                              : t('channel.memberOverrides.inherited')}
                           </span>
                         </div>
                         <div
                           className={styles.memberOverrideGrid}
                           role="group"
-                          aria-label={`Member overrides for ${memberName}`}
+                          aria-label={t('channel.memberOverrides.gridLabel', { name: memberName })}
                         >
-                          <span className={styles.memberOverridePermission}>Permission</span>
-                          <span className={styles.memberOverrideChoice}>Allow</span>
-                          <span className={styles.memberOverrideChoice}>Deny</span>
-                          <span className={styles.memberOverridePermission}>View channel</span>
+                          <span className={styles.memberOverridePermission}>
+                            {t('channel.memberOverrides.permission')}
+                          </span>
+                          <span className={styles.memberOverrideChoice}>
+                            {t('channel.memberOverrides.allow')}
+                          </span>
+                          <span className={styles.memberOverrideChoice}>
+                            {t('channel.memberOverrides.deny')}
+                          </span>
+                          <span className={styles.memberOverridePermission}>
+                            {t('channel.memberOverrides.viewChannel')}
+                          </span>
                           <CheckRow
                             className={styles.miniCheck}
-                            label={`Allow ${memberName} to view channel`}
+                            label={t('channel.override.allowView', { name: memberName })}
                             checked={viewAllow}
                             disabled={disabled}
                             onCheckedChange={(checked) =>
@@ -259,11 +268,11 @@ export function ChannelSettings({
                               )
                             }
                           >
-                            Allow
+                            {t('channel.memberOverrides.allow')}
                           </CheckRow>
                           <CheckRow
                             className={styles.miniCheck}
-                            label={`Deny ${memberName} from viewing channel`}
+                            label={t('channel.override.denyView', { name: memberName })}
                             checked={viewDeny}
                             disabled={disabled}
                             onCheckedChange={(checked) =>
@@ -275,12 +284,14 @@ export function ChannelSettings({
                               )
                             }
                           >
-                            Deny
+                            {t('channel.memberOverrides.deny')}
                           </CheckRow>
-                          <span className={styles.memberOverridePermission}>Send messages</span>
+                          <span className={styles.memberOverridePermission}>
+                            {t('channel.memberOverrides.sendMessages')}
+                          </span>
                           <CheckRow
                             className={styles.miniCheck}
-                            label={`Allow ${memberName} to send messages`}
+                            label={t('channel.override.allowSend', { name: memberName })}
                             checked={sendAllow}
                             disabled={disabled}
                             onCheckedChange={(checked) =>
@@ -292,11 +303,11 @@ export function ChannelSettings({
                               )
                             }
                           >
-                            Allow
+                            {t('channel.memberOverrides.allow')}
                           </CheckRow>
                           <CheckRow
                             className={styles.miniCheck}
-                            label={`Deny ${memberName} from sending messages`}
+                            label={t('channel.override.denySend', { name: memberName })}
                             checked={sendDeny}
                             disabled={disabled}
                             onCheckedChange={(checked) =>
@@ -308,7 +319,7 @@ export function ChannelSettings({
                               )
                             }
                           >
-                            Deny
+                            {t('channel.memberOverrides.deny')}
                           </CheckRow>
                         </div>
                       </div>
@@ -318,17 +329,17 @@ export function ChannelSettings({
             </div>
           ) : (
             <p className={styles.settingsEmptyCopy}>
-              No server members are available for channel overrides.
+              {t('channel.memberOverrides.empty')}
             </p>
           )}
         </section>
       ) : null}
       <footer className={styles.settingsModalFooter}>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={pendingAction === 'channel-update'}>
-          Save changes
+          {t('common.saveChanges')}
         </Button>
       </footer>
     </form>

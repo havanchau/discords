@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { Channel, CreateServerEventInput } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, TextArea, TextField } from '../ui';
 import { SettingsSelect } from '../settings/SettingsSelect';
 import styles from './ServerEvents.module.css';
@@ -17,6 +18,7 @@ function toIsoString(localValue: string) {
 }
 
 export function EventForm({ channels, isSubmitting, onSubmit, onCancel }: EventFormProps) {
+  const t = useTranslation();
   const [channelId, setChannelId] = useState('');
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -37,32 +39,43 @@ export function EventForm({ channels, isSubmitting, onSubmit, onCancel }: EventF
 
   return (
     <form className={styles.form} onSubmit={submit}>
-      <TextField label="Event name" name="name" required maxLength={100} />
+      <TextField label={t('events.field.name')} name="name" required maxLength={100} />
       <div className={styles.formGrid}>
-        <TextField label="Starts" name="startAt" type="datetime-local" required />
-        <TextField label="Ends" name="endAt" type="datetime-local" />
+        <TextField label={t('events.field.starts')} name="startAt" type="datetime-local" required />
+        <TextField label={t('events.field.ends')} name="endAt" type="datetime-local" />
       </div>
       <SettingsSelect
         name="channelId"
-        label="Channel"
+        label={t('events.field.channel')}
         defaultValue=""
         options={[
-          { value: '', label: 'No channel' },
+          { value: '', label: t('events.field.noChannel') },
           ...channels.map((channel) => ({
             value: channel.id,
-            label: `${channel.type === 'VOICE' ? 'Voice' : 'Text'} · ${channel.name}`,
+            label: t('events.channelOption', {
+              type:
+                channel.type === 'VOICE'
+                  ? t('events.channelType.voice')
+                  : t('events.channelType.text'),
+              name: channel.name,
+            }),
           })),
         ]}
         onValueChange={setChannelId}
       />
-      <TextField label="Location" name="location" maxLength={200} placeholder="Optional" />
-      <TextArea label="Description" name="description" maxLength={1000} />
+      <TextField
+        label={t('events.field.location')}
+        name="location"
+        maxLength={200}
+        placeholder={t('events.field.locationPlaceholder')}
+      />
+      <TextArea label={t('events.field.description')} name="description" maxLength={1000} />
       <div className={styles.formActions}>
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          Create event
+          {t('events.action.create')}
         </Button>
       </div>
     </form>

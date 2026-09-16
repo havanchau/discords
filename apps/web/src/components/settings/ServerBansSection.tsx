@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { Button } from '../ui';
 import type { SettingsModalFields } from './types';
 import styles from '../SettingsModal.module.css';
@@ -18,6 +20,8 @@ export function ServerBansSection({
   unbanUser,
   pendingAction,
 }: ServerBansSectionProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
   const serverId = server?.id;
 
   // Bans live on the API; refresh them whenever this section opens for a server. loadBans is
@@ -29,13 +33,13 @@ export function ServerBansSection({
   return (
     <section className={styles.settingsSection} aria-labelledby="server-bans-title">
       <div className={styles.settingsSectionHeading}>
-        <strong id="server-bans-title">Bans</strong>
-        <span>Banned users cannot rejoin through any invite until unbanned.</span>
+        <strong id="server-bans-title">{t('bans.section.title')}</strong>
+        <span>{t('bans.section.hint')}</span>
       </div>
       <div className={styles.inviteList}>
         {isLoadingBans ? (
           <p className="empty-note" role="status">
-            <Loader2 className="spin" size={14} aria-hidden="true" /> Loading bans
+            <Loader2 className="spin" size={14} aria-hidden="true" /> {t('bans.loading')}
           </p>
         ) : bansError ? (
           <p className="empty-note" role="alert">
@@ -48,7 +52,10 @@ export function ServerBansSection({
                 <strong>{ban.user.displayName}</strong>
                 <small>
                   {ban.reason ? `${ban.reason} · ` : ''}
-                  {new Date(ban.createdAt).toLocaleString()} by {ban.bannedBy.displayName}
+                  {t('bans.by', {
+                    date: dates.absolute(ban.createdAt),
+                    actor: ban.bannedBy.displayName,
+                  })}
                 </small>
               </div>
               <span />
@@ -59,12 +66,12 @@ export function ServerBansSection({
                 disabled={pendingAction === `member-unban-${ban.user.id}`}
                 onClick={() => void unbanUser(ban.user.id)}
               >
-                Unban
+                {t('bans.action.unban')}
               </Button>
             </div>
           ))
         ) : (
-          <p className="empty-note">No banned users.</p>
+          <p className="empty-note">{t('bans.empty')}</p>
         )}
       </div>
     </section>

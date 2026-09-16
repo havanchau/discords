@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { I18nModule } from './common/i18n/i18n.module';
 import { RateLimitGuard } from './common/rate-limit.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChannelsModule } from './modules/channels/channels.module';
@@ -24,6 +25,7 @@ import { UsersModule } from './modules/users/users.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ envFilePath: ['../../.env', '.env'], isGlobal: true }),
+    I18nModule,
     PrismaModule,
     HealthModule,
     AuthModule,

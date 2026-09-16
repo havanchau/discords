@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import { apiRequest, AuthState, CreateServerEventInput, ServerEventView } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseServerEventsOptions {
   auth: AuthState | null;
@@ -10,6 +11,7 @@ interface UseServerEventsOptions {
 }
 
 export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptions) {
+  const t = useTranslation();
   const [events, setEvents] = useState<ServerEventView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
         if (serverIdRef.current === targetServerId) setEvents(result.events);
       } catch (err) {
         if (serverIdRef.current === targetServerId) {
-          setError(err instanceof Error ? err.message : 'Cannot load events');
+          setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-events'));
         }
       } finally {
         if (serverIdRef.current === targetServerId) setIsLoading(false);
@@ -72,7 +74,7 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
       await loadEvents(serverId);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot create event');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-create-event'));
       return false;
     } finally {
       setPendingEventId(null);
@@ -87,7 +89,7 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
       await apiRequest(`/events/${eventId}`, { method: 'DELETE' }, token);
       setEvents((current) => current.filter((event) => event.id !== eventId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot cancel event');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-cancel-event'));
     } finally {
       setPendingEventId(null);
     }
@@ -111,7 +113,7 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
         ),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot update interest');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-update-interest'));
     } finally {
       setPendingEventId(null);
     }

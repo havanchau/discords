@@ -40,6 +40,12 @@ model User {
   passwordHash              String
   avatarUrl                 String?
   bio                       String?
+  bannerUrl                 String?
+  pronouns                  String?
+  customStatusText          String?
+  customStatusEmoji         String?
+  customStatusExpiresAt     DateTime?
+  locale                    String?
   status                    UserStatus                 @default(OFFLINE)
   emailVerifiedAt           DateTime?
   twoFactorSecret           String?
@@ -217,6 +223,7 @@ model ServerMember {
   serverId            String
   kind                MemberKind                  @default(MEMBER)
   nickname            String?
+  avatarUrl           String?
   timeoutUntil        DateTime?
   joinedAt            DateTime                    @default(now())
   user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)

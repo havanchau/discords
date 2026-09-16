@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, randomUUID } from 'crypto';
+import type { Locale } from '../../common/i18n/locale';
+import { I18nService } from '../../common/i18n/i18n.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -12,10 +14,7 @@ import {
   TwoFactorChallengeService
 } from './two-factor-challenge.service';
 
-export const RESEND_VERIFICATION_RESPONSE = {
-  ok: true,
-  message: 'If that account is waiting for verification, a new link has been sent.'
-} as const;
+
 
 @Injectable()
 export class AuthService {
@@ -26,10 +25,11 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly email: EmailService,
-    private readonly twoFactorChallenges: TwoFactorChallengeService
+    private readonly twoFactorChallenges: TwoFactorChallengeService,
+    private readonly i18n: I18nService
   ) {}
 
-  async register(dto: RegisterDto, _userAgent?: string) {
+  async register(dto: RegisterDto, _userAgent?: string, locale: Locale = 'en') {
     const username = dto.username.toLowerCase();
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ email: dto.email.toLowerCase() }, { username }] }
@@ -45,18 +45,19 @@ export class AuthService {
         email: dto.email.toLowerCase(),
         username,
         displayName: dto.displayName || username,
-        passwordHash
+        passwordHash,
+        locale
       }
     });
 
     const verification = await this.createVerificationToken(user.id);
-    this.deliverVerificationEmail(this.email.sendVerificationEmail(user.email, verification.token));
+    this.deliverVerificationEmail(this.email.sendVerificationEmail(user.email, verification.token, locale));
 
     // The token only ever travels by email: returning it would let anyone verify an address they do not own.
     return {
       verificationRequired: true,
       email: user.email,
-      message: 'Check your inbox for a verification link.'
+      message: this.i18n.t(locale, 'auth.register.checkInbox')
     };
   }
 
@@ -64,15 +65,17 @@ export class AuthService {
    * Same response whether or not the account exists or is pending, and the bcrypt token work runs after
    * responding, so neither the body nor the response time reveals the account state.
    */
-  async resendVerification(email: string) {
+  async resendVerification(email: string, locale: Locale = 'en') {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      select: { id: true, email: true, emailVerifiedAt: true }
+      select: { id: true, email: true, emailVerifiedAt: true, locale: true }
     });
     if (user && !user.emailVerifiedAt) {
-      this.deliverVerificationEmail(this.reissueVerificationEmail(user.id, user.email));
+      this.deliverVerificationEmail(
+        this.reissueVerificationEmail(user.id, user.email, this.i18n.resolveUserLocale(user.locale))
+      );
     }
-    return RESEND_VERIFICATION_RESPONSE;
+    return { ok: true, message: this.i18n.t(locale, 'auth.resendVerification.ok') };
   }
 
   async login(dto: LoginDto, userAgent?: string) {
@@ -154,6 +157,7 @@ export class AuthService {
         displayName: true,
         avatarUrl: true,
         bio: true,
+        locale: true,
         status: true,
         emailVerifiedAt: true,
         createdAt: true
@@ -203,6 +207,7 @@ export class AuthService {
           displayName: session.user.displayName,
           avatarUrl: session.user.avatarUrl,
           bio: session.user.bio,
+          locale: session.user.locale,
           status: session.user.status,
           emailVerifiedAt: session.user.emailVerifiedAt,
           createdAt: session.user.createdAt
@@ -254,9 +259,9 @@ export class AuthService {
     });
   }
 
-  private async reissueVerificationEmail(userId: string, email: string) {
+  private async reissueVerificationEmail(userId: string, email: string, locale: Locale) {
     const verification = await this.createVerificationToken(userId);
-    return this.email.sendVerificationEmail(email, verification.token);
+    return this.email.sendVerificationEmail(email, verification.token, locale);
   }
 
   private async createVerificationToken(userId: string) {

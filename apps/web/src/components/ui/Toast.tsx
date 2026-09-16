@@ -1,6 +1,7 @@
 import * as RadixToast from '@radix-ui/react-toast';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import styles from './Toast.module.css';
 
 export type ToastMessage = {
@@ -22,6 +23,7 @@ export function ToastViewport() {
 }
 
 export function Toast({ title, description, variant = 'notice' }: ToastMessage) {
+  const t = useTranslation();
   const isError = variant === 'error';
 
   return (
@@ -31,7 +33,7 @@ export function Toast({ title, description, variant = 'notice' }: ToastMessage) 
         {description ? <RadixToast.Description className={styles.description}>{description}</RadixToast.Description> : null}
       </div>
       {isError ? (
-        <RadixToast.Close className={styles.close} aria-label="Dismiss notification">
+        <RadixToast.Close className={styles.close} aria-label={t('toast.dismiss')}>
           <X size={16} aria-hidden="true" />
         </RadixToast.Close>
       ) : null}

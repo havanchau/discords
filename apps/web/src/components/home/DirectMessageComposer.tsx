@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import { Reply, X } from 'lucide-react';
 import type { DirectMessage } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, IconButton, TextField } from '../ui';
 import styles from './HomePanel.module.css';
 
@@ -25,15 +26,18 @@ export function DirectMessageComposer({
   onSendDirectMessage,
   onDraftChange,
 }: DirectMessageComposerProps) {
+  const t = useTranslation();
+
   return (
     <div className={styles.composerArea}>
       {replyingTo ? (
         <div className={styles.composerReply} data-testid="direct-composer-reply">
           <Reply size={14} aria-hidden="true" />
           <span>
-            Replying to <strong>{replyingToName ?? 'message'}</strong>
+            {t('composer.replyingTo')}{' '}
+            <strong>{replyingToName ?? t('dm.composer.replyFallback')}</strong>
           </span>
-          <IconButton label="Cancel reply" size="sm" onClick={onCancelReply}>
+          <IconButton label={t('composer.cancelReply')} size="sm" onClick={onCancelReply}>
             <X size={14} aria-hidden="true" />
           </IconButton>
         </div>
@@ -43,16 +47,16 @@ export function DirectMessageComposer({
           className={styles.composerInput}
           name="content"
           value={draft}
-          placeholder={`Message ${placeholderName}`}
+          placeholder={t('dm.composer.placeholder', { name: placeholderName })}
           autoComplete="off"
-          aria-label={`Message ${placeholderName}`}
+          aria-label={t('dm.composer.placeholder', { name: placeholderName })}
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && replyingTo) onCancelReply();
           }}
         />
         <Button type="submit" disabled={pendingAction === 'direct-message'}>
-          Send
+          {t('common.send')}
         </Button>
       </form>
     </div>

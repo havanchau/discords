@@ -1,16 +1,13 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
+import type { Locale } from '../../common/i18n/locale';
+import { I18nService } from '../../common/i18n/i18n.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimePublisher } from '../realtime/realtime-publisher.service';
 import { EmailService } from './email.service';
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
-export const FORGOT_PASSWORD_RESPONSE = {
-  ok: true,
-  message: 'If an account exists for that email, a reset link has been sent.',
-} as const;
-
 export function hashResetToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -23,15 +20,17 @@ export class PasswordResetService {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly realtime: RealtimePublisher,
+    private readonly i18n: I18nService,
   ) {}
 
   /* Same response whether or not the account exists, and delivery happens after responding. */
-  async requestReset(email: string) {
+  async requestReset(email: string, locale: Locale = 'en') {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      select: { id: true, email: true },
+      select: { id: true, email: true, locale: true },
     });
-    if (!user) return FORGOT_PASSWORD_RESPONSE;
+    const okResponse = { ok: true, message: this.i18n.t(locale, 'auth.forgotPassword.ok') };
+    if (!user) return okResponse;
 
     const token = randomBytes(32).toString('base64url');
     await this.prisma.$transaction([
@@ -48,13 +47,15 @@ export class PasswordResetService {
       }),
     ]);
 
-    this.email.sendPasswordResetEmail(user.email, token).catch((error: unknown) => {
+    this.email
+      .sendPasswordResetEmail(user.email, token, this.i18n.resolveUserLocale(user.locale))
+      .catch((error: unknown) => {
       this.logger.error(
         'Password reset email delivery failed',
         error instanceof Error ? error.stack : undefined,
       );
     });
-    return FORGOT_PASSWORD_RESPONSE;
+    return okResponse;
   }
 
   async resetPassword(token: string, password: string) {

@@ -1,7 +1,9 @@
 import { FormEvent } from 'react';
 import { Loader2, MessageSquareReply, Send, X } from 'lucide-react';
 import { assetUrl, Message } from '../../api';
-import { formatDate, initials, previewText } from '../../helpers';
+import { initials, previewText } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { Button, IconButton } from '../ui';
 import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
 import { MarkdownContent } from './MarkdownContent';
@@ -28,16 +30,18 @@ export function ThreadPanel({
   onDraftChange,
   onSend,
 }: ThreadPanelProps) {
+  const t = useTranslation();
+
   if (!rootMessage) return null;
 
   return (
-    <aside className={styles.panel} aria-label={`Thread for ${previewText(rootMessage)}`}>
+    <aside className={styles.panel} aria-label={t('thread.ariaLabel', { preview: previewText(rootMessage) })}>
       <header className={styles.header}>
         <span>
           <MessageSquareReply size={18} aria-hidden="true" />
-          Thread
+          {t('thread.title')}
         </span>
-        <IconButton label="Close thread" onClick={onClose}>
+        <IconButton label={t('thread.close')} onClick={onClose}>
           <X size={18} aria-hidden="true" />
         </IconButton>
       </header>
@@ -46,12 +50,14 @@ export function ThreadPanel({
         <ThreadMessage message={rootMessage} isRoot />
         <div className={styles.replyDivider}>
           {rootMessage.thread?.replyCount
-            ? `${rootMessage.thread.replyCount} ${rootMessage.thread.replyCount === 1 ? 'reply' : 'replies'}`
-            : 'No replies yet'}
+            ? rootMessage.thread.replyCount === 1
+              ? t('thread.replyCountOne')
+              : t('thread.replyCount', { count: rootMessage.thread.replyCount })
+            : t('thread.noReplies')}
         </div>
         {isLoading ? (
           <div className={styles.loading}>
-            <Loader2 className="spin" size={18} aria-hidden="true" /> Loading thread…
+            <Loader2 className="spin" size={18} aria-hidden="true" /> {t('thread.loading')}
           </div>
         ) : (
           messages.map((message) => <ThreadMessage key={message.id} message={message} />)
@@ -62,8 +68,8 @@ export function ThreadPanel({
         <input
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
-          placeholder="Reply in thread"
-          aria-label="Reply in thread"
+          placeholder={t('thread.composerPlaceholder')}
+          aria-label={t('thread.composerPlaceholder')}
           disabled={isSending}
         />
         <Button type="submit" size="sm" disabled={!draft.trim() || isSending}>
@@ -72,7 +78,7 @@ export function ThreadPanel({
           ) : (
             <Send size={16} />
           )}
-          Send
+          {t('common.send')}
         </Button>
       </form>
     </aside>
@@ -80,6 +86,8 @@ export function ThreadPanel({
 }
 
 function ThreadMessage({ message, isRoot = false }: { message: Message; isRoot?: boolean }) {
+  const t = useTranslation();
+  const dates = useDateFormat();
   const { resolveEmoji } = useServerEmojiContext();
   return (
     <article className={`${styles.message} ${isRoot ? styles.rootMessage : ''}`}>
@@ -93,11 +101,11 @@ function ThreadMessage({ message, isRoot = false }: { message: Message; isRoot?:
       <div className={styles.messageBody}>
         <div className={styles.meta}>
           <strong>{message.author.displayName}</strong>
-          <span>{formatDate(message.createdAt)}</span>
+          <span>{dates.dateTime(message.createdAt)}</span>
         </div>
         {message.deletedAt || !message.content ? (
           <p className={message.deletedAt ? styles.deleted : undefined}>
-            {message.deletedAt ? 'Message deleted' : 'Attachment'}
+            {message.deletedAt ? t('message.deleted') : t('message.attachmentOnly')}
           </p>
         ) : (
           <MarkdownContent

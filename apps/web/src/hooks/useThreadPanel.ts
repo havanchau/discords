@@ -10,6 +10,7 @@ import {
 import type { Socket } from 'socket.io-client';
 import { apiRequest, AuthState, Message, ThreadMessageResult } from '../api';
 import { encryptChannelMessage } from '../e2ee';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseThreadPanelOptions {
   auth: AuthState | null;
@@ -30,6 +31,7 @@ export function useThreadPanel({
   setMessages,
   setWorkspaceError,
 }: UseThreadPanelOptions) {
+  const t = useTranslation();
   const [rootMessage, setRootMessage] = useState<Message | null>(null);
   const [threadMessages, setThreadMessages] = useState<Message[]>([]);
   const [threadDraft, setThreadDraft] = useState('');
@@ -64,7 +66,7 @@ export function useThreadPanel({
         setThreadMessages(await decryptMessagesForDisplay(result.messages ?? []));
         socket?.emit('thread:join', { rootMessageId: message.id });
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot load thread');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-thread'));
       } finally {
         setIsThreadLoading(false);
       }
@@ -109,7 +111,7 @@ export function useThreadPanel({
         );
         setThreadDraft('');
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : 'Cannot send thread reply');
+        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-send-thread-reply'));
       } finally {
         setIsThreadSending(false);
       }

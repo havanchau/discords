@@ -25,6 +25,7 @@ import {
   Tooltip,
 } from '../ui';
 import type { ChatPanelChannelAvatar, ChatPanelPanels } from './types';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import styles from './ChatHeader.module.css';
 
 interface ChatHeaderProps {
@@ -55,10 +56,29 @@ export function ChatHeader({
   channelAvatar,
   startCall,
 }: ChatHeaderProps) {
+  const t = useTranslation();
   const callActions = [
-    { mode: 'voice' as const, icon: Phone, label: 'Start voice call', testId: 'voice-call-button', secondary: false },
-    { mode: 'video' as const, icon: Video, label: 'Start video call', testId: 'video-call-button', secondary: true },
-    { mode: 'screen' as const, icon: MonitorUp, label: 'Share screen', testId: 'screen-share-button', secondary: true },
+    {
+      mode: 'voice' as const,
+      icon: Phone,
+      label: t('chatHeader.startVoiceCall'),
+      testId: 'voice-call-button',
+      secondary: false,
+    },
+    {
+      mode: 'video' as const,
+      icon: Video,
+      label: t('chatHeader.startVideoCall'),
+      testId: 'video-call-button',
+      secondary: true,
+    },
+    {
+      mode: 'screen' as const,
+      icon: MonitorUp,
+      label: t('chatHeader.shareScreen'),
+      testId: 'screen-share-button',
+      secondary: true,
+    },
   ];
 
   const isNarrow = useMediaQuery(NARROW_HEADER);
@@ -82,8 +102,8 @@ export function ChatHeader({
         <Button
           className={styles.channelAvatarButton}
           variant="ghost"
-          title="Change channel avatar"
-          aria-label="Change channel avatar"
+          title={t('chatHeader.changeChannelAvatar')}
+          aria-label={t('chatHeader.changeChannelAvatar')}
           onClick={() => channelAvatar.inputRef.current?.click()}
           disabled={!channel || pendingAction === 'channel-avatar'}
         >
@@ -99,10 +119,8 @@ export function ChatHeader({
           )}
         </Button>
         <div className={styles.channelIdentity}>
-          <strong>{channel?.name || 'Select a channel'}</strong>
-          <span>
-            {channel ? channel.topic || '' : 'Choose a workspace channel to start.'}
-          </span>
+          <strong>{channel?.name || t('chatHeader.selectChannel')}</strong>
+          <span>{channel ? channel.topic || '' : t('chatHeader.selectChannelHint')}</span>
         </div>
       </div>
 
@@ -123,12 +141,12 @@ export function ChatHeader({
 
         <span className={styles.toolbarDivider} aria-hidden="true" />
 
-        <Tooltip content="Notifications">
+        <Tooltip content={t('chatHeader.notifications')}>
           <IconButton
             label={
               notificationUnreadCount > 0
-                ? `Notifications, ${notificationUnreadCount} unread`
-                : 'Notifications'
+                ? t('chatHeader.notificationsUnread', { count: notificationUnreadCount })
+                : t('chatHeader.notifications')
             }
             onClick={() => togglePanel('notifications')}
             variant={panels.activePanel === 'notifications' ? 'primary' : 'ghost'}
@@ -147,7 +165,7 @@ export function ChatHeader({
 
         <DropdownMenuRoot>
           <DropdownMenuTrigger asChild>
-            <IconButton label="More channel actions" data-testid="channel-overflow-button">
+            <IconButton label={t('chatHeader.moreActions')} data-testid="channel-overflow-button">
               <MoreVertical size={18} aria-hidden="true" />
             </IconButton>
           </DropdownMenuTrigger>
@@ -167,11 +185,11 @@ export function ChatHeader({
               onSelect={() => setTimeout(() => panels.setActiveDialog('channel-settings'), 0)}
             >
               <Edit3 size={16} aria-hidden="true" />
-              Channel settings
+              {t('chatHeader.channelSettings')}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={!channel} onSelect={() => togglePanel('media')}>
               <FolderOpen size={16} aria-hidden="true" />
-              Media, files, and links
+              {t('chatHeader.mediaFilesLinks')}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={!channel} onSelect={() => togglePanel('encryption')}>
               {isChannelEncrypted ? (
@@ -179,7 +197,7 @@ export function ChatHeader({
               ) : (
                 <Unlock size={16} aria-hidden="true" />
               )}
-              {isChannelEncrypted ? 'Encryption enabled' : 'Set encryption passphrase'}
+              {isChannelEncrypted ? t('chatHeader.encryptionEnabled') : t('chatHeader.setEncryption')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenuRoot>
@@ -193,7 +211,7 @@ export function ChatHeader({
           aria-pressed={panels.activePanel === 'search'}
           data-testid="search-button"
         >
-          <span>Search</span>
+          <span>{t('chatHeader.search')}</span>
           <Search size={14} aria-hidden="true" />
         </Button>
       </div>

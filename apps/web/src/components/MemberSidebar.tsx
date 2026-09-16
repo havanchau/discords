@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { ServerDetail } from '../api';
 import { accentClass, initials } from '../helpers';
+import { useTranslation, type Translate } from '../i18n/LocaleProvider';
+import { memberIdentityOf } from '../utils/memberIdentity';
+import { ProfileCard } from './profile/ProfileCard';
 import {
   Avatar,
   Button,
@@ -15,34 +19,44 @@ import styles from './MemberSidebar.module.css';
 import { cn } from '../utils/cn';
 import { MessageSquare, ShieldCheck } from 'lucide-react';
 
-const PRESENCE_LABELS: Record<string, string> = {
-  ONLINE: 'Online',
-  IDLE: 'Idle',
-  DND: 'Do not disturb',
-  OFFLINE: 'Offline',
-};
+const PRESENCE_KEYS = {
+  ONLINE: 'presence.online',
+  IDLE: 'presence.idle',
+  DND: 'presence.dnd',
+  OFFLINE: 'presence.offline',
+} as const;
 
-function presenceLabel(status: string | null | undefined): string {
-  return PRESENCE_LABELS[status ?? ''] ?? PRESENCE_LABELS.OFFLINE;
+function presenceLabel(t: Translate, status: string | null | undefined): string {
+  return t(PRESENCE_KEYS[status as keyof typeof PRESENCE_KEYS] ?? PRESENCE_KEYS.OFFLINE);
 }
 
 export interface MemberSidebarProps {
   assetUrl: (url: string) => string;
+  accessToken: string;
+  viewerId: string;
   onManageMember: (memberId: string) => void;
   onDirectMessage: (userId: string) => void;
+  onAddFriend: (userId: string) => void;
   server: ServerDetail | null;
 }
 
 export function MemberSidebar({
   assetUrl,
+  accessToken,
+  viewerId,
   onManageMember,
   onDirectMessage,
+  onAddFriend,
   server,
 }: MemberSidebarProps) {
+  const t = useTranslation();
+  // The popover renders its content before opening; this gates the profile fetch to the open card.
+  const [openProfileMemberId, setOpenProfileMemberId] = useState<string | null>(null);
+
   if (!server) {
     return (
       <aside className={cn(styles.memberSidebar, 'member-sidebar')}>
-        <div className={styles.emptyNote}>No server selected.</div>
+        <div className={styles.emptyNote}>{t('members.noServer')}</div>
       </aside>
     );
   }
@@ -85,8 +99,8 @@ export function MemberSidebar({
   // 5. Combine groups, filtering out empty ones
   const groups = [
     ...displayRoles.map((role) => roleGroups[role.id]).filter((g) => g.members.length > 0),
-    { label: 'Online', members: onlineNoRole },
-    { label: 'Offline', members: offlineMembers },
+    { label: t('members.groupOnline'), members: onlineNoRole },
+    { label: t('members.groupOffline'), members: offlineMembers },
   ].filter((g) => g.members.length > 0);
 
   return (
@@ -97,9 +111,7 @@ export function MemberSidebar({
             {'color' in group && group.color ? (
               <span className={styles.roleMarker} style={{ backgroundColor: group.color }} />
             ) : null}
-            <span>
-              {group.label} - {group.members.length}
-            </span>
+            <span>{t('members.groupCount', { label: group.label, count: group.members.length })}</span>
           </div>
           <div className={styles.memberList}>
             {group.members.map((member) => {
@@ -109,24 +121,27 @@ export function MemberSidebar({
               const namedRoles = roleNames.filter((name) => name !== '@everyone');
               // The subtitle carries one kind of information only: the member's standing in the
               // server. Presence is conveyed by the status dot, never repeated as text here.
-              const subtitle = member.kind === 'OWNER' ? 'Owner' : namedRoles[0];
+              const subtitle = member.kind === 'OWNER' ? t('roles.owner') : namedRoles[0];
+              const identity = memberIdentityOf(member);
 
               return (
                 <ContextMenuRoot key={member.id}>
                   <ContextMenuTrigger>
-                    <PopoverRoot>
+                    <PopoverRoot
+                      onOpenChange={(open) => setOpenProfileMemberId(open ? member.id : null)}
+                    >
                       <PopoverTrigger asChild>
                         <Button
                           type="button"
                           variant="ghost"
                           className={styles.member}
-                          title={`View profile of ${member.user.displayName}`}
+                          title={t('members.viewProfile', { name: identity.displayName })}
                         >
                           <div className={styles.avatarWrap}>
                             <Avatar
-                              src={member.user.avatarUrl ? assetUrl(member.user.avatarUrl) : null}
-                              alt={member.user.displayName}
-                              fallback={initials(member.user.displayName)}
+                              src={identity.avatarUrl ? assetUrl(identity.avatarUrl) : null}
+                              alt={identity.displayName}
+                              fallback={initials(identity.displayName)}
                               size="sm"
                               className={accentClass(member.user.id)}
                             />
@@ -136,51 +151,38 @@ export function MemberSidebar({
                                 styles[member.user.status?.toLowerCase() || 'offline'],
                               )}
                               role="img"
-                              aria-label={presenceLabel(member.user.status)}
+                              aria-label={presenceLabel(t, member.user.status)}
                             />
                           </div>
                           <div className={styles.memberInfo}>
                             <strong style={topRole?.color ? { color: topRole.color } : undefined}>
-                              {member.user.displayName}
+                              {identity.displayName}
                             </strong>
                             {subtitle ? <span>{subtitle}</span> : null}
                           </div>
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent side="left" align="start" className={styles.popoverContent}>
-                        <div className={styles.popoverBanner} />
-                        <div className={styles.popoverBody}>
-                          <Avatar
-                            src={member.user.avatarUrl ? assetUrl(member.user.avatarUrl) : null}
-                            alt={member.user.displayName}
-                            fallback={initials(member.user.displayName)}
-                            size="lg"
-                            className={cn(styles.profileCardAvatar, accentClass(member.user.id))}
-                          />
-                          <strong>{member.user.displayName}</strong>
-                          <span>@{member.user.username}</span>
-                          {member.user.bio ? <p>{member.user.bio}</p> : null}
-                          {namedRoles.length > 0 && (
-                            <div className={styles.roleChips}>
-                              {namedRoles.slice(0, 4).map((roleName) => (
-                                <small key={roleName} className={styles.roleChip}>
-                                  {roleName}
-                                </small>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <ProfileCard
+                          accessToken={accessToken}
+                          userId={member.user.id}
+                          viewerId={viewerId}
+                          serverId={server.id}
+                          isOpen={openProfileMemberId === member.id}
+                          onDirectMessage={onDirectMessage}
+                          onAddFriend={onAddFriend}
+                        />
                       </PopoverContent>
                     </PopoverRoot>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => onManageMember(member.id)}>
                       <ShieldCheck size={14} aria-hidden="true" />
-                      Manage Roles
+                      {t('members.manageRoles')}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => onDirectMessage(member.user.id)}>
                       <MessageSquare size={14} aria-hidden="true" />
-                      Message
+                      {t('members.message')}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenuRoot>
@@ -189,7 +191,7 @@ export function MemberSidebar({
           </div>
         </section>
       ))}
-      {!server.members.length && <div className={styles.emptyNote}>No members yet.</div>}
+      {!server.members.length && <div className={styles.emptyNote}>{t('members.empty')}</div>}
     </aside>
   );
 }

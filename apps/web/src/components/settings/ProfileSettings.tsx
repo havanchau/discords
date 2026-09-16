@@ -1,5 +1,7 @@
+import type { Locale } from '@discord-clone/shared';
 import { assetUrl } from '../../api';
 import { accentClass, initials } from '../../helpers';
+import { useLocale, type MessageKey, type Translate } from '../../i18n/LocaleProvider';
 import { Button, TextArea, TextField } from '../ui';
 import { SettingsSelect } from './SettingsSelect';
 import { SwitchRow } from './SettingsRows';
@@ -7,17 +9,35 @@ import type { SettingsModalFields, SettingsSelectOption, UiTheme } from './types
 import styles from '../SettingsModal.module.css';
 import { cn } from '../../utils/cn';
 
-const STATUS_OPTIONS: SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBLE'>[] = [
-  { value: 'ONLINE', label: 'Online' },
-  { value: 'IDLE', label: 'Idle' },
-  { value: 'DND', label: 'Do Not Disturb' },
-  { value: 'INVISIBLE', label: 'Invisible' },
+function statusOptions(t: Translate): SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBLE'>[] {
+  return [
+    { value: 'ONLINE', label: t('profile.status.online') },
+    { value: 'IDLE', label: t('profile.status.idle') },
+    { value: 'DND', label: t('profile.status.dnd') },
+    { value: 'INVISIBLE', label: t('profile.status.invisible') },
+  ];
+}
+
+function themeOptions(t: Translate): SettingsSelectOption<UiTheme>[] {
+  return [
+    { value: 'system', label: t('profile.theme.system') },
+    { value: 'light', label: t('profile.theme.light') },
+    { value: 'dark', label: t('profile.theme.dark') },
+  ];
+}
+
+// Each language is written in itself, so someone stuck in the wrong one can still find their own.
+const LANGUAGE_OPTIONS: SettingsSelectOption<Locale>[] = [
+  { value: 'en', label: 'English' },
+  { value: 'vi', label: 'Tiếng Việt' },
 ];
 
-const THEME_OPTIONS: SettingsSelectOption<UiTheme>[] = [
-  { value: 'system', label: 'Match system' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
+const EXPIRY_OPTIONS: { value: string; labelKey: MessageKey }[] = [
+  { value: 'never', labelKey: 'profile.expiry.never' },
+  { value: '30m', labelKey: 'profile.expiry.30m' },
+  { value: '1h', labelKey: 'profile.expiry.1h' },
+  { value: '4h', labelKey: 'profile.expiry.4h' },
+  { value: 'today', labelKey: 'profile.expiry.today' },
 ];
 
 type ProfileSettingsProps = Pick<
@@ -26,11 +46,13 @@ type ProfileSettingsProps = Pick<
   | 'notificationPreferences'
   | 'pendingAction'
   | 'profileAvatarInputRef'
+  | 'profileBannerInputRef'
   | 'setActiveDialog'
   | 'setUiTheme'
   | 'uiTheme'
   | 'updateNotificationPreference'
   | 'updateProfile'
+  | 'updateProfileBanner'
 >;
 
 export function ProfileSettings({
@@ -38,12 +60,15 @@ export function ProfileSettings({
   notificationPreferences,
   pendingAction,
   profileAvatarInputRef,
+  profileBannerInputRef,
   setActiveDialog,
   setUiTheme,
   uiTheme,
   updateNotificationPreference,
   updateProfile,
+  updateProfileBanner,
 }: ProfileSettingsProps) {
+  const { locale, t } = useLocale();
   const globalNotificationPreference = notificationPreferences.find(
     (preference) => !preference.serverId && !preference.channelId,
   );
@@ -52,8 +77,8 @@ export function ProfileSettings({
     <form className={styles.settingsForm} onSubmit={updateProfile}>
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Profile</strong>
-          <span>How other members see you across servers.</span>
+          <strong>{t('profile.section.profile')}</strong>
+          <span>{t('profile.section.profileHint')}</span>
         </div>
         <div className={styles.settingsAvatarRow}>
           <Button
@@ -76,39 +101,96 @@ export function ProfileSettings({
             fullWidth
             onClick={() => profileAvatarInputRef.current?.click()}
           >
-            Change avatar
+            {t('profile.changeAvatar')}
           </Button>
         </div>
         <TextField
-          label="Display name"
+          label={t('profile.field.displayName')}
           name="displayName"
           defaultValue={auth.user.displayName}
           maxLength={64}
           required
         />
         <TextArea
-          label="Bio"
+          label={t('profile.field.bio')}
           name="bio"
           defaultValue={auth.user.bio ?? ''}
           maxLength={280}
-          placeholder="Short profile note"
+          placeholder={t('profile.field.bioPlaceholder')}
+        />
+        <TextField
+          label={t('profile.field.pronouns')}
+          name="pronouns"
+          defaultValue={auth.user.pronouns ?? ''}
+          maxLength={40}
+          placeholder={t('profile.field.pronounsPlaceholder')}
+        />
+        <input
+          ref={profileBannerInputRef}
+          className={styles.hiddenInput}
+          type="file"
+          accept="image/*"
+          aria-label={t('profile.changeBanner')}
+          onChange={(event) => void updateProfileBanner(event)}
+        />
+        <div className={styles.settingsAvatarRow}>
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            disabled={pendingAction === 'profile-banner'}
+            onClick={() => profileBannerInputRef.current?.click()}
+          >
+            {t('profile.changeBanner')}
+          </Button>
+        </div>
+      </section>
+
+      <section className={styles.settingsSection}>
+        <div className={styles.settingsSectionHeading}>
+          <strong>{t('profile.section.customStatus')}</strong>
+          <span>{t('profile.section.customStatusHint')}</span>
+        </div>
+        <div className={styles.settingsGrid}>
+          <TextField
+            label={t('profile.field.customStatusText')}
+            name="customStatusText"
+            defaultValue={auth.user.customStatus?.text ?? ''}
+            maxLength={128}
+            placeholder={t('profile.field.customStatusTextPlaceholder')}
+          />
+          <TextField
+            label={t('profile.field.customStatusEmoji')}
+            name="customStatusEmoji"
+            defaultValue={auth.user.customStatus?.emoji ?? ''}
+            maxLength={64}
+          />
+        </div>
+        <SettingsSelect
+          name="customStatusExpiry"
+          label={t('profile.field.customStatusExpiry')}
+          defaultValue="never"
+          options={EXPIRY_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(option.labelKey),
+          }))}
         />
       </section>
 
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Account</strong>
-          <span>Identity and presence controls.</span>
+          <strong>{t('profile.section.account')}</strong>
+          <span>{t('profile.section.accountHint')}</span>
         </div>
         <div className={styles.settingsGrid}>
           <TextField
-            label="Username"
+            label={t('profile.field.username')}
             value={auth.user.username}
             readOnly
             className={styles.readonlyInput}
           />
           <TextField
-            label="Email"
+            label={t('profile.field.email')}
             value={auth.user.email}
             readOnly
             className={styles.readonlyInput}
@@ -116,16 +198,22 @@ export function ProfileSettings({
         </div>
         <SettingsSelect
           name="status"
-          label="Status"
+          label={t('profile.field.status')}
           defaultValue={auth.user.status ?? 'ONLINE'}
-          options={STATUS_OPTIONS}
+          options={statusOptions(t)}
         />
         <SettingsSelect
           name="uiTheme"
-          label="App theme"
+          label={t('profile.field.theme')}
           defaultValue={uiTheme}
-          options={THEME_OPTIONS}
+          options={themeOptions(t)}
           onValueChange={setUiTheme}
+        />
+        <SettingsSelect
+          name="locale"
+          label={t('profile.field.language')}
+          defaultValue={locale}
+          options={LANGUAGE_OPTIONS}
         />
         <div className={styles.profilePreview}>
           <div className={`avatar small ${accentClass(auth.user.id)}`}>
@@ -144,12 +232,12 @@ export function ProfileSettings({
 
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
-          <strong>Notifications</strong>
-          <span>Global delivery preferences for this browser session.</span>
+          <strong>{t('profile.section.notifications')}</strong>
+          <span>{t('profile.section.notificationsHint')}</span>
         </div>
         <SwitchRow
-          title="Mute notifications"
-          description="Keep unread badges, but silence non-critical notifications."
+          title={t('profile.notifications.mute')}
+          description={t('profile.notifications.muteHint')}
           checked={Boolean(globalNotificationPreference?.muted)}
           disabled={pendingAction === 'notification-preference'}
           onCheckedChange={(checked) =>
@@ -163,8 +251,8 @@ export function ProfileSettings({
           }
         />
         <SwitchRow
-          title="Mentions only"
-          description="Only surface notifications that mention you directly."
+          title={t('profile.notifications.mentionsOnly')}
+          description={t('profile.notifications.mentionsOnlyHint')}
           checked={Boolean(globalNotificationPreference?.mentionOnly)}
           disabled={pendingAction === 'notification-preference'}
           onCheckedChange={(checked) =>
@@ -178,8 +266,8 @@ export function ProfileSettings({
           }
         />
         <SwitchRow
-          title="Desktop notifications"
-          description="Store consent preference for future browser notifications."
+          title={t('profile.notifications.desktop')}
+          description={t('profile.notifications.desktopHint')}
           checked={Boolean(globalNotificationPreference?.desktopEnabled)}
           disabled={pendingAction === 'notification-preference'}
           onCheckedChange={(checked) =>
@@ -195,10 +283,10 @@ export function ProfileSettings({
       </section>
       <footer className={styles.settingsModalFooter}>
         <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={pendingAction === 'profile-update'}>
-          Save changes
+          {t('common.saveChanges')}
         </Button>
       </footer>
     </form>

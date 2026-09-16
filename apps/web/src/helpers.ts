@@ -3,20 +3,23 @@ import { Message, MessageAttachment } from './api';
 export const AUTH_KEY = 'discord-clone-auth';
 export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 export const QUICK_REACTIONS = ['👍', '🔥', '😂', '❤️', '🎉'];
-export const PERMISSION_OPTIONS = [
-  { value: 'VIEW_CHANNEL', label: 'View channels' },
-  { value: 'SEND_MESSAGES', label: 'Send messages' },
-  { value: 'MANAGE_MESSAGES', label: 'Manage messages' },
-  { value: 'MANAGE_CHANNELS', label: 'Manage channels' },
-  { value: 'MANAGE_SERVER', label: 'Manage server' },
-  { value: 'MANAGE_ROLES', label: 'Manage roles' },
-  { value: 'KICK_MEMBERS', label: 'Kick members' },
-  { value: 'BAN_MEMBERS', label: 'Ban members' },
-  { value: 'CREATE_INVITE', label: 'Create invites' },
-  { value: 'CONNECT_VOICE', label: 'Connect voice' },
-  { value: 'SPEAK_VOICE', label: 'Speak voice' },
-  { value: 'UPLOAD_FILES', label: 'Upload files' },
-];
+// Labels live in the locale catalogs under `permission.<VALUE>`; this list is the order and the set.
+export const PERMISSION_VALUES = [
+  'VIEW_CHANNEL',
+  'SEND_MESSAGES',
+  'MANAGE_MESSAGES',
+  'MANAGE_CHANNELS',
+  'MANAGE_SERVER',
+  'MANAGE_ROLES',
+  'KICK_MEMBERS',
+  'BAN_MEMBERS',
+  'CREATE_INVITE',
+  'CONNECT_VOICE',
+  'SPEAK_VOICE',
+  'UPLOAD_FILES',
+] as const;
+
+export type PermissionValue = (typeof PERMISSION_VALUES)[number];
 
 export type CallMode = 'voice' | 'video' | 'screen';
 
@@ -62,12 +65,6 @@ export function initials(value: string) {
     .toUpperCase();
 }
 
-export function formatTime(value: string) {
-  return new Intl.DateTimeFormat('en', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
 
 export function accentClass(indexOrValue: number | string) {
   const value =
@@ -77,42 +74,7 @@ export function accentClass(indexOrValue: number | string) {
   return `accent-${Math.abs(value) % 6}`;
 }
 
-export function formatDate(value: string) {
-  const date = new Date(value);
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const isYesterday = date.toDateString() === yesterday.toDateString();
 
-  if (isToday) return `Today at ${formatTime(value)}`;
-  if (isYesterday) return `Yesterday at ${formatTime(value)}`;
-  return (
-    new Intl.DateTimeFormat('en', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric',
-    }).format(date) +
-    ' ' +
-    formatTime(value)
-  );
-}
-
-export function formatDayDivider(value: string) {
-  const date = new Date(value);
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (date.toDateString() === now.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return new Intl.DateTimeFormat('en', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
-}
 
 export function isSameMessageDay(left?: string, right?: string) {
   if (!left || !right) return false;

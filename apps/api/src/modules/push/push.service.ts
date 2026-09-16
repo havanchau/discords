@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { I18nService } from '../../common/i18n/i18n.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { createVapidJwt, encryptWebPushPayload } from './web-push-crypto';
 
@@ -22,6 +23,7 @@ export class PushService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly i18n: I18nService,
   ) {}
 
   getPublicKey() {
@@ -67,9 +69,18 @@ export class PushService {
     if (!subscriptions.length) return;
     if (!(await this.reserveRateLimit(input.toUserId, input.channelId))) return;
 
+    const recipient = await this.prisma.user.findUnique({
+      where: { id: input.toUserId },
+      select: { locale: true },
+    });
+    const locale = this.i18n.resolveUserLocale(recipient?.locale);
+
     const payload = JSON.stringify({
-      title: `#${input.channelName}`,
-      body: `${input.fromUsername}: ${truncate(input.content, 100)}`,
+      title: this.i18n.t(locale, 'push.channelMessage.title', { channel: input.channelName }),
+      body: this.i18n.t(locale, 'push.channelMessage.body', {
+        author: input.fromUsername,
+        content: truncate(input.content, 100),
+      }),
       icon: '/favicon.svg',
       badge: '/favicon.svg',
       data: {

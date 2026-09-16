@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { apiRequest, AuthState, configureAuthRefresh } from '../api';
 import { AUTH_KEY } from '../helpers';
 import { TwoFactorRequiredResponse, useOAuthSignIn } from './useOAuthSignIn';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'two-factor';
 
@@ -21,6 +22,7 @@ interface UseAuthSessionOptions {
 }
 
 export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
+  const t = useTranslation();
   const [auth, setAuth] = useState<AuthState | null>(() => {
     const raw = localStorage.getItem(AUTH_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -69,7 +71,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     const token = params.get('token');
     if (window.location.pathname === '/verify-email' && token) {
       setVerificationToken(token);
-      setVerificationHint('Email token loaded. Confirm verification to continue.');
+      setVerificationHint(t('notice.emailTokenLoaded'));
       setMode('login');
       window.history.replaceState({}, '', '/');
     }
@@ -134,7 +136,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       }
       setAuth(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Authentication failed';
+      const message = err instanceof Error ? err.message : t('error.fallback.authentication-failed');
       if (mode === 'login' && message === EMAIL_NOT_VERIFIED_MESSAGE) {
         setPendingVerificationEmail(payload.email);
       }
@@ -154,7 +156,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       });
       setNotice(result.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot resend the verification email');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-resend-the-verification-email'));
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +175,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       setPendingVerificationEmail(null);
       setAuth(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
+      setError(err instanceof Error ? err.message : t('error.fallback.verification-failed'));
     }
   }
 
@@ -192,7 +194,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       setTwoFactorChallenge('');
       setAuth(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid two-factor code');
+      setError(err instanceof Error ? err.message : t('error.fallback.invalid-two-factor-code'));
     } finally {
       setIsSubmitting(false);
     }
@@ -209,7 +211,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       });
       setNotice(result.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot request a password reset');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-request-a-password-reset'));
     } finally {
       setIsSubmitting(false);
     }
@@ -229,9 +231,9 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       });
       setResetToken('');
       setMode('login');
-      setNotice('Password updated. Sign in with your new password.');
+      setNotice(t('notice.passwordUpdated'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cannot reset password');
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-reset-password'));
     } finally {
       setIsSubmitting(false);
     }

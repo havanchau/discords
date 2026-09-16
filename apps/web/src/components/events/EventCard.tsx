@@ -1,5 +1,7 @@
 import { CalendarClock, Hash, MapPin, Star, Volume2 } from 'lucide-react';
 import type { Channel, ServerEventView } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import { Badge, Button } from '../ui';
 import styles from './ServerEvents.module.css';
 
@@ -12,8 +14,6 @@ interface EventCardProps {
   onCancel: (eventId: string) => Promise<void>;
 }
 
-const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-
 export function EventCard({
   event,
   channel,
@@ -22,15 +22,20 @@ export function EventCard({
   onToggleInterest,
   onCancel,
 }: EventCardProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
+
   return (
     <article className={styles.card} data-testid="server-event">
       <div className={styles.cardMeta}>
         <CalendarClock size={14} aria-hidden="true" />
         <span>
-          {dateFormatter.format(new Date(event.startAt))}
-          {event.endAt ? ` – ${dateFormatter.format(new Date(event.endAt))}` : ''}
+          {dates.absolute(event.startAt)}
+          {event.endAt ? ` – ${dates.absolute(event.endAt)}` : ''}
         </span>
-        {event.status === 'ACTIVE' ? <Badge variant="success">Happening now</Badge> : null}
+        {event.status === 'ACTIVE' ? (
+          <Badge variant="success">{t('events.happeningNow')}</Badge>
+        ) : null}
       </div>
       <strong className={styles.cardTitle}>{event.name}</strong>
       {channel ? (
@@ -52,7 +57,10 @@ export function EventCard({
       {event.description ? <p className={styles.cardDescription}>{event.description}</p> : null}
       <div className={styles.cardActions}>
         <span className={styles.cardDetail}>
-          {event.interestedCount} interested · by {event.creator.displayName}
+          {t('events.interestedBy', {
+            count: event.interestedCount,
+            author: event.creator.displayName,
+          })}
         </span>
         {canManage ? (
           <Button
@@ -62,7 +70,7 @@ export function EventCard({
             disabled={isPending}
             onClick={() => void onCancel(event.id)}
           >
-            Cancel event
+            {t('events.action.cancel')}
           </Button>
         ) : null}
         <Button
@@ -74,7 +82,7 @@ export function EventCard({
           onClick={() => void onToggleInterest(event.id, !event.interested)}
         >
           <Star size={14} aria-hidden="true" />
-          {event.interested ? 'Interested' : 'Mark interested'}
+          {event.interested ? t('events.interested') : t('events.markInterested')}
         </Button>
       </div>
     </article>

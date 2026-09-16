@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { AuthState, Channel } from '../api';
 import { CallMode, CallParticipant, CallState, RemoteMedia } from '../helpers';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseChannelCallOptions {
   auth: AuthState | null;
@@ -23,6 +24,7 @@ export function useChannelCall({
   socket,
   setWorkspaceError,
 }: UseChannelCallOptions) {
+  const t = useTranslation();
   const [callState, setCallState] = useState<CallState | null>(null);
   const [remoteMedia, setRemoteMedia] = useState<RemoteMedia[]>([]);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -129,7 +131,7 @@ export function useChannelCall({
     const label = options.label ?? (channel ? `#${channel.name}` : '');
     if (!callId || !auth || !socket) return false;
     if (callStateRef.current) {
-      setWorkspaceError('Leave the current call before starting another one.');
+      setWorkspaceError(t('call.leaveCurrentFirst'));
       return false;
     }
     try {
@@ -174,7 +176,7 @@ export function useChannelCall({
         },
         async (err: Error | null, result?: { participants: CallParticipant[] }) => {
           if (err) {
-            setWorkspaceError('Cannot join call. Try again.');
+            setWorkspaceError(t('call.cannotJoin'));
             endCall();
             return;
           }
@@ -191,7 +193,7 @@ export function useChannelCall({
       return true;
     } catch (err) {
       stopLocalStream();
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot start call');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-start-call'));
       return false;
     }
   }

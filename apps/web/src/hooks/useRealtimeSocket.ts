@@ -1,9 +1,23 @@
 import { Dispatch, RefObject, SetStateAction, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
-import { AuthState, DirectConversation, DirectMessage, Message, NotificationItem, ServerDetail } from '../api';
+import {
+  AuthState,
+  CustomStatus,
+  DirectConversation,
+  DirectMessage,
+  Message,
+  NotificationItem,
+  ServerDetail,
+} from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
 import { ActiveCallSummary, SOCKET_URL } from '../helpers';
+
+interface PresenceUpdatePayload {
+  userId: string;
+  status?: string;
+  customStatus?: CustomStatus | null;
+}
 
 interface TypingUser {
   userId: string;
@@ -243,14 +257,24 @@ export function useRealtimeSocket({
       setTypingUsers((current) => current.filter((user) => user.userId !== payload.userId));
     });
 
-    nextSocket.on(RealtimeEvents.PresenceUpdate, (payload: { userId: string; status: string }) => {
+    // Partial: a connect/disconnect carries `status`, a profile save carries `customStatus`.
+    nextSocket.on(RealtimeEvents.PresenceUpdate, (payload: PresenceUpdatePayload) => {
       setServer((current) =>
         current
           ? {
               ...current,
               members: current.members.map((member) =>
                 member.user.id === payload.userId
-                  ? { ...member, user: { ...member.user, status: payload.status } }
+                  ? {
+                      ...member,
+                      user: {
+                        ...member.user,
+                        ...(payload.status !== undefined ? { status: payload.status } : {}),
+                        ...(payload.customStatus !== undefined
+                          ? { customStatus: payload.customStatus }
+                          : {}),
+                      },
+                    }
                   : member,
               ),
             }

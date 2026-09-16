@@ -5,6 +5,7 @@ import {
   deriveChannelKey,
   isEncryptedMessage,
 } from '../e2ee';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseChannelEncryptionOptions {
   channel: Channel | null;
@@ -21,6 +22,7 @@ export function useChannelEncryption({
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseChannelEncryptionOptions) {
+  const t = useTranslation();
   const [channelKeys, setChannelKeys] = useState<Record<string, CryptoKey>>({});
   const channelKeysRef = useRef<Record<string, CryptoKey>>({});
 
@@ -37,7 +39,7 @@ export function useChannelEncryption({
     if (!channel) return;
     const trimmedPassphrase = passphrase.trim();
     if (trimmedPassphrase.length < 8) {
-      setWorkspaceError('Use at least 8 characters for the encryption passphrase.');
+      setWorkspaceError(t('encryption.passphraseTooShort'));
       return;
     }
 
@@ -46,7 +48,7 @@ export function useChannelEncryption({
     channelKeysRef.current = nextKeys;
     setChannelKeys(nextKeys);
     setMessages(await Promise.all(messages.map((message) => decryptMessageForDisplay(message))));
-    setWorkspaceNotice('End-to-end encryption enabled for this channel on this device.');
+    setWorkspaceNotice(t('encryption.enabledNotice'));
   }
 
   function clearChannelEncryption() {

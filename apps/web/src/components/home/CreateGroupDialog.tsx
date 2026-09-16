@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { FriendEntry } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button, Checkbox, DialogContent, DialogRoot, TextField } from '../ui';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
@@ -23,6 +24,7 @@ export function CreateGroupDialog({
   onOpenChange,
   onCreate,
 }: CreateGroupDialogProps) {
+  const t = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [name, setName] = useState('');
   const isCreating = pendingAction === 'group-create';
@@ -54,19 +56,22 @@ export function CreateGroupDialog({
   return (
     <DialogRoot open={open} onOpenChange={close}>
       <DialogContent
-        title="New group DM"
-        description={`Pick ${MIN_OTHER_MEMBERS} to ${MAX_OTHER_MEMBERS} friends.`}
+        title={t('group.create.title')}
+        description={t('group.create.description', {
+          min: MIN_OTHER_MEMBERS,
+          max: MAX_OTHER_MEMBERS,
+        })}
       >
         <form className={styles.groupForm} onSubmit={submit}>
           <TextField
-            label="Group name"
+            label={t('group.field.name')}
             value={name}
             maxLength={100}
-            placeholder="Optional"
+            placeholder={t('group.field.namePlaceholder')}
             onChange={(event) => setName(event.target.value)}
           />
           {friends.length ? (
-            <div className={styles.groupFriendList} role="group" aria-label="Friends">
+            <div className={styles.groupFriendList} role="group" aria-label={t('group.friendsLabel')}>
               {friends.map((friend) => {
                 const checked = selectedIds.includes(friend.user.id);
                 const limitReached = !checked && selectedIds.length >= MAX_OTHER_MEMBERS;
@@ -75,7 +80,7 @@ export function CreateGroupDialog({
                     <Checkbox
                       checked={checked}
                       disabled={limitReached}
-                      aria-label={`Add ${friend.user.displayName}`}
+                      aria-label={t('group.addFriend', { name: friend.user.displayName })}
                       onCheckedChange={(next) => toggle(friend.user.id, next === true)}
                     />
                     <UserAvatar user={friend.user} />
@@ -85,11 +90,11 @@ export function CreateGroupDialog({
               })}
             </div>
           ) : (
-            <p className="empty-note">Add friends before creating a group.</p>
+            <p className="empty-note">{t('group.needFriends')}</p>
           )}
           <Button type="submit" fullWidth disabled={!canSubmit}>
             {isCreating ? <Loader2 className="spin" size={16} aria-hidden="true" /> : null}
-            Create group ({selectedIds.length} selected)
+            {t('group.create.action', { count: selectedIds.length })}
           </Button>
         </form>
       </DialogContent>

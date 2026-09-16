@@ -2,6 +2,7 @@ import { ReactNode, Ref, useImperativeHandle, useLayoutEffect, useRef, useState 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Hash, Loader2, MessageSquare, Search } from 'lucide-react';
 import { Channel, Message } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button } from '../ui';
 import styles from './MessageList.module.css';
 
@@ -58,6 +59,7 @@ export function MessageList({
   renderMessage,
   ref,
 }: MessageListProps) {
+  const t = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
   const [rowsOffset, setRowsOffset] = useState(0);
@@ -102,7 +104,7 @@ export function MessageList({
   return (
     <div className={styles.messageList} data-testid="message-list" ref={scrollRef}>
       {isLoadingMessages ? (
-        <div className={styles.messageSkeletonList} aria-label="Loading messages">
+        <div className={styles.messageSkeletonList} aria-label={t('messages.loading')}>
           {Array.from({ length: 7 }, (_, index) => (
             <div key={index} className={styles.messageSkeleton}>
               <span />
@@ -116,18 +118,18 @@ export function MessageList({
       ) : !channel ? (
         <div className={styles.statePanel}>
           <Hash size={24} aria-hidden="true" />
-          Select a channel from the sidebar.
+          {t('messages.selectChannel')}
         </div>
       ) : messages.length === 0 ? (
         <div className={styles.statePanel}>
           <MessageSquare size={24} aria-hidden="true" />
-          <strong>Welcome to #{channel.name}</strong>
-          <span>This is the start of the channel.</span>
+          <strong>{t('messages.welcome', { channel: channel.name })}</strong>
+          <span>{t('messages.channelStart')}</span>
         </div>
       ) : visibleMessages.length === 0 ? (
         <div className={styles.statePanel}>
           <Search size={24} aria-hidden="true" />
-          No messages match the current search.
+          {t('messages.noSearchMatch')}
         </div>
       ) : (
         <>

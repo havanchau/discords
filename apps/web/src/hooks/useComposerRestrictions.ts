@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AuthState, Channel, ServerDetail } from '../api';
+import { useLocale } from '../i18n/LocaleProvider';
+import { buildDateFormatters } from '../i18n/useDateFormat';
 import { activeTimeoutUntil, memberHasServerPermission } from '../utils/serverPermissions';
 
 export interface ComposerRestriction {
@@ -17,6 +19,7 @@ interface UseComposerRestrictionsOptions {
 
 /** Client-side hints for timeouts and slowmode; the API remains authoritative. */
 export function useComposerRestrictions({ auth, server, channel }: UseComposerRestrictionsOptions) {
+  const { locale, t } = useLocale();
   const [now, setNow] = useState(() => Date.now());
   const [lastSentAtByChannel, setLastSentAtByChannel] = useState<Record<string, number>>({});
   const userId = auth?.user.id ?? '';
@@ -47,7 +50,9 @@ export function useComposerRestrictions({ auth, server, channel }: UseComposerRe
 
   const restriction: ComposerRestriction = {
     disabledReason: timeoutUntil
-      ? `You are timed out until ${new Date(timeoutUntil).toLocaleTimeString()}`
+      ? t('composer.timedOutUntil', {
+          time: buildDateFormatters(locale, t).time(new Date(timeoutUntil).toISOString()),
+        })
       : null,
     slowmodeSeconds,
     retryAfterSeconds,

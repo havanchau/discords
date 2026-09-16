@@ -24,8 +24,49 @@ interface AuthRefreshConfig {
 let authRefreshConfig: AuthRefreshConfig | null = null;
 let refreshPromise: Promise<AuthState> | null = null;
 
+/**
+ * The API translates `message` for the request locale and adds a stable `code`; callers that need to
+ * branch on a specific failure use `code`, never the text.
+ */
+export class ApiError extends Error {
+  readonly code: string | null;
+  readonly status: number;
+
+  constructor(message: unknown, code: unknown, status: number, statusText: string, detail?: string) {
+    const text = normalizeMessage(message) || statusText;
+    super(detail ? `${text} (${detail})` : text);
+    this.name = 'ApiError';
+    this.code = typeof code === 'string' ? code : null;
+    this.status = status;
+  }
+}
+
+/** Upload failures name the file so a user with several queued uploads knows which one failed. */
+function fileDetail(file: File) {
+  return `${file.name}, ${file.type || 'unknown'}`;
+}
+
+function normalizeMessage(message: unknown): string {
+  if (Array.isArray(message)) return message.filter((part) => typeof part === 'string').join(', ');
+  return typeof message === 'string' ? message : '';
+}
+
+let requestLocale = 'en';
+
+/** Set by LocaleProvider so the API answers errors and emails in the locale the user is looking at. */
+export function setRequestLocale(locale: string) {
+  requestLocale = locale;
+}
+
 export function configureAuthRefresh(config: AuthRefreshConfig) {
   authRefreshConfig = config;
+}
+
+export interface CustomStatus {
+  text: string | null;
+  emoji: string | null;
+  /** ISO timestamp; null means the status has no expiry. */
+  expiresAt: string | null;
 }
 
 export interface User {
@@ -34,9 +75,28 @@ export interface User {
   username: string;
   displayName: string;
   avatarUrl?: string | null;
+  bannerUrl?: string | null;
   bio?: string | null;
+  pronouns?: string | null;
+  customStatus?: CustomStatus | null;
+  locale?: string | null;
   status?: string;
+  createdAt?: string;
   emailVerifiedAt?: string | null;
+}
+
+/** A member's identity inside one server, plus the roles that decorate it on the profile card. */
+export interface UserProfileServerContext {
+  serverId: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  joinedAt: string;
+  roles: Array<{ id: string; name: string; color?: string | null }>;
+}
+
+export interface UserProfile extends PublicUser {
+  createdAt: string;
+  server: UserProfileServerContext | null;
 }
 
 /** Another user's profile as returned by friends and DM endpoints; email is private to its owner. */
@@ -54,6 +114,7 @@ export interface ServerMemberDetail {
   user: User;
   kind: string;
   nickname?: string | null;
+  avatarUrl?: string | null;
   timeoutUntil?: string | null;
   roles?: Array<{ role: Role }>;
 }
@@ -345,7 +406,7 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || 'Request failed');
+    throw new ApiError(error.message, error.code, response.status, response.statusText);
   }
 
   return response.json();
@@ -374,9 +435,7 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(
-      `${error.message || 'Upload failed'} (${file.name}, ${file.type || 'unknown'})`,
-    );
+    throw new ApiError(error.message, error.code, response.status, response.statusText, fileDetail(file));
   }
 
   const result = (await response.json()) as { attachment: MessageAttachment };
@@ -418,8 +477,12 @@ async function uploadFileInChunks(file: File, token: string): Promise<MessageAtt
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(
-        `${error.message || 'Chunk upload failed'} (${file.name}, ${file.type || 'unknown'})`,
+      throw new ApiError(
+        error.message,
+        error.code,
+        response.status,
+        response.statusText,
+        fileDetail(file),
       );
     }
 
@@ -451,6 +514,7 @@ export function assetUrl(url: string) {
 function buildHeaders(headers: RequestInit['headers'], token?: string | null) {
   return {
     'Content-Type': 'application/json',
+    'X-Locale': requestLocale,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...headers,
   };

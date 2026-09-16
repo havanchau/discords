@@ -1,4 +1,5 @@
 import type { BlockedUserEntry } from '../../api';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import { Button } from '../ui';
 import styles from './HomePanel.module.css';
 
@@ -9,12 +10,14 @@ type BlockedUsersListProps = {
 };
 
 export function BlockedUsersList({ blocked, pendingAction, onUnblock }: BlockedUsersListProps) {
+  const t = useTranslation();
+
   if (!blocked.length) return null;
 
   return (
     <section aria-labelledby="home-blocked-title">
       <h2 id="home-blocked-title" className={styles.sectionTitle}>
-        Blocked
+        {t('home.blocked.title')}
       </h2>
       <div className={styles.list} role="list">
         {blocked.map((entry) => (
@@ -29,7 +32,7 @@ export function BlockedUsersList({ blocked, pendingAction, onUnblock }: BlockedU
                 disabled={pendingAction === `unblock-${entry.user.id}`}
                 onClick={() => void onUnblock(entry.user.id)}
               >
-                Unblock
+                {t('home.blocked.unblock')}
               </Button>
             </span>
           </article>

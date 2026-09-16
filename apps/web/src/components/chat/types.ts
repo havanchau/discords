@@ -2,6 +2,7 @@ import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from
 import type { AuthState, Channel, Message, NotificationItem } from '../../api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
 import type { ComposerRestriction } from '../../hooks/useComposerRestrictions';
+import type { MemberIdentity } from '../../utils/memberIdentity';
 import type { ParsedMessageSearch } from '../../utils/messageSearch';
 
 export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | null;
@@ -21,6 +22,8 @@ export type ActiveDialog =
 export interface ChatPanelSession {
   auth: AuthState;
   channel: Channel | null;
+  /** Per-server nickname and avatar by user id, so authors match the member list. */
+  memberIdentities: Record<string, MemberIdentity>;
 }
 
 export interface ChatPanelMessages {
@@ -76,7 +79,8 @@ export interface ChatPanelCall {
   end: () => void;
 }
 
-export interface ChatPanelMessageActions {
+/** What `useChannelMessageActions` owns: everything about the message itself. */
+export interface ChannelMessageActions {
   editingMessageId: string | null;
   editingDraft: string;
   setReplyingToMessage: (message: Message | null) => void;
@@ -87,6 +91,12 @@ export interface ChatPanelMessageActions {
   delete: (messageId: string) => Promise<void>;
   toggleReaction: (message: Message, emoji: string) => Promise<void>;
   togglePinned: (message: Message) => void;
+}
+
+export interface ChatPanelMessageActions extends ChannelMessageActions {
+  /** Opened from a message author's avatar, so the profile card can act on that member. */
+  startDirectConversation: (userId: string) => void;
+  sendFriendRequest: (usernameOrEmail: string) => void;
 }
 
 export interface ChatPanelComposer {

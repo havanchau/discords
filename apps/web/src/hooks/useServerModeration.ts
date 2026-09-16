@@ -9,6 +9,7 @@ import {
   ServerDetail,
   ServerSummary,
 } from '../api';
+import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseServerModerationOptions {
   auth: AuthState | null;
@@ -28,10 +29,14 @@ interface MemberRemovedPayload {
   reason: 'KICK' | 'BAN';
 }
 
+/** Partial by design: a publisher sends only the fields its change touched. */
 interface MemberUpdatedPayload {
   serverId: string;
   memberId: string;
-  timeoutUntil: string | null;
+  userId?: string;
+  timeoutUntil?: string | null;
+  nickname?: string | null;
+  avatarUrl?: string | null;
 }
 
 export function useServerModeration({
@@ -45,6 +50,7 @@ export function useServerModeration({
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseServerModerationOptions) {
+  const t = useTranslation();
   const [bans, setBans] = useState<ServerBanEntry[]>([]);
   const [isLoadingBans, setIsLoadingBans] = useState(false);
   const [bansError, setBansError] = useState<string | null>(null);
@@ -91,9 +97,18 @@ export function useServerModeration({
         current?.id === payload.serverId
           ? {
               ...current,
+              // A partial payload: only the keys the change carried are merged, so a nickname
+              // update does not clear `timeoutUntil` and vice versa.
               members: current.members.map((member) =>
                 member.id === payload.memberId
-                  ? { ...member, timeoutUntil: payload.timeoutUntil }
+                  ? {
+                      ...member,
+                      ...(payload.timeoutUntil !== undefined
+                        ? { timeoutUntil: payload.timeoutUntil }
+                        : {}),
+                      ...(payload.nickname !== undefined ? { nickname: payload.nickname } : {}),
+                      ...(payload.avatarUrl !== undefined ? { avatarUrl: payload.avatarUrl } : {}),
+                    }
                   : member,
               ),
             }
@@ -123,7 +138,7 @@ export function useServerModeration({
     } catch (err) {
       if (serverRef.current?.id !== serverId) return;
       setBans([]);
-      setBansError(err instanceof Error ? err.message : 'Cannot load bans');
+      setBansError(err instanceof Error ? err.message : t('error.fallback.cannot-load-bans'));
     } finally {
       if (serverRef.current?.id === serverId) setIsLoadingBans(false);
     }
@@ -149,7 +164,7 @@ export function useServerModeration({
       setWorkspaceNotice(`${result.ban.user.displayName} was banned.`);
       return true;
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot ban member');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-ban-member'));
       return false;
     } finally {
       setPendingAction(null);
@@ -168,7 +183,7 @@ export function useServerModeration({
       );
       setBans((current) => current.filter((ban) => ban.user.id !== userId));
     } catch (err) {
-      setBansError(err instanceof Error ? err.message : 'Cannot unban user');
+      setBansError(err instanceof Error ? err.message : t('error.fallback.cannot-unban-user'));
     } finally {
       setPendingAction(null);
     }
@@ -198,7 +213,7 @@ export function useServerModeration({
           : current,
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : 'Cannot update timeout');
+      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-timeout'));
     } finally {
       setPendingAction(null);
     }

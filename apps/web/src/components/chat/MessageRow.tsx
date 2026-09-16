@@ -17,14 +17,13 @@ import {
   accentClass,
   attachmentKind,
   formatBytes,
-  formatDate,
-  formatDayDivider,
-  formatTime,
   initials,
   isSameMessageDay,
   previewText,
   QUICK_REACTIONS,
 } from '../../helpers';
+import { useTranslation } from '../../i18n/LocaleProvider';
+import { useDateFormat } from '../../i18n/useDateFormat';
 import {
   Button,
   IconButton,
@@ -40,6 +39,8 @@ import {
   PopoverTrigger,
 } from '../ui';
 import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
+import { ProfileCard } from '../profile/ProfileCard';
+import type { MemberIdentity } from '../../utils/memberIdentity';
 import { EmojiPicker, ReactionEmoji } from './EmojiPicker';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import { extractMarkdownLinks } from '../../utils/markdown';
@@ -66,6 +67,8 @@ function MessageContent({
   onOpenThread: (message: Message) => void;
   onJumpToMessage: (messageId: string) => void;
 }) {
+  const t = useTranslation();
+  const dates = useDateFormat();
   const { resolveEmoji } = useServerEmojiContext();
   const links = extractMarkdownLinks(message.content);
 
@@ -100,7 +103,7 @@ function MessageContent({
                 ) : (
                   <Unlock size={12} aria-hidden="true" />
                 )}
-                {message.decryptionFailed ? 'Locked' : 'E2EE'}
+                {message.decryptionFailed ? t('message.encrypted.locked') : t('message.encrypted.ok')}
               </span>
             ) : null
           }
@@ -115,9 +118,15 @@ function MessageContent({
         >
           <MessageSquareReply size={14} aria-hidden="true" />
           <strong>{message.thread.replyCount}</strong>
-          <span>{message.thread.replyCount === 1 ? 'reply' : 'replies'}</span>
+          <span>
+            {message.thread.replyCount === 1
+              ? t('message.thread.replySingular')
+              : t('message.thread.replyPlural')}
+          </span>
           {message.thread.lastReplyAt ? (
-            <small>Last reply {formatDate(message.thread.lastReplyAt)}</small>
+            <small>
+              {t('message.thread.lastReply', { date: dates.dateTime(message.thread.lastReplyAt) })}
+            </small>
           ) : null}
         </button>
       ) : null}
@@ -140,6 +149,8 @@ function MessageAttachments({
   attachments: MessageAttachment[];
   onPreview: (attachment: PreviewAttachment) => void;
 }) {
+  const t = useTranslation();
+
   if (!attachments.length) return null;
 
   return (
@@ -175,7 +186,7 @@ function MessageAttachments({
                   size="sm"
                   onClick={() => onPreview({ url, fileName: attachment.fileName, kind: 'video' })}
                 >
-                  Open preview
+                  {t('attachment.openPreview')}
                 </Button>
               </span>
             </div>
@@ -230,6 +241,8 @@ interface MessageRowProps {
   message: Message;
   previousMessage?: Message;
   auth: AuthState;
+  serverId: string | null;
+  authorIdentity: MemberIdentity;
   pinnedMessageIds: string[];
   actions: ChatPanelMessageActions;
   onPreviewAttachment: (attachment: PreviewAttachment) => void;
@@ -241,12 +254,17 @@ export const MessageRow = memo(function MessageRow({
   message,
   previousMessage,
   auth,
+  serverId,
+  authorIdentity,
   pinnedMessageIds,
   actions,
   onPreviewAttachment,
   onJumpToMessage,
 }: MessageRowProps) {
+  const t = useTranslation();
+  const dates = useDateFormat();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [areActionsVisible, setAreActionsVisible] = useState(false);
   const showDateDivider = !isSameMessageDay(previousMessage?.createdAt, message.createdAt);
   const isFirstInGroup =
@@ -268,7 +286,7 @@ export const MessageRow = memo(function MessageRow({
     <div className={styles.messageBlock}>
       {showDateDivider && (
         <div className={styles.dateDivider}>
-          <span>{formatDayDivider(message.createdAt)}</span>
+          <span>{dates.dayDivider(message.createdAt)}</span>
         </div>
       )}
 
@@ -289,30 +307,50 @@ export const MessageRow = memo(function MessageRow({
             }}
           >
             {isFirstInGroup ? (
-              <div
-                className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
-              >
-                {message.author.avatarUrl ? (
-                  <img src={assetUrl(message.author.avatarUrl)} alt={message.author.displayName} />
-                ) : (
-                  initials(message.author.displayName)
-                )}
-              </div>
+              <PopoverRoot open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
+                    aria-label={t('members.viewProfile', { name: authorIdentity.displayName })}
+                  >
+                    {authorIdentity.avatarUrl ? (
+                      <img
+                        src={assetUrl(authorIdentity.avatarUrl)}
+                        alt={authorIdentity.displayName}
+                      />
+                    ) : (
+                      initials(authorIdentity.displayName)
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="right" align="start">
+                  <ProfileCard
+                    accessToken={auth.accessToken}
+                    userId={message.authorId}
+                    viewerId={auth.user.id}
+                    serverId={serverId}
+                    isOpen={isProfileOpen}
+                    onDirectMessage={actions.startDirectConversation}
+                    onAddFriend={actions.sendFriendRequest}
+                  />
+                </PopoverContent>
+              </PopoverRoot>
             ) : (
-              <span className={styles.hoverTimestamp}>{formatTime(message.createdAt)}</span>
+              <span className={styles.hoverTimestamp}>{dates.time(message.createdAt)}</span>
             )}
 
             <div className={styles.body}>
               {isFirstInGroup && (
                 <div className={styles.meta}>
-                  <strong>{message.author.displayName}</strong>
-                  <span>{formatDate(message.createdAt)}</span>
-                  {message.editedAt ? <span>edited</span> : null}
+                  <strong>{authorIdentity.displayName}</strong>
+                  <span>{dates.dateTime(message.createdAt)}</span>
+                  {message.editedAt ? <span>{t('message.edited')}</span> : null}
                 </div>
               )}
 
               {message.deletedAt ? (
-                <p className={styles.deletedMessage}>Message deleted</p>
+                <p className={styles.deletedMessage}>{t('message.deleted')}</p>
               ) : isEditing ? (
                 <div className={styles.editRow}>
                   <TextField
@@ -320,11 +358,11 @@ export const MessageRow = memo(function MessageRow({
                     onChange={(event) => actions.setEditingDraft(event.target.value)}
                     autoFocus
                     className={styles.editInput}
-                    aria-label="Edit message"
+                    aria-label={t('message.edit.ariaLabel')}
                     autoComplete="off"
                   />
                   <Button size="sm" onClick={() => void actions.saveEdit(message.id)}>
-                    Save
+                    {t('common.save')}
                   </Button>
                   <Button
                     size="sm"
@@ -334,7 +372,7 @@ export const MessageRow = memo(function MessageRow({
                       actions.setEditingDraft('');
                     }}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                 </div>
               ) : (
@@ -361,7 +399,7 @@ export const MessageRow = memo(function MessageRow({
                       type="button"
                       className={reaction.me ? styles.active : ''}
                       onClick={() => void actions.toggleReaction(message, reaction.emoji)}
-                      title={`React ${reaction.emoji}`}
+                      title={t('message.reaction.title', { emoji: reaction.emoji })}
                     >
                       <ReactionEmoji emoji={reaction.emoji} />
                       <strong>{reaction.count}</strong>
@@ -372,26 +410,32 @@ export const MessageRow = memo(function MessageRow({
 
               {!message.deletedAt && !isEditing && areActionsVisible && (
                 <div className={`${styles.actions} ${styles.actionsVisible}`}>
-                  <Tooltip content="Reply">
-                    <IconButton label="Reply" onClick={() => actions.setReplyingToMessage(message)}>
+                  <Tooltip content={t('message.action.reply')}>
+                    <IconButton
+                      label={t('message.action.reply')}
+                      onClick={() => actions.setReplyingToMessage(message)}
+                    >
                       <Reply size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip content="Open thread">
-                    <IconButton label="Open thread" onClick={() => actions.openThread(message)}>
+                  <Tooltip content={t('message.action.openThread')}>
+                    <IconButton
+                      label={t('message.action.openThread')}
+                      onClick={() => actions.openThread(message)}
+                    >
                       <MessageSquareReply size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip content={isPinned ? 'Unpin message' : 'Pin message'}>
+                  <Tooltip content={isPinned ? t('message.action.unpin') : t('message.action.pin')}>
                     <IconButton
-                      label={isPinned ? 'Unpin message' : 'Pin message'}
+                      label={isPinned ? t('message.action.unpin') : t('message.action.pin')}
                       className={isPinned ? styles.selected : ''}
                       onClick={() => void actions.togglePinned(message)}
                     >
                       <Pin size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
-                  <div className={styles.quickReactions} title="Quick reactions">
+                  <div className={styles.quickReactions} title={t('message.action.quickReactions')}>
                     {QUICK_REACTIONS.map((emoji) => (
                       <button
                         key={emoji}
@@ -404,7 +448,7 @@ export const MessageRow = memo(function MessageRow({
                     ))}
                     <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
                       <PopoverTrigger asChild>
-                        <IconButton label="Add reaction">
+                        <IconButton label={t('message.action.addReaction')}>
                           <SmilePlus size={14} aria-hidden="true" />
                         </IconButton>
                       </PopoverTrigger>
@@ -420,9 +464,9 @@ export const MessageRow = memo(function MessageRow({
                   </div>
                   {canManage && (
                     <>
-                      <Tooltip content="Edit message">
+                      <Tooltip content={t('message.action.edit')}>
                         <IconButton
-                          label="Edit message"
+                          label={t('message.action.edit')}
                           onClick={() => {
                             actions.setEditingMessageId(message.id);
                             actions.setEditingDraft(message.content);
@@ -431,9 +475,9 @@ export const MessageRow = memo(function MessageRow({
                           <Edit3 size={14} aria-hidden="true" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip content="Delete message">
+                      <Tooltip content={t('message.action.delete')}>
                         <IconButton
-                          label="Delete message"
+                          label={t('message.action.delete')}
                           variant="danger"
                           onClick={() => void actions.delete(message.id)}
                         >
@@ -451,15 +495,16 @@ export const MessageRow = memo(function MessageRow({
         {!message.deletedAt && (
           <ContextMenuContent>
             <ContextMenuItem onClick={() => actions.setReplyingToMessage(message)}>
-              <Reply size={14} aria-hidden="true" /> Reply
+              <Reply size={14} aria-hidden="true" /> {t('message.menu.reply')}
             </ContextMenuItem>
             <ContextMenuItem onClick={() => actions.openThread(message)}>
-              <MessageSquareReply size={14} aria-hidden="true" /> Open Thread
+              <MessageSquareReply size={14} aria-hidden="true" /> {t('message.menu.openThread')}
             </ContextMenuItem>
             <ContextMenuItem onClick={() => void actions.togglePinned(message)}>
-              <Pin size={14} aria-hidden="true" /> {isPinned ? 'Unpin Message' : 'Pin Message'}
+              <Pin size={14} aria-hidden="true" />{' '}
+              {isPinned ? t('message.menu.unpin') : t('message.menu.pin')}
             </ContextMenuItem>
-            <ContextMenuItem onClick={copyMessageContent}>Copy Text</ContextMenuItem>
+            <ContextMenuItem onClick={copyMessageContent}>{t('message.menu.copyText')}</ContextMenuItem>
             {canManage && (
               <>
                 <ContextMenuSeparator />
@@ -469,10 +514,10 @@ export const MessageRow = memo(function MessageRow({
                     actions.setEditingDraft(message.content);
                   }}
                 >
-                  <Edit3 size={14} aria-hidden="true" /> Edit Message
+                  <Edit3 size={14} aria-hidden="true" /> {t('message.menu.edit')}
                 </ContextMenuItem>
                 <ContextMenuItem variant="danger" onClick={() => void actions.delete(message.id)}>
-                  <Trash2 size={14} aria-hidden="true" /> Delete Message
+                  <Trash2 size={14} aria-hidden="true" /> {t('message.menu.delete')}
                 </ContextMenuItem>
               </>
             )}

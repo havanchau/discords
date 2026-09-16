@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { CurrentUser } from '../../common/current-user.decorator';
+import { I18nService } from '../../common/i18n/i18n.service';
 import { RateLimit } from '../../common/rate-limit.decorator';
 import { RequestUser } from '../../common/request-user';
 import { AuthService } from './auth.service';
@@ -18,13 +19,14 @@ import { PasswordResetService } from './password-reset.service';
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
-    private readonly passwordReset: PasswordResetService
+    private readonly passwordReset: PasswordResetService,
+    private readonly i18n: I18nService
   ) {}
 
   @RateLimit({ keyPrefix: 'auth-register', limit: 5, windowMs: 15 * 60_000 })
   @Post('register')
   register(@Body() dto: RegisterDto, @Req() request: Request) {
-    return this.auth.register(dto, request.headers['user-agent']);
+    return this.auth.register(dto, request.headers['user-agent'], this.i18n.resolveRequestLocale(request));
   }
 
   @RateLimit({ keyPrefix: 'auth-login', limit: 10, windowMs: 15 * 60_000 })
@@ -42,15 +44,15 @@ export class AuthController {
   @RateLimit({ keyPrefix: 'auth-resend-verification', limit: 5, windowMs: 15 * 60_000 })
   @HttpCode(200)
   @Post('resend-verification')
-  resendVerification(@Body() dto: ResendVerificationDto) {
-    return this.auth.resendVerification(dto.email);
+  resendVerification(@Body() dto: ResendVerificationDto, @Req() request: Request) {
+    return this.auth.resendVerification(dto.email, this.i18n.resolveRequestLocale(request));
   }
 
   @RateLimit({ keyPrefix: 'auth-forgot-password', limit: 5, windowMs: 15 * 60_000 })
   @HttpCode(200)
   @Post('forgot-password')
-  forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.passwordReset.requestReset(dto.email);
+  forgotPassword(@Body() dto: ForgotPasswordDto, @Req() request: Request) {
+    return this.passwordReset.requestReset(dto.email, this.i18n.resolveRequestLocale(request));
   }
 
   @RateLimit({ keyPrefix: 'auth-reset-password', limit: 10, windowMs: 15 * 60_000 })

@@ -1,4 +1,5 @@
 import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
+import { useTranslation } from '../../i18n/LocaleProvider';
 import styles from './EmojiPicker.module.css';
 
 export const UNICODE_EMOJI_OPTIONS = [
@@ -26,11 +27,12 @@ interface EmojiPickerProps {
 }
 
 export function EmojiPicker({ onSelect }: EmojiPickerProps) {
+  const t = useTranslation();
   const { emojis, resolveEmoji } = useServerEmojiContext();
 
   return (
     <div className={styles.picker}>
-      <div className={styles.grid} role="group" aria-label="Emoji">
+      <div className={styles.grid} role="group" aria-label={t('emoji.picker.label')}>
         {UNICODE_EMOJI_OPTIONS.map((emoji) => (
           <button
             key={emoji}
@@ -44,8 +46,8 @@ export function EmojiPicker({ onSelect }: EmojiPickerProps) {
       </div>
       {emojis.length ? (
         <>
-          <strong className={styles.sectionTitle}>Server emoji</strong>
-          <div className={styles.grid} role="group" aria-label="Server emoji">
+          <strong className={styles.sectionTitle}>{t('emoji.picker.serverSection')}</strong>
+          <div className={styles.grid} role="group" aria-label={t('emoji.picker.serverSection')}>
             {emojis.map((emoji) => (
               <button
                 key={emoji.id}
