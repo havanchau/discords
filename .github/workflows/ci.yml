@@ -36,6 +36,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run format:check
       - run: npm run db:generate --workspace apps/api
       - run: npm run db:push --workspace apps/api
       - run: npm run db:seed --workspace apps/api

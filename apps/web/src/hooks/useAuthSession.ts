@@ -1,8 +1,9 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { apiRequest, AuthState, configureAuthRefresh } from '../api';
-import { AUTH_KEY } from '../helpers';
+import { apiRequest, AuthState, configureAuthRefresh } from '@/api';
+import { AUTH_KEY } from '@/helpers';
 import { TwoFactorRequiredResponse, useOAuthSignIn } from './useOAuthSignIn';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { formText } from '@/utils/formText';
 
 export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'two-factor';
 
@@ -25,7 +26,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
   const t = useTranslation();
   const [auth, setAuth] = useState<AuthState | null>(() => {
     const raw = localStorage.getItem(AUTH_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as AuthState) : null;
   });
   const [mode, setModeState] = useState<AuthMode>('login');
   const [verificationToken, setVerificationToken] = useState('');
@@ -81,7 +82,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       setMode('reset');
       window.history.replaceState({}, '', '/');
     }
-  }, [setMode]);
+  }, [setMode, t]);
 
   useEffect(() => {
     configureAuthRefresh({
@@ -107,10 +108,10 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     setError(null);
     const form = new FormData(event.currentTarget);
     const payload = {
-      email: String(form.get('email')),
-      username: String(form.get('username') || ''),
-      displayName: String(form.get('displayName') || ''),
-      password: String(form.get('password')),
+      email: formText(form, 'email'),
+      username: formText(form, 'username'),
+      displayName: formText(form, 'displayName'),
+      password: formText(form, 'password'),
     };
 
     try {
@@ -136,7 +137,8 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       }
       setAuth(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('error.fallback.authentication-failed');
+      const message =
+        err instanceof Error ? err.message : t('error.fallback.authentication-failed');
       if (mode === 'login' && message === EMAIL_NOT_VERIFIED_MESSAGE) {
         setPendingVerificationEmail(payload.email);
       }
@@ -156,7 +158,11 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       });
       setNotice(result.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-resend-the-verification-email'));
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('error.fallback.cannot-resend-the-verification-email'),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -188,7 +194,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
         method: 'POST',
         body: JSON.stringify({
           challengeToken: twoFactorChallenge,
-          code: String(new FormData(event.currentTarget).get('code') ?? '').trim(),
+          code: formText(new FormData(event.currentTarget), 'code').trim(),
         }),
       });
       setTwoFactorChallenge('');
@@ -207,11 +213,13 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     try {
       const result = await apiRequest<{ message: string }>('/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email: String(new FormData(event.currentTarget).get('email')) }),
+        body: JSON.stringify({ email: formText(new FormData(event.currentTarget), 'email') }),
       });
       setNotice(result.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-request-a-password-reset'));
+      setError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-request-a-password-reset'),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -226,7 +234,7 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
         method: 'POST',
         body: JSON.stringify({
           token: resetToken,
-          password: String(new FormData(event.currentTarget).get('password')),
+          password: formText(new FormData(event.currentTarget), 'password'),
         }),
       });
       setResetToken('');

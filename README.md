@@ -130,7 +130,6 @@ Current limits:
 - `docs/ui-redesign-plan.md`: phased UI refactor status.
 - `docs/ui-event-ownership-map.md`: realtime/UI side-effect ownership map.
 
-
 ## Current Backlog
 
 The canonical backlog and completion status live in `docs/feature-spec.md` under **Feature Completion Checklist**. Detailed upcoming slices live in `docs/feature-roadmap.md`. Keep backlog status there instead of duplicating checked/unchecked feature lists in this README.

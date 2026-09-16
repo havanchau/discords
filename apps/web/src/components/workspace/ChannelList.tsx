@@ -1,9 +1,9 @@
 import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { Channel } from '../../api';
-import type { ActiveCallSummary } from '../../helpers';
-import { cn } from '../../utils/cn';
-import { Button, IconButton } from '../ui';
+import type { Channel } from '@/api';
+import type { ActiveCallSummary } from '@/helpers';
+import { cn } from '@/utils/cn';
+import { Button, IconButton } from '@/components/ui';
 import styles from './ChannelSidebar.module.css';
 import type { ChannelBadgeState } from './types';
 

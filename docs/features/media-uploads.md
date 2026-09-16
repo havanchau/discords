@@ -46,9 +46,9 @@ Enable multi-format file uploads attached to channel messages and direct message
 ## Trade-offs
 
 - **Local Storage vs External S3/Cloudinary**:
-  - *Chosen*: Dual-driver model. Local storage in development, Cloudinary for hosted production.
-  - *Rationale*: Frictionless developer experience without requiring external cloud credentials for local setup.
-  - *Cost*: Requires dual driver code maintainability in `UploadsService`.
+  - _Chosen_: Dual-driver model. Local storage in development, Cloudinary for hosted production.
+  - _Rationale_: Frictionless developer experience without requiring external cloud credentials for local setup.
+  - _Cost_: Requires dual driver code maintainability in `UploadsService`.
 
 ## Risks & Rollback
 

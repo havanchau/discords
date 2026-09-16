@@ -28,14 +28,15 @@ Build this project as a real-time Discord-like communication app with:
 ## Operating Rules
 
 1. Read existing code and configuration before editing.
-2. Follow global `.claude` standards (`~/.claude/rules/workflow.md`, `~/.claude/rules/documentation.md`, `~/.claude/rules/self-review.md`).
-3. Keep changes scoped to the requested feature or fix.
-4. Preserve user work; do not revert unrelated changes.
-5. Prefer existing local patterns over new architecture.
-6. Add tests for behavior that can regress, especially permissions, auth, message delivery, and persistence.
-7. Do not commit secrets, tokens, database URLs, private keys, generated build output, or local upload artifacts.
-8. Use clear domain names: `server`, `channel`, `member`, `role`, `message`, `conversation`, `presence`, `notification`.
-9. Maintain docs-driven development: write or update task specs in `docs/features/` or canonical doc owners before implementing code changes.
+2. Follow [docs/code-style.md](docs/code-style.md) for formatting, lint, naming, imports, and API/web patterns.
+3. Follow global `.claude` standards (`~/.claude/rules/workflow.md`, `~/.claude/rules/documentation.md`, `~/.claude/rules/self-review.md`).
+4. Keep changes scoped to the requested feature or fix.
+5. Preserve user work; do not revert unrelated changes.
+6. Prefer existing local patterns over new architecture.
+7. Add tests for behavior that can regress, especially permissions, auth, message delivery, and persistence.
+8. Do not commit secrets, tokens, database URLs, private keys, generated build output, or local upload artifacts.
+9. Use clear domain names: `server`, `channel`, `member`, `role`, `message`, `conversation`, `presence`, `notification`.
+10. Maintain docs-driven development: write or update task specs in `docs/features/` or canonical doc owners before implementing code changes.
 
 ## Task Checklist Rules
 

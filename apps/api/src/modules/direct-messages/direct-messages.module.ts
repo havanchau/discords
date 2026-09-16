@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
-import { PrismaModule } from '../prisma/prisma.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { RealtimePublisherModule } from '../realtime/realtime-publisher.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { PrismaModule } from '@/modules/prisma/prisma.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
 import { DirectMessageActionsController } from './direct-message-actions.controller';
 import { DirectMessageActionsService } from './direct-message-actions.service';
 import { DirectConversationsService } from './direct-conversations.service';

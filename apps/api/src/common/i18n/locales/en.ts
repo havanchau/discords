@@ -54,7 +54,8 @@ export const enApiMessages = {
   MEMBER_NOT_FOUND: 'Member not found',
   MEMBER_OR_ROLE_NOT_FOUND: 'Member or role not found',
   MESSAGE_CONTENT_CANNOT_BE_EMPTY: 'Message content cannot be empty',
-  MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS: 'Message content cannot be empty without attachments',
+  MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS:
+    'Message content cannot be empty without attachments',
   MESSAGE_NOT_FOUND: 'Message not found',
   MISSING_BEARER_TOKEN: 'Missing bearer token',
   MISSING_TOKEN: 'Missing token',
@@ -63,10 +64,13 @@ export const enApiMessages = {
   NOTIFICATION_NOT_FOUND: 'Notification not found',
   ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE: 'Only the author can delete this message',
   ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE: 'Only the author can edit this message',
-  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE: 'Only the author or message manager can delete this message',
-  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE: 'Only the author or message managers can pin this message',
+  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE:
+    'Only the author or message manager can delete this message',
+  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE:
+    'Only the author or message managers can pin this message',
   ONLY_THE_GROUP_OWNER_CAN_REMOVE_MEMBERS: 'Only the group owner can remove members',
-  ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST: 'Only the receiver can accept or reject this request',
+  ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST:
+    'Only the receiver can accept or reject this request',
   PIN_LIMIT_REACHED: 'Pin limit reached',
   REPLY_TARGET_NOT_FOUND: 'Reply target not found',
   ROLE_NOT_FOUND: 'Role not found',
@@ -98,16 +102,19 @@ export const enApiMessages = {
   MEMBER_TIMED_OUT: 'You are timed out until {detail}',
   INTERNAL_ERROR: 'Something went wrong. Please try again.',
   'email.verify.subject': 'Verify your Discord Clone account',
-  'email.verify.text': 'Verify your account within 1 hour: {url}\n\nIf you did not create this account, ignore this email.',
+  'email.verify.text':
+    'Verify your account within 1 hour: {url}\n\nIf you did not create this account, ignore this email.',
   'email.verify.intro': 'Verify your account within 1 hour:',
   'email.verify.ignore': 'If you did not create this account, ignore this email.',
   'email.reset.subject': 'Reset your Discord Clone password',
-  'email.reset.text': 'Reset your password within 30 minutes: {url}\n\nIf you did not ask for this, ignore this email.',
+  'email.reset.text':
+    'Reset your password within 30 minutes: {url}\n\nIf you did not ask for this, ignore this email.',
   'email.reset.intro': 'Reset your password within 30 minutes:',
   'email.reset.ignore': 'If you did not ask for this, ignore this email.',
   'push.channelMessage.title': '#{channel}',
   'push.channelMessage.body': '{author}: {content}',
   'auth.register.checkInbox': 'Check your inbox for a verification link.',
-  'auth.resendVerification.ok': 'If that account is waiting for verification, a new link has been sent.',
+  'auth.resendVerification.ok':
+    'If that account is waiting for verification, a new link has been sent.',
   'auth.forgotPassword.ok': 'If an account exists for that email, a reset link has been sent.',
 } as const;

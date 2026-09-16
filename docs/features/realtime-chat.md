@@ -53,13 +53,13 @@ Provide high-concurrency, low-latency text chat within server channels and direc
 ## Trade-offs
 
 - **Cursor Pagination vs Offset Pagination**:
-  - *Chosen*: Cursor pagination based on message ID/timestamp.
-  - *Rationale*: Eliminates missing/duplicate items when new messages arrive while scrolling history.
-  - *Cost*: Cannot jump directly to an arbitrary page number.
+  - _Chosen_: Cursor pagination based on message ID/timestamp.
+  - _Rationale_: Eliminates missing/duplicate items when new messages arrive while scrolling history.
+  - _Cost_: Cannot jump directly to an arbitrary page number.
 - **Persist-First Broadcasting vs Speculative Broadcasting**:
-  - *Chosen*: Persist to database first, then broadcast to Socket.IO room.
-  - *Rationale*: Ensures data integrity and prevents ghost messages on failure.
-  - *Cost*: Adds database write latency (~5-15ms) to broadcast delivery time.
+  - _Chosen_: Persist to database first, then broadcast to Socket.IO room.
+  - _Rationale_: Ensures data integrity and prevents ghost messages on failure.
+  - _Cost_: Adds database write latency (~5-15ms) to broadcast delivery time.
 
 ## Risks & Rollback
 

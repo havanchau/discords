@@ -69,15 +69,15 @@ Migration `20260915009000_add_two_factor_auth`.
 
 ### API
 
-| Method | Path | Auth | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- | --- |
-| `GET` | `/auth/2fa` | bearer | — | `{ enabled, enabledAt, recoveryCodesRemaining }` | default |
-| `POST` | `/auth/2fa/setup` | bearer | — | `{ secret, otpauthUrl }` | 10 / 15 min |
-| `POST` | `/auth/2fa/enable` | bearer | `{ code }` | `{ recoveryCodes }` | 10 / 15 min |
-| `POST` | `/auth/2fa/disable` | bearer | `{ password, code }` | `{ ok: true }` | 10 / 15 min |
-| `POST` | `/auth/2fa/recovery-codes` | bearer | `{ code }` | `{ recoveryCodes }` | 5 / 15 min |
-| `POST` | `/auth/2fa/verify-login` | public | `{ challengeToken, code }` | session payload | 10 / 15 min |
-| `POST` | `/auth/login` | public | unchanged | session payload or `{ twoFactorRequired, challengeToken, expiresIn }` | unchanged |
+| Method | Path                       | Auth   | Body                       | Response                                                              | Rate limit  |
+| ------ | -------------------------- | ------ | -------------------------- | --------------------------------------------------------------------- | ----------- |
+| `GET`  | `/auth/2fa`                | bearer | —                          | `{ enabled, enabledAt, recoveryCodesRemaining }`                      | default     |
+| `POST` | `/auth/2fa/setup`          | bearer | —                          | `{ secret, otpauthUrl }`                                              | 10 / 15 min |
+| `POST` | `/auth/2fa/enable`         | bearer | `{ code }`                 | `{ recoveryCodes }`                                                   | 10 / 15 min |
+| `POST` | `/auth/2fa/disable`        | bearer | `{ password, code }`       | `{ ok: true }`                                                        | 10 / 15 min |
+| `POST` | `/auth/2fa/recovery-codes` | bearer | `{ code }`                 | `{ recoveryCodes }`                                                   | 5 / 15 min  |
+| `POST` | `/auth/2fa/verify-login`   | public | `{ challengeToken, code }` | session payload                                                       | 10 / 15 min |
+| `POST` | `/auth/login`              | public | unchanged                  | session payload or `{ twoFactorRequired, challengeToken, expiresIn }` | unchanged   |
 
 ### Files
 

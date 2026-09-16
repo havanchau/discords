@@ -4,14 +4,15 @@ import {
   FormEvent,
   SetStateAction,
   useEffect,
+  useEffectEvent,
   useRef,
 } from 'react';
 import { parseLocale } from '@discord-clone/shared';
-import { useLocale } from '../i18n/LocaleProvider';
+import { useLocale } from '@/i18n/LocaleProvider';
 import { useInvalidateUserProfile } from './useUserProfile';
-import { queryKeys } from '../query/queryKeys';
-import type { PatchServer, PatchServers, SelectChannel } from '../query/useWorkspaceStore';
-import { useLazyResource } from '../query/useLazyResource';
+import { queryKeys } from '@/query/queryKeys';
+import type { PatchServer, PatchServers, SelectChannel } from '@/query/useWorkspaceStore';
+import { useLazyResource } from '@/query/useLazyResource';
 import {
   apiRequest,
   AuthState,
@@ -23,10 +24,11 @@ import {
   Role,
   ServerDetail,
   uploadFile,
-} from '../api';
-import { ChannelBadgeState } from '../components/WorkspaceSidebar';
-import { UiTheme } from '../contexts/appContexts';
-import { disablePushNotifications, enablePushNotifications } from '../utils/pushNotifications';
+} from '@/api';
+import { ChannelBadgeState } from '@/components/WorkspaceSidebar';
+import { UiTheme } from '@/contexts/appContexts';
+import { disablePushNotifications, enablePushNotifications } from '@/utils/pushNotifications';
+import { formText } from '@/utils/formText';
 
 interface UseSettingsActionsOptions {
   auth: AuthState | null;
@@ -122,15 +124,22 @@ export function useSettingsActions({
   const profileBannerInputRef = useRef<HTMLInputElement | null>(null);
   const channelAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  // Settings panels load when they open, or when the channel, server or token behind them changes.
+  const loadChannelSettings = useEffectEvent(() => {
     if (!auth || !channel || activeDialog !== 'channel-settings') return;
     void loadChannelOverrides(channel.id);
+  });
+  useEffect(() => {
+    loadChannelSettings();
   }, [activeDialog, channel?.id, auth?.accessToken]);
 
-  useEffect(() => {
+  const loadServerSettings = useEffectEvent(() => {
     if (!auth || !server || activeDialog !== 'server-settings') return;
     void loadAuditLogs(server.id);
     void loadInvites(server.id);
+  });
+  useEffect(() => {
+    loadServerSettings();
   }, [activeDialog, server?.id, auth?.accessToken]);
 
   async function loadNotificationPreferences() {
@@ -167,7 +176,9 @@ export function useSettingsActions({
         ...(current ?? []).filter((item) => item.id !== result.preference.id),
       ]);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-notifications'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-notifications'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -197,7 +208,7 @@ export function useSettingsActions({
     try {
       const expiresInHours = Number(form?.get('expiresInHours') || 24);
       const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
-      const maxUsesValue = String(form?.get('maxUses') || '').trim();
+      const maxUsesValue = (form ? formText(form, 'maxUses') : '').trim();
       const result = await apiRequest<{ invite: Invite }>(
         `/servers/${server.id}/invites`,
         {
@@ -216,7 +227,9 @@ export function useSettingsActions({
       ]);
       if (event) event.currentTarget.reset();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-invite'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-create-invite'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -232,9 +245,13 @@ export function useSettingsActions({
         { method: 'DELETE' },
         auth.accessToken,
       );
-      invitesResource.write((current) => (current ?? []).filter((invite) => invite.id !== inviteId));
+      invitesResource.write((current) =>
+        (current ?? []).filter((invite) => invite.id !== inviteId),
+      );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-revoke-invite'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-revoke-invite'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -258,7 +275,9 @@ export function useSettingsActions({
       );
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-avatar'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-avatar'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -280,7 +299,9 @@ export function useSettingsActions({
       setAuth({ ...auth, user: { ...auth.user, ...result.user } });
       invalidateUserProfile(auth.user.id);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-banner'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-banner'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -353,7 +374,9 @@ export function useSettingsActions({
       }));
       selectChannel(result.channel.id);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-avatar'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-avatar'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -363,8 +386,8 @@ export function useSettingsActions({
     event.preventDefault();
     if (!auth) return;
     const form = new FormData(event.currentTarget);
-    const nextTheme = String(form.get('uiTheme') || uiTheme) as UiTheme;
-    const nextLocale = parseLocale(String(form.get('locale') || '')) ?? locale;
+    const nextTheme = (formText(form, 'uiTheme') || uiTheme) as UiTheme;
+    const nextLocale = parseLocale(formText(form, 'locale')) ?? locale;
     setPendingAction('profile-update');
     setWorkspaceError(null);
     try {
@@ -373,14 +396,14 @@ export function useSettingsActions({
         {
           method: 'PATCH',
           body: JSON.stringify({
-            displayName: String(form.get('displayName') || '').trim(),
-            bio: String(form.get('bio') || '').trim(),
+            displayName: formText(form, 'displayName').trim(),
+            bio: formText(form, 'bio').trim(),
             // An emptied field is sent as null so the column is cleared, not set to ''.
-            pronouns: String(form.get('pronouns') || '').trim() || null,
-            customStatusText: String(form.get('customStatusText') || '').trim() || null,
-            customStatusEmoji: String(form.get('customStatusEmoji') || '').trim() || null,
-            customStatusExpiresAt: customStatusExpiry(String(form.get('customStatusExpiry') || '')),
-            status: String(form.get('status') || auth.user.status || 'ONLINE'),
+            pronouns: formText(form, 'pronouns').trim() || null,
+            customStatusText: formText(form, 'customStatusText').trim() || null,
+            customStatusEmoji: formText(form, 'customStatusEmoji').trim() || null,
+            customStatusExpiresAt: customStatusExpiry(formText(form, 'customStatusExpiry')),
+            status: formText(form, 'status') || auth.user.status || 'ONLINE',
             locale: nextLocale,
           }),
         },
@@ -400,7 +423,9 @@ export function useSettingsActions({
       }));
       setActiveDialog(null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-profile'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-profile'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -418,8 +443,8 @@ export function useSettingsActions({
         {
           method: 'PATCH',
           body: JSON.stringify({
-            name: String(form.get('name') || '').trim(),
-            description: String(form.get('description') || '').trim(),
+            name: formText(form, 'name').trim(),
+            description: formText(form, 'description').trim(),
           }),
         },
         auth.accessToken,
@@ -440,7 +465,9 @@ export function useSettingsActions({
       );
       setActiveDialog(null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-server'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-server'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -453,7 +480,7 @@ export function useSettingsActions({
     setPendingAction('channel-update');
     setWorkspaceError(null);
     try {
-      const positionValue = String(form.get('position') || '').trim();
+      const positionValue = formText(form, 'position').trim();
       const slowmodeValue = form.get('slowmodeSeconds');
       const categoryValue = form.get('categoryId');
       const result = await apiRequest<{ channel: Channel }>(
@@ -461,13 +488,13 @@ export function useSettingsActions({
         {
           method: 'PATCH',
           body: JSON.stringify({
-            name: String(form.get('name') || '').trim(),
-            topic: String(form.get('topic') || '').trim(),
+            name: formText(form, 'name').trim(),
+            topic: formText(form, 'topic').trim(),
             isPrivate: form.get('isPrivate') === 'on',
             position: positionValue ? Number(positionValue) : undefined,
             slowmodeSeconds: slowmodeValue === null ? undefined : Number(slowmodeValue),
             // The select is only rendered when the server has categories; '' means "No category".
-            categoryId: categoryValue === null ? undefined : String(categoryValue) || null,
+            categoryId: categoryValue === null ? undefined : formText(form, 'categoryId') || null,
           }),
         },
         auth.accessToken,
@@ -481,7 +508,9 @@ export function useSettingsActions({
       selectChannel(result.channel.id);
       setActiveDialog(null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-channel'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -531,7 +560,9 @@ export function useSettingsActions({
         nextOverride,
       ]);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-permission'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-channel-permission'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -570,7 +601,9 @@ export function useSettingsActions({
       ]);
     } catch (err) {
       setWorkspaceError(
-        err instanceof Error ? err.message : t('error.fallback.cannot-update-member-channel-permission'),
+        err instanceof Error
+          ? err.message
+          : t('error.fallback.cannot-update-member-channel-permission'),
       );
     } finally {
       setPendingAction(null);
@@ -595,8 +628,8 @@ export function useSettingsActions({
         {
           method: 'POST',
           body: JSON.stringify({
-            name: String(form.get('name') || '').trim(),
-            color: String(form.get('color') || '').trim() || undefined,
+            name: formText(form, 'name').trim(),
+            color: formText(form, 'color').trim() || undefined,
             permissions: form.getAll('permissions').map(String),
           }),
         },
@@ -605,7 +638,9 @@ export function useSettingsActions({
       formElement.reset();
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-role'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-create-role'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -629,7 +664,9 @@ export function useSettingsActions({
       );
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-role'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-role'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -649,7 +686,9 @@ export function useSettingsActions({
       );
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-role'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-delete-role'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -669,7 +708,9 @@ export function useSettingsActions({
       );
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-member-roles'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-member-roles'),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -688,7 +729,9 @@ export function useSettingsActions({
       setActiveDialog(null);
       await reloadCurrentServer();
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-remove-member'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-remove-member'),
+      );
     } finally {
       setPendingAction(null);
     }

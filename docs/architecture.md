@@ -173,7 +173,10 @@ Optional channel passphrase E2EE is a client-side feature.
 ## Scaling Rules
 
 - Design for horizontal scale: avoid process-local assumptions for durable state.
-- Use Redis adapter or equivalent before running multiple Socket.IO API instances.
+- Socket.IO runs on the Redis adapter, so broadcasts, room joins and `fetchSockets` reach every instance.
+- Presence, call membership, DM call rings and rate-limit counters live in Redis, not in process memory. See [features/realtime-scale-out.md](features/realtime-scale-out.md).
+- Entries in Redis carry a heartbeat and are pruned when it goes stale: a killed instance never runs its disconnect path, so nothing else would clean up after it.
+- Uploads still write to instance-local disk, which remains a blocker for running more than one instance.
 - Keep permission checks efficient and cache only when invalidation is clear.
 - Keep writes idempotent where user retries are likely.
 - Apply backpressure to uploads and realtime fan-out.
@@ -192,7 +195,6 @@ Recommended production layout:
 
 See [deployment.md](deployment.md) for operational details.
 
-
 ## Architecture Checklist
 
 - [x] Shared contracts exist in `packages/shared`.
@@ -201,7 +203,8 @@ See [deployment.md](deployment.md) for operational details.
 - [x] Socket events are authorized by room.
 - [x] Uploads support local and hosted storage.
 - [x] UI is split into focused app-shell components.
-- [ ] Redis adapter or equivalent for multi-instance Socket.IO.
+- [x] Redis adapter or equivalent for multi-instance Socket.IO.
+- [ ] Shared upload storage so instances can serve each other's files.
 - [ ] Production migration workflow fully replaces `db:push`.
 - [ ] Observability dashboard for API, realtime, and uploads.
 - [ ] Load testing for high-volume message and upload paths.

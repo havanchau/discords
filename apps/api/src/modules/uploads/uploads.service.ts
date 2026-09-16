@@ -302,7 +302,7 @@ export class UploadsService {
     const publicId = resourceType === 'raw' ? key : key.replace(/\.[^.]+$/, '');
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
-      cloudinary.uploader.upload_large(
+      void cloudinary.uploader.upload_large(
         path,
         {
           public_id: publicId,
@@ -314,17 +314,17 @@ export class UploadsService {
         },
         (error, response) => {
           if (error || !response) {
-            reject(error ?? new Error('Cloudinary upload failed'));
+            reject(new Error('Cloudinary upload failed', { cause: error }));
             return;
           }
           resolve(response);
         },
       );
     }).catch((error) => {
-        throw new InternalServerErrorException(
-          error instanceof Error ? error.message : 'Cloudinary upload failed',
-        );
-      });
+      throw new InternalServerErrorException(
+        error instanceof Error ? error.message : 'Cloudinary upload failed',
+      );
+    });
 
     await rm(path, { force: true });
     return result.secure_url;

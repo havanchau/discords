@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import { SocketUser } from './socket-user';
 
 @Injectable()
@@ -15,8 +15,9 @@ export class SocketAuthService {
 
   /** Verifies the handshake token and that its session is still live. */
   async authenticate(client: Socket): Promise<SocketUser> {
+    const authToken: unknown = client.handshake.auth?.token;
     const token =
-      client.handshake.auth?.token ||
+      (typeof authToken === 'string' ? authToken : '') ||
       client.handshake.headers.authorization?.replace(/^Bearer\s+/i, '');
 
     if (!token) {

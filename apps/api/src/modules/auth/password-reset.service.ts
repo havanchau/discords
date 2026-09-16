@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
-import type { Locale } from '../../common/i18n/locale';
-import { I18nService } from '../../common/i18n/i18n.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import type { Locale } from '@/common/i18n/locale';
+import { I18nService } from '@/common/i18n/i18n.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { EmailService } from './email.service';
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -50,11 +50,11 @@ export class PasswordResetService {
     this.email
       .sendPasswordResetEmail(user.email, token, this.i18n.resolveUserLocale(user.locale))
       .catch((error: unknown) => {
-      this.logger.error(
-        'Password reset email delivery failed',
-        error instanceof Error ? error.stack : undefined,
-      );
-    });
+        this.logger.error(
+          'Password reset email delivery failed',
+          error instanceof Error ? error.stack : undefined,
+        );
+      });
     return okResponse;
   }
 

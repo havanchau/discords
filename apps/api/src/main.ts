@@ -4,14 +4,14 @@ import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
-import type { Server } from 'http';
 import { AppModule } from './app.module';
-import { FixedWindowLimiter } from './common/fixed-window-limiter';
 import { createGlobalRateLimitMiddleware } from './common/global-rate-limit.middleware';
+import { RedisFixedWindowLimiter } from './common/redis-fixed-window-limiter';
 import { readLimitsConfig } from './common/limits-config';
 import { I18nService } from './common/i18n/i18n.service';
 import { TranslatingExceptionFilter } from './common/http-exception.filter';
@@ -25,7 +25,7 @@ const HTTP_REQUEST_TIMEOUT_MS = 120_000;
 const HTTP_KEEP_ALIVE_TIMEOUT_MS = 65_000;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
   const config = app.get(ConfigService);
   const webOrigins = parseWebOrigins(config.get<string>('WEB_ORIGIN', defaultWebOrigin));
   const jwtSecret = config.get<string>('JWT_SECRET', 'dev-secret-change-me');
@@ -42,8 +42,13 @@ async function bootstrap() {
     mkdirSync(uploadsDir, { recursive: true });
   }
 
-  app.getHttpAdapter().getInstance().set('trust proxy', limits.trustProxyHops);
-  app.use(createGlobalRateLimitMiddleware(new FixedWindowLimiter(), limits.globalRequestsPerMinute));
+  app.set('trust proxy', limits.trustProxyHops);
+  app.use(
+    createGlobalRateLimitMiddleware(
+      app.get(RedisFixedWindowLimiter),
+      limits.globalRequestsPerMinute,
+    ),
+  );
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -52,10 +57,10 @@ async function bootstrap() {
           defaultSrc: ["'self'"],
           baseUri: ["'self'"],
           objectSrc: ["'none'"],
-          frameAncestors: ["'none'"]
-        }
-      }
-    })
+          frameAncestors: ["'none'"],
+        },
+      },
+    }),
   );
   app.use(express.json({ limit: '256kb' }));
   app.use(express.urlencoded({ extended: false, limit: '64kb' }));
@@ -67,7 +72,7 @@ async function bootstrap() {
     setHeaders: (response) => {
       response.setHeader('X-Content-Type-Options', 'nosniff');
       response.setHeader('Cache-Control', 'private, max-age=3600');
-    }
+    },
   });
   app.use('/uploads', (request: Request, response: Response, next: NextFunction) => {
     if (request.method === 'GET' || request.method === 'HEAD') {
@@ -77,26 +82,29 @@ async function bootstrap() {
     next();
   });
   app.enableCors({
-    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
       if (isAllowedWebOrigin(origin, webOrigins)) {
         callback(null, true);
         return;
       }
       callback(new Error('Origin is not allowed by CORS'));
     },
-    credentials: true
+    credentials: true,
   });
   app.useGlobalFilters(new TranslatingExceptionFilter(app.get(I18nService)));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: true
-    })
+      forbidNonWhitelisted: true,
+    }),
   );
 
   const port = config.get<number>('PORT', 3000);
-  const httpServer = app.getHttpServer() as Server;
+  const httpServer = app.getHttpServer();
   httpServer.headersTimeout = HTTP_HEADERS_TIMEOUT_MS;
   httpServer.requestTimeout = HTTP_REQUEST_TIMEOUT_MS;
   httpServer.keepAliveTimeout = HTTP_KEEP_ALIVE_TIMEOUT_MS;

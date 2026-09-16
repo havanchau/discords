@@ -54,12 +54,12 @@ Migration `20260915002000_add_group_dms` (additive; existing rows become 1-1 con
 
 ### API
 
-| Method | Path | Body | Response |
-| --- | --- | --- | --- |
-| `POST` | `/direct-conversations` | `{ userIds: string[], name? }` | `201 { conversation }` |
-| `PATCH` | `/direct-conversations/:id` | `{ name }` | `{ conversation }` |
-| `POST` | `/direct-conversations/:id/members` | `{ userId }` | `{ conversation }` |
-| `DELETE` | `/direct-conversations/:id/members/:userId` | — | `{ ok: true }` |
+| Method   | Path                                        | Body                           | Response               |
+| -------- | ------------------------------------------- | ------------------------------ | ---------------------- |
+| `POST`   | `/direct-conversations`                     | `{ userIds: string[], name? }` | `201 { conversation }` |
+| `PATCH`  | `/direct-conversations/:id`                 | `{ name }`                     | `{ conversation }`     |
+| `POST`   | `/direct-conversations/:id/members`         | `{ userId }`                   | `{ conversation }`     |
+| `DELETE` | `/direct-conversations/:id/members/:userId` | —                              | `{ ok: true }`         |
 
 `conversation` matches the `GET /direct-conversations` item shape plus `isGroup`, `name`, `ownerId`. Create is rate limited to 10 per minute; member changes to 30 per minute.
 

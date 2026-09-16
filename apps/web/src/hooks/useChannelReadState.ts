@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { apiRequest, type AuthState } from '../api';
-import type { ChannelBadgeState } from '../components/WorkspaceSidebar';
+import { apiRequest, type AuthState } from '@/api';
+import type { ChannelBadgeState } from '@/components/WorkspaceSidebar';
 
 interface UseChannelReadStateOptions {
   auth: AuthState | null;

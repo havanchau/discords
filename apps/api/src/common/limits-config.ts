@@ -15,7 +15,12 @@ export const DEFAULT_LIMITS_CONFIG: LimitsConfig = {
 /** Called at startup: a malformed value must stop the boot instead of silently disabling a limit. */
 export function readLimitsConfig(config: ConfigService): LimitsConfig {
   return {
-    trustProxyHops: readInteger(config, 'TRUST_PROXY_HOPS', DEFAULT_LIMITS_CONFIG.trustProxyHops, 0),
+    trustProxyHops: readInteger(
+      config,
+      'TRUST_PROXY_HOPS',
+      DEFAULT_LIMITS_CONFIG.trustProxyHops,
+      0,
+    ),
     globalRequestsPerMinute: readInteger(
       config,
       'RATE_LIMIT_GLOBAL_PER_MINUTE',

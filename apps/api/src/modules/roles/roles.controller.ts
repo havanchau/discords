@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RolesService } from './roles.service';
@@ -20,13 +20,17 @@ export class RolesController {
   create(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
-    @Body() dto: CreateRoleDto
+    @Body() dto: CreateRoleDto,
   ) {
     return this.roles.createRole(user.id, serverId, dto);
   }
 
   @Patch('roles/:roleId')
-  update(@CurrentUser() user: RequestUser, @Param('roleId') roleId: string, @Body() dto: UpdateRoleDto) {
+  update(
+    @CurrentUser() user: RequestUser,
+    @Param('roleId') roleId: string,
+    @Body() dto: UpdateRoleDto,
+  ) {
     return this.roles.updateRole(user.id, roleId, dto);
   }
 
@@ -40,7 +44,7 @@ export class RolesController {
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
     @Param('memberId') memberId: string,
-    @Param('roleId') roleId: string
+    @Param('roleId') roleId: string,
   ) {
     return this.roles.addMemberRole(user.id, serverId, memberId, roleId);
   }
@@ -50,7 +54,7 @@ export class RolesController {
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
     @Param('memberId') memberId: string,
-    @Param('roleId') roleId: string
+    @Param('roleId') roleId: string,
   ) {
     return this.roles.removeMemberRole(user.id, serverId, memberId, roleId);
   }

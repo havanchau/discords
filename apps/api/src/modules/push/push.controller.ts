@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { DeletePushSubscriptionDto, SavePushSubscriptionDto } from './dto/push-subscription.dto';
 import { PushService } from './push.service';
 

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiRequest, type Channel, type ServerDetail, type ServerSummary } from '../api';
+import { apiRequest, type Channel, type ServerDetail, type ServerSummary } from '@/api';
 import { queryKeys } from './queryKeys';
 
 interface UseWorkspaceStoreOptions {

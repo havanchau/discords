@@ -1,15 +1,17 @@
 import type { Locale } from '@discord-clone/shared';
-import { assetUrl } from '../../api';
-import { accentClass, initials } from '../../helpers';
-import { useLocale, type MessageKey, type Translate } from '../../i18n/LocaleProvider';
-import { Button, TextArea, TextField } from '../ui';
+import { assetUrl } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useLocale, type MessageKey, type Translate } from '@/i18n/LocaleProvider';
+import { Button, TextArea, TextField } from '@/components/ui';
 import { SettingsSelect } from './SettingsSelect';
 import { SwitchRow } from './SettingsRows';
 import type { SettingsModalFields, SettingsSelectOption, UiTheme } from './types';
-import styles from '../SettingsModal.module.css';
-import { cn } from '../../utils/cn';
+import styles from '@/components/SettingsModal.module.css';
+import { cn } from '@/utils/cn';
 
-function statusOptions(t: Translate): SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBLE'>[] {
+function statusOptions(
+  t: Translate,
+): SettingsSelectOption<'ONLINE' | 'IDLE' | 'DND' | 'INVISIBLE'>[] {
   return [
     { value: 'ONLINE', label: t('profile.status.online') },
     { value: 'IDLE', label: t('profile.status.idle') },
@@ -74,7 +76,7 @@ export function ProfileSettings({
   );
 
   return (
-    <form className={styles.settingsForm} onSubmit={updateProfile}>
+    <form className={styles.settingsForm} onSubmit={(event) => void updateProfile(event)}>
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
           <strong>{t('profile.section.profile')}</strong>

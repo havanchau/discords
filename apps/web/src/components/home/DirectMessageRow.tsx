@@ -1,12 +1,12 @@
 import { memo, useState } from 'react';
 import { Edit3, Pin, Reply, SmilePlus, Trash2 } from 'lucide-react';
-import type { DirectMessage } from '../../api';
-import { QUICK_REACTIONS } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { extractMarkdownLinks } from '../../utils/markdown';
-import { cn } from '../../utils/cn';
-import { toViewerReactions } from '../../utils/directMessages';
+import type { DirectMessage } from '@/api';
+import { QUICK_REACTIONS } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { extractMarkdownLinks } from '@/utils/markdown';
+import { cn } from '@/utils/cn';
+import { toViewerReactions } from '@/utils/directMessages';
 import {
   Button,
   IconButton,
@@ -15,9 +15,9 @@ import {
   PopoverTrigger,
   TextField,
   Tooltip,
-} from '../ui';
-import { LinkPreviewCard } from '../chat/LinkPreviewCard';
-import { MarkdownContent } from '../chat/MarkdownContent';
+} from '@/components/ui';
+import { LinkPreviewCard } from '@/components/chat/LinkPreviewCard';
+import { MarkdownContent } from '@/components/chat/MarkdownContent';
 import styles from './DirectMessageRow.module.css';
 
 const MAX_LINK_PREVIEWS = 3;

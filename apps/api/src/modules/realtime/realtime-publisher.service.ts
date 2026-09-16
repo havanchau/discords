@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
+import { readSocketUser } from './socket-user';
 
 @Injectable()
 export class RealtimePublisher {
@@ -42,7 +43,7 @@ export class RealtimePublisher {
     const sockets = await this.server.in(this.userRoom(userId)).fetchSockets();
     sockets
       .filter((socket) => {
-        const socketUser = socket.data.user as { sessionId?: string } | undefined;
+        const socketUser = readSocketUser(socket);
         return Boolean(socketUser?.sessionId && sessionIds.includes(socketUser.sessionId));
       })
       .forEach((socket) => socket.disconnect(true));

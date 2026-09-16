@@ -1,13 +1,13 @@
-import { assetUrl } from '../../api';
-import { accentClass, initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Avatar, Badge, Button } from '../ui';
+import { assetUrl } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Avatar, Badge, Button } from '@/components/ui';
 import { CheckRow } from './SettingsRows';
-import { memberHasServerPermission } from '../../utils/serverPermissions';
+import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { MemberModerationSection } from './MemberModerationSection';
 import type { SettingsModalFields } from './types';
-import styles from '../SettingsModal.module.css';
-import { cn } from '../../utils/cn';
+import styles from '@/components/SettingsModal.module.css';
+import { cn } from '@/utils/cn';
 
 type MemberRolesSettingsProps = Pick<
   SettingsModalFields,

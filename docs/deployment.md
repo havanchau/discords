@@ -162,5 +162,6 @@ The deploy workflow can be run from GitHub Actions with `workflow_dispatch`. Aft
 - Do not commit `.env`.
 - Cloudinary secrets belong only to the API service, not the Vercel frontend.
 - Vite variables are baked into the static bundle at build time. Redeploy web after changing `VITE_*` values.
-- Keep the API to one instance until Socket.IO is configured with a Redis adapter.
+- `REDIS_URL` is required. The API refuses to boot without a reachable Redis, because presence, call membership, DM call rings and rate limits are shared through it.
+- Socket.IO runs on the Redis adapter, so the API is no longer limited to one instance by its realtime layer. Uploads are: they still write to instance-local disk, so keep one instance until upload storage is shared or fully on Cloudinary.
 - If the API URL changes, update both `VITE_API_URL` and `VITE_SOCKET_URL`.

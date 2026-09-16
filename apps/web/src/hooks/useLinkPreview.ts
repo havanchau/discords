@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiRequest, type LinkPreview } from '../api';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, type LinkPreview } from '@/api';
+import { queryKeys } from '@/query/queryKeys';
 
 /**
  * The preview for a URL, or null when there is none (or it failed, or `enabled` is false).

@@ -1,6 +1,6 @@
 import * as RadixDropdownMenu from '@radix-ui/react-dropdown-menu';
 import type { ComponentPropsWithoutRef } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './DropdownMenu.module.css';
 
 export const DropdownMenuRoot = RadixDropdownMenu.Root;

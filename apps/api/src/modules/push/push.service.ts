@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { I18nService } from '../../common/i18n/i18n.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '@/common/i18n/i18n.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import { createVapidJwt, encryptWebPushPayload } from './web-push-crypto';
 
 const PUSH_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;

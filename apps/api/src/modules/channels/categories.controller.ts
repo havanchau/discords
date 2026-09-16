@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';

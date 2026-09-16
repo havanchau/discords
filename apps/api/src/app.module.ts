@@ -16,6 +16,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { PushModule } from './modules/push/push.module';
+import { RedisModule } from './modules/redis/redis.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { ServersModule } from './modules/servers/servers.module';
@@ -27,6 +28,7 @@ import { UsersModule } from './modules/users/users.module';
     ConfigModule.forRoot({ envFilePath: ['../../.env', '.env'], isGlobal: true }),
     I18nModule,
     PrismaModule,
+    RedisModule,
     HealthModule,
     AuthModule,
     UsersModule,

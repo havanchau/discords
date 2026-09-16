@@ -1,9 +1,9 @@
 import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
-import type { AuthState, Channel, Message, NotificationItem } from '../../api';
-import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '../../helpers';
-import type { ComposerRestriction } from '../../hooks/useComposerRestrictions';
-import type { MemberIdentity } from '../../utils/memberIdentity';
-import type { ParsedMessageSearch } from '../../utils/messageSearch';
+import type { AuthState, Channel, Message, NotificationItem } from '@/api';
+import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '@/helpers';
+import type { ComposerRestriction } from '@/hooks/useComposerRestrictions';
+import type { MemberIdentity } from '@/utils/memberIdentity';
+import type { ParsedMessageSearch } from '@/utils/messageSearch';
 
 export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | null;
 export type ActiveDialog =
@@ -129,5 +129,5 @@ export interface ChatPanelThread {
 
 export interface ChatPanelChannelAvatar {
   inputRef: RefObject<HTMLInputElement | null>;
-  update: (event: ChangeEvent<HTMLInputElement>) => void;
+  update: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 }

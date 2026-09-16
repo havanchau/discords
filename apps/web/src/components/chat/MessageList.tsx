@@ -1,9 +1,9 @@
 import { ReactNode, Ref, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Hash, Loader2, MessageSquare, Search } from 'lucide-react';
-import { Channel, Message } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button } from '../ui';
+import { Channel, Message } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button } from '@/components/ui';
 import styles from './MessageList.module.css';
 
 // Typical single-line row; real heights are measured after render.
@@ -77,6 +77,7 @@ export function MessageList({
   });
 
   // The intro and "load older" row sit above the virtual rows; their height is the scroll margin.
+  const hasNoMessages = visibleMessages.length === 0;
   useLayoutEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
@@ -86,7 +87,7 @@ export function MessageList({
     const observer = new ResizeObserver(measure);
     observer.observe(scrollElement);
     return () => observer.disconnect();
-  }, [channel?.id, hasSearch, hasMoreMessages, isLoadingMessages, visibleMessages.length === 0]);
+  }, [channel?.id, hasSearch, hasMoreMessages, isLoadingMessages, hasNoMessages]);
 
   useImperativeHandle(
     ref,

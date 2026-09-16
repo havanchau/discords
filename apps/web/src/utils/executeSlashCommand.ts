@@ -1,5 +1,5 @@
-import { apiRequest, type AuthState, type Channel, type ServerDetail } from '../api';
-import type { Translate } from '../i18n/LocaleProvider';
+import { apiRequest, type AuthState, type Channel, type ServerDetail } from '@/api';
+import type { Translate } from '@/i18n/LocaleProvider';
 import { parseSlashCommand } from './slashCommands';
 
 interface ExecuteSlashCommandOptions {
@@ -7,16 +7,18 @@ interface ExecuteSlashCommandOptions {
   auth: AuthState;
   server: ServerDetail | null;
   channel: Channel | null;
-  openServer: (serverId: string, token?: string, preferredChannelId?: string | null) => Promise<void>;
+  openServer: (
+    serverId: string,
+    token?: string,
+    preferredChannelId?: string | null,
+  ) => Promise<void>;
   clearDraft: () => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
   t: Translate;
 }
 
-export type SlashCommandExecutionResult =
-  | { handled: false; content: string }
-  | { handled: true };
+export type SlashCommandExecutionResult = { handled: false; content: string } | { handled: true };
 
 export async function executeSlashCommand({
   content,
@@ -67,9 +69,7 @@ export async function executeSlashCommand({
     );
     await openServer(server.id, auth.accessToken, channel?.id);
     setWorkspaceNotice(
-      command.args
-        ? t('slash.nick.updated', { nickname: command.args })
-        : t('slash.nick.cleared'),
+      command.args ? t('slash.nick.updated', { nickname: command.args }) : t('slash.nick.cleared'),
     );
     clearDraft();
     return { handled: true };

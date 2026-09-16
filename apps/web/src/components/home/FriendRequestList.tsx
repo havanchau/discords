@@ -1,6 +1,6 @@
-import type { FriendRequestEntry } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button } from '../ui';
+import type { FriendRequestEntry } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button } from '@/components/ui';
 import styles from './HomePanel.module.css';
 
 type FriendRequestListProps = {

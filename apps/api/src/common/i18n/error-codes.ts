@@ -53,7 +53,8 @@ export const ERROR_MESSAGE_CODES = {
   'Member not found': 'MEMBER_NOT_FOUND',
   'Member or role not found': 'MEMBER_OR_ROLE_NOT_FOUND',
   'Message content cannot be empty': 'MESSAGE_CONTENT_CANNOT_BE_EMPTY',
-  'Message content cannot be empty without attachments': 'MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS',
+  'Message content cannot be empty without attachments':
+    'MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS',
   'Message not found': 'MESSAGE_NOT_FOUND',
   'Missing bearer token': 'MISSING_BEARER_TOKEN',
   'Missing token': 'MISSING_TOKEN',
@@ -62,10 +63,13 @@ export const ERROR_MESSAGE_CODES = {
   'Notification not found': 'NOTIFICATION_NOT_FOUND',
   'Only the author can delete this message': 'ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE',
   'Only the author can edit this message': 'ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE',
-  'Only the author or message manager can delete this message': 'ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE',
-  'Only the author or message managers can pin this message': 'ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE',
+  'Only the author or message manager can delete this message':
+    'ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE',
+  'Only the author or message managers can pin this message':
+    'ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE',
   'Only the group owner can remove members': 'ONLY_THE_GROUP_OWNER_CAN_REMOVE_MEMBERS',
-  'Only the receiver can accept or reject this request': 'ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST',
+  'Only the receiver can accept or reject this request':
+    'ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST',
   'Pin limit reached': 'PIN_LIMIT_REACHED',
   'Reply target not found': 'REPLY_TARGET_NOT_FOUND',
   'Role not found': 'ROLE_NOT_FOUND',

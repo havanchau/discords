@@ -1,6 +1,6 @@
 import { createContext, PropsWithChildren, useContext } from 'react';
 import { Socket } from 'socket.io-client';
-import { AuthState } from '../api';
+import { AuthState } from '@/api';
 
 export type UiTheme = 'light' | 'dark' | 'system';
 
@@ -29,7 +29,11 @@ export function SocketProvider({ socket, children }: PropsWithChildren<SocketCon
   return <SocketContext.Provider value={{ socket }}>{children}</SocketContext.Provider>;
 }
 
-export function ThemeProvider({ uiTheme, setUiTheme, children }: PropsWithChildren<ThemeContextValue>) {
+export function ThemeProvider({
+  uiTheme,
+  setUiTheme,
+  children,
+}: PropsWithChildren<ThemeContextValue>) {
   return <ThemeContext.Provider value={{ uiTheme, setUiTheme }}>{children}</ThemeContext.Provider>;
 }
 

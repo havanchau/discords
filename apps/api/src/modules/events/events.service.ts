@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { ServerEventView } from '@discord-clone/shared';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { activeEventCutoffs, eventStatus, validateEventTimes } from './event-status';

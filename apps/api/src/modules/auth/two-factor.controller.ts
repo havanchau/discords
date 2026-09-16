@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { RequestUser } from '../../common/request-user';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { RequestUser } from '@/common/request-user';
 import {
   DisableTwoFactorDto,
   TwoFactorCodeDto,

@@ -112,12 +112,12 @@ In order:
 
 ### API
 
-| Method | Path | Body / query | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `GET` | `/auth/oauth/providers` | — | `{ google, facebook }` | global |
-| `GET` | `/auth/oauth/:provider` | — | `302` to provider | 20 / 15 min |
-| `GET` | `/auth/oauth/:provider/callback` | `code`, `state`, or `error` | `302` to web | 20 / 15 min |
-| `POST` | `/auth/oauth/exchange` | `{ code }` | same as `/auth/login` | 20 / 15 min |
+| Method | Path                             | Body / query                | Response               | Rate limit  |
+| ------ | -------------------------------- | --------------------------- | ---------------------- | ----------- |
+| `GET`  | `/auth/oauth/providers`          | —                           | `{ google, facebook }` | global      |
+| `GET`  | `/auth/oauth/:provider`          | —                           | `302` to provider      | 20 / 15 min |
+| `GET`  | `/auth/oauth/:provider/callback` | `code`, `state`, or `error` | `302` to web           | 20 / 15 min |
+| `POST` | `/auth/oauth/exchange`           | `{ code }`                  | same as `/auth/login`  | 20 / 15 min |
 
 `:provider` is validated against `google | facebook`; anything else is `404`. A provider without
 credentials returns `404` on start and callback.
@@ -174,11 +174,11 @@ tokens are not stored.
 
 ### Configuration
 
-| Variable | Purpose |
-| --- | --- |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud OAuth client (type "Web application"). |
-| `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | Meta app with Facebook Login. |
-| `OAUTH_REDIRECT_BASE_URL` | Public base URL of the API as the browser sees it; the callback is `{base}/auth/oauth/:provider/callback`. Must be the same host that started the flow, or the state cookie is not sent. Defaults to `http://localhost:5173/api` (Vite proxy); the API refuses to start in production when a provider is configured without it. |
+| Variable                                   | Purpose                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud OAuth client (type "Web application").                                                                                                                                                                                                                                                                             |
+| `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`   | Meta app with Facebook Login.                                                                                                                                                                                                                                                                                                   |
+| `OAUTH_REDIRECT_BASE_URL`                  | Public base URL of the API as the browser sees it; the callback is `{base}/auth/oauth/:provider/callback`. Must be the same host that started the flow, or the state cookie is not sent. Defaults to `http://localhost:5173/api` (Vite proxy); the API refuses to start in production when a provider is configured without it. |
 
 A provider counts as configured only when both its id and secret are set. The flow cookie is not signed: it
 holds only random values compared against the callback, and a browser cannot be made to send a cookie it

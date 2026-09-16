@@ -1,6 +1,6 @@
-import type { Channel, Role, ServerDetail } from '../api';
-import { PERMISSION_VALUES } from '../helpers';
-import type { Translate } from '../i18n/LocaleProvider';
+import type { Channel, Role, ServerDetail } from '@/api';
+import { PERMISSION_VALUES } from '@/helpers';
+import type { Translate } from '@/i18n/LocaleProvider';
 
 export interface PermissionPreviewAction {
   value: string;
@@ -38,7 +38,7 @@ export function buildMemberPermissionPreview(
   const permissions = new Set(
     member.kind === 'OWNER'
       ? [...PERMISSION_VALUES]
-      : member.roles?.flatMap(({ role }) => role.permissions) ?? [],
+      : (member.roles?.flatMap(({ role }) => role.permissions) ?? []),
   );
 
   return channels.map((channel) => ({

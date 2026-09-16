@@ -13,10 +13,10 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { assetUrl, type Channel, type ChannelCategory } from '../../api';
-import { accentClass, initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { cn } from '../../utils/cn';
+import { assetUrl, type Channel, type ChannelCategory } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
 import {
   Badge,
   Button,
@@ -27,10 +27,10 @@ import {
   DropdownMenuTrigger,
   IconButton,
   TextField,
-} from '../ui';
-import { useCollapsedCategories } from '../../hooks/useCollapsedCategories';
-import { groupChannelsByCategory } from '../../utils/channelCategories';
-import { memberHasServerPermission } from '../../utils/serverPermissions';
+} from '@/components/ui';
+import { useCollapsedCategories } from '@/hooks/useCollapsedCategories';
+import { groupChannelsByCategory } from '@/utils/channelCategories';
+import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { CategorySection, ChannelGroup, ChannelRow } from './ChannelList';
 import styles from './ChannelSidebar.module.css';
 import type { ChannelCreateType, WorkspaceSidebarProps } from './types';
@@ -66,8 +66,15 @@ export function ChannelSidebar({
     activeCalls,
     channelBadges,
   } = workspace;
-  const { openHome, createInvite, updateProfileAvatar, logout, selectChannel, setChannelQuery, setActiveDialog } =
-    actions;
+  const {
+    openHome,
+    createInvite,
+    updateProfileAvatar,
+    logout,
+    selectChannel,
+    setChannelQuery,
+    setActiveDialog,
+  } = actions;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { collapsedIds, toggleCategory } = useCollapsedCategories();
   const isSearching = Boolean(channelQuery.trim());
@@ -133,7 +140,9 @@ export function ChannelSidebar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="bottom">
-              <DropdownMenuItem onSelect={() => setTimeout(() => setActiveDialog('server-settings'), 0)}>
+              <DropdownMenuItem
+                onSelect={() => setTimeout(() => setActiveDialog('server-settings'), 0)}
+              >
                 <Settings size={16} aria-hidden="true" />
                 {t('sidebar.menu.serverSettings')}
               </DropdownMenuItem>
@@ -293,7 +302,7 @@ export function ChannelSidebar({
           className={styles.hiddenFileInput}
           type="file"
           accept="image/*"
-          onChange={updateProfileAvatar}
+          onChange={(event) => void updateProfileAvatar(event)}
         />
         <Button
           type="button"

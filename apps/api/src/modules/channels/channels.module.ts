@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
-import { PermissionsModule } from '../permissions/permissions.module';
-import { ServersModule } from '../servers/servers.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { PermissionsModule } from '@/modules/permissions/permissions.module';
+import { ServersModule } from '@/modules/servers/servers.module';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { ChannelsController } from './channels.controller';
@@ -11,6 +11,6 @@ import { ChannelsService } from './channels.service';
   imports: [AuthModule, ServersModule, PermissionsModule],
   controllers: [ChannelsController, CategoriesController],
   providers: [ChannelsService, CategoriesService],
-  exports: [ChannelsService]
+  exports: [ChannelsService],
 })
 export class ChannelsModule {}

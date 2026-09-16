@@ -1,8 +1,8 @@
 import type { FormEvent } from 'react';
 import { Reply, X } from 'lucide-react';
-import type { DirectMessage } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, IconButton, TextField } from '../ui';
+import type { DirectMessage } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, IconButton, TextField } from '@/components/ui';
 import styles from './HomePanel.module.css';
 
 type DirectMessageComposerProps = {
@@ -42,7 +42,7 @@ export function DirectMessageComposer({
           </IconButton>
         </div>
       ) : null}
-      <form className={styles.composer} onSubmit={onSendDirectMessage}>
+      <form className={styles.composer} onSubmit={(event) => void onSendDirectMessage(event)}>
         <TextField
           className={styles.composerInput}
           name="content"

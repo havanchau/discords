@@ -1,7 +1,7 @@
 import { Fragment, memo, useMemo, useState, type ReactNode } from 'react';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { cn } from '../../utils/cn';
-import { parseMarkdown, type MarkdownNode } from '../../utils/markdown';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
+import { parseMarkdown, type MarkdownNode } from '@/utils/markdown';
 import styles from './MarkdownContent.module.css';
 
 /** Returns an image URL for a custom emoji name, or undefined to keep the shortcode as text. */

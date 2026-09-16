@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ChatHeader } from './chat/ChatHeader';
 import { UtilityPanel } from './chat/UtilityPanel';
 import { CallStage } from './chat/CallStage';
@@ -7,10 +7,10 @@ import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { resolveMemberIdentity } from '../utils/memberIdentity';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveMemberIdentity } from '@/utils/memberIdentity';
 import { Button } from './ui';
-import { cn } from '../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './ChatPanel.module.css';
 import type {
   ActiveDialog,
@@ -64,12 +64,16 @@ export function ChatPanel({
 
   // Announce incoming messages to screen readers
   const lastMessage = messages.all[messages.all.length - 1];
-  useEffect(() => {
+  // Only a new last message or the end of loading announces; an edit to the same message does not.
+  const announceLastMessage = useEffectEvent(() => {
     if (lastMessage && !messages.isLoading) {
       setAnnouncement(
         `New message from ${lastMessage.author.displayName}: ${lastMessage.content || 'attachment'}`,
       );
     }
+  });
+  useEffect(() => {
+    announceLastMessage();
   }, [lastMessage?.id, messages.isLoading]);
 
   return (
@@ -143,8 +147,7 @@ export function ChatPanel({
             auth={session.auth}
             serverId={session.channel?.serverId ?? null}
             authorIdentity={
-              session.memberIdentities[message.authorId] ??
-              resolveMemberIdentity(message.author)
+              session.memberIdentities[message.authorId] ?? resolveMemberIdentity(message.author)
             }
             pinnedMessageIds={messages.pinnedIds}
             actions={messageActions}

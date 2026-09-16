@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, Lock, Mail } from 'lucide-react';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, TextField } from '../ui';
-import styles from '../AuthScreen.module.css';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, TextField } from '@/components/ui';
+import styles from '@/components/AuthScreen.module.css';
 
 const PASSWORD_PATTERN = '(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}';
 

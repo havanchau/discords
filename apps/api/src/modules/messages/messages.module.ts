@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
-import { ChannelsModule } from '../channels/channels.module';
-import { PermissionsModule } from '../permissions/permissions.module';
-import { PushModule } from '../push/push.module';
-import { RealtimePublisherModule } from '../realtime/realtime-publisher.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { ChannelsModule } from '@/modules/channels/channels.module';
+import { PermissionsModule } from '@/modules/permissions/permissions.module';
+import { PushModule } from '@/modules/push/push.module';
+import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
 import { MessagesController } from './messages.controller';
 import { MessagesService } from './messages.service';
 

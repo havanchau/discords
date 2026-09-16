@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { DirectMessageActionsService } from './direct-message-actions.service';
 import { DirectMessageReactionDto } from './dto/direct-message-reaction.dto';
 import { UpdateDirectMessageDto } from './dto/update-direct-message.dto';

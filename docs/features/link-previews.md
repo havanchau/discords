@@ -56,9 +56,9 @@ A hostname is rejected if any resolved address is not public.
 
 ### API
 
-| Method | Path | Query | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `GET` | `/link-previews` | `url` (http/https, ≤ 2048 chars) | `{ preview }` | 60/min |
+| Method | Path             | Query                            | Response      | Rate limit |
+| ------ | ---------------- | -------------------------------- | ------------- | ---------- |
+| `GET`  | `/link-previews` | `url` (http/https, ≤ 2048 chars) | `{ preview }` | 60/min     |
 
 ### Files
 

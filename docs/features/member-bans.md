@@ -70,11 +70,11 @@ Migration `20260915003000_add_server_bans`.
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `GET` | `/servers/:serverId/bans` | — | `{ bans: Array<{ id, user, reason, createdAt, bannedBy }> }` (latest 200) | default |
-| `POST` | `/servers/:serverId/bans` | `{ userId, reason? }` | `{ ban }` | 20/min |
-| `DELETE` | `/servers/:serverId/bans/:userId` | — | `{ ok: true }` | 20/min |
+| Method   | Path                              | Body                  | Response                                                                  | Rate limit |
+| -------- | --------------------------------- | --------------------- | ------------------------------------------------------------------------- | ---------- |
+| `GET`    | `/servers/:serverId/bans`         | —                     | `{ bans: Array<{ id, user, reason, createdAt, bannedBy }> }` (latest 200) | default    |
+| `POST`   | `/servers/:serverId/bans`         | `{ userId, reason? }` | `{ ban }`                                                                 | 20/min     |
+| `DELETE` | `/servers/:serverId/bans/:userId` | —                     | `{ ok: true }`                                                            | 20/min     |
 
 ### Files
 

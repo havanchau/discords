@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { Channel, ChannelPermissionOverride } from '@discord-clone/shared';
-import { ServersService } from '../servers/servers.service';
+import { ServersService } from '@/modules/servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -60,11 +60,7 @@ export class ChannelsService {
       throw new NotFoundException('Channel not found');
     }
     await this.servers.requireMembership(userId, channel.serverId);
-    await this.permissions.requireChannelPermission(
-      userId,
-      channel.id,
-      Permission.ViewChannel,
-    );
+    await this.permissions.requireChannelPermission(userId, channel.id, Permission.ViewChannel);
     return { channel };
   }
 
@@ -161,11 +157,7 @@ export class ChannelsService {
     if (!channel) {
       throw new NotFoundException('Channel not found');
     }
-    await this.permissions.requireChannelPermission(
-      userId,
-      channel.id,
-      Permission.ViewChannel,
-    );
+    await this.permissions.requireChannelPermission(userId, channel.id, Permission.ViewChannel);
     return channel;
   }
 

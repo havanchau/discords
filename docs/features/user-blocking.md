@@ -66,11 +66,11 @@ Migration `20260915000000_add_user_blocks`: create table, copy legacy rows with 
 
 ### API
 
-| Method | Path | Body | Response |
-| --- | --- | --- | --- |
-| `GET` | `/friends` | — | `{ friends, pendingIncoming, pendingOutgoing, blocked: Array<{ user, createdAt }> }` |
-| `POST` | `/friends/blocks` | `{ userId }` | `201 { block: { user, createdAt } }` |
-| `DELETE` | `/friends/blocks/:userId` | — | `200 { ok: true }` |
+| Method   | Path                      | Body         | Response                                                                             |
+| -------- | ------------------------- | ------------ | ------------------------------------------------------------------------------------ |
+| `GET`    | `/friends`                | —            | `{ friends, pendingIncoming, pendingOutgoing, blocked: Array<{ user, createdAt }> }` |
+| `POST`   | `/friends/blocks`         | `{ userId }` | `201 { block: { user, createdAt } }`                                                 |
+| `DELETE` | `/friends/blocks/:userId` | —            | `200 { ok: true }`                                                                   |
 
 `POST /friends/blocks` is rate limited to 30 requests per minute.
 

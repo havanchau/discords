@@ -1,4 +1,4 @@
-import type { DirectConversation, DirectMessage } from '../api';
+import type { DirectConversation, DirectMessage } from '@/api';
 
 export interface ViewerReaction {
   emoji: string;

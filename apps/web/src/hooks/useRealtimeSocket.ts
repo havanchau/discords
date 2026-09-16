@@ -1,19 +1,21 @@
-import { Dispatch, RefObject, SetStateAction, useEffect, useRef, useState } from 'react';
+import {
+  Dispatch,
+  RefObject,
+  SetStateAction,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Json, PresenceUpdatePayload, RealtimeEvents } from '@discord-clone/shared';
-import type { PatchServer } from '../query/useWorkspaceStore';
+import type { PatchServer } from '@/query/useWorkspaceStore';
 
 // Socket payloads cross the same JSON boundary as HTTP responses, so dates arrive as strings.
 type PresenceUpdate = Json<PresenceUpdatePayload>;
-import {
-  AuthState,
-  DirectConversation,
-  DirectMessage,
-  Message,
-  NotificationItem,
-} from '../api';
-import { ChannelBadgeState } from '../components/WorkspaceSidebar';
-import { ActiveCallSummary, SOCKET_URL } from '../helpers';
+import { AuthState, DirectConversation, DirectMessage, Message, NotificationItem } from '@/api';
+import { ChannelBadgeState } from '@/components/WorkspaceSidebar';
+import { ActiveCallSummary, SOCKET_URL } from '@/helpers';
 
 interface TypingUser {
   userId: string;
@@ -70,7 +72,9 @@ export function useRealtimeSocket({
     activeConversationIdRef.current = activeConversationId ?? null;
   }, [activeConversationId]);
 
-  useEffect(() => {
+  // One connection per access token. Listeners keep the values from the render that connected, so
+  // callbacks passed in must stay valid for the lifetime of the token.
+  const connectSocket = useEffectEvent(() => {
     if (!auth) {
       socket?.disconnect();
       setSocket(null);
@@ -173,21 +177,26 @@ export function useRealtimeSocket({
       });
     });
 
-    nextSocket.on(RealtimeEvents.DmUnread, (payload: { conversationId: string; count?: number }) => {
-      setDirectConversations((current) => {
-        const existing = current.find((conversation) => conversation.id === payload.conversationId);
-        if (!existing) return current;
-        const updated = {
-          ...existing,
-          unreadCount:
-            payload.conversationId === activeConversationIdRef.current ? 0 : (payload.count ?? 0),
-        };
-        return [
-          updated,
-          ...current.filter((conversation) => conversation.id !== payload.conversationId),
-        ];
-      });
-    });
+    nextSocket.on(
+      RealtimeEvents.DmUnread,
+      (payload: { conversationId: string; count?: number }) => {
+        setDirectConversations((current) => {
+          const existing = current.find(
+            (conversation) => conversation.id === payload.conversationId,
+          );
+          if (!existing) return current;
+          const updated = {
+            ...existing,
+            unreadCount:
+              payload.conversationId === activeConversationIdRef.current ? 0 : (payload.count ?? 0),
+          };
+          return [
+            updated,
+            ...current.filter((conversation) => conversation.id !== payload.conversationId),
+          ];
+        });
+      },
+    );
 
     nextSocket.on(RealtimeEvents.DmUpdated, applyDirectMessageUpdate);
     nextSocket.on(RealtimeEvents.DmDeleted, applyDirectMessageUpdate);
@@ -197,12 +206,9 @@ export function useRealtimeSocket({
       void loadDirectConversations(auth.accessToken);
     });
 
-    nextSocket.on(
-      RealtimeEvents.DmConversationRemoved,
-      (payload: { conversationId: string }) => {
-        removeDirectConversation(payload.conversationId);
-      },
-    );
+    nextSocket.on(RealtimeEvents.DmConversationRemoved, (payload: { conversationId: string }) => {
+      removeDirectConversation(payload.conversationId);
+    });
 
     nextSocket.on(RealtimeEvents.FriendRequest, () => {
       void loadFriends(auth.accessToken);
@@ -290,7 +296,8 @@ export function useRealtimeSocket({
     return () => {
       nextSocket.disconnect();
     };
-  }, [auth?.accessToken]);
+  });
+  useEffect(() => connectSocket(), [auth?.accessToken]);
 
   return socket;
 }

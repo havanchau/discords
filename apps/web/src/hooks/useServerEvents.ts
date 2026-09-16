@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
-import { apiRequest, AuthState, CreateServerEventInput, ServerEventView } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, AuthState, CreateServerEventInput, ServerEventView } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { queryKeys } from '@/query/queryKeys';
 
 interface UseServerEventsOptions {
   auth: AuthState | null;

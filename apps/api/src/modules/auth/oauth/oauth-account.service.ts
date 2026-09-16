@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OAuthProvider, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, randomInt } from 'crypto';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import {
   OAUTH_PROVIDERS,
   OAuthFlowError,

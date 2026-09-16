@@ -2,15 +2,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
-import {
-  apiRequest,
-  AuthState,
-  ServerBanEntry,
-  ServerDetail,
-} from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
-import type { PatchServer, PatchServers } from '../query/useWorkspaceStore';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, AuthState, ServerBanEntry, ServerDetail } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import type { PatchServer, PatchServers } from '@/query/useWorkspaceStore';
+import { queryKeys } from '@/query/queryKeys';
 
 interface UseServerModerationOptions {
   auth: AuthState | null;
@@ -226,7 +221,9 @@ export function useServerModeration({
           : current,
       );
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-timeout'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-update-timeout'),
+      );
     } finally {
       setPendingAction(null);
     }

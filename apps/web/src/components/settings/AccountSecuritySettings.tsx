@@ -1,7 +1,7 @@
 import type { SettingsModalFields } from './types';
 import { SessionsSettings } from './SessionsSettings';
 import { TwoFactorSettings } from './TwoFactorSettings';
-import styles from '../SettingsModal.module.css';
+import styles from '@/components/SettingsModal.module.css';
 
 type AccountSecuritySettingsProps = Pick<SettingsModalFields, 'auth' | 'signOut'>;
 

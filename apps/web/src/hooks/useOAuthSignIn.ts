@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { apiRequest, AuthState, OAuthProviderName, oauthStartUrl } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { apiRequest, AuthState, OAuthProviderName, oauthStartUrl } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 export interface TwoFactorRequiredResponse {
   twoFactorRequired: true;
@@ -89,7 +89,7 @@ export function useOAuthSignIn({
     }
     if (code) void exchangeCode(code);
     // Re-runs are harmless: the parameters were removed from the URL on the first run.
-  }, [onError, onSignedIn, onTwoFactorRequired]);
+  }, [onError, onSignedIn, onTwoFactorRequired, t]);
 
   return {
     oauthProviders: providers,

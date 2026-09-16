@@ -2,7 +2,6 @@
 
 This plan turns the product rules, feature scope, and architecture documents into a delivery sequence. It is intentionally implementation-oriented; detailed product behavior lives in [feature-spec.md](feature-spec.md), feature specs live in `docs/features/`, and UI rules live in [design-rules.md](design-rules.md).
 
-
 ## Delivery Principles
 
 - Keep Sprint 1 through Sprint 3 as the mandatory MVP.

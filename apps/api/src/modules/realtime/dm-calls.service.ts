@@ -1,7 +1,8 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { findBlockBetween } from '../friends/user-blocks';
-import { NotificationsService } from '../notifications/notifications.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { findBlockBetween } from '@/modules/friends/user-blocks';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RedisService } from '@/modules/redis/redis.service';
 import { DmCallMode, DmCallRing, DmCallRings } from './dm-call-rings';
 import { RealtimePublisher } from './realtime-publisher.service';
 
@@ -21,13 +22,21 @@ type RingStopReason = 'answered' | 'declined' | 'cancelled' | 'missed';
 @Injectable()
 export class DmCallsService {
   private readonly logger = new Logger(DmCallsService.name);
-  private readonly rings = new DmCallRings((ring) => this.handleExpired(ring));
+  private readonly rings: DmCallRings;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
     private readonly notifications: NotificationsService,
-  ) {}
+    redis: RedisService,
+  ) {
+    this.rings = new DmCallRings(redis, (ring) => this.handleExpired(ring));
+  }
+
+  /** Driven by the realtime heartbeat: turns rings past their deadline into a missed call. */
+  async sweepExpiredRings() {
+    await this.rings.sweepExpired();
+  }
 
   /** Membership, plus no block in either direction for 1-1 conversations. */
   async authorizeCall(userId: string, conversationId: string) {
@@ -56,7 +65,7 @@ export class DmCallsService {
       select: { id: true, displayName: true, avatarUrl: true },
     });
 
-    this.rings.start({ conversationId, callerUserId: userId, mode, isGroup, memberUserIds });
+    await this.rings.start({ conversationId, callerUserId: userId, mode, isGroup, memberUserIds });
     this.realtime.emitToRooms(
       memberUserIds
         .filter((memberId) => memberId !== userId)
@@ -67,8 +76,8 @@ export class DmCallsService {
     return { ok: true };
   }
 
-  decline(userId: string, conversationId: string) {
-    const ring = this.rings.get(conversationId);
+  async decline(userId: string, conversationId: string) {
+    const ring = await this.rings.get(conversationId);
     if (!ring || ring.callerUserId === userId || !ring.memberUserIds.includes(userId)) {
       return { ok: false };
     }
@@ -87,26 +96,26 @@ export class DmCallsService {
       return { ok: true };
     }
 
-    this.rings.clear(conversationId);
+    await this.rings.clear(conversationId);
     this.emitRingStopped(ring, 'declined', userId);
     return { ok: true };
   }
 
   async cancel(userId: string, conversationId: string) {
-    const ring = this.rings.get(conversationId);
+    const ring = await this.rings.get(conversationId);
     if (!ring || ring.callerUserId !== userId) return { ok: false };
 
-    this.rings.clear(conversationId);
+    await this.rings.clear(conversationId);
     this.emitRingStopped(ring, 'cancelled');
     await this.notifyMissedCall(ring);
     return { ok: true };
   }
 
   /** Called after a member joins the DM call: answering stops ringing on every device. */
-  participantJoined(conversationId: string, userId: string) {
-    const ring = this.rings.get(conversationId);
+  async participantJoined(conversationId: string, userId: string) {
+    const ring = await this.rings.get(conversationId);
     if (!ring || ring.callerUserId === userId) return;
-    this.rings.clear(conversationId);
+    await this.rings.clear(conversationId);
     this.emitRingStopped(ring, 'answered', userId);
   }
 

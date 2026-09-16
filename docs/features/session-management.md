@@ -49,11 +49,11 @@ Acceptance criteria:
 
 ### API
 
-| Method | Path | Response | Rate limit |
-| --- | --- | --- | --- |
-| `GET` | `/auth/sessions` | `{ sessions: Array<{ id, userAgent, createdAt, lastActiveAt, expiresAt, current }> }` | default |
-| `DELETE` | `/auth/sessions/:sessionId` | `{ ok: true, current: boolean }` | 30/min |
-| `POST` | `/auth/sessions/revoke-others` | `{ revoked: number }` | 10/min |
+| Method   | Path                           | Response                                                                              | Rate limit |
+| -------- | ------------------------------ | ------------------------------------------------------------------------------------- | ---------- |
+| `GET`    | `/auth/sessions`               | `{ sessions: Array<{ id, userAgent, createdAt, lastActiveAt, expiresAt, current }> }` | default    |
+| `DELETE` | `/auth/sessions/:sessionId`    | `{ ok: true, current: boolean }`                                                      | 30/min     |
+| `POST`   | `/auth/sessions/revoke-others` | `{ revoked: number }`                                                                 | 10/min     |
 
 ### Files
 

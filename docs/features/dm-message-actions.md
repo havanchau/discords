@@ -77,14 +77,14 @@ Migration `20260915001000_add_dm_message_actions` (additive only).
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `POST` | `/direct-conversations/:id/messages` | `{ content, replyToMessageId? }` | `{ message }` | existing |
-| `GET` | `/direct-conversations/:id/pins` | — | `{ messages }` | default |
-| `PATCH` | `/direct-messages/:messageId` | `{ content }` | `{ message }` | 30/min |
-| `DELETE` | `/direct-messages/:messageId` | — | `{ message }` | 30/min |
-| `POST` | `/direct-messages/:messageId/reactions` | `{ emoji }` | `{ message }` | 60/min |
-| `POST` | `/direct-messages/:messageId/pins` | — | `{ pinned, message }` | 30/min |
+| Method   | Path                                    | Body                             | Response              | Rate limit |
+| -------- | --------------------------------------- | -------------------------------- | --------------------- | ---------- |
+| `POST`   | `/direct-conversations/:id/messages`    | `{ content, replyToMessageId? }` | `{ message }`         | existing   |
+| `GET`    | `/direct-conversations/:id/pins`        | —                                | `{ messages }`        | default    |
+| `PATCH`  | `/direct-messages/:messageId`           | `{ content }`                    | `{ message }`         | 30/min     |
+| `DELETE` | `/direct-messages/:messageId`           | —                                | `{ message }`         | 30/min     |
+| `POST`   | `/direct-messages/:messageId/reactions` | `{ emoji }`                      | `{ message }`         | 60/min     |
+| `POST`   | `/direct-messages/:messageId/pins`      | —                                | `{ pinned, message }` | 30/min     |
 
 ### Realtime
 

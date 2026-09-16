@@ -3,6 +3,6 @@ import { PermissionsService } from './permissions.service';
 
 @Module({
   providers: [PermissionsService],
-  exports: [PermissionsService]
+  exports: [PermissionsService],
 })
 export class PermissionsModule {}

@@ -1,4 +1,4 @@
-import { apiRequest } from '../api';
+import { apiRequest } from '@/api';
 
 export async function enablePushNotifications(token: string) {
   if (
@@ -54,7 +54,7 @@ export async function disablePushNotifications(token: string) {
 }
 
 async function getVapidPublicKey(token: string) {
-  const envKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+  const envKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
   if (envKey) return envKey;
   const result = await apiRequest<{ publicKey: string }>('/push/public-key', {}, token);
   if (!result.publicKey) {

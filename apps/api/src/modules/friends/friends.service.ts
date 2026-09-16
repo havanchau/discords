@@ -4,10 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { FriendsSummary } from '@discord-clone/shared';
-import { NotificationsService } from '../notifications/notifications.service';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
 import { RespondFriendRequestDto } from './dto/respond-friend-request.dto';
 import { findBlockBetween } from './user-blocks';

@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { countDirectUnread } from '../messages/unread-counts';
-import { PrismaService } from '../prisma/prisma.service';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { countDirectUnread } from '@/modules/messages/unread-counts';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { directConversationInclude, requireConversationMembership } from './direct-message.format';
 import { AddConversationMemberDto } from './dto/add-conversation-member.dto';
 import { CreateGroupConversationDto, MAX_GROUP_MEMBERS } from './dto/create-group-conversation.dto';

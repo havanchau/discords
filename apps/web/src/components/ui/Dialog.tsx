@@ -1,8 +1,8 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { cn } from '../../utils/cn';
-import { useTranslation } from '../../i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { IconButton } from './Button';
 import styles from './Dialog.module.css';
 

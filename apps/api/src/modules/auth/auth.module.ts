@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
-import { RealtimePublisherModule } from '../realtime/realtime-publisher.module';
+import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
 import { AuthController } from './auth.controller';
 import { EmailService } from './email.service';
 import { AuthService } from './auth.service';
@@ -26,10 +26,10 @@ import { TwoFactorService } from './two-factor.service';
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET', 'dev-secret-change-me'),
         signOptions: {
-          expiresIn: config.get<string>('JWT_EXPIRES_IN', '15m') as StringValue
-        }
-      })
-    })
+          expiresIn: config.get<string>('JWT_EXPIRES_IN', '15m') as StringValue,
+        },
+      }),
+    }),
   ],
   controllers: [AuthController, OAuthController, SessionsController, TwoFactorController],
   providers: [
@@ -41,8 +41,8 @@ import { TwoFactorService } from './two-factor.service';
     PasswordResetService,
     SessionsService,
     TwoFactorChallengeService,
-    TwoFactorService
+    TwoFactorService,
   ],
-  exports: [AuthService, JwtAuthGuard, JwtModule]
+  exports: [AuthService, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

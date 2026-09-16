@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { apiRequest, AuthState, NotificationItem } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, AuthState, NotificationItem } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { queryKeys } from '@/query/queryKeys';
 
 type TranslationKey = Parameters<ReturnType<typeof useTranslation>>[0];
 
@@ -101,10 +101,10 @@ export function useNotifications({ auth, setWorkspaceError }: UseNotificationsOp
   const pushNotification = useCallback(
     (notification: NotificationItem, unreadCount: number) => {
       writeCache((current) => ({
-        items: [
-          notification,
-          ...current.items.filter((item) => item.id !== notification.id),
-        ].slice(0, MAX_CACHED_NOTIFICATIONS),
+        items: [notification, ...current.items.filter((item) => item.id !== notification.id)].slice(
+          0,
+          MAX_CACHED_NOTIFICATIONS,
+        ),
         unreadCount,
       }));
     },

@@ -12,10 +12,10 @@ import { randomUUID } from 'crypto';
 import { mkdir } from 'fs/promises';
 import { diskStorage, memoryStorage } from 'multer';
 import { join } from 'path';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { UploadChunkDto } from './dto/upload-chunk.dto';
 import { UploadsService } from './uploads.service';
 

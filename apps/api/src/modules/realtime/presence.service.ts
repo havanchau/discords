@@ -1,61 +1,126 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RedisService } from '@/modules/redis/redis.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 
 /**
- * Presence is derived from the sockets this process holds, so a user stays ONLINE while any tab or
- * device is still connected and only goes OFFLINE when the last one drops.
+ * Presence is derived from every socket the deployment holds, not just this process: the sockets of
+ * one user live in a Redis sorted set scored by their last heartbeat, so a user stays ONLINE while
+ * any tab on any instance is still connected.
+ *
+ * Scoring by heartbeat is what makes a crash safe. A killed instance never runs its disconnect
+ * path, so its socket entries simply stop being refreshed and are pruned once they fall behind
+ * `heartbeatTtlMs` — no instance-scoped cleanup and no blanket reset on boot.
  */
 @Injectable()
 export class PresenceService {
   private readonly logger = new Logger(PresenceService.name);
-  private readonly userSockets = new Map<string, Set<string>>();
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
     private readonly publisher: RealtimePublisher,
     private readonly access: RealtimeAccessService,
   ) {}
 
   async socketConnected(userId: string, socketId: string) {
-    const sockets = this.userSockets.get(userId) ?? new Set<string>();
-    sockets.add(socketId);
-    this.userSockets.set(userId, sockets);
+    const now = Date.now();
+    const userKey = this.userSocketsKey(userId);
 
-    // Only the first socket flips the user online; further tabs join an already-online user.
-    if (sockets.size === 1) {
+    // Counted inside the transaction: reading the size afterwards would let two sockets connecting
+    // at once both observe 2, and nobody would flip the user online.
+    const replies = await this.redis.client
+      .multi()
+      .zadd(userKey, now, socketId)
+      .zremrangebyscore(userKey, '-inf', this.staleBefore(now))
+      .pexpire(userKey, this.redis.config.heartbeatTtlMs * 2)
+      .zadd(this.onlineUsersKey(), now, userId)
+      .zcard(userKey)
+      .exec();
+
+    // Only the first live socket of this user flips them online; further tabs join an online user.
+    if (this.replyAt(replies, 4) === 1) {
       await this.setStatus(userId, 'ONLINE');
     }
   }
 
   async socketDisconnected(userId: string, socketId: string) {
-    const sockets = this.userSockets.get(userId);
-    if (!sockets) return;
+    const userKey = this.userSocketsKey(userId);
+    const replies = await this.redis.client
+      .multi()
+      .zrem(userKey, socketId)
+      .zremrangebyscore(userKey, '-inf', this.staleBefore(Date.now()))
+      .zcard(userKey)
+      .exec();
 
-    sockets.delete(socketId);
-    if (sockets.size > 0) return;
+    if (this.replyAt(replies, 2) !== 0) return;
 
-    this.userSockets.delete(userId);
+    await this.redis.client.zrem(this.onlineUsersKey(), userId);
     await this.setStatus(userId, 'OFFLINE');
   }
 
+  /** A transaction reply is `[error, value]`; a failed command must not be read as a count. */
+  private replyAt(replies: [Error | null, unknown][] | null, index: number) {
+    const reply = replies?.[index];
+    if (!reply || reply[0]) return null;
+    return typeof reply[1] === 'number' ? reply[1] : null;
+  }
+
+  /** Keeps this instance's own sockets from being pruned as if their instance had crashed. */
+  async heartbeat(socketsByUserId: Map<string, string[]>) {
+    if (!socketsByUserId.size) return;
+
+    const now = Date.now();
+    const pipeline = this.redis.client.pipeline();
+    socketsByUserId.forEach((socketIds, userId) => {
+      const userKey = this.userSocketsKey(userId);
+      socketIds.forEach((socketId) => pipeline.zadd(userKey, now, socketId));
+      pipeline.pexpire(userKey, this.redis.config.heartbeatTtlMs * 2);
+      pipeline.zadd(this.onlineUsersKey(), now, userId);
+    });
+    await pipeline.exec();
+  }
+
   /**
-   * A crash or restart never runs the disconnect path, so anyone online at that moment would stay
-   * ONLINE in the database forever. Presence lives in this process, so on boot nobody is connected.
+   * Flips users whose every socket stopped heartbeating — the case a crashed instance leaves
+   * behind, where no disconnect event will ever arrive.
    */
-  async resetStalePresence() {
-    try {
-      const { count } = await this.prisma.user.updateMany({
-        where: { status: 'ONLINE' },
-        data: { status: 'OFFLINE' },
-      });
-      if (count > 0) {
-        this.logger.log(`Reset ${count} stale ONLINE users on startup`);
+  async sweepStaleUsers() {
+    const staleBefore = this.staleBefore(Date.now());
+    const candidateUserIds = await this.redis.client.zrangebyscore(
+      this.onlineUsersKey(),
+      '-inf',
+      staleBefore,
+    );
+
+    for (const userId of candidateUserIds) {
+      const userKey = this.userSocketsKey(userId);
+      await this.redis.client.zremrangebyscore(userKey, '-inf', staleBefore);
+      if ((await this.redis.client.zcard(userKey)) > 0) continue;
+
+      // Losing this race is harmless: whichever instance removes the member sends one OFFLINE.
+      const removed = await this.redis.client.zrem(this.onlineUsersKey(), userId);
+      if (removed === 0) continue;
+
+      try {
+        await this.setStatus(userId, 'OFFLINE');
+      } catch (error) {
+        this.logger.error(`Could not mark stale user ${userId} offline`, error);
       }
-    } catch (error) {
-      this.logger.error('Could not reset stale presence on startup', error);
     }
+  }
+
+  private staleBefore(now: number) {
+    return now - this.redis.config.heartbeatTtlMs;
+  }
+
+  private userSocketsKey(userId: string) {
+    return this.redis.key('presence', 'user', userId);
+  }
+
+  private onlineUsersKey() {
+    return this.redis.key('presence', 'online');
   }
 
   private async setStatus(userId: string, status: 'ONLINE' | 'OFFLINE') {

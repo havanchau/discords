@@ -91,15 +91,15 @@ A change to one must land in the other; the file says so in a comment.
 - `parseLocale(value: string | null | undefined): Locale | null` — used by the header, the column, and `Accept-Language` parsing.
 - `type Catalog<K extends string> = Record<Locale, Record<K, string>>`.
 - `translate(catalog, locale, key, vars?)` — placeholder substitution and `en` fallback.
-The error-code map lives on the API side only, at `apps/api/src/common/i18n/error-codes.ts`, because
-nothing in the client needs it: the filter returns both the code and the already-translated message.
+  The error-code map lives on the API side only, at `apps/api/src/common/i18n/error-codes.ts`, because
+  nothing in the client needs it: the filter returns both the code and the already-translated message.
 
 Each app owns its own copy catalog so the web bundle never ships email or push text.
 
 ### API
 
-| Method | Path | Body | Response |
-| --- | --- | --- | --- |
+| Method  | Path        | Body                                         | Response                      |
+| ------- | ----------- | -------------------------------------------- | ----------------------------- |
 | `PATCH` | `/users/me` | existing fields plus `locale?: 'en' \| 'vi'` | `{ user }` including `locale` |
 
 `GET /users/me` adds `locale` to its select (`apps/api/src/modules/users/users.service.ts:12-23`). `UpdateMeDto` gains `@IsOptional() @IsIn(['en','vi']) locale?: Locale` (`apps/api/src/modules/users/dto/update-me.dto.ts`).
@@ -107,7 +107,11 @@ Each app owns its own copy catalog so the web bundle never ships email or push t
 Error envelope, from the new filter:
 
 ```json
-{ "statusCode": 409, "code": "EMAIL_OR_USERNAME_TAKEN", "message": "Email hoặc tên đăng nhập đã tồn tại" }
+{
+  "statusCode": 409,
+  "code": "EMAIL_OR_USERNAME_TAKEN",
+  "message": "Email hoặc tên đăng nhập đã tồn tại"
+}
 ```
 
 `code` is `null` when the thrown message is not in the map, and the original message passes through

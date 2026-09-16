@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Loader2 } from 'lucide-react';
-import type { FriendEntry } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, Checkbox, DialogContent, DialogRoot, TextField } from '../ui';
+import type { FriendEntry } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, Checkbox, DialogContent, DialogRoot, TextField } from '@/components/ui';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
 
@@ -62,7 +62,7 @@ export function CreateGroupDialog({
           max: MAX_OTHER_MEMBERS,
         })}
       >
-        <form className={styles.groupForm} onSubmit={submit}>
+        <form className={styles.groupForm} onSubmit={(event) => void submit(event)}>
           <TextField
             label={t('group.field.name')}
             value={name}
@@ -71,7 +71,11 @@ export function CreateGroupDialog({
             onChange={(event) => setName(event.target.value)}
           />
           {friends.length ? (
-            <div className={styles.groupFriendList} role="group" aria-label={t('group.friendsLabel')}>
+            <div
+              className={styles.groupFriendList}
+              role="group"
+              aria-label={t('group.friendsLabel')}
+            >
               {friends.map((friend) => {
                 const checked = selectedIds.includes(friend.user.id);
                 const limitReached = !checked && selectedIds.length >= MAX_OTHER_MEMBERS;

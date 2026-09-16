@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
-import { apiRequest, AuthState, ServerEmoji, uploadFile } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, AuthState, ServerEmoji, uploadFile } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { queryKeys } from '@/query/queryKeys';
 
 export const MAX_EMOJI_BYTES = 256 * 1024;
 const EMOJI_MIME_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];

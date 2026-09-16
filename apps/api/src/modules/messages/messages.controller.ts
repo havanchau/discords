@@ -9,10 +9,10 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';

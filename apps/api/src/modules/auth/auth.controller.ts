@@ -1,9 +1,9 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { I18nService } from '../../common/i18n/i18n.service';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { RequestUser } from '../../common/request-user';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { I18nService } from '@/common/i18n/i18n.service';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { RequestUser } from '@/common/request-user';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -20,13 +20,17 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly passwordReset: PasswordResetService,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
   ) {}
 
   @RateLimit({ keyPrefix: 'auth-register', limit: 5, windowMs: 15 * 60_000 })
   @Post('register')
   register(@Body() dto: RegisterDto, @Req() request: Request) {
-    return this.auth.register(dto, request.headers['user-agent'], this.i18n.resolveRequestLocale(request));
+    return this.auth.register(
+      dto,
+      request.headers['user-agent'],
+      this.i18n.resolveRequestLocale(request),
+    );
   }
 
   @RateLimit({ keyPrefix: 'auth-login', limit: 10, windowMs: 15 * 60_000 })

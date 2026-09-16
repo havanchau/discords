@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AuthState, Channel, ServerDetail } from '../api';
-import { useLocale } from '../i18n/LocaleProvider';
-import { buildDateFormatters } from '../i18n/useDateFormat';
-import { activeTimeoutUntil, memberHasServerPermission } from '../utils/serverPermissions';
+import type { AuthState, Channel, ServerDetail } from '@/api';
+import { useLocale } from '@/i18n/LocaleProvider';
+import { buildDateFormatters } from '@/i18n/useDateFormat';
+import { activeTimeoutUntil, memberHasServerPermission } from '@/utils/serverPermissions';
 
 export interface ComposerRestriction {
   /** Set while the composer must stay disabled, e.g. during a timeout. */

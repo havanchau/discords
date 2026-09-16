@@ -15,9 +15,20 @@ const TRANSLATED_ATTRIBUTES = new Set([
 
 const findings = [];
 
-const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', `${webRoot}/**/*.ts`, `${webRoot}/**/*.tsx`], {
-  encoding: 'utf8',
-})
+const files = execFileSync(
+  'git',
+  [
+    'ls-files',
+    '--cached',
+    '--others',
+    '--exclude-standard',
+    `${webRoot}/**/*.ts`,
+    `${webRoot}/**/*.tsx`,
+  ],
+  {
+    encoding: 'utf8',
+  },
+)
   .split(/\r?\n/)
   .filter(Boolean)
   .filter((file) => !file.startsWith(catalogDir));
@@ -126,10 +137,12 @@ function checkCatalogs() {
   const problems = [];
 
   for (const key of en) {
-    if (!vi.has(key)) problems.push({ file: `${catalogDir}/vi.ts`, line: 1, text: key, kind: 'missing key' });
+    if (!vi.has(key))
+      problems.push({ file: `${catalogDir}/vi.ts`, line: 1, text: key, kind: 'missing key' });
   }
   for (const key of vi) {
-    if (!en.has(key)) problems.push({ file: `${catalogDir}/en.ts`, line: 1, text: key, kind: 'missing key' });
+    if (!en.has(key))
+      problems.push({ file: `${catalogDir}/en.ts`, line: 1, text: key, kind: 'missing key' });
   }
   return problems;
 }
@@ -176,12 +189,22 @@ function checkApiCatalogs() {
   const problems = [];
   for (const key of en) {
     if (!vi.has(key)) {
-      problems.push({ file: 'apps/api/src/common/i18n/locales/vi.ts', line: 1, text: key, kind: 'missing key' });
+      problems.push({
+        file: 'apps/api/src/common/i18n/locales/vi.ts',
+        line: 1,
+        text: key,
+        kind: 'missing key',
+      });
     }
   }
   for (const key of vi) {
     if (!en.has(key)) {
-      problems.push({ file: 'apps/api/src/common/i18n/locales/en.ts', line: 1, text: key, kind: 'missing key' });
+      problems.push({
+        file: 'apps/api/src/common/i18n/locales/en.ts',
+        line: 1,
+        text: key,
+        kind: 'missing key',
+      });
     }
   }
   return problems;
@@ -192,7 +215,8 @@ function readApiCatalogKeys(locale) {
   if (!fs.existsSync(file)) return new Set();
   const keys = new Set();
   for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const match = /^\s*'?([A-Za-z0-9_.]+)'?:\s*'/.exec(line);
+    // Prettier moves a long value to the next line, leaving the key alone on its line.
+    const match = /^\s*'?([A-Za-z0-9_.]+)'?:\s*(?:'|$)/.exec(line);
     if (match) keys.add(match[1]);
   }
   return keys;

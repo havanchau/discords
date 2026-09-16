@@ -1,5 +1,5 @@
-import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
-import { useTranslation } from '../../i18n/LocaleProvider';
+import { useServerEmojiContext } from '@/contexts/ServerEmojiContext';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import styles from './EmojiPicker.module.css';
 
 export const UNICODE_EMOJI_OPTIONS = [

@@ -85,13 +85,13 @@ Migration `20260915010000_add_server_events`.
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `GET` | `/servers/:serverId/events` | — | `{ events: ServerEventView[] }` (max 50) | default |
-| `POST` | `/servers/:serverId/events` | `{ name, description?, location?, channelId?, startAt, endAt? }` | `201 { event }` | 20/min |
-| `PATCH` | `/events/:eventId` | same fields, optional | `{ event }` | 20/min |
-| `DELETE` | `/events/:eventId` | — | `{ ok: true }` | 20/min |
-| `PUT` | `/events/:eventId/interest` | `{ interested: boolean }` | `{ interested, interestedCount }` | 60/min |
+| Method   | Path                        | Body                                                             | Response                                 | Rate limit |
+| -------- | --------------------------- | ---------------------------------------------------------------- | ---------------------------------------- | ---------- |
+| `GET`    | `/servers/:serverId/events` | —                                                                | `{ events: ServerEventView[] }` (max 50) | default    |
+| `POST`   | `/servers/:serverId/events` | `{ name, description?, location?, channelId?, startAt, endAt? }` | `201 { event }`                          | 20/min     |
+| `PATCH`  | `/events/:eventId`          | same fields, optional                                            | `{ event }`                              | 20/min     |
+| `DELETE` | `/events/:eventId`          | —                                                                | `{ ok: true }`                           | 20/min     |
+| `PUT`    | `/events/:eventId/interest` | `{ interested: boolean }`                                        | `{ interested, interestedCount }`        | 60/min     |
 
 `ServerEventView`: `{ id, serverId, channelId, name, description, location, startAt, endAt, status, creator: { id, displayName, avatarUrl }, interestedCount, interested }`.
 

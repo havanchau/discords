@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { AuthScreen, type AuthScreenProps } from '../AuthScreen';
-import { AuthProvider, ThemeProvider } from '../../contexts/appContexts';
-import type { AuthState } from '../../api';
-import type { UiTheme } from '../settings/types';
+import { AuthScreen, type AuthScreenProps } from '@/components/AuthScreen';
+import { AuthProvider, ThemeProvider } from '@/contexts/appContexts';
+import type { AuthState } from '@/api';
+import type { UiTheme } from '@/components/settings/types';
 
 interface AuthGateProps {
   auth: AuthState | null;

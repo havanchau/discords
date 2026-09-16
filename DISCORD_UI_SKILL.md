@@ -50,14 +50,14 @@ pairing drops below its WCAG threshold in either theme. Do not edit the threshol
 
 ## Where things live
 
-| Concern | Location |
-| --- | --- |
-| Tokens and themes | [`apps/web/src/styles/tokens.css`](apps/web/src/styles/tokens.css) |
-| Reset and focus ring | [`apps/web/src/styles/reset.css`](apps/web/src/styles/reset.css) |
-| Global helpers | [`apps/web/src/styles/utilities.css`](apps/web/src/styles/utilities.css) |
-| Shared primitives | [`apps/web/src/components/ui/`](apps/web/src/components/ui/) |
-| Shell grid | [`apps/web/src/components/app/AppLayout.module.css`](apps/web/src/components/app/AppLayout.module.css) |
-| Theme resolution | [`apps/web/src/hooks/useTheme.ts`](apps/web/src/hooks/useTheme.ts) |
-| Contrast check | [`scripts/check-token-contrast.mjs`](scripts/check-token-contrast.mjs) |
-| Canonical rules | [`docs/design-rules.md`](docs/design-rules.md) |
-| Migration record | [`docs/features/ui-identity-redesign.md`](docs/features/ui-identity-redesign.md) |
+| Concern              | Location                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| Tokens and themes    | [`apps/web/src/styles/tokens.css`](apps/web/src/styles/tokens.css)                                     |
+| Reset and focus ring | [`apps/web/src/styles/reset.css`](apps/web/src/styles/reset.css)                                       |
+| Global helpers       | [`apps/web/src/styles/utilities.css`](apps/web/src/styles/utilities.css)                               |
+| Shared primitives    | [`apps/web/src/components/ui/`](apps/web/src/components/ui/)                                           |
+| Shell grid           | [`apps/web/src/components/app/AppLayout.module.css`](apps/web/src/components/app/AppLayout.module.css) |
+| Theme resolution     | [`apps/web/src/hooks/useTheme.ts`](apps/web/src/hooks/useTheme.ts)                                     |
+| Contrast check       | [`scripts/check-token-contrast.mjs`](scripts/check-token-contrast.mjs)                                 |
+| Canonical rules      | [`docs/design-rules.md`](docs/design-rules.md)                                                         |
+| Migration record     | [`docs/features/ui-identity-redesign.md`](docs/features/ui-identity-redesign.md)                       |

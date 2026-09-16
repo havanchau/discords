@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { AuthState, Channel } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { AuthState, Channel } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseComposerAttachmentsOptions {
   auth: AuthState | null;
@@ -113,7 +113,9 @@ export function useComposerAttachments({
       recorder.start();
       setIsRecordingVoice(true);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-start-voice-recording'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-start-voice-recording'),
+      );
     }
   }
 

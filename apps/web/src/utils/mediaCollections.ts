@@ -1,4 +1,4 @@
-import type { Message, MessageAttachment } from '../api';
+import type { Message, MessageAttachment } from '@/api';
 
 export type MediaCollectionTab = 'media' | 'files' | 'links';
 
@@ -16,7 +16,9 @@ export interface MediaCollectionItem {
 
 const URL_PATTERN = /https?:\/\/[^\s<>()]+/gi;
 
-export function categorizeAttachment(attachment: MessageAttachment): MediaCollectionItem['category'] {
+export function categorizeAttachment(
+  attachment: MessageAttachment,
+): MediaCollectionItem['category'] {
   if (attachment.mimeType.startsWith('image/')) return 'image';
   if (attachment.mimeType.startsWith('video/')) return 'video';
   if (attachment.mimeType.startsWith('audio/')) return 'audio';

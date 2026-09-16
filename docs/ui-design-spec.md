@@ -4,7 +4,6 @@ Canonical UI rules now live in [design-rules.md](design-rules.md).
 
 This file is intentionally short to avoid duplicated design-token, layout, typography, spacing, and component rules. Use it as a product-facing summary of what the UI should feel like; use [design-rules.md](design-rules.md) when implementing CSS or React UI.
 
-
 ## UI Goal
 
 The interface should feel like a real, dense communication product:

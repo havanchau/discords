@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { AuthSessionEntry } from '@discord-clone/shared';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 
 @Injectable()
 export class SessionsService {

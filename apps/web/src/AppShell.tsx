@@ -1,4 +1,12 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ChannelBadgeState } from './components/WorkspaceSidebar';
 import { useSyncAccountLocale, useTranslation } from './i18n/LocaleProvider';
 import { buildMemberIdentityMap } from './utils/memberIdentity';
@@ -347,11 +355,14 @@ export function AppShell() {
     activeChannelIdRef.current = channel?.id ?? null;
   }, [channel?.id]);
 
+  const loadAccountData = useEffectEvent((token: string) => {
+    void loadFriends(token);
+    void loadDirectConversations(token);
+    void loadNotificationPreferences();
+  });
   useEffect(() => {
     if (!auth) return;
-    void loadFriends(auth.accessToken);
-    void loadDirectConversations(auth.accessToken);
-    void loadNotificationPreferences();
+    loadAccountData(auth.accessToken);
   }, [auth]);
 
   useEffect(() => {
@@ -360,7 +371,7 @@ export function AppShell() {
     clearChannelKeys();
   }, [auth, clearChannelKeys, clearDirectMessages]);
 
-  useEffect(() => {
+  const openChannel = useEffectEvent(() => {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
     setMessageCursor(null);
@@ -387,7 +398,9 @@ export function AppShell() {
         void markChannelRead(channel.id, lastMessage?.id);
       })
       .catch((err) =>
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-messages')),
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-load-messages'),
+        ),
       )
       .finally(() => setIsLoadingMessages(false));
     void loadPinnedMessages(channel.id, auth.accessToken);
@@ -406,6 +419,10 @@ export function AppShell() {
         });
       },
     );
+  });
+  // Opening a channel resets and refetches its state, so it runs on a new channel, token or socket only.
+  useEffect(() => {
+    openChannel();
   }, [channel?.id, auth?.accessToken, socket]);
 
   useEffect(() => {
@@ -417,7 +434,10 @@ export function AppShell() {
   }, [channelBadges]);
 
   // Per-server nicknames and avatars, resolved once per member list change rather than per row.
-  const memberIdentities = useMemo(() => buildMemberIdentityMap(server?.members), [server?.members]);
+  const memberIdentities = useMemo(
+    () => buildMemberIdentityMap(server?.members),
+    [server?.members],
+  );
 
   const selectedMember = useMemo(
     () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
@@ -486,7 +506,9 @@ export function AppShell() {
       markMessageSent(channel.id);
       return true;
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-send-message'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-send-message'),
+      );
       return false;
     } finally {
       setPendingAction(null);
@@ -543,12 +565,7 @@ export function AppShell() {
 
   if (!auth || !homeProps) {
     return (
-      <AuthGate
-        auth={auth}
-        uiTheme={uiTheme}
-        setUiTheme={setUiTheme}
-        authScreen={authScreen}
-      >
+      <AuthGate auth={auth} uiTheme={uiTheme} setUiTheme={setUiTheme} authScreen={authScreen}>
         {null}
       </AuthGate>
     );

@@ -68,11 +68,11 @@ Migration `20260915006000_add_server_emojis`.
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `GET` | `/servers/:serverId/emojis` | — | `{ emojis: Array<{ id, name, url, creatorId, createdAt }> }` | default |
-| `POST` | `/servers/:serverId/emojis` | `{ name, url }` | `201 { emoji }` | 20/min |
-| `DELETE` | `/servers/:serverId/emojis/:emojiId` | — | `{ ok: true }` | 20/min |
+| Method   | Path                                 | Body            | Response                                                     | Rate limit |
+| -------- | ------------------------------------ | --------------- | ------------------------------------------------------------ | ---------- |
+| `GET`    | `/servers/:serverId/emojis`          | —               | `{ emojis: Array<{ id, name, url, creatorId, createdAt }> }` | default    |
+| `POST`   | `/servers/:serverId/emojis`          | `{ name, url }` | `201 { emoji }`                                              | 20/min     |
+| `DELETE` | `/servers/:serverId/emojis/:emojiId` | —               | `{ ok: true }`                                               | 20/min     |
 
 ### Files
 

@@ -66,10 +66,10 @@ Migration `20260915007000_add_password_reset_tokens`.
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `POST` | `/auth/forgot-password` | `{ email }` | `{ ok, message }` | 5 / 15 min |
-| `POST` | `/auth/reset-password` | `{ token, password }` | `{ ok: true }` | 10 / 15 min |
+| Method | Path                    | Body                  | Response          | Rate limit  |
+| ------ | ----------------------- | --------------------- | ----------------- | ----------- |
+| `POST` | `/auth/forgot-password` | `{ email }`           | `{ ok, message }` | 5 / 15 min  |
+| `POST` | `/auth/reset-password`  | `{ token, password }` | `{ ok: true }`    | 10 / 15 min |
 
 ### Files
 

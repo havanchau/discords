@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Message, ThreadSummary } from '@discord-clone/shared';
-import { ChannelsService } from '../channels/channels.service';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { PushService } from '../push/push.service';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { ChannelsService } from '@/modules/channels/channels.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { PushService } from '@/modules/push/push.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';

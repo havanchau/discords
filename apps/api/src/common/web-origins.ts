@@ -13,7 +13,11 @@ export function isAllowedWebOrigin(origin: string | undefined, webOrigins: strin
 
   try {
     const { hostname, protocol } = new URL(origin);
-    return protocol === 'https:' && hostname.endsWith('.vercel.app') && webOrigins.includes('https://*.vercel.app');
+    return (
+      protocol === 'https:' &&
+      hostname.endsWith('.vercel.app') &&
+      webOrigins.includes('https://*.vercel.app')
+    );
   } catch {
     return false;
   }

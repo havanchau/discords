@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
-import type { PublicUser } from '../api';
-import type { CallState, RemoteMedia } from '../helpers';
+import type { PublicUser } from '@/api';
+import type { CallState, RemoteMedia } from '@/helpers';
 import type { StartCallOptions } from './useChannelCall';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 export type DirectCallMode = 'voice' | 'video';
 

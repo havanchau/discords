@@ -11,14 +11,14 @@ exactly the global CSS that surface owned, so the app built and ran after every 
 
 ## Phases
 
-| Phase | Surface | Status |
-| --- | --- | --- |
-| 0 | Tokens, themes, reset, contrast check | Done |
-| 1 | Auth screen | Done |
-| 2 | Shell, server rail, channel sidebar, member sidebar | Done |
-| 3 | Chat header, panel, message list, composer, call tiles | Done |
-| 4 | Settings modal, roles, permissions, invites | Done |
-| 5 | Compatibility shim removed, docs rewritten | Done |
+| Phase | Surface                                                | Status |
+| ----- | ------------------------------------------------------ | ------ |
+| 0     | Tokens, themes, reset, contrast check                  | Done   |
+| 1     | Auth screen                                            | Done   |
+| 2     | Shell, server rail, channel sidebar, member sidebar    | Done   |
+| 3     | Chat header, panel, message list, composer, call tiles | Done   |
+| 4     | Settings modal, roles, permissions, invites            | Done   |
+| 5     | Compatibility shim removed, docs rewritten             | Done   |
 
 ## What shipped
 

@@ -1,4 +1,4 @@
-import { DialogContent, DialogRoot } from '../ui';
+import { DialogContent, DialogRoot } from '@/components/ui';
 import styles from './AttachmentPreviewDialog.module.css';
 
 interface PreviewAttachment {
@@ -24,7 +24,11 @@ export function AttachmentPreviewDialog({
       >
         <div className={styles.mediaContainer}>
           {previewAttachment?.kind === 'image' && (
-            <img src={previewAttachment.url} alt={previewAttachment.fileName} className={styles.media} />
+            <img
+              src={previewAttachment.url}
+              alt={previewAttachment.fileName}
+              className={styles.media}
+            />
           )}
           {previewAttachment?.kind === 'video' && (
             <video src={previewAttachment.url} controls autoPlay className={styles.media} />

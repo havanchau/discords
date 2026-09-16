@@ -8,9 +8,9 @@ import {
   useRef,
 } from 'react';
 import type { Socket } from 'socket.io-client';
-import { apiRequest, AuthState, Channel, Message } from '../api';
-import type { ChannelMessageActions } from '../components/chat/types';
-import { encryptChannelMessage } from '../e2ee';
+import { apiRequest, AuthState, Channel, Message } from '@/api';
+import type { ChannelMessageActions } from '@/components/chat/types';
+import { encryptChannelMessage } from '@/e2ee';
 
 interface UseChannelMessageActionsOptions {
   auth: AuthState | null;
@@ -25,8 +25,8 @@ interface UseChannelMessageActionsOptions {
   setEditingMessageId: (messageId: string | null) => void;
   setEditingDraft: (draft: string) => void;
   setReplyingToMessage: (message: Message | null) => void;
-  openThread: (message: Message) => void;
-  togglePinnedMessage: (message: Message) => void;
+  openThread: (message: Message) => Promise<void>;
+  togglePinnedMessage: (message: Message) => Promise<void>;
 }
 
 /** Edit, delete, react, and pin actions for channel message rows, with stable identities. */
@@ -135,13 +135,13 @@ export function useChannelMessageActions({
       editingMessageId,
       editingDraft,
       setReplyingToMessage,
-      openThread: openThread,
+      openThread: (message) => void openThread(message),
       setEditingMessageId,
       setEditingDraft,
       saveEdit: saveMessageEdit,
       delete: deleteMessage,
       toggleReaction,
-      togglePinned: togglePinnedMessage,
+      togglePinned: (message) => void togglePinnedMessage(message),
     }),
     [
       editingMessageId,

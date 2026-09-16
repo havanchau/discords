@@ -1,12 +1,12 @@
 import { Loader2, MessageSquare, UserPlus } from 'lucide-react';
-import { assetUrl } from '../../api';
-import { accentClass, initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { useUserProfile } from '../../hooks/useUserProfile';
-import { profileIdentityOf } from '../../utils/memberIdentity';
-import { ReactionEmoji } from '../chat/EmojiPicker';
-import { Avatar, Button } from '../ui';
+import { assetUrl } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { profileIdentityOf } from '@/utils/memberIdentity';
+import { ReactionEmoji } from '@/components/chat/EmojiPicker';
+import { Avatar, Button } from '@/components/ui';
 import styles from './ProfileCard.module.css';
 
 interface ProfileCardProps {
@@ -81,9 +81,7 @@ export function ProfileCard({
         />
         <strong className={styles.displayName}>{identity.displayName}</strong>
         <span className={styles.username}>@{profile.username}</span>
-        {showsAccountName ? (
-          <span className={styles.username}>{profile.displayName}</span>
-        ) : null}
+        {showsAccountName ? <span className={styles.username}>{profile.displayName}</span> : null}
         {profile.pronouns ? <span className={styles.pronouns}>{profile.pronouns}</span> : null}
 
         {profile.customStatus ? (

@@ -1,8 +1,8 @@
 import { CalendarClock, Hash, MapPin, Star, Volume2 } from 'lucide-react';
-import type { Channel, ServerEventView } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { Badge, Button } from '../ui';
+import type { Channel, ServerEventView } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { Badge, Button } from '@/components/ui';
 import styles from './ServerEvents.module.css';
 
 interface EventCardProps {

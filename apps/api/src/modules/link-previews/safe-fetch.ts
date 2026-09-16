@@ -113,7 +113,7 @@ function validatedLookup(isAllowedAddress: (address: string) => boolean): Lookup
         callback(error, '', 0);
         return;
       }
-      const resolved = addresses as LookupAddress[];
+      const resolved = addresses;
       if (!resolved.length || resolved.some((entry) => !isAllowedAddress(entry.address))) {
         callback(new BlockedUrlError('Link preview target is not a public address'), '', 0);
         return;

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { CalendarPlus, Loader2 } from 'lucide-react';
-import type { ServerDetail } from '../../api';
-import type { ServerEventsState } from '../../hooks/useServerEvents';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, DialogContent, DialogRoot } from '../ui';
+import type { ServerDetail } from '@/api';
+import type { ServerEventsState } from '@/hooks/useServerEvents';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, DialogContent, DialogRoot } from '@/components/ui';
 import { EventCard } from './EventCard';
 import { EventForm } from './EventForm';
 import styles from './ServerEvents.module.css';

@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Socket } from 'socket.io';
+import { RedisService } from '@/modules/redis/redis.service';
 import { parseDmCallKey } from './dm-calls.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 
@@ -21,94 +22,113 @@ export interface ActiveCallSummary {
   screenSharer?: CallParticipant;
 }
 
+/** Stored shape: the participant plus the heartbeat that proves their instance is still alive. */
+interface StoredParticipant extends CallParticipant {
+  lastSeen: number;
+}
+
 /**
- * Who is in which call. This is process-local state: it belongs to the sockets this instance holds
- * and is rebuilt from scratch on restart, which is also why the API runs as a single instance.
+ * Who is in which call, shared across instances through Redis. It has to be shared because
+ * `assertPeer` authorizes WebRTC signalling between two sockets that may be connected to two
+ * different instances, and because the participant list a client renders must be the same one
+ * every instance sees.
+ *
+ * Entries carry a heartbeat and are pruned once it goes stale, so a killed instance cannot leave a
+ * ghost participant in a call forever.
  */
 @Injectable()
 export class CallRegistryService {
-  private readonly callParticipants = new Map<string, Map<string, CallParticipant>>();
-  private readonly socketCalls = new Map<string, Set<string>>();
-
-  constructor(private readonly publisher: RealtimePublisher) {}
+  constructor(
+    private readonly redis: RedisService,
+    private readonly publisher: RealtimePublisher,
+  ) {}
 
   callRoom(channelId: string) {
     return `call:${channelId}`;
   }
 
   /** Adds the participant and returns everyone who was already in the call. */
-  join(channelId: string, participant: CallParticipant) {
-    const participants = this.getParticipants(channelId);
-    const existingParticipants = [...participants.values()].filter(
+  async join(channelId: string, participant: CallParticipant) {
+    const existingParticipants = (await this.listParticipants(channelId)).filter(
       (item) => item.socketId !== participant.socketId,
     );
 
-    participants.set(participant.socketId, participant);
-    const calls = this.socketCalls.get(participant.socketId) ?? new Set<string>();
-    calls.add(channelId);
-    this.socketCalls.set(participant.socketId, calls);
+    const stored: StoredParticipant = { ...participant, lastSeen: Date.now() };
+    await this.redis.client
+      .multi()
+      .hset(this.participantsKey(channelId), participant.socketId, JSON.stringify(stored))
+      .pexpire(this.participantsKey(channelId), this.entryTtlMs())
+      .sadd(this.socketCallsKey(participant.socketId), channelId)
+      .pexpire(this.socketCallsKey(participant.socketId), this.entryTtlMs())
+      .exec();
 
     return existingParticipants;
   }
 
-  updateState(
+  async updateState(
     channelId: string,
     socketId: string,
     patch: Partial<Pick<CallParticipant, 'mode' | 'isMuted' | 'isCameraOff' | 'isSharingScreen'>>,
   ) {
-    const participant = this.callParticipants.get(channelId)?.get(socketId);
+    const raw = await this.redis.client.hget(this.participantsKey(channelId), socketId);
+    const participant = this.parse(raw);
     if (!participant) return null;
 
-    const nextParticipant: CallParticipant = {
+    const nextParticipant: StoredParticipant = {
       ...participant,
       mode: patch.mode ?? participant.mode,
       isMuted: patch.isMuted ?? participant.isMuted,
       isCameraOff: patch.isCameraOff ?? participant.isCameraOff,
       isSharingScreen: patch.isSharingScreen ?? participant.isSharingScreen,
+      lastSeen: Date.now(),
     };
-    this.callParticipants.get(channelId)?.set(socketId, nextParticipant);
-    return nextParticipant;
+    await this.redis.client.hset(
+      this.participantsKey(channelId),
+      socketId,
+      JSON.stringify(nextParticipant),
+    );
+    return this.withoutHeartbeat(nextParticipant);
   }
 
-  leave(client: Socket, channelId: string) {
-    const participants = this.callParticipants.get(channelId);
-    const participant = participants?.get(client.id);
-    if (!participants || !participant) return;
+  async leave(client: Socket, channelId: string) {
+    const raw = await this.redis.client.hget(this.participantsKey(channelId), client.id);
+    const participant = this.parse(raw);
+    if (!participant) return;
 
-    participants.delete(client.id);
-    if (participants.size === 0) {
-      this.callParticipants.delete(channelId);
-    }
+    await this.redis.client
+      .multi()
+      .hdel(this.participantsKey(channelId), client.id)
+      .srem(this.socketCallsKey(client.id), channelId)
+      .exec();
 
-    const calls = this.socketCalls.get(client.id);
-    calls?.delete(channelId);
-    if (calls && calls.size === 0) {
-      this.socketCalls.delete(client.id);
-    }
-
-    client.leave(this.callRoom(channelId));
+    await client.leave(this.callRoom(channelId));
     client.to(this.callRoom(channelId)).emit('voice:user-left', {
       channelId,
       socketId: client.id,
       userId: participant.userId,
     });
-    this.emitActiveCall(channelId);
+    await this.emitActiveCall(channelId);
   }
 
-  leaveAll(client: Socket) {
-    const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
-    channelIds.forEach((channelId) => this.leave(client, channelId));
+  async leaveAll(client: Socket) {
+    const channelIds = await this.redis.client.smembers(this.socketCallsKey(client.id));
+    for (const channelId of channelIds) {
+      await this.leave(client, channelId);
+    }
+    await this.redis.client.del(this.socketCallsKey(client.id));
   }
 
-  assertPeer(client: Socket, channelId: string, targetSocketId: string) {
-    const participants = this.callParticipants.get(channelId);
-    if (!participants?.has(client.id) || !participants.has(targetSocketId)) {
+  async assertPeer(client: Socket, channelId: string, targetSocketId: string) {
+    const socketIds = new Set(
+      (await this.listParticipants(channelId)).map((participant) => participant.socketId),
+    );
+    if (!socketIds.has(client.id) || !socketIds.has(targetSocketId)) {
       throw new UnauthorizedException('Target is not in the call');
     }
   }
 
-  getActiveCallSummary(channelId: string): ActiveCallSummary | null {
-    const participants = [...(this.callParticipants.get(channelId)?.values() ?? [])];
+  async getActiveCallSummary(channelId: string): Promise<ActiveCallSummary | null> {
+    const participants = await this.listParticipants(channelId);
     if (!participants.length) return null;
 
     const screenSharer = participants.find(
@@ -123,12 +143,12 @@ export class CallRegistryService {
   }
 
   // Channel calls announce to the channel room; DM calls to the conversation room.
-  emitActiveCall(channelId: string) {
+  async emitActiveCall(channelId: string) {
     const dmConversationId = parseDmCallKey(channelId);
     const room = dmConversationId
       ? this.publisher.conversationRoom(dmConversationId)
       : this.publisher.channelRoom(channelId);
-    const activeCall = this.getActiveCallSummary(channelId);
+    const activeCall = await this.getActiveCallSummary(channelId);
 
     if (activeCall) {
       this.publisher.emitToRoom(room, 'voice:active', activeCall);
@@ -137,9 +157,78 @@ export class CallRegistryService {
     this.publisher.emitToRoom(room, 'voice:ended', { channelId });
   }
 
-  private getParticipants(channelId: string) {
-    const participants = this.callParticipants.get(channelId) ?? new Map<string, CallParticipant>();
-    this.callParticipants.set(channelId, participants);
-    return participants;
+  /** Keeps this instance's own participants from being pruned as if their instance had crashed. */
+  async heartbeat(socketIds: string[]) {
+    if (!socketIds.length) return;
+
+    const now = Date.now();
+    for (const socketId of socketIds) {
+      const channelIds = await this.redis.client.smembers(this.socketCallsKey(socketId));
+      if (!channelIds.length) continue;
+
+      const pipeline = this.redis.client.pipeline();
+      for (const channelId of channelIds) {
+        const participant = this.parse(
+          await this.redis.client.hget(this.participantsKey(channelId), socketId),
+        );
+        if (!participant) continue;
+        pipeline.hset(
+          this.participantsKey(channelId),
+          socketId,
+          JSON.stringify({ ...participant, lastSeen: now }),
+        );
+        pipeline.pexpire(this.participantsKey(channelId), this.entryTtlMs());
+      }
+      pipeline.pexpire(this.socketCallsKey(socketId), this.entryTtlMs());
+      await pipeline.exec();
+    }
+  }
+
+  /** Reads the call, dropping — and cleaning up — participants whose heartbeat went stale. */
+  private async listParticipants(channelId: string): Promise<CallParticipant[]> {
+    const entries = await this.redis.client.hgetall(this.participantsKey(channelId));
+    const staleBefore = Date.now() - this.redis.config.heartbeatTtlMs;
+
+    const live: CallParticipant[] = [];
+    const staleSocketIds: string[] = [];
+    for (const [socketId, raw] of Object.entries(entries)) {
+      const participant = this.parse(raw);
+      if (!participant || participant.lastSeen < staleBefore) {
+        staleSocketIds.push(socketId);
+        continue;
+      }
+      live.push(this.withoutHeartbeat(participant));
+    }
+
+    if (staleSocketIds.length) {
+      await this.redis.client.hdel(this.participantsKey(channelId), ...staleSocketIds);
+    }
+    return live;
+  }
+
+  private parse(raw: string | null): StoredParticipant | null {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as StoredParticipant;
+    } catch {
+      // A value this process cannot parse is treated as absent; the stale sweep removes it.
+      return null;
+    }
+  }
+
+  private withoutHeartbeat({ lastSeen: _lastSeen, ...participant }: StoredParticipant) {
+    return participant;
+  }
+
+  private entryTtlMs() {
+    return this.redis.config.heartbeatTtlMs * 2;
+  }
+
+  private participantsKey(channelId: string) {
+    return this.redis.key('call', channelId, 'participants');
+  }
+
+  private socketCallsKey(socketId: string) {
+    return this.redis.key('socket', socketId, 'calls');
   }
 }

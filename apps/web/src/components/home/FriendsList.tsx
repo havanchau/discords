@@ -1,4 +1,4 @@
-import type { FriendEntry } from '../../api';
+import type { FriendEntry } from '@/api';
 import { Ban, MoreVertical, UserMinus } from 'lucide-react';
 import {
   Button,
@@ -7,9 +7,9 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
   IconButton,
-} from '../ui';
+} from '@/components/ui';
 import { UserAvatar } from './UserAvatar';
-import { useTranslation } from '../../i18n/LocaleProvider';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import styles from './HomePanel.module.css';
 import { handleListKeyboardNavigation } from './keyboardNavigation';
 

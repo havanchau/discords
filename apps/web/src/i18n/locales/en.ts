@@ -17,7 +17,8 @@ export const en = {
   'auth.brand.tagline': 'Realtime',
   'auth.error.passwordMismatch': 'Passwords do not match.',
   'auth.field.authCode': 'Authentication code',
-  'auth.field.authCodeHint': 'Enter the 6-digit code from your authenticator app, or a recovery code.',
+  'auth.field.authCodeHint':
+    'Enter the 6-digit code from your authenticator app, or a recovery code.',
   'auth.field.authCodePlaceholder': '123456 or recovery code',
   'auth.field.confirmNewPassword': 'Confirm new password',
   'auth.field.displayName': 'Display name',
@@ -26,7 +27,8 @@ export const en = {
   'auth.field.emailPlaceholder': 'you@example.com',
   'auth.field.newPassword': 'New password',
   'auth.field.password': 'Password',
-  'auth.field.passwordHint': 'At least 8 characters, with uppercase, lowercase, a number, and a symbol.',
+  'auth.field.passwordHint':
+    'At least 8 characters, with uppercase, lowercase, a number, and a symbol.',
   'auth.field.username': 'Username',
   'auth.field.usernamePlaceholder': 'demo',
   'auth.forgotPassword': 'Forgot password?',
@@ -94,7 +96,8 @@ export const en = {
   'channel.memberOverrides.deny': 'Deny',
   'channel.memberOverrides.empty': 'No server members are available for channel overrides.',
   'channel.memberOverrides.gridLabel': 'Member overrides for {name}',
-  'channel.memberOverrides.hint': 'Allow or deny channel access for one member. Member rules take priority over role rules.',
+  'channel.memberOverrides.hint':
+    'Allow or deny channel access for one member. Member rules take priority over role rules.',
   'channel.memberOverrides.inherited': 'Using role permissions',
   'channel.memberOverrides.permission': 'Permission',
   'channel.memberOverrides.select': 'Select member',
@@ -175,7 +178,8 @@ export const en = {
   'devices.empty': 'No active devices.',
   'devices.lastActive': 'Last active {date}',
   'devices.loading': 'Loading devices',
-  'devices.section.hint': 'Where your account is signed in. Signing a device out takes effect immediately.',
+  'devices.section.hint':
+    'Where your account is signed in. Signing a device out takes effect immediately.',
   'devices.section.title': 'Devices',
   'devices.thisDevice': 'This device',
   'dialog.close': 'Close dialog',
@@ -204,7 +208,8 @@ export const en = {
   'encryption.action.forget': 'Forget key',
   'encryption.action.update': 'Update key',
   'encryption.enabledNotice': 'End-to-end encryption enabled for this channel on this device.',
-  'encryption.hint': 'Messages are encrypted in this browser before they are sent. Share the passphrase out-of-band with trusted members.',
+  'encryption.hint':
+    'Messages are encrypted in this browser before they are sent. Share the passphrase out-of-band with trusted members.',
   'encryption.passphrasePlaceholder': 'Channel passphrase',
   'encryption.passphraseTooShort': 'Use at least 8 characters for the encryption passphrase.',
   'encryption.titleActive': 'Encrypted channel session',
@@ -269,7 +274,8 @@ export const en = {
   'error.fallback.cannot-update-channel-permission': 'Cannot update channel permission',
   'error.fallback.cannot-update-friend-request': 'Cannot update friend request',
   'error.fallback.cannot-update-interest': 'Cannot update interest',
-  'error.fallback.cannot-update-member-channel-permission': 'Cannot update member channel permission',
+  'error.fallback.cannot-update-member-channel-permission':
+    'Cannot update member channel permission',
   'error.fallback.cannot-update-member-roles': 'Cannot update member roles',
   'error.fallback.cannot-update-notification': 'Cannot update notification',
   'error.fallback.cannot-update-notifications': 'Cannot update notifications',
@@ -532,7 +538,8 @@ export const en = {
   'roles.preview.filterChannels': 'Filter channels',
   'roles.preview.filterPlaceholder': 'general',
   'roles.preview.hidden': 'Hidden',
-  'roles.preview.hint': 'Read-only view of channel visibility and actions. @everyone supplies inherited defaults before extra roles are added.',
+  'roles.preview.hint':
+    'Read-only view of channel visibility and actions. @everyone supplies inherited defaults before extra roles are added.',
   'roles.preview.member': 'Member',
   'roles.preview.role': 'Role',
   'roles.preview.roleOnly': 'Role only',
@@ -563,7 +570,8 @@ export const en = {
   'server.field.namePlaceholder': 'New server',
   'serverProfile.changeAvatar': 'Change server avatar',
   'serverProfile.field.nickname': 'Nickname',
-  'serverProfile.hint': 'How you appear in {server} only. Empty means your account values are used.',
+  'serverProfile.hint':
+    'How you appear in {server} only. Empty means your account values are used.',
   'serverProfile.resetAvatar': 'Use account avatar',
   'serverProfile.save': 'Save server profile',
   'serverProfile.title': 'Server profile',
@@ -632,7 +640,8 @@ export const en = {
   'twoFactor.field.authenticatorCode': 'Authenticator code',
   'twoFactor.field.code6': '6-digit code',
   'twoFactor.field.currentPassword': 'Current password',
-  'twoFactor.field.currentPasswordHint': 'Signed up with Google or Facebook? Set a password with “Forgot password?” on the sign-in screen first.',
+  'twoFactor.field.currentPasswordHint':
+    'Signed up with Google or Facebook? Set a password with “Forgot password?” on the sign-in screen first.',
   'twoFactor.hint': 'Require a code from an authenticator app when signing in.',
   'twoFactor.loading': 'Loading security settings',
   'twoFactor.recovery.copy': 'Copy codes',
@@ -641,7 +650,8 @@ export const en = {
   'twoFactor.recovery.saved': 'I saved them',
   'twoFactor.recovery.warning': 'Save these recovery codes now. They will not be shown again.',
   'twoFactor.setup.copy': 'Copy',
-  'twoFactor.setup.hint': 'Add this key to your authenticator app, or open the setup link on this device.',
+  'twoFactor.setup.hint':
+    'Add this key to your authenticator app, or open the setup link on this device.',
   'twoFactor.setup.openInApp': 'Open in authenticator',
   'twoFactor.title': 'Two-factor authentication',
   'voice.notSupported': 'Voice recording is not supported in this browser.',

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
-import { PrismaModule } from '../prisma/prisma.module';
-import { RealtimePublisherModule } from '../realtime/realtime-publisher.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { PrismaModule } from '@/modules/prisma/prisma.module';
+import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 

@@ -1,4 +1,4 @@
-import type { MessageKey } from '../i18n/LocaleProvider';
+import type { MessageKey } from '@/i18n/LocaleProvider';
 
 export interface SlashCommandDefinition {
   name: string;
@@ -9,7 +9,12 @@ export interface SlashCommandDefinition {
 
 export const SLASH_COMMANDS: SlashCommandDefinition[] = [
   { name: 'me', descriptionKey: 'slash.me.description', usage: '/me waves hello', owner: 'client' },
-  { name: 'nick', descriptionKey: 'slash.nick.description', usage: '/nick New nickname', owner: 'server' },
+  {
+    name: 'nick',
+    descriptionKey: 'slash.nick.description',
+    usage: '/nick New nickname',
+    owner: 'server',
+  },
   {
     name: 'poll',
     descriptionKey: 'slash.poll.description',

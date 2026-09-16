@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
-import { AuthState, Channel } from '../api';
-import { CallMode, CallParticipant, CallState, RemoteMedia } from '../helpers';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { AuthState, Channel } from '@/api';
+import { CallMode, CallParticipant, CallState, RemoteMedia } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseChannelCallOptions {
   auth: AuthState | null;
@@ -42,7 +42,8 @@ export function useChannelCall({
     }
   }, [callState]);
 
-  useEffect(() => {
+  // Listeners attach once per socket; the helpers they call only use refs, state setters and the socket.
+  const attachCallListeners = useEffectEvent(() => {
     if (!socket) return;
 
     const handleUserJoined = (payload: { channelId: string; participant: CallParticipant }) => {
@@ -123,7 +124,8 @@ export function useChannelCall({
       socket.off('webrtc:answer', handleAnswer);
       socket.off('webrtc:ice-candidate', handleIceCandidate);
     };
-  }, [socket]);
+  });
+  useEffect(() => attachCallListeners(), [socket]);
 
   /** Resolves false when the call could not start, e.g. media permission was denied. */
   async function startCall(mode: CallMode, options: StartCallOptions = {}): Promise<boolean> {

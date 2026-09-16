@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { accentClass, initials, RemoteMedia } from '../helpers';
-import { cn } from '../utils/cn';
+import { accentClass, initials, RemoteMedia } from '@/helpers';
+import { cn } from '@/utils/cn';
 import styles from './RemoteVideoTile.module.css';
 
 export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
@@ -23,7 +23,13 @@ export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
       )}
       <div className={styles.label}>
         <strong>{participant.displayName}</strong>
-        <span>{participant.isSharingScreen ? 'Sharing screen' : participant.isMuted ? 'Muted' : 'In call'}</span>
+        <span>
+          {participant.isSharingScreen
+            ? 'Sharing screen'
+            : participant.isMuted
+              ? 'Muted'
+              : 'In call'}
+        </span>
       </div>
     </div>
   );

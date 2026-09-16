@@ -1,4 +1,4 @@
-import type { Channel, ChannelCategory } from '../api';
+import type { Channel, ChannelCategory } from '@/api';
 
 export interface CategoryGroup {
   category: ChannelCategory;

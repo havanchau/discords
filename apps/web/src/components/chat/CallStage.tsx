@@ -1,9 +1,9 @@
 import { Mic, MicOff, MonitorUp, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
-import { accentClass, initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { cn } from '../../utils/cn';
-import { RemoteVideoTile } from '../RemoteVideoTile';
-import { Avatar, Button, IconButton } from '../ui';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
+import { RemoteVideoTile } from '@/components/RemoteVideoTile';
+import { Avatar, Button, IconButton } from '@/components/ui';
 import styles from './CallStage.module.css';
 import type { ChatPanelCall, ChatPanelSession } from './types';
 

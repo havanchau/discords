@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { apiRequest, type UserProfile } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, type UserProfile } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { queryKeys } from '@/query/queryKeys';
 
 interface UseUserProfileOptions {
   accessToken: string;
@@ -25,7 +25,11 @@ export function useUserProfile({ accessToken, userId, serverId, enabled }: UseUs
     enabled: enabled && Boolean(userId),
     queryFn: () => {
       const query = serverId ? `?serverId=${encodeURIComponent(serverId)}` : '';
-      return apiRequest<{ profile: UserProfile }>(`/users/${userId}/profile${query}`, {}, accessToken);
+      return apiRequest<{ profile: UserProfile }>(
+        `/users/${userId}/profile${query}`,
+        {},
+        accessToken,
+      );
     },
   });
 
@@ -36,7 +40,11 @@ export function useUserProfile({ accessToken, userId, serverId, enabled }: UseUs
   return {
     profile: data?.profile ?? null,
     isLoading,
-    error: error ? (error instanceof Error ? error.message : t('error.fallback.cannot-load-profile')) : null,
+    error: error
+      ? error instanceof Error
+        ? error.message
+        : t('error.fallback.cannot-load-profile')
+      : null,
     reload,
   };
 }

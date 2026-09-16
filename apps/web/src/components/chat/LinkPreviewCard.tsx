@@ -1,5 +1,5 @@
 import { Link as LinkIcon } from 'lucide-react';
-import { useLinkPreview } from '../../hooks/useLinkPreview';
+import { useLinkPreview } from '@/hooks/useLinkPreview';
 import styles from './LinkPreviewCard.module.css';
 
 interface LinkPreviewCardProps {

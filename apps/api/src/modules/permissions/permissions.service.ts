@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import {
   evaluateChannelPermission,
   Permission,
@@ -18,7 +18,7 @@ export class PermissionsService {
   async requireMembership(userId: string, serverId: string) {
     const member = await this.prisma.serverMember.findUnique({
       where: { userId_serverId: { userId, serverId } },
-      include: { roles: { include: { role: true } } }
+      include: { roles: { include: { role: true } } },
     });
 
     if (!member) {
@@ -46,14 +46,17 @@ export class PermissionsService {
   async hasServerPermission(userId: string, serverId: string, permission: PermissionValue) {
     const member = await this.prisma.serverMember.findUnique({
       where: { userId_serverId: { userId, serverId } },
-      include: { roles: { include: { role: true } } }
+      include: { roles: { include: { role: true } } },
     });
 
     if (!member) {
       return false;
     }
 
-    return member.kind === 'OWNER' || member.roles.some(({ role }) => role.permissions.includes(permission));
+    return (
+      member.kind === 'OWNER' ||
+      member.roles.some(({ role }) => role.permissions.includes(permission))
+    );
   }
 
   /** Refuses members whose timeout has not expired yet; the owner can never be timed out. */

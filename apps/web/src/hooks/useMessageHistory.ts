@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { apiRequest, type AuthState, type Channel, type Message } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { apiRequest, type AuthState, type Channel, type Message } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseMessageHistoryOptions {
   auth: AuthState | null;
@@ -44,7 +44,9 @@ export function useMessageHistory({
       });
       setMessageCursor(result.nextCursor ?? null);
     } catch (err) {
-      setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-load-older-messages'));
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-load-older-messages'),
+      );
     } finally {
       setIsLoadingMoreMessages(false);
     }

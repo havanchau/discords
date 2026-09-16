@@ -13,14 +13,21 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import { Channel } from '../../api';
-import { formatBytes } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, TextField } from '../ui';
+import { Channel } from '@/api';
+import { formatBytes } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import {
+  Button,
+  IconButton,
+  PopoverContent,
+  PopoverRoot,
+  PopoverTrigger,
+  TextField,
+} from '@/components/ui';
 import { EmojiPicker } from './EmojiPicker';
 import styles from './MessageComposer.module.css';
-import { cn } from '../../utils/cn';
-import { getSlashCommandSuggestions, parseSlashCommand } from '../../utils/slashCommands';
+import { cn } from '@/utils/cn';
+import { getSlashCommandSuggestions, parseSlashCommand } from '@/utils/slashCommands';
 import type { ChatPanelComposer, ChatPanelMessageActions } from './types';
 
 interface MessageComposerProps {
@@ -29,11 +36,7 @@ interface MessageComposerProps {
   messageActions: Pick<ChatPanelMessageActions, 'setReplyingToMessage'>;
 }
 
-export function MessageComposer({
-  channel,
-  composer,
-  messageActions,
-}: MessageComposerProps) {
+export function MessageComposer({ channel, composer, messageActions }: MessageComposerProps) {
   const t = useTranslation();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const isMessageSending = composer.pendingAction === 'send-message';
@@ -52,7 +55,7 @@ export function MessageComposer({
   const parsedCommand = parseSlashCommand(composer.draft);
 
   return (
-    <form onSubmit={composer.sendMessage} className={styles.composer}>
+    <form onSubmit={(event) => void composer.sendMessage(event)} className={styles.composer}>
       {composer.replyingToMessage && (
         <div className={styles.composerReply} data-testid="composer-reply">
           <Reply size={14} aria-hidden="true" />
@@ -71,7 +74,11 @@ export function MessageComposer({
       )}
 
       {commandSuggestions.length > 0 && (
-        <div className={styles.commandPopover} role="listbox" aria-label={t('composer.commandSuggestions')}>
+        <div
+          className={styles.commandPopover}
+          role="listbox"
+          aria-label={t('composer.commandSuggestions')}
+        >
           {commandSuggestions.map((command) => (
             <button
               type="button"
@@ -145,12 +152,18 @@ export function MessageComposer({
       <IconButton
         label={composer.isRecordingVoice ? t('composer.stopVoice') : t('composer.recordVoice')}
         className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
-        onClick={composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording}
+        onClick={
+          composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording
+        }
         disabled={
           !channel || Boolean(disabledReason) || (isMessageSending && !composer.isRecordingVoice)
         }
       >
-        {composer.isRecordingVoice ? <Square size={15} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
+        {composer.isRecordingVoice ? (
+          <Square size={15} aria-hidden="true" />
+        ) : (
+          <Mic size={18} aria-hidden="true" />
+        )}
       </IconButton>
 
       <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>

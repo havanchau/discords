@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { ChannelsService } from './channels.service';
 import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -16,7 +16,7 @@ export class ChannelsController {
   create(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
-    @Body() dto: CreateChannelDto
+    @Body() dto: CreateChannelDto,
   ) {
     return this.channels.createChannel(user.id, serverId, dto);
   }
@@ -35,7 +35,7 @@ export class ChannelsController {
   update(
     @CurrentUser() user: RequestUser,
     @Param('channelId') channelId: string,
-    @Body() dto: UpdateChannelDto
+    @Body() dto: UpdateChannelDto,
   ) {
     return this.channels.updateChannel(user.id, channelId, dto);
   }

@@ -1,16 +1,29 @@
 import { Hash } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { assetUrl } from '../../api';
-import { useTranslation, type Translate } from '../../i18n/LocaleProvider';
-import { Button, TextArea, TextField } from '../ui';
+import { assetUrl } from '@/api';
+import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
+import { Button, TextArea, TextField } from '@/components/ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
 import { SettingsSelect } from './SettingsSelect';
 import type { SettingsModalFields, SettingsSelectOption } from './types';
-import styles from '../SettingsModal.module.css';
-import { cn } from '../../utils/cn';
+import styles from '@/components/SettingsModal.module.css';
+import { cn } from '@/utils/cn';
 
 type SlowmodeOption =
-  | '0' | '5' | '10' | '15' | '30' | '60' | '120' | '300' | '600' | '900' | '1800' | '3600' | '7200' | '21600';
+  | '0'
+  | '5'
+  | '10'
+  | '15'
+  | '30'
+  | '60'
+  | '120'
+  | '300'
+  | '600'
+  | '900'
+  | '1800'
+  | '3600'
+  | '7200'
+  | '21600';
 
 function slowmodeOptions(t: Translate): SettingsSelectOption<SlowmodeOption>[] {
   return [
@@ -56,7 +69,7 @@ export function ChannelSettings({
   updateChannelSettings,
 }: ChannelSettingsProps) {
   const t = useTranslation();
-  const members = server?.members ?? [];
+  const members = useMemo(() => server?.members ?? [], [server?.members]);
   const [selectedMemberId, setSelectedMemberId] = useState(() => members[0]?.id ?? '');
   const selectedMember = useMemo(
     () => members.find((member) => member.id === selectedMemberId) ?? members[0] ?? null,
@@ -66,7 +79,7 @@ export function ChannelSettings({
   if (!channel) return null;
 
   return (
-    <form className={styles.settingsForm} onSubmit={updateChannelSettings}>
+    <form className={styles.settingsForm} onSubmit={(event) => void updateChannelSettings(event)}>
       <section className={styles.settingsSection}>
         <div className={styles.settingsSectionHeading}>
           <strong>{t('channel.section.overview')}</strong>
@@ -117,11 +130,19 @@ export function ChannelSettings({
             defaultValue={channel.categoryId ?? ''}
             options={[
               { value: '', label: t('channel.field.noCategory') },
-              ...server.categories.map((category) => ({ value: category.id, label: category.name })),
+              ...server.categories.map((category) => ({
+                value: category.id,
+                label: category.name,
+              })),
             ]}
           />
         ) : null}
-        <TextArea label={t('channel.field.topic')} name="topic" defaultValue={channel.topic ?? ''} maxLength={200} />
+        <TextArea
+          label={t('channel.field.topic')}
+          name="topic"
+          defaultValue={channel.topic ?? ''}
+          maxLength={200}
+        />
         {channel.type === 'TEXT' ? (
           <SettingsSelect
             name="slowmodeSeconds"
@@ -168,7 +189,11 @@ export function ChannelSettings({
                 <div className={styles.permissionOverrideRow} key={role.id}>
                   <div>
                     <strong style={{ color: role.color || undefined }}>{role.name}</strong>
-                    <span>{role.name === '@everyone' ? t('channel.role.default') : t('channel.role.access')}</span>
+                    <span>
+                      {role.name === '@everyone'
+                        ? t('channel.role.default')
+                        : t('channel.role.access')}
+                    </span>
                   </div>
                   <CheckRow
                     className={styles.miniCheck}
@@ -328,9 +353,7 @@ export function ChannelSettings({
                 : null}
             </div>
           ) : (
-            <p className={styles.settingsEmptyCopy}>
-              {t('channel.memberOverrides.empty')}
-            </p>
+            <p className={styles.settingsEmptyCopy}>{t('channel.memberOverrides.empty')}</p>
           )}
         </section>
       ) : null}

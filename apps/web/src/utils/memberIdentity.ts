@@ -1,4 +1,4 @@
-import type { PublicUser, ServerMemberDetail, UserProfileServerContext } from '../api';
+import type { PublicUser, ServerMemberDetail, UserProfileServerContext } from '@/api';
 
 export interface MemberIdentity {
   displayName: string;

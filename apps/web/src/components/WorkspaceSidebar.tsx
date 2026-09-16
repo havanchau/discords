@@ -3,9 +3,9 @@ import { ChannelSidebar } from './workspace/ChannelSidebar';
 import { ServerRail } from './workspace/ServerRail';
 import { ServerEventsDialog } from './events/ServerEventsDialog';
 import { EditCategoryDialog } from './workspace/EditCategoryDialog';
-import { memberHasServerPermission } from '../utils/serverPermissions';
+import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { WorkspaceDialogs } from './workspace/WorkspaceDialogs';
-import type { ChannelCategory } from '../api';
+import type { ChannelCategory } from '@/api';
 import type { ChannelCreateType, ServerAction, WorkspaceSidebarProps } from './workspace/types';
 
 export type {

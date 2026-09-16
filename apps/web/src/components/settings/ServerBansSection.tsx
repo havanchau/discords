@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { Button } from '../ui';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { Button } from '@/components/ui';
 import type { SettingsModalFields } from './types';
-import styles from '../SettingsModal.module.css';
+import styles from '@/components/SettingsModal.module.css';
 
 type ServerBansSectionProps = Pick<
   SettingsModalFields,
@@ -26,8 +26,9 @@ export function ServerBansSection({
 
   // Bans live on the API; refresh them whenever this section opens for a server. loadBans is
   // recreated on every workspace render, so only the server id drives the refresh.
+  const refreshBans = useEffectEvent((id: string) => void loadBans(id));
   useEffect(() => {
-    if (serverId) void loadBans(serverId);
+    if (serverId) refreshBans(serverId);
   }, [serverId]);
 
   return (
