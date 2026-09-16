@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Message, ThreadSummary } from '@discord-clone/shared';
 import { ChannelsService } from '../channels/channels.service';
 import { Permission, PermissionsService } from '../permissions/permissions.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -623,7 +624,7 @@ export class MessagesService {
       rootMessageId: thread.rootMessageId,
       channelId: thread.channelId,
       replyCount: thread._count.messages,
-      lastReplyAt: lastReply?.createdAt ?? thread.updatedAt,
+      lastReplyAt: (lastReply?.createdAt ?? thread.updatedAt).toISOString(),
       participants: thread.participants.map((participant) => ({
         user: participant.user,
         lastReadAt:
@@ -673,12 +674,16 @@ export class MessagesService {
     );
   }
 
+  /**
+   * The one place a message becomes the shape the client reads. Fields are listed explicitly so the
+   * response is the declared contract and not whatever columns the query happened to select.
+   */
   private formatMessage(
     message: MessageWithDetails,
     userId: string,
-    replyToMessage?: unknown,
+    replyToMessage?: Message | null,
     thread?: ThreadSummary | null,
-  ) {
+  ): Message {
     const reactionMap = new Map<string, { emoji: string; count: number; me: boolean }>();
 
     message.reactions.forEach((reaction) => {
@@ -695,8 +700,24 @@ export class MessagesService {
     });
 
     return {
-      ...message,
+      id: message.id,
+      channelId: message.channelId,
+      serverId: message.serverId,
+      authorId: message.authorId,
+      content: message.content,
+      createdAt: message.createdAt.toISOString(),
+      editedAt: message.editedAt?.toISOString() ?? null,
+      deletedAt: message.deletedAt?.toISOString() ?? null,
+      author: message.author,
+      attachments: message.attachments.map((attachment) => ({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        byteSize: attachment.byteSize,
+        url: attachment.url,
+      })),
       reactions: [...reactionMap.values()],
+      replyToMessageId: message.replyToMessageId,
       replyToMessage,
       threadId: message.threadId,
       thread: thread ?? null,
@@ -748,18 +769,6 @@ const threadSummaryInclude = {
 } satisfies Prisma.ThreadInclude;
 
 type ThreadWithSummary = Prisma.ThreadGetPayload<{ include: typeof threadSummaryInclude }>;
-type ThreadSummary = {
-  id: string;
-  rootMessageId: string;
-  channelId: string;
-  replyCount: number;
-  lastReplyAt: Date;
-  participants: Array<{
-    user: { id: string; username: string; displayName: string; avatarUrl: string | null };
-    lastReadAt: string | null;
-  }>;
-};
-
 function parseMentions(content: string) {
   return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);
 }

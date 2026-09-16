@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import { apiRequest, AuthState, ServerEmoji, uploadFile } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import { queryKeys } from '../query/queryKeys';
 
 export const MAX_EMOJI_BYTES = 256 * 1024;
 const EMOJI_MIME_TYPES = ['image/png', 'image/gif', 'image/webp', 'image/jpeg'];
@@ -13,56 +15,56 @@ interface UseServerEmojisOptions {
   serverId: string | null;
 }
 
+interface EmojisResult {
+  emojis: ServerEmoji[];
+}
+
+const noEmojis: ServerEmoji[] = [];
+
+function byName(a: ServerEmoji, b: ServerEmoji) {
+  return a.name.localeCompare(b.name);
+}
+
 /** The open server's custom emoji, refreshed when anyone adds or removes one. */
 export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptions) {
   const t = useTranslation();
-  const [emojis, setEmojis] = useState<ServerEmoji[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const serverIdRef = useRef(serverId);
+  const queryClient = useQueryClient();
   const token = auth?.accessToken;
+  const queryKey = queryKeys.serverEmojis(serverId ?? 'none');
+  const [error, setError] = useState<string | null>(null);
 
-  const loadEmojis = useCallback(
-    async (targetServerId: string) => {
-      if (!token) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await apiRequest<{ emojis: ServerEmoji[] }>(
-          `/servers/${targetServerId}/emojis`,
-          {},
-          token,
-        );
-        if (serverIdRef.current === targetServerId) setEmojis(result.emojis);
-      } catch (err) {
-        if (serverIdRef.current === targetServerId) {
-          setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-emoji'));
-        }
-      } finally {
-        if (serverIdRef.current === targetServerId) setIsLoading(false);
-      }
-    },
-    [token],
-  );
-
-  useEffect(() => {
-    serverIdRef.current = serverId;
-    setEmojis([]);
-    setError(null);
-    setIsLoading(false);
-    if (serverId) void loadEmojis(serverId);
-  }, [serverId, loadEmojis]);
+  const { data, isLoading } = useQuery({
+    queryKey,
+    enabled: Boolean(token && serverId),
+    queryFn: () => apiRequest<EmojisResult>(`/servers/${serverId}/emojis`, {}, token),
+  });
 
   useEffect(() => {
     if (!socket) return;
     const handleUpdated = (payload: { serverId: string }) => {
-      if (payload.serverId === serverIdRef.current) void loadEmojis(payload.serverId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverEmojis(payload.serverId) });
     };
     socket.on(RealtimeEvents.ServerEmojisUpdated, handleUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerEmojisUpdated, handleUpdated);
     };
-  }, [socket, loadEmojis]);
+  }, [socket, queryClient]);
+
+  const createMutation = useMutation({
+    mutationFn: async ({ file, name }: { file: File; name: string }) => {
+      const attachment = await uploadFile(file, token!);
+      return apiRequest<{ emoji: ServerEmoji }>(
+        `/servers/${serverId}/emojis`,
+        { method: 'POST', body: JSON.stringify({ name, url: attachment.url }) },
+        token,
+      );
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (emojiId: string) =>
+      apiRequest(`/servers/${serverId}/emojis/${emojiId}`, { method: 'DELETE' }, token),
+  });
 
   async function createEmoji(file: File, name: string) {
     if (!token || !serverId) return false;
@@ -76,17 +78,13 @@ export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptio
     }
     setError(null);
     try {
-      const attachment = await uploadFile(file, token);
-      const result = await apiRequest<{ emoji: ServerEmoji }>(
-        `/servers/${serverId}/emojis`,
-        { method: 'POST', body: JSON.stringify({ name, url: attachment.url }) },
-        token,
-      );
-      setEmojis((current) =>
-        [...current.filter((emoji) => emoji.id !== result.emoji.id), result.emoji].sort((a, b) =>
-          a.name.localeCompare(b.name),
-        ),
-      );
+      const result = await createMutation.mutateAsync({ file, name });
+      queryClient.setQueryData<EmojisResult>(queryKey, (current) => ({
+        emojis: [
+          ...(current?.emojis ?? []).filter((emoji) => emoji.id !== result.emoji.id),
+          result.emoji,
+        ].sort(byName),
+      }));
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.fallback.cannot-add-emoji'));
@@ -98,12 +96,14 @@ export function useServerEmojis({ auth, socket, serverId }: UseServerEmojisOptio
     if (!token || !serverId) return;
     setError(null);
     try {
-      await apiRequest(`/servers/${serverId}/emojis/${emojiId}`, { method: 'DELETE' }, token);
-      setEmojis((current) => current.filter((emoji) => emoji.id !== emojiId));
+      await deleteMutation.mutateAsync(emojiId);
+      queryClient.setQueryData<EmojisResult>(queryKey, (current) =>
+        current ? { emojis: current.emojis.filter((emoji) => emoji.id !== emojiId) } : current,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-emoji'));
     }
   }
 
-  return { emojis, isLoading, error, createEmoji, deleteEmoji };
+  return { emojis: data?.emojis ?? noEmojis, isLoading, error, createEmoji, deleteEmoji };
 }

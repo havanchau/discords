@@ -1,3 +1,4 @@
+export * from './api-contract.js';
 export * from './i18n.js';
 export * from './permissions.js';
 export * from './realtime-events.js';

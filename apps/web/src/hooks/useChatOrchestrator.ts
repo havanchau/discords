@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { apiRequest, Channel, Message } from '../api';
-import { buildMessageSearchParams, parseMessageSearchQuery } from '../utils/messageSearch';
+import { parseMessageSearchQuery } from '../utils/messageSearch';
 import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseChatOrchestratorProps {

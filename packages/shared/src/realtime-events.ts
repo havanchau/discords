@@ -1,3 +1,6 @@
+import { CustomStatus } from './api-contract.js';
+import { UserStatus } from './types.js';
+
 export const RealtimeEvents = {
   MessageCreate: 'message:create',
   MessageCreated: 'message:created',
@@ -53,3 +56,12 @@ export const RealtimeEvents = {
 } as const;
 
 export type RealtimeEvent = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
+
+/**
+ * Partial by design: a connect/disconnect carries `status`, a profile save carries `customStatus`.
+ */
+export interface PresenceUpdatePayload {
+  userId: string;
+  status?: UserStatus;
+  customStatus?: CustomStatus | null;
+}

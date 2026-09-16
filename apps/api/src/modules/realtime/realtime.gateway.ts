@@ -1,53 +1,27 @@
-import { HttpException, HttpStatus, Logger, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
+import { Logger } from '@nestjs/common';
 import {
-  ConnectedSocket,
-  MessageBody,
   OnGatewayConnection,
+  OnGatewayDisconnect,
   OnGatewayInit,
-  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
-import { PrismaService } from '../prisma/prisma.service';
-import { MessagesService } from '../messages/messages.service';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
-import { ReactionDto } from '../messages/dto/reaction.dto';
 import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
 import { FixedWindowLimiter } from '../../common/fixed-window-limiter';
 import { readLimitsConfig } from '../../common/limits-config';
+import { CallRegistryService } from './call-registry.service';
+import { PresenceService } from './presence.service';
+import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
-import { countChannelUnread } from '../messages/unread-counts';
-import { DmCallMode } from './dm-call-rings';
-import { DmCallsService, parseDmCallKey } from './dm-calls.service';
-import { SOCKET_MAX_PAYLOAD_BYTES, attachSocketGuards, socketLimitSubject } from './socket-guards';
+import { SocketAuthService } from './socket-auth.service';
+import { SOCKET_MAX_PAYLOAD_BYTES, attachSocketGuards } from './socket-guards';
 
-interface SocketUser {
-  id: string;
-  sessionId: string;
-}
-
-interface CallParticipant {
-  socketId: string;
-  userId: string;
-  username: string;
-  displayName: string;
-  mode: 'voice' | 'video' | 'screen';
-  isMuted: boolean;
-  isCameraOff: boolean;
-  isSharingScreen: boolean;
-}
-
-interface ActiveCallSummary {
-  channelId: string;
-  mode: 'voice' | 'video' | 'screen';
-  participants: CallParticipant[];
-  screenSharer?: CallParticipant;
-}
-
+/**
+ * Owns the socket connection itself: authentication, room membership and presence. Event handlers
+ * live in the feature gateways (`MessagesGateway`, `VoiceGateway`) attached to the same server.
+ */
 @WebSocketGateway({
   cors: {
     origin: parseWebOrigins(process.env.WEB_ORIGIN || defaultWebOrigin),
@@ -55,658 +29,63 @@ interface ActiveCallSummary {
   },
   maxHttpBufferSize: SOCKET_MAX_PAYLOAD_BYTES,
 })
-export class RealtimeGateway implements OnGatewayConnection, OnGatewayInit {
+export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
   private readonly logger = new Logger(RealtimeGateway.name);
-  private readonly callParticipants = new Map<string, Map<string, CallParticipant>>();
-  private readonly socketCalls = new Map<string, Set<string>>();
-  private readonly socketLimiter = new FixedWindowLimiter();
+  private readonly connectionLimiter = new FixedWindowLimiter();
 
   constructor(
-    private readonly jwt: JwtService,
-    private readonly prisma: PrismaService,
-    private readonly messages: MessagesService,
-    private readonly permissions: PermissionsService,
     private readonly config: ConfigService,
     private readonly publisher: RealtimePublisher,
-    private readonly dmCalls: DmCallsService,
+    private readonly socketAuth: SocketAuthService,
+    private readonly presence: PresenceService,
+    private readonly access: RealtimeAccessService,
+    private readonly calls: CallRegistryService,
   ) {}
 
   afterInit(server: Server) {
     this.publisher.attach(server);
     const limits = readLimitsConfig(this.config);
-    attachSocketGuards(server, this.socketLimiter, {
+    attachSocketGuards(server, this.connectionLimiter, {
       trustProxyHops: limits.trustProxyHops,
       maxConnectionsPerIp: limits.socketMaxConnectionsPerIp,
     });
+    void this.presence.resetStalePresence();
   }
 
   async handleConnection(client: Socket) {
     try {
-      client.data.user = await this.authenticate(client);
-      await client.join(this.userRoom(client.data.user.id));
-      await this.joinDirectConversationRooms(client, client.data.user.id);
-      await this.prisma.user.update({
-        where: { id: client.data.user.id },
-        data: { status: 'ONLINE' },
-      });
-      await this.broadcastPresence(client.data.user.id, 'ONLINE');
+      const user = await this.socketAuth.authenticate(client);
+      client.data.user = user;
+      await client.join(this.publisher.userRoom(user.id));
+      await this.joinDirectConversationRooms(client, user.id);
+      await this.presence.socketConnected(user.id, client.id);
     } catch {
       client.disconnect(true);
     }
   }
 
   async handleDisconnect(client: Socket) {
-    this.leaveAllCalls(client);
-    const user = client.data.user as SocketUser | undefined;
-    if (user) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { status: 'OFFLINE' },
-      });
-      await this.broadcastPresence(user.id, 'OFFLINE');
-    }
-  }
+    this.calls.leaveAll(client);
+    const user = client.data.user as { id: string } | undefined;
+    if (!user) return;
 
-  @SubscribeMessage('channel:join')
-  async joinChannel(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    const user = this.getUser(client);
-    const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: body.channelId } });
-    const canView = await this.permissions.hasChannelPermission(
-      user.id,
-      channel.id,
-      Permission.ViewChannel,
-    );
-    if (!canView) {
-      throw new UnauthorizedException('Not a channel member');
-    }
-
-    await client.join(this.channelRoom(body.channelId));
-    await client.join(this.serverRoom(channel.serverId));
-    return { ok: true, activeCall: this.getActiveCallSummary(body.channelId) };
-  }
-
-  @SubscribeMessage('message:create')
-  async createMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: {
-      channelId: string;
-      content: string;
-      replyToMessageId?: string;
-      attachments?: MessageAttachmentInputDto[];
-    },
-  ) {
-    this.assertSocketRateLimit(client, 'message:create', 20, 60_000);
-    const user = this.getUser(client);
-    let result: Awaited<ReturnType<MessagesService['createMessage']>>;
     try {
-      result = await this.messages.createMessage(user.id, body.channelId, {
-        content: body.content,
-        replyToMessageId: body.replyToMessageId,
-        attachments: body.attachments,
-      });
+      await this.presence.socketDisconnected(user.id, client.id);
     } catch (error) {
-      // Business refusals (timeout, slowmode, permissions) are acknowledged so the client can show
-      // the reason; anything else still fails the event as before.
-      if (error instanceof HttpException) return { error: error.message };
-      throw error;
-    }
-    this.server.to(this.channelRoom(body.channelId)).emit('message:created', result.message);
-    await this.emitUnreadUpdated(result.message);
-    return result;
-  }
-
-  @SubscribeMessage('thread:join')
-  async joinThread(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { rootMessageId: string },
-  ) {
-    const user = this.getUser(client);
-    const result = await this.messages.listThreadMessages(user.id, body.rootMessageId);
-    if (result.thread?.id) {
-      await client.join(`thread:${result.thread.id}`);
-    }
-    return result;
-  }
-
-  @SubscribeMessage('thread:message:create')
-  async createThreadMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: {
-      rootMessageId: string;
-      content: string;
-      replyToMessageId?: string;
-      attachments?: MessageAttachmentInputDto[];
-    },
-  ) {
-    this.assertSocketRateLimit(client, 'thread:message:create', 20, 60_000);
-    const user = this.getUser(client);
-    return this.messages.createThreadMessage(user.id, body.rootMessageId, {
-      content: body.content,
-      replyToMessageId: body.replyToMessageId,
-      attachments: body.attachments,
-    });
-  }
-
-  @SubscribeMessage('message:update')
-  async updateMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { messageId: string; content: string },
-  ) {
-    this.assertSocketRateLimit(client, 'message:update', 20, 60_000);
-    const user = this.getUser(client);
-    return this.messages.updateMessage(user.id, body.messageId, {
-      content: body.content,
-    });
-  }
-
-  @SubscribeMessage('message:delete')
-  async deleteMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { messageId: string },
-  ) {
-    this.assertSocketRateLimit(client, 'message:delete', 20, 60_000);
-    const user = this.getUser(client);
-    return this.messages.deleteMessage(user.id, body.messageId);
-  }
-
-  @SubscribeMessage('conversation:join')
-  async joinConversation(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { conversationId: string },
-  ) {
-    const user = this.getUser(client);
-    await this.requireConversationMember(user.id, body.conversationId);
-    await client.join(this.conversationRoom(body.conversationId));
-    return { ok: true };
-  }
-
-  @SubscribeMessage('unread:get')
-  async getUnreadCounts(@ConnectedSocket() client: Socket) {
-    const user = this.getUser(client);
-    return { counts: await this.countUnreadByChannel(user.id) };
-  }
-
-  @SubscribeMessage('unread:clear')
-  async clearUnread(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    const user = this.getUser(client);
-    await this.messages.markChannelRead(user.id, body.channelId);
-    this.server.to(this.userRoom(user.id)).emit('unread:cleared', { channelId: body.channelId });
-    return { ok: true };
-  }
-
-  @SubscribeMessage('reaction:toggle')
-  async toggleReaction(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { channelId: string; messageId: string; emoji: string },
-  ) {
-    this.assertSocketRateLimit(client, 'reaction:toggle', 60, 60_000);
-    const user = this.getUser(client);
-    const result = await this.messages.toggleReaction(user.id, body.messageId, {
-      emoji: body.emoji,
-    } satisfies ReactionDto);
-    this.server.to(this.channelRoom(body.channelId)).emit('reaction:updated', {
-      channelId: body.channelId,
-      message: result.message,
-    });
-    return result;
-  }
-
-  @SubscribeMessage('typing:start')
-  async typingStart(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    this.assertSocketRateLimit(client, 'typing:start', 20, 30_000);
-    const user = this.getUser(client);
-    await this.assertChannelMember(user.id, body.channelId);
-    const profile = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      select: { displayName: true, username: true },
-    });
-    client.to(this.channelRoom(body.channelId)).emit('typing:start', {
-      channelId: body.channelId,
-      userId: user.id,
-      displayName: profile?.displayName ?? profile?.username ?? 'Someone',
-    });
-    return { ok: true };
-  }
-
-  @SubscribeMessage('typing:stop')
-  async typingStop(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    this.assertSocketRateLimit(client, 'typing:stop', 20, 30_000);
-    const user = this.getUser(client);
-    await this.assertChannelMember(user.id, body.channelId);
-    client.to(this.channelRoom(body.channelId)).emit('typing:stop', {
-      channelId: body.channelId,
-      userId: user.id,
-    });
-    return { ok: true };
-  }
-
-  @SubscribeMessage('voice:join')
-  async joinVoice(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: {
-      channelId: string;
-      mode: 'voice' | 'video' | 'screen';
-      isMuted?: boolean;
-      isCameraOff?: boolean;
-      isSharingScreen?: boolean;
-    },
-  ) {
-    this.assertSocketRateLimit(client, 'voice:join', 10, 60_000);
-    const user = this.getUser(client);
-    const profile = await this.authorizeCallJoin(user.id, body.channelId);
-
-    const room = this.callRoom(body.channelId);
-    const participants = this.getCallParticipants(body.channelId);
-    const existingParticipants = [...participants.values()].filter(
-      (item) => item.socketId !== client.id,
-    );
-    const participant: CallParticipant = {
-      socketId: client.id,
-      userId: user.id,
-      username: profile.username,
-      displayName: profile.displayName,
-      mode: body.mode,
-      isMuted: Boolean(body.isMuted),
-      isCameraOff: Boolean(body.isCameraOff),
-      isSharingScreen: Boolean(body.isSharingScreen),
-    };
-
-    participants.set(client.id, participant);
-    if (!this.socketCalls.has(client.id)) {
-      this.socketCalls.set(client.id, new Set());
-    }
-    this.socketCalls.get(client.id)?.add(body.channelId);
-    await client.join(room);
-    client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
-    this.emitActiveCall(body.channelId);
-    const dmConversationId = parseDmCallKey(body.channelId);
-    if (dmConversationId) this.dmCalls.participantJoined(dmConversationId, user.id);
-    return { participants: existingParticipants };
-  }
-
-  @SubscribeMessage('dm:call:ring')
-  async ringDirectCall(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { conversationId: string; mode: DmCallMode },
-  ) {
-    this.assertSocketRateLimit(client, 'dm:call:ring', 10, 60_000);
-    const user = this.getUser(client);
-    if (body.mode !== 'voice' && body.mode !== 'video') {
-      throw new UnauthorizedException('Invalid call mode');
-    }
-    return this.dmCalls.ring(user.id, body.conversationId, body.mode);
-  }
-
-  @SubscribeMessage('dm:call:decline')
-  declineDirectCall(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { conversationId: string },
-  ) {
-    this.assertSocketRateLimit(client, 'dm:call:decline', 20, 60_000);
-    return this.dmCalls.decline(this.getUser(client).id, body.conversationId);
-  }
-
-  @SubscribeMessage('dm:call:cancel')
-  cancelDirectCall(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { conversationId: string },
-  ) {
-    this.assertSocketRateLimit(client, 'dm:call:cancel', 20, 60_000);
-    return this.dmCalls.cancel(this.getUser(client).id, body.conversationId);
-  }
-
-  @SubscribeMessage('voice:state')
-  updateVoiceState(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: {
-      channelId: string;
-      isMuted?: boolean;
-      isCameraOff?: boolean;
-      isSharingScreen?: boolean;
-      mode?: 'voice' | 'video' | 'screen';
-    },
-  ) {
-    this.assertSocketRateLimit(client, 'voice:state', 30, 60_000);
-    const participant = this.callParticipants.get(body.channelId)?.get(client.id);
-    if (!participant) return { ok: false };
-
-    const nextParticipant = {
-      ...participant,
-      mode: body.mode ?? participant.mode,
-      isMuted: body.isMuted ?? participant.isMuted,
-      isCameraOff: body.isCameraOff ?? participant.isCameraOff,
-      isSharingScreen: body.isSharingScreen ?? participant.isSharingScreen,
-    };
-    this.callParticipants.get(body.channelId)?.set(client.id, nextParticipant);
-    this.server.to(this.callRoom(body.channelId)).emit('voice:user-updated', {
-      channelId: body.channelId,
-      participant: nextParticipant,
-    });
-    this.emitActiveCall(body.channelId);
-    return { ok: true };
-  }
-
-  @SubscribeMessage('voice:leave')
-  leaveVoice(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    this.leaveCall(client, body.channelId);
-    return { ok: true };
-  }
-
-  @SubscribeMessage('webrtc:offer')
-  relayOffer(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: { channelId: string; targetSocketId: string; offer: unknown },
-  ) {
-    this.assertSocketRateLimit(client, 'webrtc:offer', 30, 60_000);
-    this.assertCallPeer(client, body.channelId, body.targetSocketId);
-    this.server.to(body.targetSocketId).emit('webrtc:offer', {
-      channelId: body.channelId,
-      fromSocketId: client.id,
-      offer: body.offer,
-    });
-  }
-
-  @SubscribeMessage('webrtc:answer')
-  relayAnswer(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: { channelId: string; targetSocketId: string; answer: unknown },
-  ) {
-    this.assertSocketRateLimit(client, 'webrtc:answer', 30, 60_000);
-    this.assertCallPeer(client, body.channelId, body.targetSocketId);
-    this.server.to(body.targetSocketId).emit('webrtc:answer', {
-      channelId: body.channelId,
-      fromSocketId: client.id,
-      answer: body.answer,
-    });
-  }
-
-  @SubscribeMessage('webrtc:ice-candidate')
-  relayIceCandidate(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    body: { channelId: string; targetSocketId: string; candidate: unknown },
-  ) {
-    this.assertSocketRateLimit(client, 'webrtc:ice-candidate', 120, 60_000);
-    this.assertCallPeer(client, body.channelId, body.targetSocketId);
-    this.server.to(body.targetSocketId).emit('webrtc:ice-candidate', {
-      channelId: body.channelId,
-      fromSocketId: client.id,
-      candidate: body.candidate,
-    });
-  }
-
-  private async authenticate(client: Socket): Promise<SocketUser> {
-    const token =
-      client.handshake.auth?.token ||
-      client.handshake.headers.authorization?.replace(/^Bearer\s+/i, '');
-
-    if (!token) {
-      throw new UnauthorizedException('Missing token');
-    }
-
-    const payload = await this.jwt.verifyAsync<{ sub: string; sid: string }>(token, {
-      secret: this.config.get<string>('JWT_SECRET', 'dev-secret-change-me'),
-    });
-    if (typeof payload.sub !== 'string' || typeof payload.sid !== 'string') {
-      throw new UnauthorizedException('Invalid token');
-    }
-
-    const session = await this.prisma.session.findFirst({
-      where: {
-        id: payload.sid,
-        userId: payload.sub,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    if (!session) {
-      throw new UnauthorizedException('Invalid session');
-    }
-
-    return { id: payload.sub, sessionId: payload.sid };
-  }
-
-  private getUser(client: Socket): SocketUser {
-    const user = client.data.user as SocketUser | undefined;
-    if (!user) {
-      throw new UnauthorizedException('Unauthenticated socket');
-    }
-    return user;
-  }
-
-  private channelRoom(channelId: string) {
-    return `channel:${channelId}`;
-  }
-
-  private serverRoom(serverId: string) {
-    return `server:${serverId}`;
-  }
-
-  private userRoom(userId: string) {
-    return this.publisher.userRoom(userId);
-  }
-
-  private conversationRoom(conversationId: string) {
-    return this.publisher.conversationRoom(conversationId);
-  }
-
-  private callRoom(channelId: string) {
-    return `call:${channelId}`;
-  }
-
-  private getCallParticipants(channelId: string) {
-    if (!this.callParticipants.has(channelId)) {
-      this.callParticipants.set(channelId, new Map());
-    }
-    return this.callParticipants.get(channelId)!;
-  }
-
-  private leaveCall(client: Socket, channelId: string) {
-    const participants = this.callParticipants.get(channelId);
-    const participant = participants?.get(client.id);
-    if (!participants || !participant) return;
-
-    participants.delete(client.id);
-    if (participants.size === 0) {
-      this.callParticipants.delete(channelId);
-    }
-
-    this.socketCalls.get(client.id)?.delete(channelId);
-    if (this.socketCalls.get(client.id)?.size === 0) {
-      this.socketCalls.delete(client.id);
-    }
-
-    client.leave(this.callRoom(channelId));
-    client.to(this.callRoom(channelId)).emit('voice:user-left', {
-      channelId,
-      socketId: client.id,
-      userId: participant.userId,
-    });
-    this.emitActiveCall(channelId);
-  }
-
-  private leaveAllCalls(client: Socket) {
-    const channelIds = [...(this.socketCalls.get(client.id) ?? [])];
-    channelIds.forEach((channelId) => this.leaveCall(client, channelId));
-  }
-
-  private assertCallPeer(client: Socket, channelId: string, targetSocketId: string) {
-    const participants = this.callParticipants.get(channelId);
-    if (!participants?.has(client.id) || !participants.has(targetSocketId)) {
-      throw new UnauthorizedException('Target is not in the call');
+      this.logger.error(`Could not update presence for user ${user.id}`, error);
     }
   }
 
-  private getActiveCallSummary(channelId: string): ActiveCallSummary | null {
-    const participants = [...(this.callParticipants.get(channelId)?.values() ?? [])];
-    if (!participants.length) return null;
-
-    const screenSharer = participants.find(
-      (participant) => participant.isSharingScreen || participant.mode === 'screen',
-    );
-    const mode = screenSharer
-      ? 'screen'
-      : participants.some((participant) => participant.mode === 'video')
-        ? 'video'
-        : 'voice';
-    return { channelId, mode, participants, screenSharer };
-  }
-
-  // Channel calls announce to the channel room; DM calls to the conversation room.
-  private emitActiveCall(channelId: string) {
-    const dmConversationId = parseDmCallKey(channelId);
-    const room = dmConversationId
-      ? this.conversationRoom(dmConversationId)
-      : this.channelRoom(channelId);
-    const activeCall = this.getActiveCallSummary(channelId);
-    if (activeCall) {
-      this.server.to(room).emit('voice:active', activeCall);
-      return;
-    }
-    this.server.to(room).emit('voice:ended', { channelId });
-  }
-
-  /** Authorizes a call id (channel id or `dm:<conversationId>`) and returns the joiner's names. */
-  private async authorizeCallJoin(userId: string, callId: string) {
-    const dmConversationId = parseDmCallKey(callId);
-    if (dmConversationId) {
-      await this.dmCalls.authorizeCall(userId, dmConversationId);
-    } else {
-      const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: callId } });
-      const member = await this.prisma.serverMember.findUnique({
-        where: { userId_serverId: { userId, serverId: channel.serverId } },
-        select: { id: true },
-      });
-      if (!member) {
-        throw new UnauthorizedException('Not a channel member');
-      }
-    }
-    return this.prisma.user.findUniqueOrThrow({
-      where: { id: userId },
-      select: { username: true, displayName: true },
-    });
-  }
-
-  private async emitUnreadUpdated(message: {
-    authorId: string;
-    channelId: string;
-    serverId: string;
-    content: string;
-  }) {
-    const [channel, members] = await Promise.all([
-      this.prisma.channel.findUnique({
-        where: { id: message.channelId },
-        select: { id: true, isPrivate: true },
-      }),
-      this.prisma.serverMember.findMany({
-        where: { serverId: message.serverId, userId: { not: message.authorId } },
-        include: {
-          user: { select: { username: true } },
-          roles: { include: { role: true } },
-        },
-      }),
-    ]);
-    if (!channel) return;
-
-    const viewers = await this.permissions.filterMembersWhoCanView(channel, members);
-    for (const member of viewers) {
-      this.server.to(this.userRoom(member.userId)).emit('unread:updated', {
-        channelId: message.channelId,
-        count: 1,
-        mentions: messageMentionsUsername(message.content, member.user.username) ? 1 : 0,
-      });
-    }
-  }
-
-  private async countUnreadByChannel(userId: string) {
-    const memberships = await this.prisma.serverMember.findMany({
-      where: { userId },
-      select: { serverId: true },
-    });
-    const serverIds = memberships.map((membership) => membership.serverId);
-    if (!serverIds.length) return {};
-
-    const channels = await this.prisma.channel.findMany({
-      where: { serverId: { in: serverIds }, type: 'TEXT' },
-      select: { id: true, serverId: true, isPrivate: true },
-    });
-    const viewableChannels = await this.permissions.filterViewableChannels(userId, channels);
-
-    return countChannelUnread(
-      this.prisma,
-      userId,
-      viewableChannels.map((channel) => channel.id),
-    );
-  }
-
-  private assertSocketRateLimit(client: Socket, event: string, limit: number, windowMs: number) {
-    const key = `socket-event:${socketLimitSubject(client)}:${event}`;
-    if (!this.socketLimiter.hit(key, limit, windowMs).allowed) {
-      throw new HttpException('Socket rate limit exceeded', HttpStatus.TOO_MANY_REQUESTS);
-    }
-  }
-
-  private async assertChannelMember(userId: string, channelId: string) {
-    const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: channelId } });
-    const member = await this.prisma.serverMember.findUnique({
-      where: { userId_serverId: { userId, serverId: channel.serverId } },
-    });
-    if (!member) {
-      throw new UnauthorizedException('Not a channel member');
-    }
-    return channel;
-  }
-
+  /** DM rooms are joined up front so a conversation delivers without an explicit join event. */
   private async joinDirectConversationRooms(client: Socket, userId: string) {
-    const memberships = await this.prisma.directConversationMember.findMany({
-      where: { userId },
-      select: { conversationId: true },
-    });
-
+    const conversationIds = await this.access.listConversationIds(userId);
     await Promise.all(
-      memberships.map((membership) =>
-        client.join(this.conversationRoom(membership.conversationId)),
+      conversationIds.map((conversationId) =>
+        client.join(this.publisher.conversationRoom(conversationId)),
       ),
     );
   }
-
-  private async requireConversationMember(userId: string, conversationId: string) {
-    const membership = await this.prisma.directConversationMember.findUnique({
-      where: { conversationId_userId: { conversationId, userId } },
-    });
-    if (!membership) {
-      throw new UnauthorizedException('Not a conversation member');
-    }
-    return membership;
-  }
-
-  private async broadcastPresence(userId: string, status: 'ONLINE' | 'OFFLINE') {
-    const memberships = await this.prisma.serverMember.findMany({
-      where: { userId },
-      select: { serverId: true },
-    });
-
-    memberships.forEach((membership) => {
-      this.server.to(this.serverRoom(membership.serverId)).emit('presence:update', {
-        userId,
-        status,
-      });
-    });
-  }
-}
-
-function messageMentionsUsername(content: string, username: string) {
-  return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].some(
-    (match) => match[1].toLowerCase() === username.toLowerCase(),
-  );
 }

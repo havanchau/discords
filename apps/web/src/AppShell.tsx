@@ -25,11 +25,9 @@ import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 import { useChatOrchestrator } from './hooks/useChatOrchestrator';
 import { useChannelMessageActions } from './hooks/useChannelMessageActions';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
-// prettier-ignore
-import { apiRequest, assetUrl, Channel, Message, ServerDetail, ServerSummary, uploadFile } from './api';
+import { apiRequest, assetUrl, Message, uploadFile } from './api';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
-import { buildMessageSearchParams, parseMessageSearchQuery } from './utils/messageSearch';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import { executeSlashCommand } from './utils/executeSlashCommand';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
@@ -73,7 +71,6 @@ export function AppShell() {
     setChannel,
     isLoadingServers,
     inviteCode,
-    setInviteCode,
     channelQuery,
     setChannelQuery,
     visibleTextChannels,
@@ -93,15 +90,12 @@ export function AppShell() {
     setWorkspaceNotice,
     setPendingAction,
     setActiveDialog,
-    setChannelBadges,
   });
 
   const {
     messages,
     setMessages,
-    searchResults,
     setSearchResults,
-    pinnedMessagesByChannel,
     isLoadingMessages,
     setIsLoadingMessages,
     isLoadingMoreMessages,
@@ -119,12 +113,10 @@ export function AppShell() {
     typingUsers,
     setTypingUsers,
     pinnedMessageIds,
-    setPinnedMessageIds,
     parsedSearch,
     visibleMessages,
     pinnedMessages,
     loadPinnedMessages,
-    jumpToMessage,
     togglePinnedMessage,
   } = useChatOrchestrator({
     auth,
@@ -230,7 +222,6 @@ export function AppShell() {
     deleteRole,
     toggleMemberRole,
     removeMember,
-    hydratePersistentChannelBadges,
   } = useSettingsActions({
     auth,
     server,
@@ -433,8 +424,6 @@ export function AppShell() {
     () => server?.members.find((member) => member.id === selectedMemberId) ?? null,
     [server?.members, selectedMemberId],
   );
-
-  const activeCall = channel ? (activeCalls[channel.id] ?? null) : null;
 
   async function sendChatMessage(content: string, files: File[]) {
     if (!auth || !channel) return false;

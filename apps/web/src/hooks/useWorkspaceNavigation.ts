@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { apiRequest, Channel, ChannelCategory, ServerDetail, ServerSummary } from '../api';
-import { ChannelBadgeState } from '../components/WorkspaceSidebar';
+import { ActiveDialog } from '../components/chat/types';
 import { useTranslation } from '../i18n/LocaleProvider';
 
 interface UseWorkspaceNavigationProps {
@@ -9,8 +9,7 @@ interface UseWorkspaceNavigationProps {
   setWorkspaceError: (error: string | null) => void;
   setWorkspaceNotice: (notice: string | null) => void;
   setPendingAction: (action: string | null) => void;
-  setActiveDialog: (dialog: any) => void;
-  setChannelBadges: React.Dispatch<React.SetStateAction<Record<string, ChannelBadgeState>>>;
+  setActiveDialog: (dialog: ActiveDialog) => void;
 }
 
 export function useWorkspaceNavigation({
@@ -20,7 +19,6 @@ export function useWorkspaceNavigation({
   setWorkspaceNotice,
   setPendingAction,
   setActiveDialog,
-  setChannelBadges,
 }: UseWorkspaceNavigationProps) {
   const t = useTranslation();
   const [servers, setServers] = useState<ServerSummary[]>([]);

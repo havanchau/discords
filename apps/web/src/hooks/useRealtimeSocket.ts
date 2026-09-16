@@ -1,9 +1,8 @@
 import { Dispatch, RefObject, SetStateAction, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { RealtimeEvents } from '@discord-clone/shared';
+import { PresenceUpdatePayload, RealtimeEvents } from '@discord-clone/shared';
 import {
   AuthState,
-  CustomStatus,
   DirectConversation,
   DirectMessage,
   Message,
@@ -12,12 +11,6 @@ import {
 } from '../api';
 import { ChannelBadgeState } from '../components/WorkspaceSidebar';
 import { ActiveCallSummary, SOCKET_URL } from '../helpers';
-
-interface PresenceUpdatePayload {
-  userId: string;
-  status?: string;
-  customStatus?: CustomStatus | null;
-}
 
 interface TypingUser {
   userId: string;

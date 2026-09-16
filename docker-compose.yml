@@ -5,9 +5,10 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: discord-clone-api
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/discord_clone
-      JWT_SECRET: dev-secret-change-me
       WEB_ORIGIN: http://localhost:5173
       PORT: 3000
     ports:
@@ -16,8 +17,6 @@ services:
       - api-uploads:/app/apps/api/uploads
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   web:
@@ -48,18 +47,6 @@ services:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d discord_clone"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: discord-clone-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10

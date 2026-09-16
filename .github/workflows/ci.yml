@@ -41,6 +41,10 @@ jobs:
       - run: npm run db:seed --workspace apps/api
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run check:file-size
+      - run: npm run docs:check
+      - run: npm run i18n:check
+      - run: npm run ui:scan
       - run: npm run build
       - name: Start API for smoke test
         run: |

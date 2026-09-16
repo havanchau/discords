@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import { apiRequest, AuthState, CreateServerEventInput, ServerEventView } from '../api';
 import { useTranslation } from '../i18n/LocaleProvider';
+import { queryKeys } from '../query/queryKeys';
 
 interface UseServerEventsOptions {
   auth: AuthState | null;
@@ -10,68 +12,69 @@ interface UseServerEventsOptions {
   serverId: string | null;
 }
 
+interface EventsResult {
+  events: ServerEventView[];
+}
+
+const noEvents: ServerEventView[] = [];
+
 export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptions) {
   const t = useTranslation();
-  const [events, setEvents] = useState<ServerEventView[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const token = auth?.accessToken;
+  // The key carries the server id, so switching servers shows that server's events and never the
+  // previous one's — the race the manual ref guard used to cover.
+  const queryKey = queryKeys.serverEvents(serverId ?? 'none');
+
   const [error, setError] = useState<string | null>(null);
   const [pendingEventId, setPendingEventId] = useState<string | null>(null);
-  const serverIdRef = useRef(serverId);
-  const token = auth?.accessToken;
 
-  const loadEvents = useCallback(
-    async (targetServerId: string) => {
-      if (!token) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await apiRequest<{ events: ServerEventView[] }>(
-          `/servers/${targetServerId}/events`,
-          {},
-          token,
-        );
-        if (serverIdRef.current === targetServerId) setEvents(result.events);
-      } catch (err) {
-        if (serverIdRef.current === targetServerId) {
-          setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-events'));
-        }
-      } finally {
-        if (serverIdRef.current === targetServerId) setIsLoading(false);
-      }
-    },
-    [token],
-  );
-
-  useEffect(() => {
-    serverIdRef.current = serverId;
-    setEvents([]);
-    setError(null);
-    setIsLoading(false);
-    if (serverId) void loadEvents(serverId);
-  }, [serverId, loadEvents]);
+  const { data, isLoading } = useQuery({
+    queryKey,
+    enabled: Boolean(token && serverId),
+    queryFn: () => apiRequest<EventsResult>(`/servers/${serverId}/events`, {}, token),
+  });
 
   useEffect(() => {
     if (!socket) return;
     const handleUpdated = (payload: { serverId: string }) => {
-      if (payload.serverId === serverIdRef.current) void loadEvents(payload.serverId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverEvents(payload.serverId) });
     };
     socket.on(RealtimeEvents.ServerEventsUpdated, handleUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerEventsUpdated, handleUpdated);
     };
-  }, [socket, loadEvents]);
+  }, [socket, queryClient]);
+
+  const createMutation = useMutation({
+    mutationFn: (input: CreateServerEventInput) =>
+      apiRequest(
+        `/servers/${serverId}/events`,
+        { method: 'POST', body: JSON.stringify(input) },
+        token,
+      ),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (eventId: string) => apiRequest(`/events/${eventId}`, { method: 'DELETE' }, token),
+  });
+
+  const interestMutation = useMutation({
+    mutationFn: ({ eventId, interested }: { eventId: string; interested: boolean }) =>
+      apiRequest<{ interested: boolean; interestedCount: number }>(
+        `/events/${eventId}/interest`,
+        { method: 'PUT', body: JSON.stringify({ interested }) },
+        token,
+      ),
+  });
 
   async function createEvent(input: CreateServerEventInput) {
     if (!token || !serverId) return false;
     setPendingEventId('new');
     setError(null);
     try {
-      await apiRequest(
-        `/servers/${serverId}/events`,
-        { method: 'POST', body: JSON.stringify(input) },
-        token,
-      );
-      await loadEvents(serverId);
+      await createMutation.mutateAsync(input);
+      await queryClient.invalidateQueries({ queryKey });
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.fallback.cannot-create-event'));
@@ -86,8 +89,10 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
     setPendingEventId(eventId);
     setError(null);
     try {
-      await apiRequest(`/events/${eventId}`, { method: 'DELETE' }, token);
-      setEvents((current) => current.filter((event) => event.id !== eventId));
+      await cancelMutation.mutateAsync(eventId);
+      queryClient.setQueryData<EventsResult>(queryKey, (current) =>
+        current ? { events: current.events.filter((event) => event.id !== eventId) } : current,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.fallback.cannot-cancel-event'));
     } finally {
@@ -100,17 +105,21 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
     setPendingEventId(eventId);
     setError(null);
     try {
-      const result = await apiRequest<{ interested: boolean; interestedCount: number }>(
-        `/events/${eventId}/interest`,
-        { method: 'PUT', body: JSON.stringify({ interested }) },
-        token,
-      );
-      setEvents((current) =>
-        current.map((event) =>
-          event.id === eventId
-            ? { ...event, interested: result.interested, interestedCount: result.interestedCount }
-            : event,
-        ),
+      const result = await interestMutation.mutateAsync({ eventId, interested });
+      queryClient.setQueryData<EventsResult>(queryKey, (current) =>
+        current
+          ? {
+              events: current.events.map((event) =>
+                event.id === eventId
+                  ? {
+                      ...event,
+                      interested: result.interested,
+                      interestedCount: result.interestedCount,
+                    }
+                  : event,
+              ),
+            }
+          : current,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.fallback.cannot-update-interest'));
@@ -119,7 +128,15 @@ export function useServerEvents({ auth, socket, serverId }: UseServerEventsOptio
     }
   }
 
-  return { events, isLoading, error, pendingEventId, createEvent, cancelEvent, setInterest };
+  return {
+    events: data?.events ?? noEvents,
+    isLoading,
+    error,
+    pendingEventId,
+    createEvent,
+    cancelEvent,
+    setInterest,
+  };
 }
 
 export type ServerEventsState = ReturnType<typeof useServerEvents>;
