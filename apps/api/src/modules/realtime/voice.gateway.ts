@@ -41,7 +41,7 @@ export class VoiceGateway {
       isSharingScreen?: boolean;
     },
   ) {
-    this.rateLimit.assert(client, 'voice:join', 10, 60_000);
+    await this.rateLimit.assert(client, 'voice:join', 10, 60_000);
     const user = getSocketUser(client);
     const profile = await this.access.authorizeCallJoin(user.id, body.channelId);
 
@@ -55,15 +55,15 @@ export class VoiceGateway {
       isCameraOff: Boolean(body.isCameraOff),
       isSharingScreen: Boolean(body.isSharingScreen),
     };
-    const existingParticipants = this.calls.join(body.channelId, participant);
+    const existingParticipants = await this.calls.join(body.channelId, participant);
 
     const room = this.calls.callRoom(body.channelId);
     await client.join(room);
     client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
-    this.calls.emitActiveCall(body.channelId);
+    await this.calls.emitActiveCall(body.channelId);
 
     const dmConversationId = parseDmCallKey(body.channelId);
-    if (dmConversationId) this.dmCalls.participantJoined(dmConversationId, user.id);
+    if (dmConversationId) await this.dmCalls.participantJoined(dmConversationId, user.id);
     return { participants: existingParticipants };
   }
 
@@ -72,7 +72,7 @@ export class VoiceGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { conversationId: string; mode: DmCallMode },
   ) {
-    this.rateLimit.assert(client, 'dm:call:ring', 10, 60_000);
+    await this.rateLimit.assert(client, 'dm:call:ring', 10, 60_000);
     const user = getSocketUser(client);
     if (body.mode !== 'voice' && body.mode !== 'video') {
       throw new UnauthorizedException('Invalid call mode');
@@ -81,25 +81,25 @@ export class VoiceGateway {
   }
 
   @SubscribeMessage('dm:call:decline')
-  declineDirectCall(
+  async declineDirectCall(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { conversationId: string },
   ) {
-    this.rateLimit.assert(client, 'dm:call:decline', 20, 60_000);
+    await this.rateLimit.assert(client, 'dm:call:decline', 20, 60_000);
     return this.dmCalls.decline(getSocketUser(client).id, body.conversationId);
   }
 
   @SubscribeMessage('dm:call:cancel')
-  cancelDirectCall(
+  async cancelDirectCall(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { conversationId: string },
   ) {
-    this.rateLimit.assert(client, 'dm:call:cancel', 20, 60_000);
+    await this.rateLimit.assert(client, 'dm:call:cancel', 20, 60_000);
     return this.dmCalls.cancel(getSocketUser(client).id, body.conversationId);
   }
 
   @SubscribeMessage('voice:state')
-  updateVoiceState(
+  async updateVoiceState(
     @ConnectedSocket() client: Socket,
     @MessageBody()
     body: {
@@ -110,8 +110,8 @@ export class VoiceGateway {
       mode?: 'voice' | 'video' | 'screen';
     },
   ) {
-    this.rateLimit.assert(client, 'voice:state', 30, 60_000);
-    const nextParticipant = this.calls.updateState(body.channelId, client.id, {
+    await this.rateLimit.assert(client, 'voice:state', 30, 60_000);
+    const nextParticipant = await this.calls.updateState(body.channelId, client.id, {
       mode: body.mode,
       isMuted: body.isMuted,
       isCameraOff: body.isCameraOff,
@@ -123,23 +123,23 @@ export class VoiceGateway {
       channelId: body.channelId,
       participant: nextParticipant,
     });
-    this.calls.emitActiveCall(body.channelId);
+    await this.calls.emitActiveCall(body.channelId);
     return { ok: true };
   }
 
   @SubscribeMessage('voice:leave')
-  leaveVoice(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    this.calls.leave(client, body.channelId);
+  async leaveVoice(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    await this.calls.leave(client, body.channelId);
     return { ok: true };
   }
 
   @SubscribeMessage('webrtc:offer')
-  relayOffer(
+  async relayOffer(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { channelId: string; targetSocketId: string; offer: unknown },
   ) {
-    this.rateLimit.assert(client, 'webrtc:offer', 30, 60_000);
-    this.calls.assertPeer(client, body.channelId, body.targetSocketId);
+    await this.rateLimit.assert(client, 'webrtc:offer', 30, 60_000);
+    await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:offer', {
       channelId: body.channelId,
       fromSocketId: client.id,
@@ -148,12 +148,12 @@ export class VoiceGateway {
   }
 
   @SubscribeMessage('webrtc:answer')
-  relayAnswer(
+  async relayAnswer(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { channelId: string; targetSocketId: string; answer: unknown },
   ) {
-    this.rateLimit.assert(client, 'webrtc:answer', 30, 60_000);
-    this.calls.assertPeer(client, body.channelId, body.targetSocketId);
+    await this.rateLimit.assert(client, 'webrtc:answer', 30, 60_000);
+    await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:answer', {
       channelId: body.channelId,
       fromSocketId: client.id,
@@ -162,12 +162,12 @@ export class VoiceGateway {
   }
 
   @SubscribeMessage('webrtc:ice-candidate')
-  relayIceCandidate(
+  async relayIceCandidate(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { channelId: string; targetSocketId: string; candidate: unknown },
   ) {
-    this.rateLimit.assert(client, 'webrtc:ice-candidate', 120, 60_000);
-    this.calls.assertPeer(client, body.channelId, body.targetSocketId);
+    await this.rateLimit.assert(client, 'webrtc:ice-candidate', 120, 60_000);
+    await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:ice-candidate', {
       channelId: body.channelId,
       fromSocketId: client.id,

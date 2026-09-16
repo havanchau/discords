@@ -39,7 +39,7 @@ export class MessagesGateway {
 
     await client.join(this.publisher.channelRoom(body.channelId));
     await client.join(this.publisher.serverRoom(channel.serverId));
-    return { ok: true, activeCall: this.calls.getActiveCallSummary(body.channelId) };
+    return { ok: true, activeCall: await this.calls.getActiveCallSummary(body.channelId) };
   }
 
   @SubscribeMessage('message:create')
@@ -53,7 +53,7 @@ export class MessagesGateway {
       attachments?: MessageAttachmentInputDto[];
     },
   ) {
-    this.rateLimit.assert(client, 'message:create', 20, 60_000);
+    await this.rateLimit.assert(client, 'message:create', 20, 60_000);
     const user = getSocketUser(client);
     let result: Awaited<ReturnType<MessagesService['createMessage']>>;
     try {
@@ -101,7 +101,7 @@ export class MessagesGateway {
       attachments?: MessageAttachmentInputDto[];
     },
   ) {
-    this.rateLimit.assert(client, 'thread:message:create', 20, 60_000);
+    await this.rateLimit.assert(client, 'thread:message:create', 20, 60_000);
     const user = getSocketUser(client);
     return this.messages.createThreadMessage(user.id, body.rootMessageId, {
       content: body.content,
@@ -115,7 +115,7 @@ export class MessagesGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { messageId: string; content: string },
   ) {
-    this.rateLimit.assert(client, 'message:update', 20, 60_000);
+    await this.rateLimit.assert(client, 'message:update', 20, 60_000);
     const user = getSocketUser(client);
     return this.messages.updateMessage(user.id, body.messageId, {
       content: body.content,
@@ -127,7 +127,7 @@ export class MessagesGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { messageId: string },
   ) {
-    this.rateLimit.assert(client, 'message:delete', 20, 60_000);
+    await this.rateLimit.assert(client, 'message:delete', 20, 60_000);
     const user = getSocketUser(client);
     return this.messages.deleteMessage(user.id, body.messageId);
   }
@@ -164,7 +164,7 @@ export class MessagesGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { channelId: string; messageId: string; emoji: string },
   ) {
-    this.rateLimit.assert(client, 'reaction:toggle', 60, 60_000);
+    await this.rateLimit.assert(client, 'reaction:toggle', 60, 60_000);
     const user = getSocketUser(client);
     const result = await this.messages.toggleReaction(user.id, body.messageId, {
       emoji: body.emoji,
@@ -178,7 +178,7 @@ export class MessagesGateway {
 
   @SubscribeMessage('typing:start')
   async typingStart(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    this.rateLimit.assert(client, 'typing:start', 20, 30_000);
+    await this.rateLimit.assert(client, 'typing:start', 20, 30_000);
     const user = getSocketUser(client);
     await this.access.requireChannelMember(user.id, body.channelId);
     const displayName = await this.access.getTypingIdentity(user.id);
@@ -193,7 +193,7 @@ export class MessagesGateway {
 
   @SubscribeMessage('typing:stop')
   async typingStop(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
-    this.rateLimit.assert(client, 'typing:stop', 20, 30_000);
+    await this.rateLimit.assert(client, 'typing:stop', 20, 30_000);
     const user = getSocketUser(client);
     await this.access.requireChannelMember(user.id, body.channelId);
 

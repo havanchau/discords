@@ -29,6 +29,8 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/ui-consistency-pass.md` | Token-only colours, uniform control heights, and the type scale across the web UI. |
 | `features/performance-optimization.md` | Batched permission/unread queries, web bundle size, and message list re-renders. |
 | `features/ddos-protection.md` | Application-layer protection against request, connection, and slow-client floods. |
+| `features/realtime-scale-out.md` | Redis adapter and Redis-backed presence/call/rate-limit state for multi-instance Socket.IO. |
+| `features/voice-sfu.md` | Replacing full-mesh WebRTC with an SFU media server for voice/video channels. |
 | `features/user-blocking.md` | Blocking users and enforcing blocks on friend and DM paths. |
 | `features/dm-message-actions.md` | Editing, deleting, replying to, reacting to, and pinning direct messages. |
 | `features/group-dm.md` | Group direct conversations and their membership lifecycle. |

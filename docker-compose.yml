@@ -9,6 +9,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/discord_clone
+      REDIS_URL: redis://redis:6379
       WEB_ORIGIN: http://localhost:5173
       PORT: 3000
     ports:
@@ -17,6 +18,8 @@ services:
       - api-uploads:/app/apps/api/uploads
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   web:
@@ -32,6 +35,19 @@ services:
       - "5173:80"
     depends_on:
       - api
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: discord-clone-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   postgres:
     image: postgres:16-alpine

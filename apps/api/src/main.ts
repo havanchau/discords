@@ -10,8 +10,8 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import type { Server } from 'http';
 import { AppModule } from './app.module';
-import { FixedWindowLimiter } from './common/fixed-window-limiter';
 import { createGlobalRateLimitMiddleware } from './common/global-rate-limit.middleware';
+import { RedisFixedWindowLimiter } from './common/redis-fixed-window-limiter';
 import { readLimitsConfig } from './common/limits-config';
 import { I18nService } from './common/i18n/i18n.service';
 import { TranslatingExceptionFilter } from './common/http-exception.filter';
@@ -43,7 +43,9 @@ async function bootstrap() {
   }
 
   app.getHttpAdapter().getInstance().set('trust proxy', limits.trustProxyHops);
-  app.use(createGlobalRateLimitMiddleware(new FixedWindowLimiter(), limits.globalRequestsPerMinute));
+  app.use(
+    createGlobalRateLimitMiddleware(app.get(RedisFixedWindowLimiter), limits.globalRequestsPerMinute),
+  );
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
