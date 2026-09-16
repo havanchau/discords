@@ -43,3 +43,5 @@ prisma/dev.db
 /uploads/
 apps/api/uploads/
 storage/
+.vercel
+.env*
