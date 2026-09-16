@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
-import { resolveForwardedIp } from '../../common/client-ip';
-import { RedisFixedWindowLimiter } from '../../common/redis-fixed-window-limiter';
+import { resolveForwardedIp } from '@/common/client-ip';
+import { RedisFixedWindowLimiter } from '@/common/redis-fixed-window-limiter';
+import { readSocketUser } from './socket-user';
 
 export const SOCKET_MAX_PAYLOAD_BYTES = 256_000;
 const SOCKET_CONNECTS_PER_MINUTE = 30;
@@ -14,7 +15,7 @@ export interface SocketGuardOptions {
 
 /** Stable limit key for a socket: the user once authenticated, so reconnecting does not reset limits. */
 export function socketLimitSubject(client: Socket) {
-  const userId = (client.data.user as { id?: string } | undefined)?.id;
+  const userId = readSocketUser(client)?.id;
   return userId ? `user:${userId}` : `socket:${client.id}`;
 }
 

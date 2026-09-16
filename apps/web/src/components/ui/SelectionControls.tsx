@@ -2,7 +2,7 @@ import * as RadixCheckbox from '@radix-ui/react-checkbox';
 import * as RadixSwitch from '@radix-ui/react-switch';
 import { Check } from 'lucide-react';
 import type { ComponentPropsWithoutRef } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './SelectionControls.module.css';
 
 export function Checkbox({
@@ -18,10 +18,7 @@ export function Checkbox({
   );
 }
 
-export function Switch({
-  className,
-  ...props
-}: ComponentPropsWithoutRef<typeof RadixSwitch.Root>) {
+export function Switch({ className, ...props }: ComponentPropsWithoutRef<typeof RadixSwitch.Root>) {
   return (
     <RadixSwitch.Root className={cn(styles.switch, className)} {...props}>
       <RadixSwitch.Thumb className={styles.thumb} />

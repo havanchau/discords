@@ -65,7 +65,6 @@ export function initials(value: string) {
     .toUpperCase();
 }
 
-
 export function accentClass(indexOrValue: number | string) {
   const value =
     typeof indexOrValue === 'number'
@@ -73,8 +72,6 @@ export function accentClass(indexOrValue: number | string) {
       : [...indexOrValue].reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return `accent-${Math.abs(value) % 6}`;
 }
-
-
 
 export function isSameMessageDay(left?: string, right?: string) {
   if (!left || !right) return false;

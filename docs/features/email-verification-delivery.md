@@ -78,14 +78,14 @@ Acceptance criteria:
 Gmail requires an App Password (Google account with 2-Step Verification → App passwords); the normal
 account password is rejected.
 
-| Variable | Value |
-| --- | --- |
-| `SMTP_HOST` | `smtp.gmail.com` |
-| `SMTP_PORT` | `465` |
-| `SMTP_SECURE` | `true` |
-| `SMTP_USER` | the Gmail address |
-| `SMTP_PASS` | the 16-character App Password |
-| `SMTP_FROM` | `Discords <the same Gmail address>` — Gmail rewrites a different sender |
+| Variable      | Value                                                                   |
+| ------------- | ----------------------------------------------------------------------- |
+| `SMTP_HOST`   | `smtp.gmail.com`                                                        |
+| `SMTP_PORT`   | `465`                                                                   |
+| `SMTP_SECURE` | `true`                                                                  |
+| `SMTP_USER`   | the Gmail address                                                       |
+| `SMTP_PASS`   | the 16-character App Password                                           |
+| `SMTP_FROM`   | `Discords <the same Gmail address>` — Gmail rewrites a different sender |
 
 `SMTP_PORT` is parsed to a number before it reaches nodemailer.
 
@@ -109,10 +109,10 @@ account password is rejected.
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `POST` | `/auth/register` | unchanged | `{ verificationRequired, email, message }` | 5 / 15 min |
-| `POST` | `/auth/resend-verification` | `{ email }` | `{ ok, message }` | 5 / 15 min |
+| Method | Path                        | Body        | Response                                   | Rate limit |
+| ------ | --------------------------- | ----------- | ------------------------------------------ | ---------- |
+| `POST` | `/auth/register`            | unchanged   | `{ verificationRequired, email, message }` | 5 / 15 min |
+| `POST` | `/auth/resend-verification` | `{ email }` | `{ ok, message }`                          | 5 / 15 min |
 
 No database change: `EmailVerificationToken` already supports invalidating and reissuing tokens.
 

@@ -2,8 +2,8 @@ import { lazy, Suspense } from 'react';
 import type { SettingsModalProps } from './settings/types';
 import { ServerProfileSection } from './settings/ServerProfileSection';
 import { DialogContent, DialogRoot, Skeleton } from './ui';
-import { useTranslation, type Translate } from '../i18n/LocaleProvider';
-import { cn } from '../utils/cn';
+import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
 import styles from './SettingsModal.module.css';
 
 // Panels load on first open; the dialog shell stays in the main bundle so open/close is instant.

@@ -1,12 +1,17 @@
 import type { KeyboardEvent } from 'react';
 
 export function handleListKeyboardNavigation(event: KeyboardEvent<HTMLElement>) {
-  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') {
+  if (
+    event.key !== 'ArrowDown' &&
+    event.key !== 'ArrowUp' &&
+    event.key !== 'Home' &&
+    event.key !== 'End'
+  ) {
     return;
   }
 
   const buttons = Array.from(
-    event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+    event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
   );
 
   if (!buttons.length) return;

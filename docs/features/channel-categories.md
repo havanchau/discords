@@ -67,14 +67,14 @@ model ChannelCategory {
 
 ### API
 
-| Method | Path | Body | Response |
-| --- | --- | --- | --- |
-| `POST` | `/servers/:serverId/categories` | `{ name }` | `201 { category }` |
-| `PATCH` | `/categories/:categoryId` | `{ name?, position? }` | `{ category }` |
-| `DELETE` | `/categories/:categoryId` | — | `{ ok: true }` |
-| `POST` | `/servers/:serverId/channels` | adds `categoryId?` | `{ channel }` |
-| `PATCH` | `/channels/:channelId` | adds `categoryId?: string \| null` | `{ channel }` |
-| `GET` | `/servers/:serverId` | — | `server.categories` added |
+| Method   | Path                            | Body                               | Response                  |
+| -------- | ------------------------------- | ---------------------------------- | ------------------------- |
+| `POST`   | `/servers/:serverId/categories` | `{ name }`                         | `201 { category }`        |
+| `PATCH`  | `/categories/:categoryId`       | `{ name?, position? }`             | `{ category }`            |
+| `DELETE` | `/categories/:categoryId`       | —                                  | `{ ok: true }`            |
+| `POST`   | `/servers/:serverId/channels`   | adds `categoryId?`                 | `{ channel }`             |
+| `PATCH`  | `/channels/:channelId`          | adds `categoryId?: string \| null` | `{ channel }`             |
+| `GET`    | `/servers/:serverId`            | —                                  | `server.categories` added |
 
 ### Files
 

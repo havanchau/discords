@@ -6,7 +6,12 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "types": ["vite/client"],
-    "lib": ["DOM", "DOM.Iterable", "ES2022"]
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "paths": {
+      "@/*": ["apps/web/src/*"],
+      "@discord-clone/shared": ["packages/shared/src/index.ts"],
+      "@discord-clone/shared/*": ["packages/shared/src/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }

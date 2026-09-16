@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { NotificationPreference, User, UserProfile } from '@discord-clone/shared';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { PROFILE_USER_SELECT, toProfileView, type CustomStatusView } from './user-profile';
@@ -16,7 +16,7 @@ export class UsersService {
   async getMe(userId: string): Promise<{ user: User }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { ...PROFILE_USER_SELECT, email: true, locale: true }
+      select: { ...PROFILE_USER_SELECT, email: true, locale: true },
     });
     return { user: toProfileView(user) };
   }
@@ -32,14 +32,14 @@ export class UsersService {
     if (!setsStatus) {
       await this.prisma.user.updateMany({
         where: { id: userId, customStatusExpiresAt: { lte: new Date() } },
-        data: { customStatusText: null, customStatusEmoji: null, customStatusExpiresAt: null }
+        data: { customStatusText: null, customStatusEmoji: null, customStatusExpiresAt: null },
       });
     }
 
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: dto,
-      select: { ...PROFILE_USER_SELECT, email: true, locale: true, updatedAt: true }
+      select: { ...PROFILE_USER_SELECT, email: true, locale: true, updatedAt: true },
     });
     const view = toProfileView(user);
     const customStatus = view.customStatus;
@@ -56,12 +56,12 @@ export class UsersService {
   private async broadcastCustomStatus(userId: string, customStatus: CustomStatusView | null) {
     const memberships = await this.prisma.serverMember.findMany({
       where: { userId },
-      select: { serverId: true }
+      select: { serverId: true },
     });
     memberships.forEach(({ serverId }) => {
       this.realtime.emitToRoom(this.realtime.serverRoom(serverId), 'presence:update', {
         userId,
-        customStatus
+        customStatus,
       });
     });
   }
@@ -82,7 +82,7 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: targetId },
-      select: PROFILE_USER_SELECT
+      select: PROFILE_USER_SELECT,
     });
     if (!user) throw new NotFoundException('User not found');
 
@@ -94,8 +94,8 @@ export class UsersService {
             nickname: true,
             avatarUrl: true,
             joinedAt: true,
-            roles: { select: { role: { select: { id: true, name: true, color: true } } } }
-          }
+            roles: { select: { role: { select: { id: true, name: true, color: true } } } },
+          },
         })
       : null;
 
@@ -108,10 +108,10 @@ export class UsersService {
               nickname: membership.nickname,
               avatarUrl: membership.avatarUrl,
               joinedAt: membership.joinedAt,
-              roles: membership.roles.map(({ role }) => role)
+              roles: membership.roles.map(({ role }) => role),
             }
-          : null
-      }
+          : null,
+      },
     };
   }
 
@@ -122,30 +122,32 @@ export class UsersService {
       where: {
         OR: [
           { blockerId: viewerId, blockedId: targetId },
-          { blockerId: targetId, blockedId: viewerId }
-        ]
+          { blockerId: targetId, blockedId: viewerId },
+        ],
       },
-      select: { blockerId: true }
+      select: { blockerId: true },
     });
     if (block) return false;
 
     const sharedServer = await this.prisma.serverMember.findFirst({
       where: { userId: targetId, server: { members: { some: { userId: viewerId } } } },
-      select: { id: true }
+      select: { id: true },
     });
     if (sharedServer) return true;
 
     const sharedConversation = await this.prisma.directConversationMember.findFirst({
       where: {
         userId: targetId,
-        conversation: { members: { some: { userId: viewerId } } }
+        conversation: { members: { some: { userId: viewerId } } },
       },
-      select: { conversationId: true }
+      select: { conversationId: true },
     });
     return Boolean(sharedConversation);
   }
 
-  async listNotificationPreferences(userId: string): Promise<{ preferences: NotificationPreference[] }> {
+  async listNotificationPreferences(
+    userId: string,
+  ): Promise<{ preferences: NotificationPreference[] }> {
     const preferences = await this.prisma.notificationPreference.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },

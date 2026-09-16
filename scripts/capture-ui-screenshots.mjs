@@ -16,7 +16,7 @@ const chromeCandidates = [
   '/usr/bin/chromium-browser',
   '/usr/bin/chromium',
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
 ].filter(Boolean);
 
 async function resolveChromePath() {
@@ -37,7 +37,7 @@ async function capture() {
   const browser = await puppeteer.launch({
     executablePath: await resolveChromePath(),
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
   });
 
   try {
@@ -46,7 +46,10 @@ async function capture() {
 
     // 1. Auth Login Screen
     await page.goto(appUrl, { waitUntil: 'networkidle0' });
-    await page.screenshot({ path: path.join(screenshotDir, '01-desktop-auth-screen.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(screenshotDir, '01-desktop-auth-screen.png'),
+      fullPage: true,
+    });
 
     // 2. Perform Login via API and set localStorage
     const loginResponse = await fetch(`${apiUrl}/auth/login`, {
@@ -54,8 +57,8 @@ async function capture() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: 'demo@example.com',
-        password: 'Demo@123456'
-      })
+        password: 'Demo@123456',
+      }),
     });
 
     if (loginResponse.ok) {
@@ -67,21 +70,32 @@ async function capture() {
       await new Promise((r) => setTimeout(r, 2000));
 
       // 2. Main Desktop App View
-      await page.screenshot({ path: path.join(screenshotDir, '02-desktop-main-app.png'), fullPage: true });
+      await page.screenshot({
+        path: path.join(screenshotDir, '02-desktop-main-app.png'),
+        fullPage: true,
+      });
 
       // 3. Settings Modal View (if trigger exists)
-      const settingsButton = await page.$('button[title*="Settings"], button[aria-label*="Settings"], [data-testid="user-settings-button"]');
+      const settingsButton = await page.$(
+        'button[title*="Settings"], button[aria-label*="Settings"], [data-testid="user-settings-button"]',
+      );
       if (settingsButton) {
         await settingsButton.click();
         await new Promise((r) => setTimeout(r, 1000));
-        await page.screenshot({ path: path.join(screenshotDir, '03-desktop-settings-modal.png'), fullPage: true });
+        await page.screenshot({
+          path: path.join(screenshotDir, '03-desktop-settings-modal.png'),
+          fullPage: true,
+        });
       }
 
       // 4. Mobile View Layout
       await page.setViewport({ width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 });
       await page.reload({ waitUntil: 'networkidle0' });
       await new Promise((r) => setTimeout(r, 1500));
-      await page.screenshot({ path: path.join(screenshotDir, '04-mobile-app-view.png'), fullPage: true });
+      await page.screenshot({
+        path: path.join(screenshotDir, '04-mobile-app-view.png'),
+        fullPage: true,
+      });
     }
 
     console.log(
@@ -92,9 +106,9 @@ async function capture() {
           '01-desktop-auth-screen.png',
           '02-desktop-main-app.png',
           '03-desktop-settings-modal.png',
-          '04-mobile-app-view.png'
-        ]
-      })
+          '04-mobile-app-view.png',
+        ],
+      }),
     );
   } finally {
     await browser.close();

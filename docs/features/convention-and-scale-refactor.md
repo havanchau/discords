@@ -124,17 +124,17 @@ server; the payload is unchanged and the client handler is idempotent.
 
 ### Realtime split
 
-| File | Responsibility |
-|---|---|
-| `realtime.gateway.ts` | Connection lifecycle: authenticate, join rooms, presence |
-| `messages.gateway.ts` | Channels, messages, threads, reactions, typing, unread |
-| `voice.gateway.ts` | Voice membership, DM ringing, WebRTC relay |
-| `socket-auth.service.ts` | Handshake token and session validation |
-| `presence.service.ts` | Socket reference counting and presence broadcast |
-| `realtime-access.service.ts` | Authorization queries for channels, conversations and calls |
-| `realtime-unread.service.ts` | Unread recipients and per-channel counts |
-| `call-registry.service.ts` | Call participants, active-call summary, peer assertion |
-| `socket-rate-limit.service.ts` | Shared per-socket event budget |
+| File                           | Responsibility                                              |
+| ------------------------------ | ----------------------------------------------------------- |
+| `realtime.gateway.ts`          | Connection lifecycle: authenticate, join rooms, presence    |
+| `messages.gateway.ts`          | Channels, messages, threads, reactions, typing, unread      |
+| `voice.gateway.ts`             | Voice membership, DM ringing, WebRTC relay                  |
+| `socket-auth.service.ts`       | Handshake token and session validation                      |
+| `presence.service.ts`          | Socket reference counting and presence broadcast            |
+| `realtime-access.service.ts`   | Authorization queries for channels, conversations and calls |
+| `realtime-unread.service.ts`   | Unread recipients and per-channel counts                    |
+| `call-registry.service.ts`     | Call participants, active-call summary, peer assertion      |
+| `socket-rate-limit.service.ts` | Shared per-socket event budget                              |
 
 Only the connection gateway implements `OnGatewayConnection`; the feature gateways use a bare
 `@WebSocketGateway()` and attach to the same server, so the CORS and payload limits are declared once.
@@ -187,16 +187,16 @@ focus (socket events already keep lists live), 30s `staleTime`, and no retry on 
 
 Migrated, each keeping its exact public API so no consumer changed:
 
-| Hook | What it gains |
-|---|---|
-| `useNotifications` | cache, dedupe; stays lazy until the panel opens |
-| `useServerEvents` | key-scoped per server, `serverIdRef` race guard removed |
-| `useServerEmojis` | same, plus socket updates now invalidate instead of re-running a loader |
-| `useSessions` | cache; revoke writes the cache directly |
-| `useUserProfile` | **module-level `Map` cache deleted** |
-| `useLinkPreview` | **two module-level `Map`s deleted** (cache + in-flight dedupe) |
-| `useServerModeration` | bans list key-scoped per server, ref guard removed |
-| `useSettingsActions` | audit logs, invites, channel overrides and notification preferences; the file no longer calls `useState` at all |
+| Hook                  | What it gains                                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `useNotifications`    | cache, dedupe; stays lazy until the panel opens                                                                 |
+| `useServerEvents`     | key-scoped per server, `serverIdRef` race guard removed                                                         |
+| `useServerEmojis`     | same, plus socket updates now invalidate instead of re-running a loader                                         |
+| `useSessions`         | cache; revoke writes the cache directly                                                                         |
+| `useUserProfile`      | **module-level `Map` cache deleted**                                                                            |
+| `useLinkPreview`      | **two module-level `Map`s deleted** (cache + in-flight dedupe)                                                  |
+| `useServerModeration` | bans list key-scoped per server, ref guard removed                                                              |
+| `useSettingsActions`  | audit logs, invites, channel overrides and notification preferences; the file no longer calls `useState` at all |
 
 `query/useLazyResource.ts` carries the shape those settings panels share: an imperative `load(id)`
 that fills a cache entry keyed by `id`, so reopening a panel is free and a slow response for a
@@ -213,13 +213,13 @@ cache: no single place knew the cache key.
 open server's detail — plus `activeServerId` and `activeChannelId` as navigation state, and exposes
 a named write API instead of raw setters:
 
-| Before | After |
-|---|---|
-| `setServer(updater)` | `patchServer(update)` — writes the open server's cache entry |
-| `setServers(updater)` | `patchServers(update)` — writes the list cache entry |
-| `setServer(detail)` | `seedServerDetail(detail)` — after create or join |
-| `setServer(null); setChannel(null)` | `openHome()` |
-| `setChannel(channel)` | `selectChannel(id)` |
+| Before                              | After                                                        |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `setServer(updater)`                | `patchServer(update)` — writes the open server's cache entry |
+| `setServers(updater)`               | `patchServers(update)` — writes the list cache entry         |
+| `setServer(detail)`                 | `seedServerDetail(detail)` — after create or join            |
+| `setServer(null); setChannel(null)` | `openHome()`                                                 |
+| `setChannel(channel)`               | `selectChannel(id)`                                          |
 
 **`channel` is now derived**, not stored. It used to be a second copy of a channel object held beside
 `server.channels`, so a rename updated one and left the other stale unless every write remembered to
@@ -241,7 +241,7 @@ user's socket and reading the ONLINE count in the browser.
 
 ### What stays on useState, and why
 
-Not every hook holding data is holding *server* state, and moving those into a server cache would be
+Not every hook holding data is holding _server_ state, and moving those into a server cache would be
 wrong rather than merely unnecessary.
 
 - **UI and device state** — `useTheme`, `useMediaQuery`, `useCollapsedCategories`,

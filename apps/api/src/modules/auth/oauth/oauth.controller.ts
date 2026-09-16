@@ -12,8 +12,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CookieOptions, Request, Response } from 'express';
-import { RateLimit } from '../../../common/rate-limit.decorator';
-import { OAuthExchangeDto } from '../dto/oauth-exchange.dto';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { OAuthExchangeDto } from '@/modules/auth/dto/oauth-exchange.dto';
 import { OAuthFlowError } from './oauth-providers';
 import { OAUTH_FLOW_COOKIE, OAUTH_FLOW_TTL_MS, OAuthService } from './oauth.service';
 

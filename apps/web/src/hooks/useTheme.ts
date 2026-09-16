@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { UiTheme } from '../contexts/appContexts';
+import type { UiTheme } from '@/contexts/appContexts';
 
 const THEME_KEY = 'discord-clone-ui-theme';
 const THEMES: UiTheme[] = ['light', 'dark', 'system'];

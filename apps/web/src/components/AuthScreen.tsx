@@ -9,11 +9,11 @@ import {
   Zap,
 } from 'lucide-react';
 import { FormEvent } from 'react';
-import type { OAuthProviderName } from '../api';
-import type { AuthMode } from '../hooks/useAuthSession';
-import type { OAuthProviderAvailability } from '../hooks/useOAuthSignIn';
-import { useTranslation, type Translate } from '../i18n/LocaleProvider';
-import { cn } from '../utils/cn';
+import type { OAuthProviderName } from '@/api';
+import type { AuthMode } from '@/hooks/useAuthSession';
+import type { OAuthProviderAvailability } from '@/hooks/useOAuthSignIn';
+import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
 import { ForgotPasswordForm, ResetPasswordForm } from './auth/PasswordResetForms';
 import { TwoFactorLoginForm } from './auth/TwoFactorLoginForm';
 import { Button, TextField } from './ui';
@@ -57,7 +57,10 @@ function oauthButtonTitle(
 
 function headings(t: Translate): Record<AuthMode, { title: string; description: string }> {
   return {
-    login: { title: t('auth.heading.login.title'), description: t('auth.heading.login.description') },
+    login: {
+      title: t('auth.heading.login.title'),
+      description: t('auth.heading.login.description'),
+    },
     register: {
       title: t('auth.heading.register.title'),
       description: t('auth.heading.register.description'),
@@ -66,7 +69,10 @@ function headings(t: Translate): Record<AuthMode, { title: string; description: 
       title: t('auth.heading.forgot.title'),
       description: t('auth.heading.forgot.description'),
     },
-    reset: { title: t('auth.heading.reset.title'), description: t('auth.heading.reset.description') },
+    reset: {
+      title: t('auth.heading.reset.title'),
+      description: t('auth.heading.reset.description'),
+    },
     'two-factor': {
       title: t('auth.heading.twoFactor.title'),
       description: t('auth.heading.twoFactor.description'),
@@ -249,11 +255,7 @@ export function AuthScreen({
                   minLength={8}
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
                   placeholder="••••••••"
-                  hint={
-                    isLogin
-                      ? undefined
-                      : t('auth.field.passwordHint')
-                  }
+                  hint={isLogin ? undefined : t('auth.field.passwordHint')}
                   pattern={
                     isLogin ? undefined : '(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}'
                   }

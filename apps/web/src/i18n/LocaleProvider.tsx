@@ -7,8 +7,15 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { Catalog, Locale, TranslationVars, defaultLocale, parseLocale, translate } from '@discord-clone/shared';
-import { setRequestLocale } from '../api';
+import {
+  Catalog,
+  Locale,
+  TranslationVars,
+  defaultLocale,
+  parseLocale,
+  translate,
+} from '@discord-clone/shared';
+import { setRequestLocale } from '@/api';
 import { en } from './locales/en';
 import { vi } from './locales/vi';
 

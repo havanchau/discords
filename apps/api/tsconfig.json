@@ -12,10 +12,10 @@
     "types": ["node"],
     "typeRoots": ["../../node_modules/@types", "node_modules/@types"],
     "paths": {
+      "@/*": ["apps/api/src/*"],
       "@discord-clone/shared": ["../../packages/shared/dist/index.d.ts"]
     }
   },
 
   "include": ["src/**/*.ts"]
 }
-

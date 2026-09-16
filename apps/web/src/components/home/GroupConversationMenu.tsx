@@ -1,8 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { Crown, LogOut, UserMinus, UserPlus, Users } from 'lucide-react';
-import type { DirectConversation, FriendEntry, PublicUser } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, TextField } from '../ui';
+import type { DirectConversation, FriendEntry, PublicUser } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import {
+  Button,
+  IconButton,
+  PopoverContent,
+  PopoverRoot,
+  PopoverTrigger,
+  TextField,
+} from '@/components/ui';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
 
@@ -51,7 +58,7 @@ export function GroupConversationMenu({
       </PopoverTrigger>
       <PopoverContent align="end" side="bottom">
         <div className={styles.groupMenu}>
-          <form className={styles.groupRename} onSubmit={submitRename}>
+          <form className={styles.groupRename} onSubmit={(event) => void submitRename(event)}>
             <TextField
               label={t('group.field.name')}
               value={name}

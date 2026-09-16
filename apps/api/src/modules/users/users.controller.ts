@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/current-user.decorator';
-import { RequestUser } from '../../common/request-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/common/current-user.decorator';
+import { RequestUser } from '@/common/request-user';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
-import { RateLimit } from '../../common/rate-limit.decorator';
+import { RateLimit } from '@/common/rate-limit.decorator';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UsersService } from './users.service';
 

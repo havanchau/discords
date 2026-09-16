@@ -54,7 +54,8 @@ export const viApiMessages = {
   MEMBER_NOT_FOUND: 'Không tìm thấy thành viên',
   MEMBER_OR_ROLE_NOT_FOUND: 'Không tìm thấy thành viên hoặc vai trò',
   MESSAGE_CONTENT_CANNOT_BE_EMPTY: 'Nội dung tin nhắn không được để trống',
-  MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS: 'Tin nhắn không có tệp đính kèm thì không được để trống',
+  MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS:
+    'Tin nhắn không có tệp đính kèm thì không được để trống',
   MESSAGE_NOT_FOUND: 'Không tìm thấy tin nhắn',
   MISSING_BEARER_TOKEN: 'Thiếu bearer token',
   MISSING_TOKEN: 'Thiếu token',
@@ -63,10 +64,13 @@ export const viApiMessages = {
   NOTIFICATION_NOT_FOUND: 'Không tìm thấy thông báo',
   ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE: 'Chỉ tác giả mới xoá được tin nhắn này',
   ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE: 'Chỉ tác giả mới sửa được tin nhắn này',
-  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE: 'Chỉ tác giả hoặc người quản lý tin nhắn mới xoá được tin nhắn này',
-  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE: 'Chỉ tác giả hoặc người quản lý tin nhắn mới ghim được tin nhắn này',
+  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE:
+    'Chỉ tác giả hoặc người quản lý tin nhắn mới xoá được tin nhắn này',
+  ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE:
+    'Chỉ tác giả hoặc người quản lý tin nhắn mới ghim được tin nhắn này',
   ONLY_THE_GROUP_OWNER_CAN_REMOVE_MEMBERS: 'Chỉ chủ nhóm mới xoá được thành viên',
-  ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST: 'Chỉ người nhận mới chấp nhận hoặc từ chối được yêu cầu này',
+  ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST:
+    'Chỉ người nhận mới chấp nhận hoặc từ chối được yêu cầu này',
   PIN_LIMIT_REACHED: 'Đã đạt giới hạn ghim',
   REPLY_TARGET_NOT_FOUND: 'Không tìm thấy tin nhắn được trả lời',
   ROLE_NOT_FOUND: 'Không tìm thấy vai trò',
@@ -91,23 +95,28 @@ export const viApiMessages = {
   YOU_CANNOT_ACCEPT_THIS_FRIEND_REQUEST: 'Bạn không thể chấp nhận lời mời kết bạn này',
   YOU_CANNOT_CALL_THIS_USER: 'Bạn không thể gọi cho người dùng này',
   YOU_CANNOT_MESSAGE_THIS_USER: 'Bạn không thể nhắn tin cho người dùng này',
-  YOU_CANNOT_SEND_A_FRIEND_REQUEST_TO_THIS_USER: 'Bạn không thể gửi lời mời kết bạn cho người dùng này',
+  YOU_CANNOT_SEND_A_FRIEND_REQUEST_TO_THIS_USER:
+    'Bạn không thể gửi lời mời kết bạn cho người dùng này',
 
   // Interpolated errors, generic fallback, and non-HTTP copy.
   MISSING_PERMISSION: 'Thiếu quyền: {detail}',
   MEMBER_TIMED_OUT: 'Bạn bị phạt im lặng đến {detail}',
   INTERNAL_ERROR: 'Đã có lỗi xảy ra. Vui lòng thử lại.',
   'email.verify.subject': 'Xác minh tài khoản Discord Clone của bạn',
-  'email.verify.text': 'Xác minh tài khoản trong vòng 1 giờ: {url}\n\nNếu bạn không tạo tài khoản này, hãy bỏ qua email.',
+  'email.verify.text':
+    'Xác minh tài khoản trong vòng 1 giờ: {url}\n\nNếu bạn không tạo tài khoản này, hãy bỏ qua email.',
   'email.verify.intro': 'Xác minh tài khoản trong vòng 1 giờ:',
   'email.verify.ignore': 'Nếu bạn không tạo tài khoản này, hãy bỏ qua email.',
   'email.reset.subject': 'Đặt lại mật khẩu Discord Clone của bạn',
-  'email.reset.text': 'Đặt lại mật khẩu trong vòng 30 phút: {url}\n\nNếu bạn không yêu cầu, hãy bỏ qua email.',
+  'email.reset.text':
+    'Đặt lại mật khẩu trong vòng 30 phút: {url}\n\nNếu bạn không yêu cầu, hãy bỏ qua email.',
   'email.reset.intro': 'Đặt lại mật khẩu trong vòng 30 phút:',
   'email.reset.ignore': 'Nếu bạn không yêu cầu, hãy bỏ qua email.',
   'push.channelMessage.title': '#{channel}',
   'push.channelMessage.body': '{author}: {content}',
   'auth.register.checkInbox': 'Hãy kiểm tra hộp thư để lấy liên kết xác minh.',
-  'auth.resendVerification.ok': 'Nếu tài khoản đó đang chờ xác minh, một liên kết mới đã được gửi đi.',
-  'auth.forgotPassword.ok': 'Nếu có tài khoản dùng email đó, một liên kết đặt lại mật khẩu đã được gửi đi.',
+  'auth.resendVerification.ok':
+    'Nếu tài khoản đó đang chờ xác minh, một liên kết mới đã được gửi đi.',
+  'auth.forgotPassword.ok':
+    'Nếu có tài khoản dùng email đó, một liên kết đặt lại mật khẩu đã được gửi đi.',
 } as const;

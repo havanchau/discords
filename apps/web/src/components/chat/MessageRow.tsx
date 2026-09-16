@@ -12,7 +12,7 @@ import {
   Trash2,
   Unlock,
 } from 'lucide-react';
-import { assetUrl, AuthState, Message, MessageAttachment } from '../../api';
+import { assetUrl, AuthState, Message, MessageAttachment } from '@/api';
 import {
   accentClass,
   attachmentKind,
@@ -21,9 +21,9 @@ import {
   isSameMessageDay,
   previewText,
   QUICK_REACTIONS,
-} from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
+} from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
 import {
   Button,
   IconButton,
@@ -37,13 +37,13 @@ import {
   PopoverContent,
   PopoverRoot,
   PopoverTrigger,
-} from '../ui';
-import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
-import { ProfileCard } from '../profile/ProfileCard';
-import type { MemberIdentity } from '../../utils/memberIdentity';
+} from '@/components/ui';
+import { useServerEmojiContext } from '@/contexts/ServerEmojiContext';
+import { ProfileCard } from '@/components/profile/ProfileCard';
+import type { MemberIdentity } from '@/utils/memberIdentity';
 import { EmojiPicker, ReactionEmoji } from './EmojiPicker';
 import { LinkPreviewCard } from './LinkPreviewCard';
-import { extractMarkdownLinks } from '../../utils/markdown';
+import { extractMarkdownLinks } from '@/utils/markdown';
 import { MarkdownContent } from './MarkdownContent';
 import styles from './MessageRow.module.css';
 import type { ChatPanelMessageActions } from './types';
@@ -103,7 +103,9 @@ function MessageContent({
                 ) : (
                   <Unlock size={12} aria-hidden="true" />
                 )}
-                {message.decryptionFailed ? t('message.encrypted.locked') : t('message.encrypted.ok')}
+                {message.decryptionFailed
+                  ? t('message.encrypted.locked')
+                  : t('message.encrypted.ok')}
               </span>
             ) : null
           }
@@ -504,7 +506,9 @@ export const MessageRow = memo(function MessageRow({
               <Pin size={14} aria-hidden="true" />{' '}
               {isPinned ? t('message.menu.unpin') : t('message.menu.pin')}
             </ContextMenuItem>
-            <ContextMenuItem onClick={copyMessageContent}>{t('message.menu.copyText')}</ContextMenuItem>
+            <ContextMenuItem onClick={copyMessageContent}>
+              {t('message.menu.copyText')}
+            </ContextMenuItem>
             {canManage && (
               <>
                 <ContextMenuSeparator />

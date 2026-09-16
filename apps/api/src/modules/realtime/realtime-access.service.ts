@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import { DmCallsService, parseDmCallKey } from './dm-calls.service';
 
 /**

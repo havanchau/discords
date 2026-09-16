@@ -1,6 +1,6 @@
 import * as RadixPopover from '@radix-ui/react-popover';
 import type { ComponentPropsWithoutRef } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './Popover.module.css';
 
 export const PopoverRoot = RadixPopover.Root;

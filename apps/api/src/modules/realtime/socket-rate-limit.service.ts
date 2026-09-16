@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { RedisFixedWindowLimiter } from '../../common/redis-fixed-window-limiter';
+import { RedisFixedWindowLimiter } from '@/common/redis-fixed-window-limiter';
 import { socketLimitSubject } from './socket-guards';
 
 @Injectable()

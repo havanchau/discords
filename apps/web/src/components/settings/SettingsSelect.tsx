@@ -6,9 +6,9 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
   Button,
-} from '../ui';
+} from '@/components/ui';
 import type { SettingsSelectOption } from './types';
-import styles from '../SettingsModal.module.css';
+import styles from '@/components/SettingsModal.module.css';
 
 interface SettingsSelectProps<T extends string> {
   name: string;
@@ -34,7 +34,12 @@ export function SettingsSelect<T extends string>({
       <input type="hidden" name={name} value={value} />
       <DropdownMenuRoot>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="secondary" className={styles.settingsSelectTrigger} aria-label={label}>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.settingsSelectTrigger}
+            aria-label={label}
+          >
             <span>{selected?.label}</span>
             <ChevronDown size={16} aria-hidden="true" />
           </Button>

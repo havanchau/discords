@@ -1,12 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
-import { slugifyChannelName } from '../../common/slugify';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { slugifyChannelName } from '@/common/slugify';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { AuditLogEntry, Invite, ServerDetail, ServerSummary } from '@discord-clone/shared';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
-import { countChannelUnread } from '../messages/unread-counts';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { countChannelUnread } from '@/modules/messages/unread-counts';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';

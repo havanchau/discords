@@ -1,4 +1,4 @@
-import type { ServerDetail } from '../api';
+import type { ServerDetail } from '@/api';
 
 /*
  * Mirrors the API's server-level check (owner, or any role granting the permission). It only gates

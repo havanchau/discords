@@ -13,7 +13,7 @@ export const Permissions = {
   MuteMembers: 'MUTE_MEMBERS',
   DeafenMembers: 'DEAFEN_MEMBERS',
   MentionEveryone: 'MENTION_EVERYONE',
-  UploadFiles: 'UPLOAD_FILES'
+  UploadFiles: 'UPLOAD_FILES',
 } as const;
 
 export type Permission = (typeof Permissions)[keyof typeof Permissions];
@@ -26,5 +26,5 @@ export const defaultMemberPermissions: Permission[] = [
   Permissions.CreateInvite,
   Permissions.ConnectVoice,
   Permissions.SpeakVoice,
-  Permissions.UploadFiles
+  Permissions.UploadFiles,
 ];

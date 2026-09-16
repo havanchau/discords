@@ -1,15 +1,24 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck, ExternalLink, FileText, Image as ImageIcon, Link, Pin } from 'lucide-react';
-import { Channel, Message, NotificationItem } from '../../api';
-import { previewText } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { buildMessageSearchSnippet } from '../../utils/messageSearch';
-import { Button, TextField } from '../ui';
-import { buildMediaCollections } from '../../utils/mediaCollections';
+import {
+  Bell,
+  CheckCheck,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  Link,
+  Pin,
+} from 'lucide-react';
+import { Channel, Message, NotificationItem } from '@/api';
+import { previewText } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { buildMessageSearchSnippet } from '@/utils/messageSearch';
+import { Button, TextField } from '@/components/ui';
+import { buildMediaCollections } from '@/utils/mediaCollections';
 import type { ActivePanel } from './types';
-import type { ParsedMessageSearch } from '../../utils/messageSearch';
+import type { ParsedMessageSearch } from '@/utils/messageSearch';
 import styles from './UtilityPanel.module.css';
+import { formText } from '@/utils/formText';
 
 const MEDIA_TAB_LABEL_KEYS = {
   media: 'media.tab.media',
@@ -96,7 +105,7 @@ export function UtilityPanel({
   function handleEncryptionSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    void configureChannelEncryption(String(form.get('passphrase') || ''));
+    void configureChannelEncryption(formText(form, 'passphrase'));
     event.currentTarget.reset();
   }
 
@@ -191,7 +200,9 @@ export function UtilityPanel({
                         <span className={styles.searchResultMeta}>
                           <strong>#{channel?.name ?? t('search.fallbackChannel')}</strong>
                           <span>{message.author.displayName}</span>
-                          <time dateTime={message.createdAt}>{dates.dateTime(message.createdAt)}</time>
+                          <time dateTime={message.createdAt}>
+                            {dates.dateTime(message.createdAt)}
+                          </time>
                         </span>
                         <span className={styles.searchResultSnippet}>
                           {snippet.fallback ? (
@@ -223,7 +234,6 @@ export function UtilityPanel({
           )}
         </div>
       )}
-
 
       {activePanel === 'media' && (
         <div className={styles.mediaPanel}>
@@ -312,7 +322,11 @@ export function UtilityPanel({
           {isLoadingNotifications ? (
             <div className={styles.notificationEmpty}>{t('notifications.loading')}</div>
           ) : notifications.length ? (
-            <div className={styles.notificationList} role="list" aria-label={t('notifications.listLabel')}>
+            <div
+              className={styles.notificationList}
+              role="list"
+              aria-label={t('notifications.listLabel')}
+            >
               {notifications.map((notification) => (
                 <button
                   type="button"
@@ -327,7 +341,9 @@ export function UtilityPanel({
                   <span className={styles.notificationText}>
                     <strong>{notification.title}</strong>
                     {notification.body && <span>{notification.body}</span>}
-                    <time dateTime={notification.createdAt}>{dates.dateTime(notification.createdAt)}</time>
+                    <time dateTime={notification.createdAt}>
+                      {dates.dateTime(notification.createdAt)}
+                    </time>
                   </span>
                 </button>
               ))}

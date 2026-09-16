@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import { AuthService } from './auth.service';
 import { createSecretBox } from './secret-box';
 import {

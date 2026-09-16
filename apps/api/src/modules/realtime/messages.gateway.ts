@@ -7,9 +7,9 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { MessagesService } from '../messages/messages.service';
-import { MessageAttachmentInputDto } from '../messages/dto/create-message.dto';
-import { ReactionDto } from '../messages/dto/reaction.dto';
+import { MessagesService } from '@/modules/messages/messages.service';
+import { MessageAttachmentInputDto } from '@/modules/messages/dto/create-message.dto';
+import { ReactionDto } from '@/modules/messages/dto/reaction.dto';
 import { CallRegistryService } from './call-registry.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';

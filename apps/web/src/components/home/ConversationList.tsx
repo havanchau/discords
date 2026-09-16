@@ -1,8 +1,8 @@
 import { Plus, Users } from 'lucide-react';
-import type { DirectConversation } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, IconButton } from '../ui';
-import { cn } from '../../utils/cn';
+import type { DirectConversation } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, IconButton } from '@/components/ui';
+import { cn } from '@/utils/cn';
 import { conversationDisplayName, conversationPartners } from './conversationDisplay';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
@@ -75,7 +75,9 @@ export function ConversationList({
                 {Boolean(conversation.unreadCount) && (
                   <span
                     className={styles.unreadBadge}
-                    aria-label={t('home.recentDms.unread', { count: conversation.unreadCount ?? 0 })}
+                    aria-label={t('home.recentDms.unread', {
+                      count: conversation.unreadCount ?? 0,
+                    })}
                   >
                     {conversation.unreadCount && conversation.unreadCount > 99
                       ? '99+'

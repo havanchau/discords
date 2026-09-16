@@ -44,7 +44,7 @@ type MarkdownNode =
   | { type: 'emoji'; name: string };
 ```
 
-1. Split out fenced code blocks (```` ``` ````); an unclosed fence is plain text.
+1. Split out fenced code blocks (` ``` `); an unclosed fence is plain text.
 2. Group consecutive lines starting with `> ` into one block quote.
 3. Tokenize inline text by priority: inline code, spoiler, bold, underline, strike, italic (`*` or word-bounded `_`), link, mention, custom emoji shortcode (`:name:`, used by [custom-emoji.md](custom-emoji.md)).
 4. Links exclude trailing `.,:;!?)` characters.

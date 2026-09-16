@@ -1,8 +1,8 @@
 import { Loader2, Pin } from 'lucide-react';
-import type { DirectMessage } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { IconButton, PopoverContent, PopoverRoot, PopoverTrigger } from '../ui';
+import type { DirectMessage } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { IconButton, PopoverContent, PopoverRoot, PopoverTrigger } from '@/components/ui';
 import styles from './HomePanel.module.css';
 
 type DirectPinnedMessagesProps = {

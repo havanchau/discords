@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { apiRequest, type AuthSessionEntry } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { queryKeys } from '../query/queryKeys';
+import { apiRequest, type AuthSessionEntry } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { queryKeys } from '@/query/queryKeys';
 
 interface UseSessionsOptions {
   accessToken: string;
@@ -49,7 +49,9 @@ export function useSessions({ accessToken, onCurrentSessionRevoked }: UseSession
         current ? { sessions: current.sessions.filter((item) => item.id !== session.id) } : current,
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-that-device'));
+      setError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-sign-out-that-device'),
+      );
     } finally {
       setPendingSessionId(null);
     }

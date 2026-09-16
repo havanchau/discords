@@ -195,7 +195,6 @@ Recommended production layout:
 
 See [deployment.md](deployment.md) for operational details.
 
-
 ## Architecture Checklist
 
 - [x] Shared contracts exist in `packages/shared`.

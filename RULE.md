@@ -2,7 +2,6 @@
 
 These are repository-level product and engineering invariants. They should remain stable even when implementation details change. See `docs/architecture.md` for architecture details, `docs/design-rules.md` for canonical UI design tokens, and `~/.claude/rules/documentation.md` for documentation standards.
 
-
 ## Domain Rules
 
 Core entities:

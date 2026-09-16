@@ -1,4 +1,4 @@
-import type { ActiveCallSummary, CallParticipant } from '../helpers';
+import type { ActiveCallSummary, CallParticipant } from '@/helpers';
 
 export function upsertVoiceParticipant(
   calls: Record<string, ActiveCallSummary>,

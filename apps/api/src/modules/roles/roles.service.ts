@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { Role } from '@discord-clone/shared';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
@@ -10,14 +10,14 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly permissions: PermissionsService
+    private readonly permissions: PermissionsService,
   ) {}
 
   async listRoles(userId: string, serverId: string): Promise<{ roles: Role[] }> {
     await this.permissions.requireMembership(userId, serverId);
     const roles = await this.prisma.role.findMany({
       where: { serverId },
-      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
     return { roles };
   }
@@ -31,8 +31,8 @@ export class RolesService {
         name: dto.name.trim(),
         color: dto.color,
         permissions: dto.permissions,
-        position
-      }
+        position,
+      },
     });
     await this.writeAuditLog(serverId, userId, 'ROLE_CREATE', role.id, {
       name: role.name,
@@ -43,14 +43,18 @@ export class RolesService {
 
   async updateRole(userId: string, roleId: string, dto: UpdateRoleDto) {
     const existing = await this.findMutableRole(roleId);
-    await this.permissions.requireServerPermission(userId, existing.serverId, Permission.ManageRoles);
+    await this.permissions.requireServerPermission(
+      userId,
+      existing.serverId,
+      Permission.ManageRoles,
+    );
     const role = await this.prisma.role.update({
       where: { id: roleId },
       data: {
         name: dto.name?.trim(),
         color: dto.color,
-        permissions: dto.permissions
-      }
+        permissions: dto.permissions,
+      },
     });
     await this.writeAuditLog(existing.serverId, userId, 'ROLE_UPDATE', role.id, {
       name: role.name,
@@ -61,7 +65,11 @@ export class RolesService {
 
   async deleteRole(userId: string, roleId: string) {
     const existing = await this.findMutableRole(roleId);
-    await this.permissions.requireServerPermission(userId, existing.serverId, Permission.ManageRoles);
+    await this.permissions.requireServerPermission(
+      userId,
+      existing.serverId,
+      Permission.ManageRoles,
+    );
     await this.prisma.role.delete({ where: { id: roleId } });
     await this.writeAuditLog(existing.serverId, userId, 'ROLE_DELETE', roleId, {
       name: existing.name,
@@ -73,7 +81,7 @@ export class RolesService {
     await this.permissions.requireServerPermission(userId, serverId, Permission.ManageRoles);
     const [member, role] = await Promise.all([
       this.prisma.serverMember.findFirst({ where: { id: memberId, serverId } }),
-      this.prisma.role.findFirst({ where: { id: roleId, serverId } })
+      this.prisma.role.findFirst({ where: { id: roleId, serverId } }),
     ]);
 
     if (!member || !role) {
@@ -83,7 +91,7 @@ export class RolesService {
     await this.prisma.memberRole.upsert({
       where: { memberId_roleId: { memberId, roleId } },
       create: { memberId, roleId },
-      update: {}
+      update: {},
     });
     await this.writeAuditLog(serverId, userId, 'MEMBER_ROLE_ADD', memberId, { roleId });
     return { ok: true };

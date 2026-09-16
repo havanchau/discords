@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { Clipboard, Loader2, ShieldCheck } from 'lucide-react';
-import { useTwoFactor } from '../../hooks/useTwoFactor';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Badge, Button, TextField } from '../ui';
-import styles from '../SettingsModal.module.css';
+import { useTwoFactor } from '@/hooks/useTwoFactor';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Badge, Button, TextField } from '@/components/ui';
+import styles from '@/components/SettingsModal.module.css';
+import { formText } from '@/utils/formText';
 
 interface TwoFactorSettingsProps {
   accessToken: string;
 }
 
 function formValue(event: FormEvent<HTMLFormElement>, name: string) {
-  return String(new FormData(event.currentTarget).get(name) ?? '').trim();
+  return formText(new FormData(event.currentTarget), name).trim();
 }
 
 export function TwoFactorSettings({ accessToken }: TwoFactorSettingsProps) {
@@ -87,9 +88,7 @@ export function TwoFactorSettings({ accessToken }: TwoFactorSettingsProps) {
             void twoFactor.confirmSetup(formValue(event, 'code'));
           }}
         >
-          <p className="empty-note">
-            {t('twoFactor.setup.hint')}
-          </p>
+          <p className="empty-note">{t('twoFactor.setup.hint')}</p>
           <div className={styles.inviteRow}>
             <div>
               <strong>

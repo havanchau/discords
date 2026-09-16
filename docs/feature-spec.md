@@ -151,39 +151,39 @@ Build a Discord-inspired realtime communication app that demonstrates full-stack
 
 The API should remain resource-oriented and guarded by auth and permission checks.
 
-| Area     | Representative Routes                                                        |
-| -------- | ---------------------------------------------------------------------------- |
+| Area     | Representative Routes                                                                                                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Auth     | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me`, `/auth/resend-verification`, `/auth/verify-email`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/sessions`, `/auth/2fa`, `/auth/oauth` |
-| Users    | `/users/me`, `/users/:userId`                                                |
-| Servers  | `/servers`, `/servers/:serverId`, `/servers/:serverId/bans`, `/servers/:serverId/members/:memberId/timeout`, `/servers/:serverId/emojis`, `/servers/:serverId/events` |
-| Channels | `/servers/:serverId/channels`, `/channels/:channelId`, `/servers/:serverId/categories`, `/categories/:categoryId` |
-| Messages | `/channels/:channelId/messages`, `/messages/:messageId`, `/link-previews`    |
-| DMs      | `/direct-conversations`, `/direct-conversations/:conversationId/messages`, `/direct-conversations/:conversationId/members`, `/direct-messages/:messageId` |
-| Friends  | `/friends`, `/friends/requests`, `/friends/blocks`                           |
-| Roles    | `/servers/:serverId/roles`, `/roles/:roleId`                                 |
-| Invites  | `/servers/:serverId/invites`, `/invites/:code`                               |
-| Events   | `/events/:eventId`, `/events/:eventId/interest`                              |
-| Uploads  | `/uploads`, chunked upload endpoints                                         |
+| Users    | `/users/me`, `/users/:userId`                                                                                                                                                                                                  |
+| Servers  | `/servers`, `/servers/:serverId`, `/servers/:serverId/bans`, `/servers/:serverId/members/:memberId/timeout`, `/servers/:serverId/emojis`, `/servers/:serverId/events`                                                          |
+| Channels | `/servers/:serverId/channels`, `/channels/:channelId`, `/servers/:serverId/categories`, `/categories/:categoryId`                                                                                                              |
+| Messages | `/channels/:channelId/messages`, `/messages/:messageId`, `/link-previews`                                                                                                                                                      |
+| DMs      | `/direct-conversations`, `/direct-conversations/:conversationId/messages`, `/direct-conversations/:conversationId/members`, `/direct-messages/:messageId`                                                                      |
+| Friends  | `/friends`, `/friends/requests`, `/friends/blocks`                                                                                                                                                                             |
+| Roles    | `/servers/:serverId/roles`, `/roles/:roleId`                                                                                                                                                                                   |
+| Invites  | `/servers/:serverId/invites`, `/invites/:code`                                                                                                                                                                                 |
+| Events   | `/events/:eventId`, `/events/:eventId/interest`                                                                                                                                                                                |
+| Uploads  | `/uploads`, chunked upload endpoints                                                                                                                                                                                           |
 
 ## Realtime Events
 
 Event names should be explicit and payloads should be typed in `packages/shared`. Similar message names are intentional when they represent different directions: client command events request a mutation, while server broadcast events report the persisted result.
 
-| Area       | Client command events                                                                                     | Server broadcast events                                                       |
-| ---------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Connection | Socket connect with auth                                                                                  | `connection`, `disconnect`, auth failure                                      |
-| Rooms      | `channel:join`, `channel:leave`                                                                           | Authorized room membership changes when needed                                |
-| Messages   | `message:create`, `message:update`, `message:delete`                                                      | `message:created`, `message:updated`, `message:deleted`                       |
-| Typing     | `typing:start`, `typing:stop`                                                                             | `typing:start`, `typing:stop` to authorized viewers                           |
-| Reactions  | `reaction:toggle`                                                                                         | `reaction:updated`                                                            |
-| Presence   | Presence set/update command when supported                                                                | `presence:update`                                                             |
-| Voice      | `voice:join`, `voice:leave`, `voice:state`                                                                | `voice:user-joined`, `voice:user-updated`, `voice:user-left`                  |
-| WebRTC     | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`                                                   | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate` to target peer        |
-| DMs        | REST writes                                                                                               | `dm:created`, `dm:updated`, `dm:deleted`, `dm:reaction-updated`, `dm:conversation-updated`, `dm:conversation-removed` |
-| DM calls   | `dm:call:ring`, `dm:call:decline`, `dm:call:cancel`, `voice:join` with a `dm:<conversationId>` call id    | `dm:call:incoming`, `dm:call:declined`, `dm:call:ring-stopped`                |
-| Moderation | REST writes                                                                                               | `server:member-removed`, `server:member-updated`                              |
-| Server     | REST writes                                                                                               | `server:emojis-updated`, `server:events-updated`                              |
-| Future     | Add notification and read-state events here only after adding them to `packages/shared`.                  | Add paired broadcast events here only after adding them to `packages/shared`. |
+| Area       | Client command events                                                                                  | Server broadcast events                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Connection | Socket connect with auth                                                                               | `connection`, `disconnect`, auth failure                                                                              |
+| Rooms      | `channel:join`, `channel:leave`                                                                        | Authorized room membership changes when needed                                                                        |
+| Messages   | `message:create`, `message:update`, `message:delete`                                                   | `message:created`, `message:updated`, `message:deleted`                                                               |
+| Typing     | `typing:start`, `typing:stop`                                                                          | `typing:start`, `typing:stop` to authorized viewers                                                                   |
+| Reactions  | `reaction:toggle`                                                                                      | `reaction:updated`                                                                                                    |
+| Presence   | Presence set/update command when supported                                                             | `presence:update`                                                                                                     |
+| Voice      | `voice:join`, `voice:leave`, `voice:state`                                                             | `voice:user-joined`, `voice:user-updated`, `voice:user-left`                                                          |
+| WebRTC     | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`                                                | `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate` to target peer                                                |
+| DMs        | REST writes                                                                                            | `dm:created`, `dm:updated`, `dm:deleted`, `dm:reaction-updated`, `dm:conversation-updated`, `dm:conversation-removed` |
+| DM calls   | `dm:call:ring`, `dm:call:decline`, `dm:call:cancel`, `voice:join` with a `dm:<conversationId>` call id | `dm:call:incoming`, `dm:call:declined`, `dm:call:ring-stopped`                                                        |
+| Moderation | REST writes                                                                                            | `server:member-removed`, `server:member-updated`                                                                      |
+| Server     | REST writes                                                                                            | `server:emojis-updated`, `server:events-updated`                                                                      |
+| Future     | Add notification and read-state events here only after adding them to `packages/shared`.               | Add paired broadcast events here only after adding them to `packages/shared`.                                         |
 
 ## UI Surfaces
 

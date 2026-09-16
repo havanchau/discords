@@ -1,10 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
-import { assetUrl } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, IconButton, TextField } from '../ui';
+import { assetUrl } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, IconButton, TextField } from '@/components/ui';
 import type { SettingsModalFields } from './types';
-import styles from '../SettingsModal.module.css';
+import styles from '@/components/SettingsModal.module.css';
 
 const MAX_EMOJIS = 50;
 
@@ -54,7 +54,7 @@ export function ServerEmojiSection({
         </strong>
         <span>{t('emoji.section.hint')}</span>
       </div>
-      <form className={styles.moderationRow} onSubmit={submit}>
+      <form className={styles.moderationRow} onSubmit={(event) => void submit(event)}>
         <TextField
           label={t('emoji.field.name')}
           value={name}

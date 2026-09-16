@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { ApiError } from '../api';
+import { ApiError } from '@/api';
 
 /** A 4xx is the server's answer, not a hiccup; only transport and 5xx failures are worth retrying. */
 function shouldRetry(failureCount: number, error: unknown) {

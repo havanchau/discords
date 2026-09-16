@@ -48,7 +48,9 @@ export class TranslatingExceptionFilter implements ExceptionFilter {
     // class-validator returns an array of field errors; those come from DTO decorators, not from
     // the error-code map, so they pass through untranslated.
     if (Array.isArray(rawMessage)) {
-      response.status(status).json({ statusCode: status, code: VALIDATION_CODE, message: rawMessage });
+      response
+        .status(status)
+        .json({ statusCode: status, code: VALIDATION_CODE, message: rawMessage });
       return;
     }
 

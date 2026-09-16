@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 interface JwtPayload {
   sub: string;
@@ -12,7 +12,7 @@ interface JwtPayload {
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext) {
@@ -34,9 +34,9 @@ export class JwtAuthGuard implements CanActivate {
           id: payload.sid,
           userId: payload.sub,
           revokedAt: null,
-          expiresAt: { gt: new Date() }
+          expiresAt: { gt: new Date() },
         },
-        include: { user: true }
+        include: { user: true },
       });
 
       if (!session) {
@@ -48,7 +48,7 @@ export class JwtAuthGuard implements CanActivate {
         email: session.user.email,
         username: session.user.username,
         sessionId: session.id,
-        locale: session.user.locale
+        locale: session.user.locale,
       };
       return true;
     } catch {

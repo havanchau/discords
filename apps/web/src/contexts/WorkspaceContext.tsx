@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode } from 'react';
-import type { Channel, ServerDetail, ServerSummary } from '../api';
-import type { ActiveDialog, ActivePanel } from '../components/chat/types';
+import type { Channel, ServerDetail, ServerSummary } from '@/api';
+import type { ActiveDialog, ActivePanel } from '@/components/chat/types';
 
 export interface WorkspaceContextValue {
   servers: ServerSummary[];

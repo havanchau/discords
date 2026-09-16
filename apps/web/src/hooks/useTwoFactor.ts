@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiRequest } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { apiRequest } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 export interface TwoFactorStatus {
   enabled: boolean;
@@ -25,9 +25,11 @@ export function useTwoFactor(accessToken: string) {
     try {
       setStatus(await apiRequest<TwoFactorStatus>('/auth/2fa', {}, accessToken));
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('error.fallback.cannot-load-two-factor-status'));
+      setError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-load-two-factor-status'),
+      );
     }
-  }, [accessToken]);
+  }, [accessToken, t]);
 
   useEffect(() => {
     void loadStatus();

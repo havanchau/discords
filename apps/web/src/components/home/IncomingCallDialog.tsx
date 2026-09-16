@@ -1,9 +1,9 @@
 import { Phone, PhoneOff, Video } from 'lucide-react';
-import { assetUrl } from '../../api';
-import { accentClass, initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import type { IncomingDirectCall } from '../../hooks/useDirectCall';
-import { Avatar, Button, DialogContent, DialogRoot } from '../ui';
+import { assetUrl } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import type { IncomingDirectCall } from '@/hooks/useDirectCall';
+import { Avatar, Button, DialogContent, DialogRoot } from '@/components/ui';
 import styles from './HomePanel.module.css';
 
 type IncomingCallDialogProps = {

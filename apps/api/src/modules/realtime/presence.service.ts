@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RedisService } from '@/modules/redis/redis.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 

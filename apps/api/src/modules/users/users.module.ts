@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
-import { RealtimePublisherModule } from '../realtime/realtime-publisher.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
   imports: [AuthModule, RealtimePublisherModule],
   controllers: [UsersController],
-  providers: [UsersService]
+  providers: [UsersService],
 })
 export class UsersModule {}

@@ -1,9 +1,9 @@
 import { MessageSquare, Plus } from 'lucide-react';
-import type { ServerDetail, ServerSummary } from '../../api';
-import { initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { cn } from '../../utils/cn';
-import { Button, Tooltip } from '../ui';
+import type { ServerDetail, ServerSummary } from '@/api';
+import { initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
+import { Button, Tooltip } from '@/components/ui';
 import styles from './ServerRail.module.css';
 
 interface ServerRailProps {
@@ -14,7 +14,13 @@ interface ServerRailProps {
   onAddServer: () => void;
 }
 
-export function ServerRail({ servers, server, openHome, openServer, onAddServer }: ServerRailProps) {
+export function ServerRail({
+  servers,
+  server,
+  openHome,
+  openServer,
+  onAddServer,
+}: ServerRailProps) {
   const t = useTranslation();
 
   return (

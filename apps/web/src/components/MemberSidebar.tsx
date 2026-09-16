@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ServerDetail } from '../api';
-import { accentClass, initials } from '../helpers';
-import { useTranslation, type Translate } from '../i18n/LocaleProvider';
-import { memberIdentityOf } from '../utils/memberIdentity';
+import { ServerDetail } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
+import { memberIdentityOf } from '@/utils/memberIdentity';
 import { ProfileCard } from './profile/ProfileCard';
 import {
   Avatar,
@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from './ui';
 import styles from './MemberSidebar.module.css';
-import { cn } from '../utils/cn';
+import { cn } from '@/utils/cn';
 import { MessageSquare, ShieldCheck } from 'lucide-react';
 
 const PRESENCE_KEYS = {
@@ -111,7 +111,9 @@ export function MemberSidebar({
             {'color' in group && group.color ? (
               <span className={styles.roleMarker} style={{ backgroundColor: group.color }} />
             ) : null}
-            <span>{t('members.groupCount', { label: group.label, count: group.members.length })}</span>
+            <span>
+              {t('members.groupCount', { label: group.label, count: group.members.length })}
+            </span>
           </div>
           <div className={styles.memberList}>
             {group.members.map((member) => {

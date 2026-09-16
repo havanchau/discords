@@ -3,18 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, randomUUID } from 'crypto';
-import type { Locale } from '../../common/i18n/locale';
-import { I18nService } from '../../common/i18n/i18n.service';
-import { PrismaService } from '../prisma/prisma.service';
+import type { Locale } from '@/common/i18n/locale';
+import { I18nService } from '@/common/i18n/i18n.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { EmailService } from './email.service';
 import {
   TWO_FACTOR_CHALLENGE_TTL_SECONDS,
-  TwoFactorChallengeService
+  TwoFactorChallengeService,
 } from './two-factor-challenge.service';
-
-
 
 @Injectable()
 export class AuthService {
@@ -26,13 +24,13 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly email: EmailService,
     private readonly twoFactorChallenges: TwoFactorChallengeService,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
   ) {}
 
   async register(dto: RegisterDto, _userAgent?: string, locale: Locale = 'en') {
     const username = dto.username.toLowerCase();
     const existing = await this.prisma.user.findFirst({
-      where: { OR: [{ email: dto.email.toLowerCase() }, { username }] }
+      where: { OR: [{ email: dto.email.toLowerCase() }, { username }] },
     });
 
     if (existing) {
@@ -46,18 +44,20 @@ export class AuthService {
         username,
         displayName: dto.displayName || username,
         passwordHash,
-        locale
-      }
+        locale,
+      },
     });
 
     const verification = await this.createVerificationToken(user.id);
-    this.deliverVerificationEmail(this.email.sendVerificationEmail(user.email, verification.token, locale));
+    this.deliverVerificationEmail(
+      this.email.sendVerificationEmail(user.email, verification.token, locale),
+    );
 
     // The token only ever travels by email: returning it would let anyone verify an address they do not own.
     return {
       verificationRequired: true,
       email: user.email,
-      message: this.i18n.t(locale, 'auth.register.checkInbox')
+      message: this.i18n.t(locale, 'auth.register.checkInbox'),
     };
   }
 
@@ -68,11 +68,15 @@ export class AuthService {
   async resendVerification(email: string, locale: Locale = 'en') {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      select: { id: true, email: true, emailVerifiedAt: true, locale: true }
+      select: { id: true, email: true, emailVerifiedAt: true, locale: true },
     });
     if (user && !user.emailVerifiedAt) {
       this.deliverVerificationEmail(
-        this.reissueVerificationEmail(user.id, user.email, this.i18n.resolveUserLocale(user.locale))
+        this.reissueVerificationEmail(
+          user.id,
+          user.email,
+          this.i18n.resolveUserLocale(user.locale),
+        ),
       );
     }
     return { ok: true, message: this.i18n.t(locale, 'auth.resendVerification.ok') };
@@ -80,7 +84,7 @@ export class AuthService {
 
   async login(dto: LoginDto, userAgent?: string) {
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() }
+      where: { email: dto.email.toLowerCase() },
     });
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
@@ -100,7 +104,7 @@ export class AuthService {
       return {
         twoFactorRequired: true,
         challengeToken: await this.twoFactorChallenges.issue(user.id),
-        expiresIn: TWO_FACTOR_CHALLENGE_TTL_SECONDS
+        expiresIn: TWO_FACTOR_CHALLENGE_TTL_SECONDS,
       };
     }
 
@@ -111,10 +115,10 @@ export class AuthService {
     const candidates = await this.prisma.emailVerificationToken.findMany({
       where: {
         usedAt: null,
-        expiresAt: { gt: new Date() }
+        expiresAt: { gt: new Date() },
       },
       include: { user: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
     for (const candidate of candidates) {
@@ -125,12 +129,12 @@ export class AuthService {
       await this.prisma.$transaction([
         this.prisma.emailVerificationToken.update({
           where: { id: candidate.id },
-          data: { usedAt: new Date() }
+          data: { usedAt: new Date() },
         }),
         this.prisma.user.update({
           where: { id: candidate.userId },
-          data: { emailVerifiedAt: new Date() }
-        })
+          data: { emailVerifiedAt: new Date() },
+        }),
       ]);
 
       return this.createSession(candidate.userId, userAgent);
@@ -142,7 +146,7 @@ export class AuthService {
   async logoutUser(userId: string) {
     await this.prisma.session.updateMany({
       where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() }
+      data: { revokedAt: new Date() },
     });
     return { ok: true };
   }
@@ -160,8 +164,8 @@ export class AuthService {
         locale: true,
         status: true,
         emailVerifiedAt: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
     return { user };
   }
@@ -170,10 +174,10 @@ export class AuthService {
     const sessions = await this.prisma.session.findMany({
       where: {
         revokedAt: null,
-        expiresAt: { gt: new Date() }
+        expiresAt: { gt: new Date() },
       },
       include: { user: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
     for (const session of sessions) {
@@ -191,8 +195,8 @@ export class AuthService {
           refreshHash,
           userAgent,
           expiresAt,
-          lastActiveAt: new Date()
-        }
+          lastActiveAt: new Date(),
+        },
       });
 
       return {
@@ -210,8 +214,8 @@ export class AuthService {
           locale: session.user.locale,
           status: session.user.status,
           emailVerifiedAt: session.user.emailVerifiedAt,
-          createdAt: session.user.createdAt
-        }
+          createdAt: session.user.createdAt,
+        },
       };
     }
 
@@ -228,8 +232,8 @@ export class AuthService {
         userId,
         refreshHash,
         userAgent,
-        expiresAt
-      }
+        expiresAt,
+      },
     });
 
     return {
@@ -237,14 +241,14 @@ export class AuthService {
       refreshToken,
       tokenType: 'Bearer',
       expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
-      ...(await this.getMe(userId))
+      ...(await this.getMe(userId)),
     };
   }
 
   private signAccessToken(userId: string, sessionId: string) {
     return this.jwt.signAsync({
       sub: userId,
-      sid: sessionId
+      sid: sessionId,
     });
   }
 
@@ -254,7 +258,7 @@ export class AuthService {
     delivery.catch((error: unknown) => {
       this.logger.error(
         'Verification email delivery failed',
-        error instanceof Error ? error.stack : undefined
+        error instanceof Error ? error.stack : undefined,
       );
     });
   }
@@ -267,7 +271,7 @@ export class AuthService {
   private async createVerificationToken(userId: string) {
     await this.prisma.emailVerificationToken.updateMany({
       where: { userId, usedAt: null },
-      data: { usedAt: new Date() }
+      data: { usedAt: new Date() },
     });
 
     const token = randomBytes(32).toString('base64url');
@@ -275,8 +279,8 @@ export class AuthService {
       data: {
         userId,
         tokenHash: await bcrypt.hash(token, 12),
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60)
-      }
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      },
     });
     return { token };
   }

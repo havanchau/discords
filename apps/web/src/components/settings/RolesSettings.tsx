@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { ChevronRight, Plus, ShieldCheck, Trash2 } from 'lucide-react';
-import { assetUrl } from '../../api';
-import { accentClass, initials, PERMISSION_VALUES } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Avatar, Badge, Button, IconButton, TextField } from '../ui';
-import { buildMemberPermissionPreview, buildRolePermissionPreview } from '../../utils/permissionPreview';
+import { assetUrl } from '@/api';
+import { accentClass, initials, PERMISSION_VALUES } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Avatar, Badge, Button, IconButton, TextField } from '@/components/ui';
+import {
+  buildMemberPermissionPreview,
+  buildRolePermissionPreview,
+} from '@/utils/permissionPreview';
 import { CheckRow } from './SettingsRows';
 import type { SettingsModalFields } from './types';
-import styles from '../SettingsModal.module.css';
-import { cn } from '../../utils/cn';
+import styles from '@/components/SettingsModal.module.css';
+import { cn } from '@/utils/cn';
 
 type RolesSettingsProps = Pick<
   SettingsModalFields,
@@ -37,7 +40,9 @@ export function RolesSettings({
 
   if (!server) return null;
 
-  const previewRole = server.roles.find((role) => role.id === (previewRoleId ?? server.roles[0]?.id));
+  const previewRole = server.roles.find(
+    (role) => role.id === (previewRoleId ?? server.roles[0]?.id),
+  );
   const previewMember = server.members.find((member) => member.id === previewMemberId);
   const filteredPreviewChannels = server.channels.filter((channel) =>
     channel.name.toLowerCase().includes(previewChannelFilter.trim().toLowerCase()),
@@ -56,14 +61,16 @@ export function RolesSettings({
 
   return (
     <div className={cn(styles.settingsForm, styles.rolesShell)}>
-      <form className={styles.roleCreateForm} onSubmit={createRole}>
+      <form className={styles.roleCreateForm} onSubmit={(event) => void createRole(event)}>
         <div className={styles.roleCreateHeader}>
           <span className={styles.roleCreateIcon}>
             <Plus size={18} aria-hidden="true" />
           </span>
           <div>
             <strong>{t('roles.create.title')}</strong>
-            <span>{t('roles.create.permissionsAvailable', { count: PERMISSION_VALUES.length })}</span>
+            <span>
+              {t('roles.create.permissionsAvailable', { count: PERMISSION_VALUES.length })}
+            </span>
           </div>
         </div>
         <div className={styles.roleCreateFields}>
@@ -74,7 +81,12 @@ export function RolesSettings({
             maxLength={50}
             required
           />
-          <TextField label={t('roles.field.color')} name="color" placeholder="#5865F2" maxLength={24} />
+          <TextField
+            label={t('roles.field.color')}
+            name="color"
+            placeholder="#5865F2"
+            maxLength={24}
+          />
         </div>
         <div className={cn(styles.permissionGrid, styles.rolePermissionPalette)}>
           {PERMISSION_VALUES.map((permission) => (
@@ -102,18 +114,31 @@ export function RolesSettings({
         <div className={styles.permissionPreviewControls}>
           <label>
             {t('roles.preview.role')}
-            <select value={previewRole?.id ?? ''} onChange={(event) => { setPreviewMemberId(null); setPreviewRoleId(event.target.value); }}>
+            <select
+              value={previewRole?.id ?? ''}
+              onChange={(event) => {
+                setPreviewMemberId(null);
+                setPreviewRoleId(event.target.value);
+              }}
+            >
               {server.roles.map((role) => (
-                <option key={role.id} value={role.id}>{role.name}</option>
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
               ))}
             </select>
           </label>
           <label>
             {t('roles.preview.member')}
-            <select value={previewMemberId ?? ''} onChange={(event) => setPreviewMemberId(event.target.value || null)}>
+            <select
+              value={previewMemberId ?? ''}
+              onChange={(event) => setPreviewMemberId(event.target.value || null)}
+            >
               <option value="">{t('roles.preview.roleOnly')}</option>
               {members.map((member) => (
-                <option key={member.id} value={member.id}>{member.user.displayName}</option>
+                <option key={member.id} value={member.id}>
+                  {member.user.displayName}
+                </option>
               ))}
             </select>
           </label>
@@ -124,16 +149,28 @@ export function RolesSettings({
             placeholder={t('roles.preview.filterPlaceholder')}
           />
         </div>
-        <div className={styles.permissionPreviewGrid} role="table" aria-label={t('roles.preview.tableLabel')}>
+        <div
+          className={styles.permissionPreviewGrid}
+          role="table"
+          aria-label={t('roles.preview.tableLabel')}
+        >
           {previewRows.map((row) => (
             <div className={styles.permissionPreviewRow} key={row.channel.id} role="row">
               <strong role="cell">#{row.channel.name}</strong>
-              <span className={row.canView ? styles.permissionAllowed : styles.permissionDenied} role="cell">
+              <span
+                className={row.canView ? styles.permissionAllowed : styles.permissionDenied}
+                role="cell"
+              >
                 {row.canView ? t('roles.preview.canView') : t('roles.preview.hidden')}
               </span>
               <div role="cell">
                 {row.actions.slice(0, 6).map((action) => (
-                  <small key={action.value} className={action.allowed ? styles.permissionChipAllowed : styles.permissionChipDenied}>
+                  <small
+                    key={action.value}
+                    className={
+                      action.allowed ? styles.permissionChipAllowed : styles.permissionChipDenied
+                    }
+                  >
                     {action.label}
                   </small>
                 ))}
@@ -198,7 +235,9 @@ export function RolesSettings({
                     })}
                     checked={role.permissions.includes(permission)}
                     disabled={isEveryone || pendingAction === `role-${role.id}`}
-                    onCheckedChange={(checked) => void toggleRolePermission(role, permission, checked)}
+                    onCheckedChange={(checked) =>
+                      void toggleRolePermission(role, permission, checked)
+                    }
                   >
                     <span>{t(`permission.${permission}`)}</span>
                   </CheckRow>
@@ -216,7 +255,9 @@ export function RolesSettings({
         </div>
         <div className={styles.memberRoleEntryList}>
           {members.map((member) => {
-            const memberRoles = member.roles?.map(({ role }) => role).filter((role) => role.name !== '@everyone') ?? [];
+            const memberRoles =
+              member.roles?.map(({ role }) => role).filter((role) => role.name !== '@everyone') ??
+              [];
             const topRole = memberRoles.find((role) => role.color) ?? memberRoles[0];
             const isSelected = selectedMember?.id === member.id;
 
@@ -239,14 +280,22 @@ export function RolesSettings({
                     <strong style={topRole?.color ? { color: topRole.color } : undefined}>
                       {member.user.displayName}
                     </strong>
-                    <span>{member.kind === 'OWNER' ? t('roles.owner') : member.user.status || t('roles.member')}</span>
+                    <span>
+                      {member.kind === 'OWNER'
+                        ? t('roles.owner')
+                        : member.user.status || t('roles.member')}
+                    </span>
                   </div>
                 </div>
                 <div className={styles.memberRoleEntryMeta}>
                   <div className={styles.memberRoleChipRow}>
                     {memberRoles.length ? (
                       memberRoles.slice(0, 3).map((role) => (
-                        <small key={role.id} className={styles.memberRoleChip} style={role.color ? { color: role.color } : undefined}>
+                        <small
+                          key={role.id}
+                          className={styles.memberRoleChip}
+                          style={role.color ? { color: role.color } : undefined}
+                        >
                           {role.name}
                         </small>
                       ))

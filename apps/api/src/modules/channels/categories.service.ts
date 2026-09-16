@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 

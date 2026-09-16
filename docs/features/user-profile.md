@@ -83,11 +83,11 @@ Migration `20260916002000_add_user_profile_fields`. All columns are additive and
 
 ### API
 
-| Method | Path | Body | Response | Rate limit |
-| --- | --- | --- | --- | --- |
-| `PATCH` | `/users/me` | existing fields plus `bannerUrl?`, `pronouns?`, `customStatusText?`, `customStatusEmoji?`, `customStatusExpiresAt?` | `{ user }` with the new fields | 20/min |
-| `GET` | `/users/:userId/profile?serverId=` | — | `{ profile }` | default |
-| `PATCH` | `/servers/:serverId/members/me` | existing `nickname?` plus `avatarUrl?` | `{ member }` | 20/min |
+| Method  | Path                               | Body                                                                                                                | Response                       | Rate limit |
+| ------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------- |
+| `PATCH` | `/users/me`                        | existing fields plus `bannerUrl?`, `pronouns?`, `customStatusText?`, `customStatusEmoji?`, `customStatusExpiresAt?` | `{ user }` with the new fields | 20/min     |
+| `GET`   | `/users/:userId/profile?serverId=` | —                                                                                                                   | `{ profile }`                  | default    |
+| `PATCH` | `/servers/:serverId/members/me`    | existing `nickname?` plus `avatarUrl?`                                                                              | `{ member }`                   | 20/min     |
 
 `GET /users/:userId/profile` response:
 
@@ -152,7 +152,7 @@ identity is the right one there.
 Written back after implementation, so the doc matches the code:
 
 - No shared-package types were added; the API cannot import `@discord-clone/shared`, and only the web client needs these shapes.
-- The profile card is not wired into the direct-message *list* rows, only the conversation header: a row is a conversation, not a person, and a group row has no single profile to open.
+- The profile card is not wired into the direct-message _list_ rows, only the conversation header: a row is a conversation, not a person, and a group row has no single profile to open.
 - `presence:update` and `server:member-updated` became partial payloads. Both already had listeners that replaced fields wholesale, which would have cleared unrelated state; the listeners now merge.
 - `PATCH /users/me` gained a 20/min rate limit, which it did not have before.
 - Custom-status expiry is a preset list rather than a free timestamp, so the client never sends a value the server would reject.

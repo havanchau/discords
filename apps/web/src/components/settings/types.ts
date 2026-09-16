@@ -10,10 +10,10 @@ import type {
   ServerBanEntry,
   ServerDetail,
   ServerEmoji,
-} from '../../api';
-import type { ActiveDialog } from '../ChatPanel';
+} from '@/api';
+import type { ActiveDialog } from '@/components/ChatPanel';
 
-import type { UiTheme } from '../../contexts/appContexts';
+import type { UiTheme } from '@/contexts/appContexts';
 
 export type { UiTheme };
 

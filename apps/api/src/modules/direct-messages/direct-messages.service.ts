@@ -1,12 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { DirectConversation } from '@discord-clone/shared';
 import type { DirectMessage } from '@discord-clone/shared';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { countDirectUnread } from '../messages/unread-counts';
-import { findBlockBetween } from '../friends/user-blocks';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { countDirectUnread } from '@/modules/messages/unread-counts';
+import { findBlockBetween } from '@/modules/friends/user-blocks';
 import {
   directConversationInclude,
   directMessageInclude,
@@ -186,7 +186,11 @@ export class DirectMessagesService {
     }
   }
 
-  private async emitDirectUnread(recipientIds: string[], conversationId: string, messageId: string) {
+  private async emitDirectUnread(
+    recipientIds: string[],
+    conversationId: string,
+    messageId: string,
+  ) {
     await Promise.all(
       recipientIds.map(async (recipientId) => {
         const count = await this.countUnreadMessages(recipientId, conversationId);

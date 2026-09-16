@@ -1,10 +1,10 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { assetUrl, type AuthState, type ServerDetail } from '../../api';
-import { accentClass, initials } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { resolveMemberIdentity } from '../../utils/memberIdentity';
-import { Avatar, Button, TextField } from '../ui';
-import styles from '../SettingsModal.module.css';
+import { assetUrl, type AuthState, type ServerDetail } from '@/api';
+import { accentClass, initials } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { resolveMemberIdentity } from '@/utils/memberIdentity';
+import { Avatar, Button, TextField } from '@/components/ui';
+import styles from '@/components/SettingsModal.module.css';
 
 interface ServerProfileSectionProps {
   auth: AuthState;

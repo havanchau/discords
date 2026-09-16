@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '@/modules/redis/redis.service';
 import { parseDmCallKey } from './dm-calls.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 

@@ -6,33 +6,34 @@ const ignoredPathParts = ['/dist/', '/build/', '/coverage/', '/node_modules/'];
 const forbiddenPatterns = [
   {
     name: 'forbidden neon cyan',
-    pattern: /#00e5ff|rgba\(\s*0\s*,\s*229\s*,\s*255\s*,/i
+    pattern: /#00e5ff|rgba\(\s*0\s*,\s*229\s*,\s*255\s*,/i,
   },
   {
     name: 'forbidden neon pink',
-    pattern: /#ff1fb8/i
+    pattern: /#ff1fb8/i,
   },
   {
     name: 'forbidden neon green or lime',
-    pattern: /#00ff95|#3cffb0/i
+    pattern: /#00ff95|#3cffb0/i,
   },
   {
     name: 'forbidden neon violet',
-    pattern: /#8f78ff/i
+    pattern: /#8f78ff/i,
   },
   {
     name: 'forbidden neon amber',
-    pattern: /#ffb000/i
+    pattern: /#ffb000/i,
   },
   {
     name: 'panel or shell gradient',
     pattern:
-      /\.(?:app-shell|server-rail|channel-sidebar|workspace-sidebar|chat-panel|chat-area|member-sidebar|sidebar|shell)[\s\S]{0,500}(?:linear-gradient|radial-gradient)\(/i
+      /\.(?:app-shell|server-rail|channel-sidebar|workspace-sidebar|chat-panel|chat-area|member-sidebar|sidebar|shell)[\s\S]{0,500}(?:linear-gradient|radial-gradient)\(/i,
   },
   {
     name: 'colored glow shadow',
-    pattern: /box-shadow\s*:[^;\n]*(?:rgba\(\s*(?!0\s*,\s*0\s*,\s*0)[^)]+\)|#(?:[0-9a-f]{3}){1,2})/i
-  }
+    pattern:
+      /box-shadow\s*:[^;\n]*(?:rgba\(\s*(?!0\s*,\s*0\s*,\s*0)[^)]+\)|#(?:[0-9a-f]{3}){1,2})/i,
+  },
 ];
 
 // Component modules may only use semantic tokens (docs/design-rules.md). Checked per declaration,
@@ -40,12 +41,12 @@ const forbiddenPatterns = [
 const componentModuleRules = [
   {
     name: 'colour literal in component module',
-    pattern: /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(|:\s*(?:white|black)\b|\s(?:white|black)\s*;/i
+    pattern: /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(|:\s*(?:white|black)\b|\s(?:white|black)\s*;/i,
   },
   {
     name: 'font-size literal in component module',
-    pattern: /(?:^|[;{\s])font-size\s*:(?!\s*var\()[^;]+/i
-  }
+    pattern: /(?:^|[;{\s])font-size\s*:(?!\s*var\()[^;]+/i,
+  },
 ];
 
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
@@ -71,7 +72,7 @@ for (const file of files) {
       file,
       line: lineForIndex(text, match.index),
       rule: rule.name,
-      sample: firstLine(match[0])
+      sample: firstLine(match[0]),
     });
   }
 }
@@ -88,7 +89,9 @@ console.log(`Scanned ${files.length} UI source files. No forbidden UI patterns f
 
 function scanComponentModule(file, text) {
   // Keep line positions stable while removing comment content.
-  const withoutComments = text.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  const withoutComments = text.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+    comment.replace(/[^\n]/g, ' '),
+  );
   const lines = withoutComments.split(/\r?\n/);
   lines.forEach((line, index) => {
     // Local custom properties (e.g. `--avatar-initials-size: 16px`) are the sanctioned place for

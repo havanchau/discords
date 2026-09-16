@@ -1,7 +1,7 @@
 import { Loader2, Plus, UserPlus } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, DialogContent, DialogRoot, TextField } from '../ui';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, DialogContent, DialogRoot, TextField } from '@/components/ui';
 import styles from './WorkspaceDialogs.module.css';
 import type { ChannelCreateType, ServerAction } from './types';
 
@@ -58,7 +58,10 @@ export function WorkspaceDialogs({
 
   return (
     <>
-      <DialogRoot open={Boolean(serverAction)} onOpenChange={(open) => !open && setServerAction(null)}>
+      <DialogRoot
+        open={Boolean(serverAction)}
+        onOpenChange={(open) => !open && setServerAction(null)}
+      >
         <DialogContent
           title={serverAction === 'join' ? t('server.dialog.join') : t('server.dialog.create')}
         >
@@ -82,7 +85,7 @@ export function WorkspaceDialogs({
           </div>
 
           {serverAction === 'join' ? (
-            <form onSubmit={submitJoinInvite} className={styles.form}>
+            <form onSubmit={(event) => void submitJoinInvite(event)} className={styles.form}>
               <TextField
                 name="code"
                 label={t('server.field.inviteCode')}
@@ -103,7 +106,7 @@ export function WorkspaceDialogs({
               </Button>
             </form>
           ) : (
-            <form onSubmit={submitCreateServer} className={styles.form}>
+            <form onSubmit={(event) => void submitCreateServer(event)} className={styles.form}>
               <TextField
                 name="name"
                 label={t('server.field.name')}
@@ -143,9 +146,11 @@ export function WorkspaceDialogs({
               : t('channel.dialog.createText')
           }
         >
-          <form onSubmit={submitCreateChannel} className={styles.form}>
+          <form onSubmit={(event) => void submitCreateChannel(event)} className={styles.form}>
             <TextField
-              data-testid={channelCreateType === 'VOICE' ? 'create-voice-input' : 'create-channel-input'}
+              data-testid={
+                channelCreateType === 'VOICE' ? 'create-voice-input' : 'create-channel-input'
+              }
               name="name"
               label={t('channel.field.name')}
               placeholder={
@@ -162,7 +167,9 @@ export function WorkspaceDialogs({
             <Button
               type="submit"
               fullWidth
-              data-testid={channelCreateType === 'VOICE' ? 'create-voice-button' : 'create-channel-button'}
+              data-testid={
+                channelCreateType === 'VOICE' ? 'create-voice-button' : 'create-channel-button'
+              }
               disabled={pendingAction === 'create-channel'}
             >
               {pendingAction === 'create-channel' ? (
@@ -177,7 +184,7 @@ export function WorkspaceDialogs({
 
       <DialogRoot open={isCreateCategoryOpen} onOpenChange={setIsCreateCategoryOpen}>
         <DialogContent title={t('category.dialog.create')}>
-          <form onSubmit={submitCreateCategory} className={styles.form}>
+          <form onSubmit={(event) => void submitCreateCategory(event)} className={styles.form}>
             <TextField
               name="name"
               label={t('category.field.name')}

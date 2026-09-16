@@ -1,8 +1,9 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { apiRequest, AuthState, Channel, ChannelCategory, ServerDetail } from '../api';
-import { ActiveDialog } from '../components/chat/types';
-import { useTranslation } from '../i18n/LocaleProvider';
-import { useWorkspaceStore } from '../query/useWorkspaceStore';
+import { apiRequest, AuthState, Channel, ChannelCategory, ServerDetail } from '@/api';
+import { ActiveDialog } from '@/components/chat/types';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useWorkspaceStore } from '@/query/useWorkspaceStore';
+import { formText } from '@/utils/formText';
 
 interface UseWorkspaceNavigationProps {
   auth: AuthState | null;
@@ -53,8 +54,9 @@ export function useWorkspaceNavigation({
   } = store;
 
   const openServer = useCallback(
-    async (serverId: string) => {
+    (serverId: string) => {
       openServerById(serverId);
+      return Promise.resolve();
     },
     [openServerById],
   );
@@ -97,8 +99,8 @@ export function useWorkspaceNavigation({
       event.preventDefault();
       if (!auth) return;
       const formData = new FormData(event.currentTarget);
-      const name = String(formData.get('name') ?? '').trim();
-      const description = String(formData.get('description') ?? '').trim();
+      const name = formText(formData, 'name').trim();
+      const description = formText(formData, 'description').trim();
       if (!name) return;
       setPendingAction('create-server');
       setWorkspaceError(null);
@@ -113,7 +115,9 @@ export function useWorkspaceNavigation({
         setActiveDialog(null);
         setWorkspaceNotice(`Created server ${data.server.name}`);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-server'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-create-server'),
+        );
       } finally {
         setPendingAction(null);
       }
@@ -134,7 +138,7 @@ export function useWorkspaceNavigation({
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const formData = new FormData(event.currentTarget);
-      const code = String(formData.get('code') ?? '').trim();
+      const code = formText(formData, 'code').trim();
       if (!code) return;
       await joinServerByInvite(code);
     },
@@ -146,9 +150,9 @@ export function useWorkspaceNavigation({
       event.preventDefault();
       if (!auth || !server) return;
       const formData = new FormData(event.currentTarget);
-      const name = String(formData.get('name') ?? '').trim();
+      const name = formText(formData, 'name').trim();
       const type = (formData.get('type') ?? 'TEXT') as 'TEXT' | 'VOICE';
-      const categoryId = String(formData.get('categoryId') ?? '') || undefined;
+      const categoryId = formText(formData, 'categoryId') || undefined;
       if (!name) return;
       setPendingAction('create-channel');
       setWorkspaceError(null);
@@ -165,19 +169,30 @@ export function useWorkspaceNavigation({
         selectChannel(data.channel);
         setActiveDialog(null);
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-channel'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-create-channel'),
+        );
       } finally {
         setPendingAction(null);
       }
     },
-    [auth, server, patchServer, selectChannel, setActiveDialog, setPendingAction, setWorkspaceError, t],
+    [
+      auth,
+      server,
+      patchServer,
+      selectChannel,
+      setActiveDialog,
+      setPendingAction,
+      setWorkspaceError,
+      t,
+    ],
   );
 
   const createCategory = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!auth || !server) return false;
-      const name = String(new FormData(event.currentTarget).get('name') ?? '').trim();
+      const name = formText(new FormData(event.currentTarget), 'name').trim();
       if (!name) return false;
       setPendingAction('create-category');
       setWorkspaceError(null);
@@ -194,7 +209,9 @@ export function useWorkspaceNavigation({
         );
         return true;
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-create-category'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-create-category'),
+        );
         return false;
       } finally {
         setPendingAction(null);
@@ -222,7 +239,9 @@ export function useWorkspaceNavigation({
         }));
         return true;
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-update-category'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-update-category'),
+        );
         return false;
       } finally {
         setPendingAction(null);
@@ -247,7 +266,9 @@ export function useWorkspaceNavigation({
         }));
         return true;
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-delete-category'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-delete-category'),
+        );
         return false;
       } finally {
         setPendingAction(null);

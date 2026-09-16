@@ -16,11 +16,13 @@ function readDrafts(storageKey: string): DraftMap {
   try {
     const value = window.localStorage.getItem(storageKey);
     if (!value) return {};
-    const parsed = JSON.parse(value);
+    const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     return Object.fromEntries(
-      Object.entries(parsed).filter(([, draft]) => typeof draft === 'string'),
-    ) as DraftMap;
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
+    );
   } catch {
     return {};
   }
@@ -74,7 +76,7 @@ export function usePersistentDrafts({ storageKey }: UsePersistentDraftsOptions) 
   return useMemo(
     () => ({
       drafts,
-      getDraft: (draftKey: string | null | undefined) => (draftKey ? drafts[draftKey] ?? '' : ''),
+      getDraft: (draftKey: string | null | undefined) => (draftKey ? (drafts[draftKey] ?? '') : ''),
       updateDraft,
       clearDraft,
     }),

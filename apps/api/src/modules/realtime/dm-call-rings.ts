@@ -1,4 +1,4 @@
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '@/modules/redis/redis.service';
 
 export type DmCallMode = 'voice' | 'video';
 

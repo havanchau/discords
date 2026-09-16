@@ -1,5 +1,5 @@
-import type { AuthState } from '../api';
-import type { HomePanelProps } from '../components/home/types';
+import type { AuthState } from '@/api';
+import type { HomePanelProps } from '@/components/home/types';
 import { useDirectMessageActions } from './useDirectMessageActions';
 import { useDirectMessages } from './useDirectMessages';
 import { useGroupConversations } from './useGroupConversations';

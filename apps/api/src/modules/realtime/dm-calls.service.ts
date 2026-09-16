@@ -1,8 +1,8 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { findBlockBetween } from '../friends/user-blocks';
-import { NotificationsService } from '../notifications/notifications.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import { findBlockBetween } from '@/modules/friends/user-blocks';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RedisService } from '@/modules/redis/redis.service';
 import { DmCallMode, DmCallRing, DmCallRings } from './dm-call-rings';
 import { RealtimePublisher } from './realtime-publisher.service';
 

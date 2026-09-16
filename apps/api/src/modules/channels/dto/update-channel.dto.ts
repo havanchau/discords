@@ -1,5 +1,14 @@
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
-import { SLOWMODE_OPTIONS_SECONDS } from '../../messages/slowmode';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
+import { SLOWMODE_OPTIONS_SECONDS } from '@/modules/messages/slowmode';
 
 export class UpdateChannelDto {
   @IsOptional()

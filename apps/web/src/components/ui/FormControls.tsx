@@ -5,7 +5,7 @@ import {
   type ReactNode,
   type TextareaHTMLAttributes,
 } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './FormControls.module.css';
 
 type FieldShellProps = {
@@ -26,7 +26,11 @@ function FieldShell({ id, label, hint, error, className, children }: FieldShellP
         </label>
       ) : null}
       {children}
-      {error ? <span className={styles.error}>{error}</span> : hint ? <span className={styles.hint}>{hint}</span> : null}
+      {error ? (
+        <span className={styles.error}>{error}</span>
+      ) : hint ? (
+        <span className={styles.hint}>{hint}</span>
+      ) : null}
     </div>
   );
 }
@@ -86,12 +90,21 @@ export type TextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
 };
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ className, fieldClassName, id, label, hint, error, 'aria-invalid': ariaInvalid, ...props }, ref) => {
+  (
+    { className, fieldClassName, id, label, hint, error, 'aria-invalid': ariaInvalid, ...props },
+    ref,
+  ) => {
     const generatedId = useId();
     const textareaId = id ?? (label ? generatedId : undefined);
 
     return (
-      <FieldShell id={textareaId} label={label} hint={hint} error={error} className={fieldClassName}>
+      <FieldShell
+        id={textareaId}
+        label={label}
+        hint={hint}
+        error={error}
+        className={fieldClassName}
+      >
         <textarea
           ref={ref}
           id={textareaId}

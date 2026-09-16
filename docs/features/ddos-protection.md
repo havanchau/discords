@@ -58,15 +58,15 @@ Gaps:
 
 ### Limits (defaults)
 
-| Layer | Key | Limit | On exceed |
-|---|---|---|---|
-| Global HTTP middleware (new) | IP | `600 req / 60s` (`RATE_LIMIT_GLOBAL_PER_MINUTE`) | `429` + `Retry-After`, before body parsing |
-| Route guard (existing) | prefix + IP + method + route | unchanged (default `120 / 60s`) | `429` + `Retry-After` (header is new) |
-| Socket connect (new) | IP | `30 handshakes / 60s` | handshake rejected |
-| Socket concurrent (new) | IP | `50` open sockets (`SOCKET_MAX_CONNECTIONS_PER_IP`) | handshake rejected |
-| Socket all events (new) | user | `300 events / 60s` | socket disconnected |
-| Socket per event (existing) | **user** + event (was socket id) | unchanged | error ack (unchanged) |
-| Socket payload (new) | — | `maxHttpBufferSize` `256kb` | Socket.IO closes the connection |
+| Layer                        | Key                              | Limit                                               | On exceed                                  |
+| ---------------------------- | -------------------------------- | --------------------------------------------------- | ------------------------------------------ |
+| Global HTTP middleware (new) | IP                               | `600 req / 60s` (`RATE_LIMIT_GLOBAL_PER_MINUTE`)    | `429` + `Retry-After`, before body parsing |
+| Route guard (existing)       | prefix + IP + method + route     | unchanged (default `120 / 60s`)                     | `429` + `Retry-After` (header is new)      |
+| Socket connect (new)         | IP                               | `30 handshakes / 60s`                               | handshake rejected                         |
+| Socket concurrent (new)      | IP                               | `50` open sockets (`SOCKET_MAX_CONNECTIONS_PER_IP`) | handshake rejected                         |
+| Socket all events (new)      | user                             | `300 events / 60s`                                  | socket disconnected                        |
+| Socket per event (existing)  | **user** + event (was socket id) | unchanged                                           | error ack (unchanged)                      |
+| Socket payload (new)         | —                                | `maxHttpBufferSize` `256kb`                         | Socket.IO closes the connection            |
 
 `600/min` global and `50` sockets per IP are deliberately generous so a whole office behind one NAT is not blocked; the per-route limits stay the precise control.
 

@@ -1,5 +1,5 @@
-import { apiRequest, AuthState, DirectConversation } from '../api';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { apiRequest, AuthState, DirectConversation } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseGroupConversationsOptions {
   auth: AuthState | null;

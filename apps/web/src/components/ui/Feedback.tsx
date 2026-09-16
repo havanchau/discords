@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './Feedback.module.css';
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
@@ -13,7 +13,7 @@ export function Badge({ className, variant = 'danger', ...props }: BadgeProps) {
         styles.badge,
         variant === 'neutral' && styles.badgeNeutral,
         variant === 'success' && styles.badgeSuccess,
-        className
+        className,
       )}
       {...props}
     />
@@ -39,7 +39,7 @@ export function Banner({ className, variant = 'info', children, ...props }: Bann
         variant === 'info' && styles.bannerInfo,
         variant === 'success' && styles.bannerSuccess,
         variant === 'danger' && styles.bannerDanger,
-        className
+        className,
       )}
       role={variant === 'danger' ? 'alert' : 'status'}
       {...props}

@@ -6,9 +6,9 @@ import type {
   FriendEntry,
   FriendRequestEntry,
   FriendsSummary,
-} from '../../api';
-import type { ActiveCallSummary, CallState, RemoteMedia } from '../../helpers';
-import type { DirectCallMode, OutgoingDirectCall } from '../../hooks/useDirectCall';
+} from '@/api';
+import type { ActiveCallSummary, CallState, RemoteMedia } from '@/helpers';
+import type { DirectCallMode, OutgoingDirectCall } from '@/hooks/useDirectCall';
 
 export interface HomePanelState {
   auth: AuthState;

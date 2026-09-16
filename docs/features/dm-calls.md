@@ -37,13 +37,13 @@ A DM call uses the key `dm:<conversationId>` wherever the gateway and client cur
 
 ### Ringing protocol
 
-| Direction | Event | Payload |
-| --- | --- | --- |
-| client → server | `dm:call:ring` | `{ conversationId, mode: 'voice' \| 'video' }` |
-| server → recipients' user rooms | `dm:call:incoming` | `{ conversationId, mode, caller: { id, displayName, avatarUrl } }` |
-| client → server | `dm:call:decline` | `{ conversationId }` |
-| server → caller's user room | `dm:call:declined` | `{ conversationId, userId }` |
-| client → server | `dm:call:cancel` | `{ conversationId }` |
+| Direction                        | Event                  | Payload                                                                                    |
+| -------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| client → server                  | `dm:call:ring`         | `{ conversationId, mode: 'voice' \| 'video' }`                                             |
+| server → recipients' user rooms  | `dm:call:incoming`     | `{ conversationId, mode, caller: { id, displayName, avatarUrl } }`                         |
+| client → server                  | `dm:call:decline`      | `{ conversationId }`                                                                       |
+| server → caller's user room      | `dm:call:declined`     | `{ conversationId, userId }`                                                               |
+| client → server                  | `dm:call:cancel`       | `{ conversationId }`                                                                       |
 | server → all members' user rooms | `dm:call:ring-stopped` | `{ conversationId, reason: 'answered' \| 'declined' \| 'cancelled' \| 'missed', userId? }` |
 
 Rules:

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { countChannelUnread } from '../messages/unread-counts';
+import { PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { countChannelUnread } from '@/modules/messages/unread-counts';
 
 export interface UnreadRecipient {
   userId: string;

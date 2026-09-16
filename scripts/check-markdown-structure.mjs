@@ -64,7 +64,6 @@ function checkFirstHeading(file, lines) {
   }
 }
 
-
 function checkHeadingHierarchy(file, lines) {
   let h1Count = 0;
   let previousLevel = 0;

@@ -1,13 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { UserPlus } from 'lucide-react';
-import type {
-  DirectConversation,
-  FriendEntry,
-  FriendRequestEntry,
-  FriendsSummary,
-} from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, TextField } from '../ui';
+import type { DirectConversation, FriendEntry, FriendRequestEntry, FriendsSummary } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, TextField } from '@/components/ui';
 import { BlockedUsersList } from './BlockedUsersList';
 import { CreateGroupDialog } from './CreateGroupDialog';
 import { ConversationList } from './ConversationList';
@@ -60,7 +55,7 @@ export function HomeSidebar({
         <strong className={styles.sidebarTitle}>{t('home.title')}</strong>
         <span className={styles.sidebarKicker}>{t('home.kicker')}</span>
       </header>
-      <form className={styles.addFriendForm} onSubmit={onRequestFriend}>
+      <form className={styles.addFriendForm} onSubmit={(event) => void onRequestFriend(event)}>
         <TextField
           className={styles.addFriendInput}
           name="usernameOrEmail"

@@ -1,11 +1,11 @@
 import { Loader2, Monitor } from 'lucide-react';
-import type { AuthState } from '../../api';
-import { useSessions } from '../../hooks/useSessions';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { describeUserAgent } from '../../utils/userAgent';
-import { Badge, Button } from '../ui';
-import styles from '../SettingsModal.module.css';
+import type { AuthState } from '@/api';
+import { useSessions } from '@/hooks/useSessions';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { describeUserAgent } from '@/utils/userAgent';
+import { Badge, Button } from '@/components/ui';
+import styles from '@/components/SettingsModal.module.css';
 
 interface SessionsSettingsProps {
   auth: AuthState;
@@ -41,9 +41,13 @@ export function SessionsSettings({ auth, onCurrentSessionRevoked }: SessionsSett
               <div>
                 <strong>
                   <Monitor size={14} aria-hidden="true" /> {describeUserAgent(session.userAgent)}{' '}
-                  {session.current ? <Badge variant="success">{t('devices.thisDevice')}</Badge> : null}
+                  {session.current ? (
+                    <Badge variant="success">{t('devices.thisDevice')}</Badge>
+                  ) : null}
                 </strong>
-                <small>{t('devices.lastActive', { date: dates.absolute(session.lastActiveAt) })}</small>
+                <small>
+                  {t('devices.lastActive', { date: dates.absolute(session.lastActiveAt) })}
+                </small>
               </div>
               <span />
               <Button

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import type { Channel, CreateServerEventInput } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, TextArea, TextField } from '../ui';
-import { SettingsSelect } from '../settings/SettingsSelect';
+import type { Channel, CreateServerEventInput } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, TextArea, TextField } from '@/components/ui';
+import { SettingsSelect } from '@/components/settings/SettingsSelect';
 import styles from './ServerEvents.module.css';
+import { formText } from '@/utils/formText';
 
 interface EventFormProps {
   channels: Channel[];
@@ -24,21 +25,21 @@ export function EventForm({ channels, isSubmitting, onSubmit, onCancel }: EventF
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const startAt = toIsoString(String(form.get('startAt') ?? ''));
+    const startAt = toIsoString(formText(form, 'startAt'));
     if (!startAt) return;
     const created = await onSubmit({
-      name: String(form.get('name') ?? '').trim(),
-      description: String(form.get('description') ?? '').trim() || undefined,
-      location: String(form.get('location') ?? '').trim() || undefined,
+      name: formText(form, 'name').trim(),
+      description: formText(form, 'description').trim() || undefined,
+      location: formText(form, 'location').trim() || undefined,
       channelId: channelId || undefined,
       startAt,
-      endAt: toIsoString(String(form.get('endAt') ?? '')),
+      endAt: toIsoString(formText(form, 'endAt')),
     });
     if (created) onCancel();
   }
 
   return (
-    <form className={styles.form} onSubmit={submit}>
+    <form className={styles.form} onSubmit={(event) => void submit(event)}>
       <TextField label={t('events.field.name')} name="name" required maxLength={100} />
       <div className={styles.formGrid}>
         <TextField label={t('events.field.starts')} name="startAt" type="datetime-local" required />

@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import {
   directMessageInclude,
   findFormattedDirectMessage,

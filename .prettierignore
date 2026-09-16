@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+package-lock.json
+artifacts/
+docs/screenshots/
+apps/api/prisma/migrations/
+.vercel/
+.claude/settings.local.json

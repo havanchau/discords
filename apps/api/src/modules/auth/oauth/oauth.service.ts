@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
-import { defaultWebOrigin, primaryWebOrigin } from '../../../common/web-origins';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuthService } from '../auth.service';
+import { defaultWebOrigin, primaryWebOrigin } from '@/common/web-origins';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { AuthService } from '@/modules/auth/auth.service';
 import { OAuthAccountService } from './oauth-account.service';
 import { oauthCredentials, oauthRedirectBaseUrl } from './oauth-config';
 import {

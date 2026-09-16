@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Checkbox, Switch } from '../ui';
-import styles from '../SettingsModal.module.css';
-import { cn } from '../../utils/cn';
+import { Checkbox, Switch } from '@/components/ui';
+import styles from '@/components/SettingsModal.module.css';
+import { cn } from '@/utils/cn';
 
 interface SwitchRowProps {
   title: string;

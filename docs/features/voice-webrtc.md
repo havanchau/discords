@@ -45,9 +45,9 @@ Provide real-time voice channel participation, participant state tracking (mute,
 ## Trade-offs
 
 - **Full Mesh P2P vs SFU Server Architecture**:
-  - *Chosen*: Full Mesh P2P for baseline implementation.
-  - *Rationale*: Zero extra backend media server operational cost or third-party SDK dependencies.
-  - *Cost*: High client bandwidth and CPU usage for voice channels with more than 4-6 active video streams.
+  - _Chosen_: Full Mesh P2P for baseline implementation.
+  - _Rationale_: Zero extra backend media server operational cost or third-party SDK dependencies.
+  - _Cost_: High client bandwidth and CPU usage for voice channels with more than 4-6 active video streams.
 
 ## Risks & Rollback
 

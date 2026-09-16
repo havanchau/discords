@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import type { ChannelCategory } from '../../api';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { Button, DialogContent, DialogRoot, TextField } from '../ui';
+import type { ChannelCategory } from '@/api';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { Button, DialogContent, DialogRoot, TextField } from '@/components/ui';
 import styles from './WorkspaceDialogs.module.css';
+import { formText } from '@/utils/formText';
 
 interface EditCategoryDialogProps {
   category: ChannelCategory | null;
@@ -27,9 +28,9 @@ export function EditCategoryDialog({
     event.preventDefault();
     if (!category) return;
     const form = new FormData(event.currentTarget);
-    const positionValue = String(form.get('position') ?? '').trim();
+    const positionValue = formText(form, 'position').trim();
     const saved = await onSave(category.id, {
-      name: String(form.get('name') ?? '').trim(),
+      name: formText(form, 'name').trim(),
       // An emptied field keeps the current position instead of becoming 0.
       position: positionValue ? Number(positionValue) : category.position,
     });
@@ -56,7 +57,7 @@ export function EditCategoryDialog({
     >
       <DialogContent title={t('category.edit.title')}>
         {category ? (
-          <form key={category.id} onSubmit={submit} className={styles.form}>
+          <form key={category.id} onSubmit={(event) => void submit(event)} className={styles.form}>
             <TextField
               name="name"
               label={t('category.field.name')}

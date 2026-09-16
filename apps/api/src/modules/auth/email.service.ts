@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
-import type { Locale } from '../../common/i18n/locale';
-import { defaultWebOrigin, primaryWebOrigin } from '../../common/web-origins';
-import { I18nService } from '../../common/i18n/i18n.service';
+import type { Locale } from '@/common/i18n/locale';
+import { defaultWebOrigin, primaryWebOrigin } from '@/common/web-origins';
+import { I18nService } from '@/common/i18n/i18n.service';
 
 @Injectable()
 export class EmailService {
@@ -11,7 +11,7 @@ export class EmailService {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
   ) {}
 
   async sendVerificationEmail(email: string, token: string, locale: Locale = 'en') {
@@ -23,7 +23,9 @@ export class EmailService {
       if (this.config.get<string>('NODE_ENV') === 'production') {
         this.logger.warn('Verification email requested but SMTP_HOST is not configured');
       } else {
-        this.logger.warn(`SMTP_HOST is not configured. Development verification link: ${verifyUrl}`);
+        this.logger.warn(
+          `SMTP_HOST is not configured. Development verification link: ${verifyUrl}`,
+        );
       }
       return { sent: false };
     }
@@ -36,8 +38,8 @@ export class EmailService {
       html: this.linkHtml(
         this.i18n.t(locale, 'email.verify.intro'),
         verifyUrl,
-        this.i18n.t(locale, 'email.verify.ignore')
-      )
+        this.i18n.t(locale, 'email.verify.ignore'),
+      ),
     });
 
     return { sent: true };
@@ -52,7 +54,9 @@ export class EmailService {
       if (this.config.get<string>('NODE_ENV') === 'production') {
         this.logger.warn('Password reset requested but SMTP_HOST is not configured');
       } else {
-        this.logger.warn(`SMTP_HOST is not configured. Development password reset link: ${resetUrl}`);
+        this.logger.warn(
+          `SMTP_HOST is not configured. Development password reset link: ${resetUrl}`,
+        );
       }
       return { sent: false };
     }
@@ -65,8 +69,8 @@ export class EmailService {
       html: this.linkHtml(
         this.i18n.t(locale, 'email.reset.intro'),
         resetUrl,
-        this.i18n.t(locale, 'email.reset.ignore')
-      )
+        this.i18n.t(locale, 'email.reset.ignore'),
+      ),
     });
 
     return { sent: true };
@@ -90,9 +94,9 @@ export class EmailService {
       auth: this.config.get<string>('SMTP_USER')
         ? {
             user: this.config.get<string>('SMTP_USER'),
-            pass: this.config.get<string>('SMTP_PASS')
+            pass: this.config.get<string>('SMTP_PASS'),
           }
-        : undefined
+        : undefined,
     });
   }
 }

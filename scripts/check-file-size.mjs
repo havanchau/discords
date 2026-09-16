@@ -11,7 +11,7 @@ const sourceExtensions = new Set([
   '.mjs',
   '.prisma',
   '.ts',
-  '.tsx'
+  '.tsx',
 ]);
 
 const ignoredPathParts = [
@@ -20,7 +20,7 @@ const ignoredPathParts = [
   '/coverage/',
   '/node_modules/',
   '/.prisma/',
-  '/generated/'
+  '/generated/',
 ];
 
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })

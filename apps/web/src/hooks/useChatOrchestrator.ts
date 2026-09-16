@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import { apiRequest, Channel, Message } from '../api';
-import { parseMessageSearchQuery } from '../utils/messageSearch';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { apiRequest, Channel, Message } from '@/api';
+import { parseMessageSearchQuery } from '@/utils/messageSearch';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseChatOrchestratorProps {
   auth: { accessToken: string } | null;
@@ -19,9 +19,9 @@ export function useChatOrchestrator({
   const t = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
-  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<
-    Record<string, Message[]>
-  >({});
+  const [pinnedMessagesByChannel, setPinnedMessagesByChannel] = useState<Record<string, Message[]>>(
+    {},
+  );
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [messageCursor, setMessageCursor] = useState<string | null>(null);
@@ -32,29 +32,26 @@ export function useChatOrchestrator({
   const [typingUsers, setTypingUsers] = useState<{ userId: string; displayName: string }[]>([]);
   const [pinnedMessageIds, setPinnedMessageIds] = useState<Record<string, string[]>>({});
 
-  const loadPinnedMessages = useCallback(
-    async (channelId: string, token: string) => {
-      try {
-        const data = await apiRequest<{ pinnedMessages?: Message[]; messages?: Message[] }>(
-          `/channels/${channelId}/pins`,
-          {},
-          token,
-        );
-        const pinnedList = data.messages ?? data.pinnedMessages ?? [];
-        setPinnedMessagesByChannel((current) => ({
-          ...current,
-          [channelId]: pinnedList,
-        }));
-        setPinnedMessageIds((current) => ({
-          ...current,
-          [channelId]: pinnedList.map((msg) => msg.id),
-        }));
-      } catch {
-        // Ignored for non-essential pin loading
-      }
-    },
-    [],
-  );
+  const loadPinnedMessages = useCallback(async (channelId: string, token: string) => {
+    try {
+      const data = await apiRequest<{ pinnedMessages?: Message[]; messages?: Message[] }>(
+        `/channels/${channelId}/pins`,
+        {},
+        token,
+      );
+      const pinnedList = data.messages ?? data.pinnedMessages ?? [];
+      setPinnedMessagesByChannel((current) => ({
+        ...current,
+        [channelId]: pinnedList,
+      }));
+      setPinnedMessageIds((current) => ({
+        ...current,
+        [channelId]: pinnedList.map((msg) => msg.id),
+      }));
+    } catch {
+      // Ignored for non-essential pin loading
+    }
+  }, []);
 
   const jumpToMessage = useCallback((messageId: string) => {
     const target = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
@@ -82,12 +79,14 @@ export function useChatOrchestrator({
           await loadPinnedMessages(channel.id, auth.accessToken);
         }
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-toggle-pin'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-toggle-pin'),
+        );
       } finally {
         setPendingAction(null);
       }
     },
-    [auth, channel, loadPinnedMessages, setPendingAction, setWorkspaceError],
+    [auth, channel, loadPinnedMessages, setPendingAction, setWorkspaceError, t],
   );
 
   const toggleReaction = useCallback(
@@ -106,10 +105,12 @@ export function useChatOrchestrator({
           current.map((item) => (item.id === messageId ? data.message : item)),
         );
       } catch (err) {
-        setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.cannot-toggle-reaction'));
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-toggle-reaction'),
+        );
       }
     },
-    [auth, setWorkspaceError],
+    [auth, setWorkspaceError, t],
   );
 
   const parsedSearch = useMemo(() => parseMessageSearchQuery(searchQuery), [searchQuery]);

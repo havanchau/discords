@@ -1,9 +1,9 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Permission, PermissionsService } from '../permissions/permissions.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { ServerBanEntry } from '@discord-clone/shared';
-import { RealtimePublisher } from '../realtime/realtime-publisher.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateBanDto } from './dto/create-ban.dto';
 import { TimeoutMemberDto } from './dto/timeout-member.dto';
 

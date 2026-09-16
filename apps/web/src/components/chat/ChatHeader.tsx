@@ -11,9 +11,9 @@ import {
   Unlock,
   Video,
 } from 'lucide-react';
-import { assetUrl, Channel } from '../../api';
-import { CallMode, CallState } from '../../helpers';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { assetUrl, Channel } from '@/api';
+import { CallMode, CallState } from '@/helpers';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   Avatar,
   Button,
@@ -23,9 +23,9 @@ import {
   DropdownMenuTrigger,
   IconButton,
   Tooltip,
-} from '../ui';
+} from '@/components/ui';
 import type { ChatPanelChannelAvatar, ChatPanelPanels } from './types';
-import { useTranslation } from '../../i18n/LocaleProvider';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import styles from './ChatHeader.module.css';
 
 interface ChatHeaderProps {
@@ -82,7 +82,9 @@ export function ChatHeader({
   ];
 
   const isNarrow = useMediaQuery(NARROW_HEADER);
-  const inlineCallActions = isNarrow ? callActions.filter((action) => !action.secondary) : callActions;
+  const inlineCallActions = isNarrow
+    ? callActions.filter((action) => !action.secondary)
+    : callActions;
   const menuCallActions = isNarrow ? callActions.filter((action) => action.secondary) : [];
 
   function togglePanel(panel: 'notifications' | 'media' | 'encryption' | 'search') {
@@ -97,7 +99,7 @@ export function ChatHeader({
           className={styles.fileInput}
           type="file"
           accept="image/*"
-          onChange={channelAvatar.update}
+          onChange={(event) => void channelAvatar.update(event)}
         />
         <Button
           className={styles.channelAvatarButton}
@@ -197,7 +199,9 @@ export function ChatHeader({
               ) : (
                 <Unlock size={16} aria-hidden="true" />
               )}
-              {isChannelEncrypted ? t('chatHeader.encryptionEnabled') : t('chatHeader.setEncryption')}
+              {isChannelEncrypted
+                ? t('chatHeader.encryptionEnabled')
+                : t('chatHeader.setEncryption')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenuRoot>

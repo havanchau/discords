@@ -1,10 +1,10 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Server } from 'socket.io';
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '@/modules/redis/redis.service';
 import { CallRegistryService } from './call-registry.service';
 import { DmCallsService } from './dm-calls.service';
 import { PresenceService } from './presence.service';
-import { SocketUser } from './socket-user';
+import { readSocketUser } from './socket-user';
 
 /** A ring must not outlive its deadline by much, so it is swept far more often than the heartbeat. */
 const RING_SWEEP_INTERVAL_MS = 2_000;
@@ -53,7 +53,7 @@ export class RealtimeHeartbeatService implements OnModuleDestroy {
       const localSockets = [...server.sockets.sockets.values()];
       const socketsByUserId = new Map<string, string[]>();
       localSockets.forEach((socket) => {
-        const user = socket.data.user as SocketUser | undefined;
+        const user = readSocketUser(socket);
         if (!user) return;
         socketsByUserId.set(user.id, [...(socketsByUserId.get(user.id) ?? []), socket.id]);
       });

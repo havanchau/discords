@@ -66,10 +66,10 @@ Migration `20260915004000_add_timeout_and_slowmode`. Adding a column with a defa
 
 ### API
 
-| Method | Path | Body | Response |
-| --- | --- | --- | --- |
-| `PUT` | `/servers/:serverId/members/:memberId/timeout` | `{ durationMinutes }` | `{ member: { id, userId, timeoutUntil } }` |
-| `PATCH` | `/channels/:channelId` | adds `slowmodeSeconds?` | `{ channel }` |
+| Method  | Path                                           | Body                    | Response                                   |
+| ------- | ---------------------------------------------- | ----------------------- | ------------------------------------------ |
+| `PUT`   | `/servers/:serverId/members/:memberId/timeout` | `{ durationMinutes }`   | `{ member: { id, userId, timeoutUntil } }` |
+| `PATCH` | `/channels/:channelId`                         | adds `slowmodeSeconds?` | `{ channel }`                              |
 
 ### Files
 

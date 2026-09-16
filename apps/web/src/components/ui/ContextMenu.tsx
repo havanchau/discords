@@ -1,6 +1,6 @@
 import * as RadixContextMenu from '@radix-ui/react-context-menu';
 import type { ComponentPropsWithoutRef } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './ContextMenu.module.css';
 
 export const ContextMenuRoot = RadixContextMenu.Root;
@@ -22,9 +22,16 @@ export function ContextMenuItem({
   variant,
   ...props
 }: ComponentPropsWithoutRef<typeof RadixContextMenu.Item> & { variant?: 'danger' }) {
-  return <RadixContextMenu.Item className={cn(styles.item, variant === 'danger' && styles.danger, className)} {...props} />;
+  return (
+    <RadixContextMenu.Item
+      className={cn(styles.item, variant === 'danger' && styles.danger, className)}
+      {...props}
+    />
+  );
 }
 
-export function ContextMenuSeparator(props: ComponentPropsWithoutRef<typeof RadixContextMenu.Separator>) {
+export function ContextMenuSeparator(
+  props: ComponentPropsWithoutRef<typeof RadixContextMenu.Separator>,
+) {
   return <RadixContextMenu.Separator className={styles.separator} {...props} />;
 }

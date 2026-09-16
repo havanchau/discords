@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useTranslation, type Translate } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { Button, TextField } from '../ui';
+import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { Button, TextField } from '@/components/ui';
 import { SettingsSelect } from './SettingsSelect';
 import type { SettingsModalFields, SettingsSelectOption } from './types';
-import styles from '../SettingsModal.module.css';
+import styles from '@/components/SettingsModal.module.css';
 
 type TimeoutOption = '1' | '5' | '10' | '60' | '1440' | '10080';
 

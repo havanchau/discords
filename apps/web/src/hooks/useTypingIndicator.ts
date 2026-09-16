@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { Socket } from 'socket.io-client';
-import type { Channel } from '../api';
+import type { Channel } from '@/api';
 
 interface UseTypingIndicatorOptions {
   channel: Channel | null;

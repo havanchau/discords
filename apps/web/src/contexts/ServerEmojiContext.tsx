@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
-import { assetUrl, type ServerEmoji } from '../api';
+import { assetUrl, type ServerEmoji } from '@/api';
 
 interface ServerEmojiContextValue {
   emojis: ServerEmoji[];

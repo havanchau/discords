@@ -21,7 +21,9 @@ export const DEFAULT_REDIS_CONFIG = {
 export function readRedisConfig(config: ConfigService): RedisConfig {
   const url = config.get<string>('REDIS_URL');
   if (!url) {
-    throw new Error('REDIS_URL must be set: realtime presence, calls and rate limits require Redis');
+    throw new Error(
+      'REDIS_URL must be set: realtime presence, calls and rate limits require Redis',
+    );
   }
   if (!/^rediss?:\/\//.test(url)) {
     throw new Error('REDIS_URL must start with redis:// or rediss://');

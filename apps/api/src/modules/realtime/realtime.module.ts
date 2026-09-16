@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { MessagesModule } from '../messages/messages.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { PermissionsModule } from '../permissions/permissions.module';
+import { MessagesModule } from '@/modules/messages/messages.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { PermissionsModule } from '@/modules/permissions/permissions.module';
 import { CallRegistryService } from './call-registry.service';
 import { DmCallsService } from './dm-calls.service';
 import { MessagesGateway } from './messages.gateway';

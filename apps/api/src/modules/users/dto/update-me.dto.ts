@@ -10,7 +10,7 @@ import {
   MaxDate,
   MaxLength,
 } from 'class-validator';
-import { locales } from '../../../common/i18n/locale';
+import { locales } from '@/common/i18n/locale';
 
 /** Uploaded-image URLs only: local `/uploads/<uuid>.<ext>` or a Cloudinary image delivery URL. */
 const UPLOADED_IMAGE_PATTERN =

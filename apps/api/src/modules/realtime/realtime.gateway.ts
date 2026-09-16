@@ -9,17 +9,17 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Server, Socket } from 'socket.io';
-import { defaultWebOrigin, parseWebOrigins } from '../../common/web-origins';
-import { RedisFixedWindowLimiter } from '../../common/redis-fixed-window-limiter';
-import { readLimitsConfig } from '../../common/limits-config';
-import { RedisService } from '../redis/redis.service';
+import { defaultWebOrigin, parseWebOrigins } from '@/common/web-origins';
+import { RedisFixedWindowLimiter } from '@/common/redis-fixed-window-limiter';
+import { readLimitsConfig } from '@/common/limits-config';
+import { RedisService } from '@/modules/redis/redis.service';
 import { CallRegistryService } from './call-registry.service';
 import { PresenceService } from './presence.service';
 import { RealtimeHeartbeatService } from './realtime-heartbeat.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { SocketAuthService } from './socket-auth.service';
-import { SocketUser } from './socket-user';
+import { readSocketUser, setSocketUser } from './socket-user';
 import { SOCKET_MAX_PAYLOAD_BYTES, attachSocketGuards } from './socket-guards';
 
 /**
@@ -70,7 +70,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       this.socketAuth
         .authenticate(socket)
         .then((user) => {
-          socket.data.user = user;
+          setSocketUser(socket, user);
           next();
         })
         .catch(() => next(new Error('Unauthorized')));
@@ -80,7 +80,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   async handleConnection(client: Socket) {
-    const user = client.data.user as SocketUser | undefined;
+    const user = readSocketUser(client);
     if (!user) {
       client.disconnect(true);
       return;
@@ -97,7 +97,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   async handleDisconnect(client: Socket) {
-    const user = client.data.user as SocketUser | undefined;
+    const user = readSocketUser(client);
 
     try {
       await this.calls.leaveAll(client);
@@ -111,9 +111,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   private async joinDirectConversationRooms(client: Socket, userId: string) {
     const conversationIds = await this.access.listConversationIds(userId);
     await Promise.all(
-      conversationIds.map((conversationId) =>
-        client.join(this.publisher.conversationRoom(conversationId)),
-      ),
+      conversationIds.map(async (conversationId) => {
+        await client.join(this.publisher.conversationRoom(conversationId));
+      }),
     );
   }
 }

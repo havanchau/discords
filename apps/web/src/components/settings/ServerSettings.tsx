@@ -1,13 +1,13 @@
 import { Clipboard, Trash2 } from 'lucide-react';
-import { Button, IconButton, TextField } from '../ui';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { memberHasServerPermission } from '../../utils/serverPermissions';
+import { Button, IconButton, TextField } from '@/components/ui';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
 import type { SettingsModalFields } from './types';
-import styles from '../SettingsModal.module.css';
-import { cn } from '../../utils/cn';
+import styles from '@/components/SettingsModal.module.css';
+import { cn } from '@/utils/cn';
 
 type ServerSettingsProps = Pick<
   SettingsModalFields,
@@ -60,8 +60,16 @@ export function ServerSettings({
 
   return (
     <div className={styles.settingsForm}>
-      <form className={styles.settingsSection} onSubmit={updateServerSettings}>
-        <Button type="button" variant="secondary" fullWidth onClick={() => setActiveDialog('roles')}>
+      <form
+        className={styles.settingsSection}
+        onSubmit={(event) => void updateServerSettings(event)}
+      >
+        <Button
+          type="button"
+          variant="secondary"
+          fullWidth
+          onClick={() => setActiveDialog('roles')}
+        >
           {t('serverSettings.manageRoles')}
         </Button>
         <TextField
@@ -93,7 +101,10 @@ export function ServerSettings({
           <strong>{t('invite.section.title')}</strong>
           <span>{t('invite.section.hint')}</span>
         </div>
-        <form className={styles.inviteCreateGrid} onSubmit={createInviteFromSettings}>
+        <form
+          className={styles.inviteCreateGrid}
+          onSubmit={(event) => void createInviteFromSettings(event)}
+        >
           <TextField
             label={t('invite.field.expiresInHours')}
             name="expiresInHours"

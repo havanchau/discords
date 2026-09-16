@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { RateLimit } from '../../common/rate-limit.decorator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RateLimit } from '@/common/rate-limit.decorator';
+import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { LinkPreviewQueryDto } from './dto/link-preview-query.dto';
 import { LinkPreviewsService } from './link-previews.service';
 

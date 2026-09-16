@@ -1,5 +1,5 @@
 import { MessageSquare } from 'lucide-react';
-import type { AuthState, DirectMessage, PublicUser } from '../../api';
+import type { AuthState, DirectMessage, PublicUser } from '@/api';
 import { DirectMessageRow, type DirectMessageRowActions } from './DirectMessageRow';
 import styles from './HomePanel.module.css';
 
@@ -43,7 +43,9 @@ export function DirectMessageTimeline({
       ) : (
         <div className={styles.statePanel}>
           <MessageSquare size={24} aria-hidden="true" />
-          <span className={styles.statePanelCopy}>Start the conversation with {emptyStateName}.</span>
+          <span className={styles.statePanelCopy}>
+            Start the conversation with {emptyStateName}.
+          </span>
         </div>
       )}
     </div>

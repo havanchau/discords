@@ -1,4 +1,4 @@
-import type { DirectConversation, PublicUser } from '../../api';
+import type { DirectConversation, PublicUser } from '@/api';
 
 /** Other members of a conversation; payloads may or may not include the viewer. */
 export function conversationPartners(

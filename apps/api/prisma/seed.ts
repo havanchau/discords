@@ -14,8 +14,8 @@ async function main() {
       username: 'demo',
       displayName: 'Demo User',
       passwordHash,
-      emailVerifiedAt: new Date()
-    }
+      emailVerifiedAt: new Date(),
+    },
   });
 
   const teammate = await prisma.user.upsert({
@@ -26,12 +26,12 @@ async function main() {
       username: 'teammate',
       displayName: 'Team Mate',
       passwordHash,
-      emailVerifiedAt: new Date()
-    }
+      emailVerifiedAt: new Date(),
+    },
   });
 
   const existingServer = await prisma.server.findFirst({
-    where: { name: 'Demo Workspace', ownerId: demo.id }
+    where: { name: 'Demo Workspace', ownerId: demo.id },
   });
 
   if (existingServer) {
@@ -43,38 +43,38 @@ async function main() {
       data: {
         name: 'Demo Workspace',
         description: 'Seeded Discord clone workspace',
-        ownerId: demo.id
-      }
+        ownerId: demo.id,
+      },
     });
 
     const role = await tx.role.create({
       data: {
         serverId: server.id,
         name: '@everyone',
-        permissions: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'CREATE_INVITE']
-      }
+        permissions: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'CREATE_INVITE'],
+      },
     });
 
     const owner = await tx.serverMember.create({
       data: {
         userId: demo.id,
         serverId: server.id,
-        kind: 'OWNER'
-      }
+        kind: 'OWNER',
+      },
     });
 
     const member = await tx.serverMember.create({
       data: {
         userId: teammate.id,
-        serverId: server.id
-      }
+        serverId: server.id,
+      },
     });
 
     await tx.memberRole.createMany({
       data: [
         { memberId: owner.id, roleId: role.id },
-        { memberId: member.id, roleId: role.id }
-      ]
+        { memberId: member.id, roleId: role.id },
+      ],
     });
 
     const general = await tx.channel.create({
@@ -82,8 +82,8 @@ async function main() {
         serverId: server.id,
         name: 'general',
         type: 'TEXT',
-        position: 0
-      }
+        position: 0,
+      },
     });
 
     await tx.channel.create({
@@ -91,8 +91,8 @@ async function main() {
         serverId: server.id,
         name: 'voice-lobby',
         type: 'VOICE',
-        position: 1
-      }
+        position: 1,
+      },
     });
 
     await tx.message.createMany({
@@ -101,15 +101,15 @@ async function main() {
           serverId: server.id,
           channelId: general.id,
           authorId: demo.id,
-          content: 'Welcome to the Discord clone MVP.'
+          content: 'Welcome to the Discord clone MVP.',
         },
         {
           serverId: server.id,
           channelId: general.id,
           authorId: teammate.id,
-          content: 'Realtime messaging is ready to test with two browser sessions.'
-        }
-      ]
+          content: 'Realtime messaging is ready to test with two browser sessions.',
+        },
+      ],
     });
 
     await tx.invite.create({
@@ -117,8 +117,8 @@ async function main() {
         code: 'demo-invite',
         serverId: server.id,
         channelId: general.id,
-        creatorId: demo.id
-      }
+        creatorId: demo.id,
+      },
     });
   });
 }

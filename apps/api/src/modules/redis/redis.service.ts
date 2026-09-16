@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { randomUUID } from 'crypto';
-import { RedisConfig, readRedisConfig } from '../../common/redis-config';
+import { RedisConfig, readRedisConfig } from '@/common/redis-config';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {

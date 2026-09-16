@@ -1,4 +1,4 @@
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './Avatar.module.css';
 
 export type AvatarProps = {
@@ -14,7 +14,11 @@ export function Avatar({ src, alt, fallback, size = 'md', className }: AvatarPro
 
   return (
     <span className={cn(styles.avatar, styles[size], className)}>
-      {src ? <img className={styles.image} src={src} alt={alt} /> : <span className={styles.fallback}>{initials}</span>}
+      {src ? (
+        <img className={styles.image} src={src} alt={alt} />
+      ) : (
+        <span className={styles.fallback}>{initials}</span>
+      )}
     </span>
   );
 }

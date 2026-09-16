@@ -1,11 +1,11 @@
 import { FormEvent } from 'react';
 import { Loader2, MessageSquareReply, Send, X } from 'lucide-react';
-import { assetUrl, Message } from '../../api';
-import { initials, previewText } from '../../helpers';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { useDateFormat } from '../../i18n/useDateFormat';
-import { Button, IconButton } from '../ui';
-import { useServerEmojiContext } from '../../contexts/ServerEmojiContext';
+import { assetUrl, Message } from '@/api';
+import { initials, previewText } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { Button, IconButton } from '@/components/ui';
+import { useServerEmojiContext } from '@/contexts/ServerEmojiContext';
 import { MarkdownContent } from './MarkdownContent';
 import styles from './ThreadPanel.module.css';
 
@@ -35,7 +35,10 @@ export function ThreadPanel({
   if (!rootMessage) return null;
 
   return (
-    <aside className={styles.panel} aria-label={t('thread.ariaLabel', { preview: previewText(rootMessage) })}>
+    <aside
+      className={styles.panel}
+      aria-label={t('thread.ariaLabel', { preview: previewText(rootMessage) })}
+    >
       <header className={styles.header}>
         <span>
           <MessageSquareReply size={18} aria-hidden="true" />

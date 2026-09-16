@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '@/utils/cn';
 import styles from './Button.module.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -12,14 +12,23 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', fullWidth = false, type = 'button', ...props }, ref) => (
+  (
+    { className, variant = 'primary', size = 'md', fullWidth = false, type = 'button', ...props },
+    ref,
+  ) => (
     <button
       ref={ref}
       type={type}
-      className={cn(styles.button, styles[variant], styles[size], fullWidth && styles.fullWidth, className)}
+      className={cn(
+        styles.button,
+        styles[variant],
+        styles[size],
+        fullWidth && styles.fullWidth,
+        className,
+      )}
       {...props}
     />
-  )
+  ),
 );
 
 Button.displayName = 'Button';
@@ -42,7 +51,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     >
       {children}
     </Button>
-  )
+  ),
 );
 
 IconButton.displayName = 'IconButton';

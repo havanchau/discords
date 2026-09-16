@@ -58,17 +58,17 @@ single owner:
 
 ### Styling layer
 
-| Stylesheet | Lines | Owns |
-| --- | --- | --- |
-| `styles/global.css` | 854 | 184 tokens, reset, auth screen, decorative space scene |
-| `styles/settings-error.css` | 752 | Settings modal, roles, permissions, banners |
-| `styles/message-overlays.css` | 399 | Composer, attachments, media preview, server/channel modals |
-| `styles/member-home-loading.css` | 267 | Member list, member popover, spinner |
-| `styles/responsive.css` | 221 | Media queries, ~85% of them for the auth screen |
-| `styles.css` | 140 | Invites, permission preview |
-| `styles/chat-layout.css` | 65 | Chat panel grid, call tiles |
-| `styles/shell-navigation.css` | 64 | App shell grid, member sidebar |
-| `styles/messages.css` | 54 | Avatar, status dot |
+| Stylesheet                       | Lines | Owns                                                        |
+| -------------------------------- | ----- | ----------------------------------------------------------- |
+| `styles/global.css`              | 854   | 184 tokens, reset, auth screen, decorative space scene      |
+| `styles/settings-error.css`      | 752   | Settings modal, roles, permissions, banners                 |
+| `styles/message-overlays.css`    | 399   | Composer, attachments, media preview, server/channel modals |
+| `styles/member-home-loading.css` | 267   | Member list, member popover, spinner                        |
+| `styles/responsive.css`          | 221   | Media queries, ~85% of them for the auth screen             |
+| `styles.css`                     | 140   | Invites, permission preview                                 |
+| `styles/chat-layout.css`         | 65    | Chat panel grid, call tiles                                 |
+| `styles/shell-navigation.css`    | 64    | App shell grid, member sidebar                              |
+| `styles/messages.css`            | 54    | Avatar, status dot                                          |
 
 Component reuse is already healthy and is **not** the problem: `components/ui/` exports ten Radix-backed
 primitives via [`ui/index.ts`](../../apps/web/src/components/ui/index.ts), 28 files import them, and only
@@ -93,12 +93,12 @@ copies of Discord's palette at slightly different luminance and are not meaningf
 
 ### Oversized components
 
-| File | Lines |
-| --- | --- |
-| [`AppShell.tsx`](../../apps/web/src/AppShell.tsx) | 784 |
-| [`components/chat/MessageRow.tsx`](../../apps/web/src/components/chat/MessageRow.tsx) | 510 |
-| [`components/WorkspaceSidebar.tsx`](../../apps/web/src/components/WorkspaceSidebar.tsx) | 505 |
-| [`components/chat/UtilityPanel.tsx`](../../apps/web/src/components/chat/UtilityPanel.tsx) | 363 |
+| File                                                                                      | Lines |
+| ----------------------------------------------------------------------------------------- | ----- |
+| [`AppShell.tsx`](../../apps/web/src/AppShell.tsx)                                         | 784   |
+| [`components/chat/MessageRow.tsx`](../../apps/web/src/components/chat/MessageRow.tsx)     | 510   |
+| [`components/WorkspaceSidebar.tsx`](../../apps/web/src/components/WorkspaceSidebar.tsx)   | 505   |
+| [`components/chat/UtilityPanel.tsx`](../../apps/web/src/components/chat/UtilityPanel.tsx) | 363   |
 
 ### Observed visual defects
 
@@ -115,7 +115,7 @@ Captured before the change, from [`../screenshots/before/redesign-baseline-deskt
 
 ### Design language
 
-The new identity replaces surface *decoration* with surface *elevation*. Hierarchy comes from
+The new identity replaces surface _decoration_ with surface _elevation_. Hierarchy comes from
 stepped background luminance, not from shadows, gradients, blur, or borders.
 
 - **Four surface levels** — `base` (app frame), `sunken` (rail), `raised` (sidebars, cards),
@@ -217,14 +217,14 @@ Token-first, then surface-by-surface. The new token file lands first and coexist
 CSS; each subsequent phase converts one surface to modules and deletes exactly the global CSS that
 surface owned. The app builds and runs after every phase.
 
-| Phase | Surface | Global CSS retired |
-| --- | --- | --- |
-| 0 | Tokens, themes, reset, contrast check | token and reset blocks of `global.css` |
-| 1 | Auth screen | auth block of `global.css`, auth block of `responsive.css` |
-| 2 | Shell, server rail, channel sidebar, member sidebar | `shell-navigation.css`, `member-home-loading.css`, `messages.css` |
-| 3 | Chat header, panel, message list, composer, call tiles | `chat-layout.css`, `message-overlays.css` |
-| 4 | Settings modal, roles, permissions, invites | `settings-error.css`, `responsive.css`, settings block of `styles.css` |
-| 5 | Compatibility shim removed, docs rewritten | `legacy-tokens.css` |
+| Phase | Surface                                                | Global CSS retired                                                     |
+| ----- | ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| 0     | Tokens, themes, reset, contrast check                  | token and reset blocks of `global.css`                                 |
+| 1     | Auth screen                                            | auth block of `global.css`, auth block of `responsive.css`             |
+| 2     | Shell, server rail, channel sidebar, member sidebar    | `shell-navigation.css`, `member-home-loading.css`, `messages.css`      |
+| 3     | Chat header, panel, message list, composer, call tiles | `chat-layout.css`, `message-overlays.css`                              |
+| 4     | Settings modal, roles, permissions, invites            | `settings-error.css`, `responsive.css`, settings block of `styles.css` |
+| 5     | Compatibility shim removed, docs rewritten             | `legacy-tokens.css`                                                    |
 
 The auth screen moved ahead of the shell: enabling the light theme in phase 0 exposed a hardcoded
 dark background on the auth panel that left its heading unreadable, so that surface could not be left
@@ -282,13 +282,13 @@ indirection and buys a single place to change the palette.
 
 ## Risks and rollback
 
-| Risk | Mitigation |
-| --- | --- |
+| Risk                                                                       | Mitigation                                                                                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Silent layout breakage during migration — no visual regression tests exist | Each phase is a separate, independently revertible change; `ui:smoke` plus manual verification per phase at desktop and mobile widths |
-| A deleted global class is still referenced by an unmigrated surface | Each phase deletes only the stylesheet it fully owns; a grep for the class names in the retired file gates the deletion |
-| Portalled Radix content losing tokens when the theme moves to `:root` | Verified explicitly in Phase 0 against `Dialog`, `DropdownMenu`, `Popover`, `Tooltip`, `ContextMenu` |
-| Users on `midnight`/`slate`/`oled` losing their preference | Read-time migration to `dark`; all three are dark variants, so the visible change is small |
-| Scope creep from "while I'm here" refactors | Component splits are mechanical only; behaviour and data flow are explicitly out of scope |
+| A deleted global class is still referenced by an unmigrated surface        | Each phase deletes only the stylesheet it fully owns; a grep for the class names in the retired file gates the deletion               |
+| Portalled Radix content losing tokens when the theme moves to `:root`      | Verified explicitly in Phase 0 against `Dialog`, `DropdownMenu`, `Popover`, `Tooltip`, `ContextMenu`                                  |
+| Users on `midnight`/`slate`/`oled` losing their preference                 | Read-time migration to `dark`; all three are dark variants, so the visible change is small                                            |
+| Scope creep from "while I'm here" refactors                                | Component splits are mechanical only; behaviour and data flow are explicitly out of scope                                             |
 
 **Rollback.** Each phase is a self-contained change that restores its global stylesheet and reverts its
 module files. Phase 0 is the only one with a user-visible persistence effect; reverting it restores the

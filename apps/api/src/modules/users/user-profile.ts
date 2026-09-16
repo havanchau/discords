@@ -30,7 +30,10 @@ interface CustomStatusSource {
  * An expired status is treated as absent everywhere. Nothing clears the columns on a schedule, so
  * this is the single place that decides whether a stored status still counts.
  */
-export function toCustomStatus(user: CustomStatusSource, now = new Date()): CustomStatusView | null {
+export function toCustomStatus(
+  user: CustomStatusSource,
+  now = new Date(),
+): CustomStatusView | null {
   if (!user.customStatusText && !user.customStatusEmoji) return null;
   if (user.customStatusExpiresAt && user.customStatusExpiresAt <= now) return null;
 

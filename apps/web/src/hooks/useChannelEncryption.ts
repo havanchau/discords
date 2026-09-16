@@ -1,11 +1,7 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
-import { Channel, Message } from '../api';
-import {
-  decryptChannelMessage,
-  deriveChannelKey,
-  isEncryptedMessage,
-} from '../e2ee';
-import { useTranslation } from '../i18n/LocaleProvider';
+import { Channel, Message } from '@/api';
+import { decryptChannelMessage, deriveChannelKey, isEncryptedMessage } from '@/e2ee';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseChannelEncryptionOptions {
   channel: Channel | null;

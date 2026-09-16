@@ -1,11 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { MessageSquare, Phone, Users, Video } from 'lucide-react';
-import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '../../api';
-import { directCallId } from '../../hooks/useDirectCall';
-import { useTranslation } from '../../i18n/LocaleProvider';
-import { cn } from '../../utils/cn';
-import { CallStage } from '../chat/CallStage';
-import { Button, IconButton, PopoverContent, PopoverRoot, PopoverTrigger, Tooltip } from '../ui';
+import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
+import { directCallId } from '@/hooks/useDirectCall';
+import { useTranslation } from '@/i18n/LocaleProvider';
+import { cn } from '@/utils/cn';
+import { CallStage } from '@/components/chat/CallStage';
+import {
+  Button,
+  IconButton,
+  PopoverContent,
+  PopoverRoot,
+  PopoverTrigger,
+  Tooltip,
+} from '@/components/ui';
 import { DirectMessageComposer } from './DirectMessageComposer';
 import type { DirectMessageRowActions } from './DirectMessageRow';
 import { DirectMessageTimeline, jumpToDirectMessage } from './DirectMessageTimeline';
@@ -13,7 +20,7 @@ import { DirectPinnedMessages } from './DirectPinnedMessages';
 import { conversationDisplayName, conversationPartners } from './conversationDisplay';
 import { GroupConversationMenu } from './GroupConversationMenu';
 import { UserAvatar } from './UserAvatar';
-import { ProfileCard } from '../profile/ProfileCard';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 import type { HomeDirectCall, HomePanelActions, HomePanelState } from './types';
 import styles from './HomePanel.module.css';
 
@@ -186,7 +193,11 @@ export function HomeDirectMessageView({
                 remoteMedia: isInThisCall ? call.remoteMedia : [],
                 localVideoRef: call.localVideoRef,
                 start: (mode) =>
-                  call.startDirectCall(activeConversation.id, mode === 'video' ? 'video' : 'voice', title),
+                  call.startDirectCall(
+                    activeConversation.id,
+                    mode === 'video' ? 'video' : 'voice',
+                    title,
+                  ),
                 toggleMute: call.toggleMute,
                 toggleCamera: call.toggleCamera,
                 end: call.end,

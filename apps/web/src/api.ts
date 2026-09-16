@@ -1,4 +1,3 @@
-
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export type OAuthProviderName = 'google' | 'facebook';
@@ -33,13 +32,25 @@ export class ApiError extends Error {
   readonly code: string | null;
   readonly status: number;
 
-  constructor(message: unknown, code: unknown, status: number, statusText: string, detail?: string) {
+  constructor(
+    message: unknown,
+    code: unknown,
+    status: number,
+    statusText: string,
+    detail?: string,
+  ) {
     const text = normalizeMessage(message) || statusText;
     super(detail ? `${text} (${detail})` : text);
     this.name = 'ApiError';
     this.code = typeof code === 'string' ? code : null;
     this.status = status;
   }
+}
+
+/** An error body that is not a JSON object reads as empty, so ApiError falls back to the status text. */
+async function readErrorBody(response: Response): Promise<Record<string, unknown>> {
+  const body: unknown = await response.json().catch(() => ({ message: response.statusText }));
+  return typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
 }
 
 /** Upload failures name the file so a user with several queued uploads knows which one failed. */
@@ -165,11 +176,11 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
+    const error = await readErrorBody(response);
     throw new ApiError(error.message, error.code, response.status, response.statusText);
   }
 
-  return response.json();
+  return (await response.json()) as T;
 }
 
 export async function uploadFile(file: File, token: string): Promise<MessageAttachment> {
@@ -194,8 +205,14 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new ApiError(error.message, error.code, response.status, response.statusText, fileDetail(file));
+    const error = await readErrorBody(response);
+    throw new ApiError(
+      error.message,
+      error.code,
+      response.status,
+      response.statusText,
+      fileDetail(file),
+    );
   }
 
   const result = (await response.json()) as { attachment: MessageAttachment };
@@ -236,7 +253,7 @@ async function uploadFileInChunks(file: File, token: string): Promise<MessageAtt
     }
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
+      const error = await readErrorBody(response);
       throw new ApiError(
         error.message,
         error.code,
