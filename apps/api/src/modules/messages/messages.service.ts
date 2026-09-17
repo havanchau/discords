@@ -95,18 +95,19 @@ export class MessagesService {
       messages.map((message) => message.id),
     );
 
+    const nextCursor = messages.length === 50 ? messages[messages.length - 1]?.id ?? null : null;
+    const ordered = [...messages].reverse();
+
     return {
-      messages: messages
-        .reverse()
-        .map((message) =>
-          formatMessage(
-            message,
-            userId,
-            replyMap.get(message.replyToMessageId ?? ''),
-            threadMap.get(message.id),
-          ),
+      messages: ordered.map((message) =>
+        formatMessage(
+          message,
+          userId,
+          replyMap.get(message.replyToMessageId ?? ''),
+          threadMap.get(message.id),
         ),
-      nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
+      ),
+      nextCursor,
     };
   }
 
