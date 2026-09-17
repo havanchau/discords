@@ -71,29 +71,31 @@ export function ServerRail({
         </Tooltip>
       ))}
 
-      <Tooltip content={t('serverRail.addServer')} side="right">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(styles.serverButton, styles.serverAdd)}
-          aria-label={t('serverRail.addServer')}
-          onClick={onAddServer}
-        >
-          <Plus size={22} aria-hidden="true" />
-        </Button>
-      </Tooltip>
+      <div className={styles.bottomActions}>
+        <Tooltip content={t('serverRail.addServer')} side="right">
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(styles.serverButton, styles.serverAdd)}
+            aria-label={t('serverRail.addServer')}
+            onClick={onAddServer}
+          >
+            <Plus size={22} aria-hidden="true" />
+          </Button>
+        </Tooltip>
 
-      <Tooltip content={t('discovery.rail')} side="right">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(styles.serverButton, styles.serverAdd)}
-          aria-label={t('discovery.rail')}
-          onClick={onOpenDiscovery}
-        >
-          <Compass size={22} aria-hidden="true" />
-        </Button>
-      </Tooltip>
+        <Tooltip content={t('discovery.rail')} side="right">
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(styles.serverButton, styles.serverAdd)}
+            aria-label={t('discovery.rail')}
+            onClick={onOpenDiscovery}
+          >
+            <Compass size={22} aria-hidden="true" />
+          </Button>
+        </Tooltip>
+      </div>
     </nav>
   );
 }
