@@ -150,6 +150,32 @@ async function main() {
       });
       console.log(`Successfully seeded ${totalToSeed} messages into #${general.name}`);
     }
+
+    // Seed sample reactions on recent messages for testing reactions grouping/counting
+    const latestMessages = await prisma.message.findMany({
+      where: { channelId: general.id },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+    });
+
+    if (latestMessages.length > 0 && latestMessages[0]) {
+      const targetMessageId = latestMessages[0].id;
+
+      // Seed reactions from both demo user and teammate on the same message
+      await prisma.messageReaction.deleteMany({
+        where: { messageId: targetMessageId },
+      });
+
+      await prisma.messageReaction.createMany({
+        data: [
+          { messageId: targetMessageId, userId: demo.id, emoji: '👍' },
+          { messageId: targetMessageId, userId: teammate.id, emoji: '👍' },
+          { messageId: targetMessageId, userId: demo.id, emoji: '❤️' },
+        ],
+        skipDuplicates: true,
+      });
+      console.log(`Seeded reactions on message ${targetMessageId}: 👍 (2), ❤️ (1)`);
+    }
   }
 }
 
