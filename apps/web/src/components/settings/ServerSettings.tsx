@@ -3,8 +3,15 @@ import { Button, IconButton, TextField } from '@/components/ui';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
+import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
+import { ServerSoundboardSection } from './ServerSoundboardSection';
+import { ServerStickersSection } from './ServerStickersSection';
+import { ServerDiscoverySettings } from './ServerDiscoverySettings';
+import { ServerOnboardingSettings } from './ServerOnboardingSettings';
+import { ServerTemplatesSection } from './ServerTemplatesSection';
+import { ReportsSection } from './ReportsSection';
 import type { SettingsModalFields } from './types';
 import styles from '@/components/SettingsModal.module.css';
 import { cn } from '@/utils/cn';
@@ -177,6 +184,30 @@ export function ServerSettings({
         />
       ) : null}
 
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerStickersSection server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerSoundboardSection server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <AutoModSection server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerOnboardingSettings server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerDiscoverySettings server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerTemplatesSection server={server} />
+      ) : null}
+
       {memberHasServerPermission(server, auth.user.id, 'BAN_MEMBERS') ? (
         <ServerBansSection
           server={server}
@@ -187,6 +218,10 @@ export function ServerSettings({
           unbanUser={unbanUser}
           pendingAction={pendingAction}
         />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES') ? (
+        <ReportsSection serverId={server.id} />
       ) : null}
 
       <section className={cn(styles.settingsSection, 'audit-section')}>

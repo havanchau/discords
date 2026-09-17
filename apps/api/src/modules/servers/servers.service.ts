@@ -7,19 +7,16 @@ import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { AuditLogEntry, Invite, ServerDetail, ServerSummary } from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { countChannelUnread } from '@/modules/messages/unread-counts';
+import { memberNeedsOnboarding } from '@/modules/permissions/onboarding-gate';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
-
-const DEFAULT_MEMBER_PERMISSIONS = [
-  'VIEW_CHANNEL',
-  'SEND_MESSAGES',
-  'CREATE_INVITE',
-  'CONNECT_VOICE',
-  'SPEAK_VOICE',
-  'UPLOAD_FILES',
-];
+import {
+  createServerFromSnapshot,
+  DEFAULT_MEMBER_PERMISSIONS,
+  EMPTY_SERVER_SNAPSHOT,
+} from './server-bootstrap';
 
 @Injectable()
 export class ServersService {
@@ -30,50 +27,15 @@ export class ServersService {
   ) {}
 
   async createServer(userId: string, dto: CreateServerDto) {
-    const server = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.server.create({
-        data: {
-          name: dto.name.trim(),
-          description: dto.description?.trim(),
-          ownerId: userId,
-        },
-      });
-
-      const everyoneRole = await tx.role.create({
-        data: {
-          serverId: created.id,
-          name: '@everyone',
-          position: 0,
-          permissions: DEFAULT_MEMBER_PERMISSIONS,
-        },
-      });
-
-      const ownerMember = await tx.serverMember.create({
-        data: {
-          userId,
-          serverId: created.id,
-          kind: 'OWNER',
-        },
-      });
-
-      await tx.memberRole.create({
-        data: {
-          memberId: ownerMember.id,
-          roleId: everyoneRole.id,
-        },
-      });
-
-      await tx.channel.create({
-        data: {
-          serverId: created.id,
-          name: 'general',
-          type: 'TEXT',
-          position: 0,
-        },
-      });
-
-      return created;
-    });
+    // The empty snapshot yields the original bootstrap: `@everyone`, the owner, and `general`.
+    const server = await this.prisma.$transaction((tx) =>
+      createServerFromSnapshot(
+        tx,
+        userId,
+        { name: dto.name.trim(), description: dto.description?.trim() },
+        EMPTY_SERVER_SNAPSHOT,
+      ),
+    );
 
     return this.getServerForUser(userId, server.id);
   }
@@ -83,6 +45,13 @@ export class ServersService {
       where: {
         deletedAt: null,
         members: { some: { userId } },
+      },
+      // Screening config is read through GET /servers/:serverId/onboarding, not with every server.
+      omit: {
+        onboardingEnabled: true,
+        rulesText: true,
+        selfAssignQuestions: true,
+        discoveryInviteId: true,
       },
       include: {
         channels: { orderBy: { position: 'asc' } },
@@ -108,6 +77,7 @@ export class ServersService {
     await this.requireMembership(userId, serverId);
     const server = await this.prisma.server.findFirstOrThrow({
       where: { id: serverId, deletedAt: null },
+      omit: { rulesText: true, selfAssignQuestions: true, discoveryInviteId: true },
       include: {
         channels: {
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
@@ -147,8 +117,14 @@ export class ServersService {
       ...channel,
       unreadCount: unreadCounts[channel.id] ?? 0,
     }));
-    const { channelCategories: _allCategories, ...serverFields } = server;
-    return { server: { ...serverFields, channels, categories } };
+    const viewer = server.members.find((member) => member.userId === userId);
+    const needsOnboarding = viewer ? memberNeedsOnboarding(server, viewer) : false;
+    const {
+      channelCategories: _allCategories,
+      onboardingEnabled: _enabled,
+      ...serverFields
+    } = server;
+    return { server: { ...serverFields, channels, categories, needsOnboarding } };
   }
 
   /* Category names can reveal private areas, so members only see categories holding a channel they can view. */
@@ -280,10 +256,16 @@ export class ServersService {
   async listInvites(userId: string, serverId: string): Promise<{ invites: Invite[] }> {
     await this.permissions.requireServerPermission(userId, serverId, Permission.CreateInvite);
     const now = new Date();
+    const server = await this.prisma.server.findUnique({
+      where: { id: serverId },
+      select: { discoveryInviteId: true },
+    });
     const invites = await this.prisma.invite.findMany({
       where: {
         serverId,
         revokedAt: null,
+        // The discovery invite is managed by the discovery setting, not revoked from this list.
+        ...(server?.discoveryInviteId ? { id: { not: server.discoveryInviteId } } : {}),
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
       orderBy: { createdAt: 'desc' },

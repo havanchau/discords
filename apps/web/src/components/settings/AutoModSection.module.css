@@ -1,0 +1,73 @@
+.ruleRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.ruleRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.ruleRow strong,
+.ruleRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ruleRow small {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.form > strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.checkGroup {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.checkGroup legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 480px) {
+  .ruleRow {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+  }
+
+  .ruleRow > div {
+    grid-column: 1 / -1;
+  }
+}

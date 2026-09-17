@@ -50,7 +50,9 @@ Do not silence a rule to get a green run. When a rule is genuinely wrong for one
 
 **API module** (`apps/api/src/modules/<domain>/`): `<domain>.module.ts`, `<domain>.controller.ts`,
 `<domain>.service.ts`, and `dto/` with one class per request body. Code shared by several modules
-goes in `apps/api/src/common/`.
+goes in `apps/api/src/common/`. The Prisma schema is a folder: `apps/api/prisma/schema.prisma` holds
+`generator` and `datasource`, models and enums live in `apps/api/prisma/models/<area>.prisma`
+(`"prisma": { "schema": "prisma" }` in `apps/api/package.json`).
 
 **Web** (`apps/web/src/`):
 
@@ -58,7 +60,8 @@ goes in `apps/api/src/common/`.
 - `components/<domain>/` — feature components (`chat/`, `home/`, `settings/`, `workspace/`, …), with
   a local `types.ts` for the props they share.
 - `hooks/` — feature hooks; `query/` — React Query client, keys and cache owners; `i18n/` —
-  locale provider and catalogs; `utils/` — pure helpers.
+  locale provider and catalogs (`i18n/locales/<locale>/<area>.ts`, merged by `index.ts`);
+  `utils/` — pure helpers.
 
 ## Imports
 

@@ -1,0 +1,64 @@
+model NotificationPreference {
+  id             String   @id @default(cuid())
+  userId         String
+  serverId       String?
+  channelId      String?
+  muted          Boolean  @default(false)
+  mentionOnly    Boolean  @default(false)
+  desktopEnabled Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server         Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel        Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([userId, serverId])
+  @@index([userId, channelId])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  deviceName String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PushNotificationThrottle {
+  id         String   @id @default(cuid())
+  userId     String
+  channelId  String
+  lastSentAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@index([channelId])
+}
+
+model Notification {
+  id             String              @id @default(cuid())
+  userId         String
+  type           String
+  title          String
+  body           String?
+  actorId        String?
+  channelId      String?
+  messageId      String?
+  conversationId String?
+  readAt         DateTime?
+  createdAt      DateTime            @default(now())
+  user           User                @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor          User?               @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt, createdAt])
+  @@index([conversationId])
+  @@index([channelId])
+  @@index([messageId])
+}

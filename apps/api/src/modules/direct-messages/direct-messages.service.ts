@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { DirectConversation } from '@discord-clone/shared';
 import type { DirectMessage } from '@discord-clone/shared';
@@ -7,6 +8,9 @@ import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { countDirectUnread } from '@/modules/messages/unread-counts';
 import { findBlockBetween } from '@/modules/friends/user-blocks';
+import { readVoiceMaxBytes, toAttachmentCreateData } from '@/modules/messages/message-attachments';
+import type { StickerAttachmentData } from '@/modules/messages/message-stickers';
+import type { ForwardSnapshot } from '@/common/forward-snapshot';
 import {
   directConversationInclude,
   directMessageInclude,
@@ -16,11 +20,16 @@ import {
 
 @Injectable()
 export class DirectMessagesService {
+  private readonly voiceMaxBytes: number;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
     private readonly notifications: NotificationsService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.voiceMaxBytes = readVoiceMaxBytes(config);
+  }
 
   async listConversations(userId: string): Promise<{ conversations: DirectConversation[] }> {
     const conversations = await this.prisma.directConversation.findMany({
@@ -61,15 +70,31 @@ export class DirectMessagesService {
       await this.markRead(userId, conversationId, latestMessage.id, { emit: true });
     }
     return {
-      messages: await formatDirectMessages(this.prisma, ordered),
+      messages: await formatDirectMessages(this.prisma, ordered, userId),
       nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
     };
   }
 
-  async createMessage(userId: string, conversationId: string, dto: CreateDirectMessageDto) {
+  /**
+   * `forward` and `carriedStickers` are set only by the forwarding module; a forward may have no text
+   * of its own. Stickers are never sent directly in a DM, only carried by a forward.
+   */
+  async createMessage(
+    userId: string,
+    conversationId: string,
+    dto: CreateDirectMessageDto,
+    forward?: ForwardSnapshot,
+    carriedStickers: StickerAttachmentData[] = [],
+  ) {
     await this.requireConversationMember(userId, conversationId);
     const content = dto.content.trim();
-    if (!content) throw new ForbiddenException('Message content cannot be empty');
+    const attachments = [
+      ...toAttachmentCreateData(dto.attachments ?? [], this.voiceMaxBytes),
+      ...carriedStickers,
+    ];
+    if (!content && !attachments.length && !forward) {
+      throw new ForbiddenException('Message content cannot be empty');
+    }
     const conversation = await this.prisma.directConversation.findUniqueOrThrow({
       where: { id: conversationId },
       select: { isGroup: true, name: true },
@@ -93,18 +118,38 @@ export class DirectMessagesService {
     }
 
     const created = await this.prisma.directMessage.create({
-      data: { conversationId, authorId: userId, content, replyToMessageId: dto.replyToMessageId },
+      data: {
+        conversationId,
+        authorId: userId,
+        content,
+        replyToMessageId: dto.replyToMessageId,
+        ...forward,
+        attachments: attachments.length ? { create: attachments } : undefined,
+      },
       include: directMessageInclude,
     });
     const [message] = await formatDirectMessages(this.prisma, [created]);
-    await Promise.all([
-      this.prisma.directConversation.update({
-        where: { id: conversationId },
-        data: { updatedAt: new Date() },
-      }),
-      this.markRead(userId, conversationId, message.id, { emit: false }),
-    ]);
+    await this.prisma.directConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+    await this.announceCreatedMessage(userId, conversationId, conversation, recipientIds, message);
+    return { message };
+  }
 
+  /**
+   * Everything after a direct message is stored: the author's read state, the live message, the
+   * recipients' unread badges and notifications. Direct polls call it too, so a poll arrives exactly
+   * like a message.
+   */
+  async announceCreatedMessage(
+    authorId: string,
+    conversationId: string,
+    conversation: { isGroup: boolean; name: string | null },
+    recipientIds: string[],
+    message: FormattedDirectMessage,
+  ) {
+    await this.markRead(authorId, conversationId, message.id, { emit: false });
     this.realtime.emitToRooms(
       [
         this.realtime.conversationRoom(conversationId),
@@ -118,15 +163,14 @@ export class DirectMessagesService {
       recipientIds.map((recipientId) =>
         this.notifications.create({
           userId: recipientId,
-          actorId: userId,
+          actorId: authorId,
           type: 'DIRECT_MESSAGE',
           title: directMessageNotificationTitle(conversation, message.author.displayName),
-          body: message.content.slice(0, 180),
+          body: (message.content || message.forwardOrigin?.content || '').slice(0, 180),
           conversationId,
         }),
       ),
     );
-    return { message };
   }
 
   async markConversationRead(userId: string, conversationId: string, messageId?: string) {
@@ -218,6 +262,8 @@ export class DirectMessagesService {
     });
   }
 }
+
+type FormattedDirectMessage = Awaited<ReturnType<typeof formatDirectMessages>>[number];
 
 function directMessageNotificationTitle(
   conversation: { isGroup: boolean; name: string | null },

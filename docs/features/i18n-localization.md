@@ -50,7 +50,7 @@ Acceptance criteria:
 - `LocaleProvider` lives in `apps/web/src/i18n/LocaleProvider.tsx` and wraps `AppShell` in `App.tsx`, above the auth gate, so the sign-in screen is translated too. It mirrors the shape of `ThemeProvider` in `appContexts.tsx` and exposes `locale`, `setLocale`, and `t`.
 - `useTranslation()` returns `t(key, vars?)` with the key type checked against the `en` catalog.
 - `useSyncAccountLocale(auth?.user.locale)` in `AppShell` adopts the account's stored locale after sign-in, so a new device follows the account rather than the browser.
-- Every user-facing literal in `apps/web/src` moves into `apps/web/src/i18n/locales/en.ts` and `vi.ts`. Keys are namespaced by surface: `chat.composer.placeholder`, `settings.profile.bioLabel`, `error.network.generic`.
+- Every user-facing literal in `apps/web/src` moves into the `apps/web/src/i18n/locales/en/` and `vi/` catalogs (one module per area, merged by each folder's `index.ts`). Keys are namespaced by surface: `chat.composer.placeholder`, `settings.profile.bioLabel`, `error.network.generic`.
 - `PERMISSION_OPTIONS` (`apps/web/src/helpers.ts:6-19`) becomes `PERMISSION_VALUES`, a `const` tuple of the values; consumers translate `permission.<VALUE>`. `buildRolePermissionPreview` and `buildMemberPermissionPreview` take the translator as their last argument.
 - `formatTime`, `formatDate`, and `formatDayDivider` move out of `helpers.ts` into `src/i18n/useDateFormat.ts` as `useDateFormat()`, bound to the active locale; the bare `toLocaleString()` call sites use it too, so the whole app formats consistently.
 - Settings gains a "Language" row next to the existing theme control in `apps/web/src/components/settings/ProfileSettings.tsx`, reusing `SettingsSelect`. It follows the pattern the theme row already uses: the select is a form field, and "Save changes" applies it — `updateProfile` sends `locale` in the same `PATCH /users/me` call and then updates the provider. Applying it immediately on change would leave the UI in a language the account has not stored, so the two can disagree until the next reload.
@@ -123,7 +123,7 @@ message; the stack trace stays in the server log.
 
 - Shared: `packages/shared/src/i18n.ts`, `index.ts`.
 - API: `common/i18n/locale.ts` (mirror of the shared module), `common/i18n/i18n.service.ts`, `common/i18n/i18n.module.ts`, `common/i18n/locales/en.ts`, `locales/vi.ts`, `common/i18n/error-codes.ts`, `common/http-exception.filter.ts`, `common/request-user.ts`, `main.ts`, `app.module.ts`, `modules/users/users.service.ts`, `modules/users/dto/update-me.dto.ts`, `modules/auth/email.service.ts`, `modules/auth/auth.service.ts`, `modules/auth/auth.controller.ts`, `modules/auth/jwt-auth.guard.ts` (it already loads the user, so `locale` costs no extra query), `modules/auth/password-reset.service.ts`, `modules/push/push.service.ts`, `prisma/schema.prisma`.
-- Web: `src/i18n/locales/en.ts`, `vi.ts`, `src/i18n/LocaleProvider.tsx`, `src/i18n/useDateFormat.ts`, `src/App.tsx`, `src/AppShell.tsx`, `src/api.ts`, `src/helpers.ts`, `src/utils/permissionPreview.ts`, `src/utils/slashCommands.ts`, `src/utils/executeSlashCommand.ts`, `src/components/settings/ProfileSettings.tsx` (it owns the theme row today), and every component and hook holding user-facing copy.
+- Web: `src/i18n/locales/en/*.ts`, `vi/*.ts`, `src/i18n/LocaleProvider.tsx`, `src/i18n/useDateFormat.ts`, `src/App.tsx`, `src/AppShell.tsx`, `src/api.ts`, `src/helpers.ts`, `src/utils/permissionPreview.ts`, `src/utils/slashCommands.ts`, `src/utils/executeSlashCommand.ts`, `src/components/settings/ProfileSettings.tsx` (it owns the theme row today), and every component and hook holding user-facing copy.
 - Scripts: `scripts/i18n-scan.mjs`, `package.json` (`i18n:check`), `.github/workflows` CI step next to `ui:scan`.
 
 `AppShell.tsx` is 787 lines against the 1000-line limit in `scripts/check-file-size.mjs:4`; replacing literals with `t('...')` calls lengthens lines but not line count, so no split is planned. If it crosses the limit during implementation, the composer and modal wiring moves out — that is a deviation to report, not to do silently.
@@ -157,6 +157,7 @@ Written back after implementation, so the doc matches the code:
 - `X-Locale` needs no CORS configuration change.
 - `class-validator` field messages stay English (see Trade-offs).
 - The ~70 non-`Error` fallback strings in the hooks were translated as well; they were not called out in the original scope but are user-facing.
+- Socket acks that refuse with `{ error }` (`message:create` in `messages.gateway.ts`, `soundboard:play` in `voice.gateway.ts`) never pass through the HTTP filter, so they were English. They now go through `SocketErrorTranslator` (`apps/api/src/modules/realtime/socket-error-translator.service.ts`), which uses the same literal-to-code lookup as the filter (`translateErrorMessage` in `common/http-exception.filter.ts`). The socket carries no `X-Locale`, so the locale is the user's stored `User.locale`, read only on a refusal, then the handshake's `Accept-Language`, then `en`. The ack stays `{ error: string }`, with no `code`.
 
 ## Risks & Rollback
 

@@ -1,7 +1,10 @@
+import { BotAuthorizeDialog } from '@/components/bots/BotAuthorizeDialog';
 import { ChatPanel, type ChatPanelProps } from '@/components/ChatPanel';
 import { HomePanel } from '@/components/HomePanel';
 import { IncomingCallDialog } from '@/components/home/IncomingCallDialog';
 import { MemberSidebar, type MemberSidebarProps } from '@/components/MemberSidebar';
+import { RulesGate } from '@/components/onboarding/RulesGate';
+import { SavedMessagesPanel } from '@/components/saved/SavedMessagesPanel';
 import { SettingsModal } from '@/components/SettingsModal';
 import { WorkspaceSidebar, type WorkspaceSidebarProps } from '@/components/WorkspaceSidebar';
 import { TooltipProvider } from '@/components/ui';
@@ -28,6 +31,7 @@ interface AuthenticatedWorkspaceProps {
   settings: SettingsModalProps;
   incomingCall: ComponentProps<typeof IncomingCallDialog>;
   serverEmojis: ServerEmoji[];
+  savedMessages: ComponentProps<typeof SavedMessagesPanel>;
 }
 
 export function AuthenticatedWorkspace({
@@ -43,6 +47,7 @@ export function AuthenticatedWorkspace({
   settings,
   incomingCall,
   serverEmojis,
+  savedMessages,
 }: AuthenticatedWorkspaceProps) {
   return (
     <AuthProvider auth={auth}>
@@ -54,7 +59,11 @@ export function AuthenticatedWorkspace({
                 <WorkspaceSidebar {...workspace} />
                 {server ? (
                   <>
-                    <ChatPanel {...chat} />
+                    {server.needsOnboarding ? (
+                      <RulesGate key={server.id} server={server} />
+                    ) : (
+                      <ChatPanel {...chat} />
+                    )}
                     <MemberSidebar {...members} />
                   </>
                 ) : (
@@ -62,6 +71,8 @@ export function AuthenticatedWorkspace({
                 )}
                 <SettingsModal {...settings} />
                 <IncomingCallDialog {...incomingCall} />
+                <SavedMessagesPanel {...savedMessages} />
+                <BotAuthorizeDialog />
               </main>
             </TooltipProvider>
           </ServerEmojiProvider>

@@ -4,6 +4,7 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
 import { RemoteVideoTile } from '@/components/RemoteVideoTile';
 import { Avatar, Button, IconButton } from '@/components/ui';
+import { SoundboardPanel } from './SoundboardPanel';
 import styles from './CallStage.module.css';
 import type { ChatPanelCall, ChatPanelSession } from './types';
 
@@ -21,6 +22,10 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
 
   if (!active && !state) return null;
   const bannerLabel = contextLabel ?? `#${channel?.name ?? ''}`;
+  // The panel needs the call's server, known only while the call's own channel is the open one.
+  const soundboardServerId =
+    state && call.soundboard && channel?.id === state.channelId ? channel.serverId : null;
+  const lastPlayed = call.soundboard?.lastPlayed ?? null;
 
   return (
     <>
@@ -73,8 +78,20 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
                 {state.label} - {remoteMedia.length + 1} participant
                 {remoteMedia.length ? 's' : ''}
               </span>
+              {lastPlayed ? (
+                <span className={styles.soundboardPlayed} role="status">
+                  {t('soundboard.played', {
+                    user: lastPlayed.triggeredBy.displayName,
+                    name: lastPlayed.name,
+                  })}
+                  {call.soundboard?.playbackFailed ? ` - ${t('soundboard.playbackBlocked')}` : ''}
+                </span>
+              ) : null}
             </div>
             <div className={styles.callControls}>
+              {soundboardServerId && call.soundboard ? (
+                <SoundboardPanel serverId={soundboardServerId} playback={call.soundboard} />
+              ) : null}
               <IconButton
                 label={state.isMuted ? 'Unmute' : 'Mute'}
                 variant={state.isMuted ? 'danger' : 'ghost'}

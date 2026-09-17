@@ -52,10 +52,14 @@ export class OAuthAccountService {
     const email = profile.email.toLowerCase();
     const existing = await this.prisma.user.findUnique({
       where: { email },
-      select: { ...SIGN_IN_USER_SELECT, emailVerifiedAt: true },
+      select: { ...SIGN_IN_USER_SELECT, emailVerifiedAt: true, kind: true },
     });
 
     if (existing) {
+      // Unreachable with the reserved `.invalid` domain; kept explicit so linking can never claim one.
+      if (existing.kind !== 'HUMAN') {
+        throw new OAuthFlowError('account_exists', 'Email belongs to an existing account');
+      }
       // Only Google proves the email is verified; linking on anything weaker hands over the account.
       if (providerName !== 'google') {
         throw new OAuthFlowError('account_exists', 'Email belongs to an existing account');

@@ -1,0 +1,28 @@
+export const webhooks = {
+  'error.fallback.cannot-create-webhook': 'Cannot create webhook',
+  'error.fallback.cannot-delete-webhook': 'Cannot delete webhook',
+  'error.fallback.cannot-load-webhooks': 'Cannot load webhooks',
+  'error.fallback.cannot-regenerate-webhook': 'Cannot regenerate webhook URL',
+  'message.webhookBadge': 'Webhook',
+  'message.webhookBadgeLabel': 'Posted by a webhook, not a server member',
+  'webhook.action.chooseAvatar': 'Choose avatar',
+  'webhook.action.confirmDelete': 'Confirm delete',
+  'webhook.action.confirmRegenerate': 'Confirm new URL',
+  'webhook.action.copyUrl': 'Copy URL',
+  'webhook.action.create': 'Create webhook',
+  'webhook.action.delete': 'Delete webhook {name}',
+  'webhook.action.dismiss': 'Done',
+  'webhook.action.regenerate': 'Regenerate URL for {name}',
+  'webhook.createdAt': 'Created {date}',
+  'webhook.empty': 'No webhooks in this channel yet.',
+  'webhook.error.avatarType': 'Choose a PNG, JPEG, GIF, or WebP image.',
+  'webhook.field.avatar': 'Webhook avatar',
+  'webhook.field.name': 'Webhook name',
+  'webhook.loading': 'Loading webhooks',
+  'webhook.secret.urlLabel': 'Webhook URL',
+  'webhook.secret.warning':
+    'Copy this URL now. It will not be shown again, and anyone who has it can post in this channel.',
+  'webhook.section.hint':
+    'Let an external service post into this channel through a secret URL. Regenerating or deleting a webhook stops its old URL at once.',
+  'webhook.section.title': 'Webhooks ({count}/{max})',
+} as const;

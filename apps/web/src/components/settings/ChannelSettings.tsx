@@ -1,3 +1,4 @@
+import { FORUM_POST_GUIDELINES_MAX_LENGTH } from '@discord-clone/shared';
 import { Hash } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { assetUrl } from '@/api';
@@ -5,6 +6,10 @@ import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
 import { Button, TextArea, TextField } from '@/components/ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
 import { SettingsSelect } from './SettingsSelect';
+import { ForumTagsSection } from './ForumTagsSection';
+import { ChannelWebhooksSection } from './ChannelWebhooksSection';
+import { useAuthContext } from '@/contexts/appContexts';
+import { memberHasServerPermission } from '@/utils/serverPermissions';
 import type { SettingsModalFields, SettingsSelectOption } from './types';
 import styles from '@/components/SettingsModal.module.css';
 import { cn } from '@/utils/cn';
@@ -69,6 +74,7 @@ export function ChannelSettings({
   updateChannelSettings,
 }: ChannelSettingsProps) {
   const t = useTranslation();
+  const { auth } = useAuthContext();
   const members = useMemo(() => server?.members ?? [], [server?.members]);
   const [selectedMemberId, setSelectedMemberId] = useState(() => members[0]?.id ?? '');
   const selectedMember = useMemo(
@@ -143,7 +149,16 @@ export function ChannelSettings({
           defaultValue={channel.topic ?? ''}
           maxLength={200}
         />
-        {channel.type === 'TEXT' ? (
+        {channel.type === 'FORUM' ? (
+          <TextArea
+            label={t('forum.settings.guidelines')}
+            hint={t('forum.settings.guidelinesHint')}
+            name="postGuidelines"
+            defaultValue={channel.postGuidelines ?? ''}
+            maxLength={FORUM_POST_GUIDELINES_MAX_LENGTH}
+          />
+        ) : null}
+        {channel.type !== 'VOICE' ? (
           <SettingsSelect
             name="slowmodeSeconds"
             label={t('channel.field.slowmode')}
@@ -166,11 +181,26 @@ export function ChannelSettings({
         />
         <TextField
           label={t('channel.field.type')}
-          value={channel.type === 'VOICE' ? t('channel.type.voice') : t('channel.type.text')}
+          value={
+            channel.type === 'VOICE'
+              ? t('channel.type.voice')
+              : channel.type === 'FORUM'
+                ? t('channel.type.forum')
+                : t('channel.type.text')
+          }
           readOnly
           className={styles.readonlyInput}
         />
       </section>
+
+      {channel.type === 'FORUM' ? <ForumTagsSection channelId={channel.id} /> : null}
+
+      {server &&
+      auth &&
+      channel.type === 'TEXT' &&
+      memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS') ? (
+        <ChannelWebhooksSection serverId={server.id} channelId={channel.id} />
+      ) : null}
 
       {server ? (
         <section className={styles.settingsSection}>

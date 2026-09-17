@@ -27,6 +27,22 @@ This document defines the top-level product scope. Delivery order lives in [impl
 - **Session Management**: [session-management.md](features/session-management.md)
 - **Two-Factor Authentication**: [two-factor-auth.md](features/two-factor-auth.md)
 - **Server Events**: [server-events.md](features/server-events.md)
+- **Polls**: [polls.md](features/polls.md)
+- **Forward Message**: [forward-message.md](features/forward-message.md)
+- **Scheduled Messages**: [scheduled-messages.md](features/scheduled-messages.md)
+- **Voice Messages**: [voice-messages.md](features/voice-messages.md)
+- **AutoMod**: [automod.md](features/automod.md)
+- **Message Reports**: [message-reports.md](features/message-reports.md)
+- **Saved Messages**: [saved-messages.md](features/saved-messages.md)
+- **Account Deletion & Data Export**: [account-deletion-and-export.md](features/account-deletion-and-export.md)
+- **Forum Channels**: [forum-channels.md](features/forum-channels.md)
+- **Server Onboarding**: [server-onboarding.md](features/server-onboarding.md)
+- **Stage Channels**: [stage-channels.md](features/stage-channels.md)
+- **Server Templates & Discovery**: [server-templates-and-discovery.md](features/server-templates-and-discovery.md)
+- **Incoming Webhooks**: [incoming-webhooks.md](features/incoming-webhooks.md)
+- **Bot API**: [bot-api.md](features/bot-api.md)
+- **Keyboard Shortcuts**: [keyboard-shortcuts.md](features/keyboard-shortcuts.md)
+- **Stickers & Soundboard**: [stickers-and-soundboard.md](features/stickers-and-soundboard.md)
 
 ## Product Goal
 

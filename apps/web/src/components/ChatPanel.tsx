@@ -6,11 +6,13 @@ import { MessageList, type MessageListHandle } from './chat/MessageList';
 import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
+import { ForumChannelView } from './forum/ForumChannelView';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { resolveMemberIdentity } from '@/utils/memberIdentity';
 import { Button } from './ui';
 import { cn } from '@/utils/cn';
+import { clearMessageJump, usePendingMessageJump } from '@/utils/pendingMessageJump';
 import styles from './ChatPanel.module.css';
 import type {
   ActiveDialog,
@@ -61,6 +63,16 @@ export function ChatPanel({
   const jumpToMessage = useCallback((messageId: string) => {
     messageListRef.current?.scrollToMessage(messageId);
   }, []);
+
+  // A jump requested before this channel opened (Saved Messages) runs once its message has loaded.
+  const pendingJump = usePendingMessageJump();
+  const channelId = session.channel?.id;
+  useEffect(() => {
+    if (!pendingJump || pendingJump.channelId !== channelId || messages.isLoading) return;
+    if (!messages.visible.some((message) => message.id === pendingJump.messageId)) return;
+    clearMessageJump();
+    jumpToMessage(pendingJump.messageId);
+  }, [pendingJump, channelId, messages.isLoading, messages.visible, jumpToMessage]);
 
   // Announce incoming messages to screen readers
   const lastMessage = messages.all[messages.all.length - 1];
@@ -130,51 +142,64 @@ export function ChatPanel({
 
       <CallStage session={session} call={call} />
 
-      <MessageList
-        ref={messageListRef}
-        channel={session.channel}
-        messages={messages.all}
-        visibleMessages={messages.visible}
-        isLoadingMessages={messages.isLoading}
-        isLoadingMoreMessages={messages.isLoadingMore}
-        hasMoreMessages={messages.hasMore}
-        searchQuery={messages.searchQuery}
-        loadMoreMessages={messages.loadMore}
-        renderMessage={(message, index) => (
-          <MessageRow
-            message={message}
-            previousMessage={messages.visible[index - 1]}
-            auth={session.auth}
-            serverId={session.channel?.serverId ?? null}
-            authorIdentity={
-              session.memberIdentities[message.authorId] ?? resolveMemberIdentity(message.author)
-            }
-            pinnedMessageIds={messages.pinnedIds}
-            actions={messageActions}
-            onPreviewAttachment={setPreviewAttachment}
-            onJumpToMessage={jumpToMessage}
+      {session.channel?.type === 'FORUM' ? (
+        <ForumChannelView
+          key={session.channel.id}
+          channel={session.channel}
+          disabledReason={composer.restriction.disabledReason}
+          onOpenPost={messageActions.openThread}
+        />
+      ) : (
+        <>
+          <MessageList
+            ref={messageListRef}
+            channel={session.channel}
+            messages={messages.all}
+            visibleMessages={messages.visible}
+            isLoadingMessages={messages.isLoading}
+            isLoadingMoreMessages={messages.isLoadingMore}
+            hasMoreMessages={messages.hasMore}
+            searchQuery={messages.searchQuery}
+            loadMoreMessages={messages.loadMore}
+            renderMessage={(message, index) => (
+              <MessageRow
+                message={message}
+                previousMessage={messages.visible[index - 1]}
+                auth={session.auth}
+                serverId={session.channel?.serverId ?? null}
+                authorIdentity={
+                  session.memberIdentities[message.authorId] ??
+                  resolveMemberIdentity(message.author)
+                }
+                pinnedMessageIds={messages.pinnedIds}
+                actions={messageActions}
+                onPreviewAttachment={setPreviewAttachment}
+                onJumpToMessage={jumpToMessage}
+              />
+            )}
           />
-        )}
-      />
 
-      {messages.typingUsers.length > 0 && (
-        <div className={styles.typingIndicator} aria-live="polite">
-          {messages.typingUsers.length === 1
-            ? `${messages.typingUsers[0].displayName} is typing...`
-            : `${messages.typingUsers
-                .slice(0, 2)
-                .map((user) => user.displayName)
-                .join(
-                  ', ',
-                )}${messages.typingUsers.length > 2 ? ` and ${messages.typingUsers.length - 2} more` : ''} are typing...`}
-        </div>
+          {messages.typingUsers.length > 0 && (
+            <div className={styles.typingIndicator} aria-live="polite">
+              {messages.typingUsers.length === 1
+                ? `${messages.typingUsers[0].displayName} is typing...`
+                : `${messages.typingUsers
+                    .slice(0, 2)
+                    .map((user) => user.displayName)
+                    .join(
+                      ', ',
+                    )}${messages.typingUsers.length > 2 ? ` and ${messages.typingUsers.length - 2} more` : ''} are typing...`}
+            </div>
+          )}
+
+          <MessageComposer
+            channel={session.channel}
+            messageActions={messageActions}
+            composer={composer}
+            isChannelEncrypted={encryption.isChannelEncrypted}
+          />
+        </>
       )}
-
-      <MessageComposer
-        channel={session.channel}
-        messageActions={messageActions}
-        composer={composer}
-      />
 
       <ThreadPanel
         rootMessage={thread.rootMessage}
@@ -185,6 +210,13 @@ export function ChatPanel({
         onClose={thread.close}
         onDraftChange={thread.setDraft}
         onSend={thread.sendMessage}
+        onSendSticker={thread.sendSticker}
+        messageActions={{
+          viewerId: session.auth.user.id,
+          canManageMessages: messageActions.canManageMessages,
+          onToggleReaction: thread.toggleReaction,
+          onDeleteMessage: thread.deleteMessage,
+        }}
       />
 
       <AttachmentPreviewDialog

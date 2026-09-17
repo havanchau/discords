@@ -26,6 +26,7 @@ import { useServerEmojis } from './hooks/useServerEmojis';
 import { useServerEvents } from './hooks/useServerEvents';
 import { useServerModeration } from './hooks/useServerModeration';
 import { useSettingsActions } from './hooks/useSettingsActions';
+import { useSoundboardPlayback } from './hooks/useSoundboardPlayback';
 import { useTheme } from './hooks/useTheme';
 import { useThreadPanel } from './hooks/useThreadPanel';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
@@ -33,15 +34,18 @@ import { useWorkspaceNavigation } from './hooks/useWorkspaceNavigation';
 import { useChatOrchestrator } from './hooks/useChatOrchestrator';
 import { useChannelMessageActions } from './hooks/useChannelMessageActions';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
-import { apiRequest, assetUrl, Message, uploadFile } from './api';
+import { apiRequest, assetUrl, Message, uploadMessageAttachments } from './api';
+import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
 import { encryptChannelMessage } from './e2ee';
 import { ActiveCallSummary } from './helpers';
 import { updateFaviconBadge } from './utils/faviconBadge';
 import { executeSlashCommand } from './utils/executeSlashCommand';
+import { memberHasServerPermission } from './utils/serverPermissions';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
 import { AuthGate } from './components/app/AuthGate';
 import { AuthenticatedWorkspace } from './components/app/AuthenticatedWorkspace';
 import { conversationDisplayName } from './components/home/conversationDisplay';
+import { KeyboardShortcuts } from './components/shortcuts/KeyboardShortcuts';
 
 // Shared empty value so channels without pins pass the same array to memoized rows each render.
 const NO_PINNED_MESSAGE_IDS: string[] = [];
@@ -52,6 +56,7 @@ export function AppShell() {
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
+  const [isSavedMessagesOpen, setIsSavedMessagesOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
   const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
@@ -311,6 +316,8 @@ export function AppShell() {
       setWorkspaceError,
     });
 
+  const soundboard = useSoundboardPlayback(socket, callState?.channelId ?? null);
+
   function conversationLabel(conversationId: string, fallback: string) {
     const conversation = directConversations.find((item) => item.id === conversationId);
     return conversation && auth ? conversationDisplayName(conversation, auth.user.id) : fallback;
@@ -345,9 +352,8 @@ export function AppShell() {
     startVoiceRecording,
     stopVoiceRecording,
   } = useComposerAttachments({
-    auth,
-    channel,
-    sendChatMessage,
+    destination: channel ? { type: 'channel', id: channel.id } : null,
+    sendVoiceMessage: (file, voice) => sendChatMessage('', [file], voice),
     setWorkspaceError,
   });
 
@@ -444,15 +450,18 @@ export function AppShell() {
     [server?.members, selectedMemberId],
   );
 
-  async function sendChatMessage(content: string, files: File[]) {
+  async function sendChatMessage(
+    content: string,
+    files: File[],
+    voice?: VoiceAttachmentMetadata | null,
+    stickerId?: string,
+  ) {
     if (!auth || !channel) return false;
-    if (!content && files.length === 0) return;
+    if (!content && files.length === 0 && !stickerId) return;
     setPendingAction('send-message');
     setWorkspaceError(null);
     try {
-      const attachments = await Promise.all(
-        files.map((file) => uploadFile(file, auth.accessToken)),
-      );
+      const attachments = await uploadMessageAttachments(files, auth.accessToken, voice);
       const channelKey = channelKeysRef.current[channel.id];
       const messageContent =
         content && channelKey ? await encryptChannelMessage(channelKey, content) : content;
@@ -461,6 +470,7 @@ export function AppShell() {
         content: messageContent,
         attachments,
         replyToMessageId: replyingToMessage?.id,
+        stickerId,
       };
       socket?.emit('typing:stop', { channelId: channel.id });
       if (socket?.connected) {
@@ -497,6 +507,7 @@ export function AppShell() {
             content: messageContent,
             attachments,
             replyToMessageId: replyingToMessage?.id,
+            stickerId,
           }),
         },
         auth.accessToken,
@@ -523,11 +534,16 @@ export function AppShell() {
     if (!content && files.length === 0) return;
     const commandResult = await executeSlashCommand({
       content,
+      isChannelEncrypted: Boolean(channel && channelKeys[channel.id]),
       auth,
       server,
       channel,
       openServer,
       clearDraft: channelDraft.clear,
+      addMessage: (message) =>
+        setMessages((current) =>
+          current.some((item) => item.id === message.id) ? current : [...current, message],
+        ),
       setWorkspaceError,
       setWorkspaceNotice,
       t,
@@ -556,6 +572,9 @@ export function AppShell() {
     setReplyingToMessage,
     openThread: threadPanel.openThread,
     togglePinnedMessage,
+    canManageMessages: Boolean(
+      auth && memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES'),
+    ),
   });
 
   function logout() {
@@ -573,6 +592,7 @@ export function AppShell() {
 
   const workspaceContextValue = {
     servers,
+    directConversations,
     server,
     channel,
     activePanel,
@@ -584,12 +604,24 @@ export function AppShell() {
     selectChannel,
     setActivePanel,
     setActiveDialog,
+    isChannelEncrypted: (channelId: string) => Boolean(channelKeys[channelId]),
+    openSavedMessages: () => setIsSavedMessagesOpen(true),
     clearWorkspaceError: () => setWorkspaceError(null),
     clearWorkspaceNotice: () => setWorkspaceNotice(null),
   };
 
   return (
     <WorkspaceProvider value={workspaceContextValue}>
+      <KeyboardShortcuts
+        viewerId={auth.user.id}
+        visibleTextChannels={visibleTextChannels}
+        channelBadges={channelBadges}
+        activeConversation={activeConversation}
+        openHome={openHome}
+        openDirectConversation={homeProps.actions.openDirectConversation}
+        markChannelRead={markChannelRead}
+        markDirectConversationRead={markDirectConversationRead}
+      />
       <AuthenticatedWorkspace
         auth={auth}
         socket={socket}
@@ -683,6 +715,7 @@ export function AppShell() {
             toggleMute,
             toggleCamera,
             end: endDirectCall,
+            soundboard,
           },
           messageActions: {
             ...messageActions,
@@ -698,6 +731,14 @@ export function AppShell() {
             draft: channelDraft.value,
             fileInputRef,
             sendMessage,
+            sendSticker: async (stickerId: string) => {
+              if (await sendChatMessage('', [], null, stickerId)) setReplyingToMessage(null);
+            },
+            clearAfterSchedule: () => {
+              channelDraft.clear();
+              setSelectedFiles([]);
+              setReplyingToMessage(null);
+            },
             setDraft: channelDraft.setValue,
             startVoiceRecording,
             stopVoiceRecording,
@@ -742,6 +783,19 @@ export function AppShell() {
           },
         }}
         serverEmojis={serverEmojis.emojis}
+        savedMessages={{
+          open: isSavedMessagesOpen,
+          onOpenChange: setIsSavedMessagesOpen,
+          conversations: homeProps.home.conversations,
+          onOpenChannel: (serverId, channelId) => {
+            void openServer(serverId);
+            selectChannel(channelId);
+          },
+          onOpenConversation: (conversation) => {
+            openHome();
+            void homeProps.actions.openDirectConversation(conversation);
+          },
+        }}
         incomingCall={{
           incomingCall,
           conversationLabel: incomingCall

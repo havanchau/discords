@@ -4,12 +4,16 @@
   max-width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto auto auto minmax(0, 1fr) auto auto;
   grid-template-rows: auto auto auto;
   align-items: center;
   gap: 0;
   padding: 0 var(--space-4) var(--space-6);
   background: transparent;
+}
+
+.scheduledBar {
+  grid-column: 1 / -1;
 }
 
 .pendingAttachments {
@@ -134,7 +138,8 @@
   background: var(--surface-hover);
 }
 
-.voiceRecordButton {
+.voiceRecordButton,
+.scheduleButton {
   position: relative;
   width: var(--control-height-lg);
   height: var(--control-height-lg);
@@ -155,7 +160,8 @@
   align-self: center;
 }
 
-.voiceRecordButton:hover {
+.voiceRecordButton:hover,
+.scheduleButton:hover {
   color: var(--text-primary);
   background: var(--surface-hover);
 }

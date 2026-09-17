@@ -38,6 +38,7 @@ TWO_FACTOR_ENCRYPTION_KEY=replace-with-at-least-32-random-characters
 WEB_ORIGIN=https://your-vercel-domain.vercel.app,https://*.vercel.app
 STORAGE_DRIVER=cloudinary
 UPLOAD_MAX_BYTES=104857600
+VOICE_MAX_BYTES=26214400
 UPLOAD_CHUNK_BYTES=2097152
 UPLOAD_TMP_DIR=uploads/.chunks
 CLOUDINARY_CLOUD_NAME=
@@ -55,7 +56,7 @@ npm run db:push --workspace apps/api
 Run that command locally with `DATABASE_URL` pointed at Render, or use a one-off Render shell/job. For mature production releases, replace `db:push` with Prisma migrations and use:
 
 ```bash
-npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+npm exec --workspace apps/api -- prisma migrate deploy
 ```
 
 Current schema update note:
@@ -71,7 +72,7 @@ npm run db:push --workspace apps/api
 or apply the included SQL migration:
 
 ```bash
-npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+npm exec --workspace apps/api -- prisma migrate deploy
 ```
 
 If the live database was originally created with `db:push` and does not have Prisma migration history, prefer `db:push` for this release.
@@ -92,6 +93,12 @@ Google and Facebook sign-in (see `docs/features/oauth-login.md`):
 - Set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` and/or `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET`; a provider without both stays disabled on the sign-in screen.
 - Set `OAUTH_REDIRECT_BASE_URL` to the API's public base URL (the API will not start in production without it once a provider is configured) and register `{OAUTH_REDIRECT_BASE_URL}/auth/oauth/google/callback` and `…/facebook/callback` in the provider consoles.
 - Outbound HTTPS from the API to `oauth2.googleapis.com`, `openidconnect.googleapis.com`, and `graph.facebook.com` is required.
+
+Account deletion and data export (see `docs/features/account-deletion-and-export.md`):
+
+- Run migration `20260917007000_add_account_deletion_and_export` before deploying the API, and deploy the web client in the same release (the sign-in screen's cancel flow uses the new `POST /auth/account-deletion/cancel`).
+- Optional `PRIVATE_STORAGE_LOCAL_DIR` (local storage driver only, default `<os tmpdir>/discord-clone-private`): where export archives are written. It must not be the public `uploads` directory. With `STORAGE_DRIVER=cloudinary`, exports reuse the `CLOUDINARY_*` settings as `authenticated` raw resources.
+- The deletion and export-expiry sweep starts with the API process every 60 seconds; no separate worker.
 
 DDoS and abuse protection (see `docs/features/ddos-protection.md`):
 

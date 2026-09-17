@@ -63,6 +63,7 @@ export class FriendsService {
     const [target, requester] = await Promise.all([
       this.prisma.user.findFirst({
         where: {
+          kind: 'HUMAN',
           OR: [{ username: query }, { email: query.toLowerCase() }],
         },
         select: this.userSelect,
@@ -193,8 +194,8 @@ export class FriendsService {
 
   async block(userId: string, targetUserId: string) {
     if (targetUserId === userId) throw new BadRequestException('Cannot block yourself');
-    const target = await this.prisma.user.findUnique({
-      where: { id: targetUserId },
+    const target = await this.prisma.user.findFirst({
+      where: { id: targetUserId, kind: 'HUMAN' },
       select: this.userSelect,
     });
     if (!target) throw new NotFoundException('User not found');

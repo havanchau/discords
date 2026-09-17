@@ -1,4 +1,7 @@
 import type { SettingsModalFields } from './types';
+import { AccountDangerZoneSection } from './AccountDangerZoneSection';
+import { AccountDataExportSection } from './AccountDataExportSection';
+import { BotsSection } from './BotsSection';
 import { SessionsSettings } from './SessionsSettings';
 import { TwoFactorSettings } from './TwoFactorSettings';
 import styles from '@/components/SettingsModal.module.css';
@@ -11,6 +14,9 @@ export function AccountSecuritySettings({ auth, signOut }: AccountSecuritySettin
     <div className={styles.settingsForm}>
       <TwoFactorSettings accessToken={auth.accessToken} />
       <SessionsSettings auth={auth} onCurrentSessionRevoked={signOut} />
+      <BotsSection />
+      <AccountDataExportSection auth={auth} />
+      <AccountDangerZoneSection accessToken={auth.accessToken} signOut={signOut} />
     </div>
   );
 }

@@ -10,12 +10,15 @@ import { Server, Socket } from 'socket.io';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { MessageAttachmentInputDto } from '@/modules/messages/dto/create-message.dto';
 import { ReactionDto } from '@/modules/messages/dto/reaction.dto';
+import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { CallRegistryService } from './call-registry.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { RealtimeUnreadService } from './realtime-unread.service';
+import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
 import { getSocketUser } from './socket-user';
+import { validateSocketMessageBody } from './socket-validation';
 
 /** Chat over the socket: rooms, messages, threads, reactions, typing and unread badges. */
 @WebSocketGateway()
@@ -30,6 +33,7 @@ export class MessagesGateway {
     private readonly publisher: RealtimePublisher,
     private readonly calls: CallRegistryService,
     private readonly rateLimit: SocketRateLimitService,
+    private readonly socketErrors: SocketErrorTranslator,
   ) {}
 
   @SubscribeMessage('channel:join')
@@ -51,21 +55,19 @@ export class MessagesGateway {
       content: string;
       replyToMessageId?: string;
       attachments?: MessageAttachmentInputDto[];
+      stickerId?: string;
     },
   ) {
     await this.rateLimit.assert(client, 'message:create', 20, 60_000);
     const user = getSocketUser(client);
     let result: Awaited<ReturnType<MessagesService['createMessage']>>;
     try {
-      result = await this.messages.createMessage(user.id, body.channelId, {
-        content: body.content,
-        replyToMessageId: body.replyToMessageId,
-        attachments: body.attachments,
-      });
+      const dto = await validateSocketMessageBody(body);
+      result = await this.messages.createMessage(user.id, body.channelId, dto);
     } catch (error) {
       // Business refusals (timeout, slowmode, permissions) are acknowledged so the client can show
       // the reason; anything else still fails the event as before.
-      if (error instanceof HttpException) return { error: error.message };
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
       throw error;
     }
     this.publisher.emitToRoom(
@@ -99,15 +101,13 @@ export class MessagesGateway {
       content: string;
       replyToMessageId?: string;
       attachments?: MessageAttachmentInputDto[];
+      stickerId?: string;
     },
   ) {
     await this.rateLimit.assert(client, 'thread:message:create', 20, 60_000);
     const user = getSocketUser(client);
-    return this.messages.createThreadMessage(user.id, body.rootMessageId, {
-      content: body.content,
-      replyToMessageId: body.replyToMessageId,
-      attachments: body.attachments,
-    });
+    const dto = await validateSocketMessageBody(body);
+    return this.messages.createThreadMessage(user.id, body.rootMessageId, dto);
   }
 
   @SubscribeMessage('message:update')
@@ -171,7 +171,7 @@ export class MessagesGateway {
     } satisfies ReactionDto);
     this.publisher.emitToRoom(this.publisher.channelRoom(body.channelId), 'reaction:updated', {
       channelId: body.channelId,
-      message: result.message,
+      message: withoutViewerVotes(result.message),
     });
     return result;
   }

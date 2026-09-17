@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
-import { RealtimeEvents } from '@discord-clone/shared';
+import { RealtimeEvents, type AccountDeletedPayload } from '@discord-clone/shared';
 import { apiRequest, AuthState, ServerBanEntry, ServerDetail } from '@/api';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { PatchServer, PatchServers } from '@/query/useWorkspaceStore';
@@ -134,13 +134,37 @@ export function useServerModeration({
       );
     };
 
+    // An anonymized account left every server at once; the open server drops it from the roster.
+    const handleAccountDeleted = (payload: AccountDeletedPayload) => {
+      patchServer((current) =>
+        current.members.some((member) => member.user.id === payload.userId)
+          ? {
+              ...current,
+              members: current.members.filter((member) => member.user.id !== payload.userId),
+            }
+          : current,
+      );
+    };
+
+    // `needsOnboarding` lives on the server detail, so screening changes refetch it.
+    const handleOnboardingUpdated = (payload: { serverId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.serverOnboarding(payload.serverId),
+      });
+    };
+
     socket.on(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
     socket.on(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
+    socket.on(RealtimeEvents.AccountDeleted, handleAccountDeleted);
+    socket.on(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
+      socket.off(RealtimeEvents.AccountDeleted, handleAccountDeleted);
+      socket.off(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
     };
-  }, [socket, openHome, patchServer, patchServers]);
+  }, [socket, openHome, patchServer, patchServers, queryClient]);
 
   // The server id is part of the query key, so a slow response for the previous server can no
   // longer land on the current one; the manual ref guard this used to need is gone.

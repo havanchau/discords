@@ -8,9 +8,10 @@ import {
   useRef,
 } from 'react';
 import type { Socket } from 'socket.io-client';
-import { apiRequest, AuthState, Channel, Message } from '@/api';
+import { apiRequest, AuthState, Channel, Message, Poll } from '@/api';
 import type { ChannelMessageActions } from '@/components/chat/types';
 import { encryptChannelMessage } from '@/e2ee';
+import { updatePollInMessages } from '@/utils/polls';
 
 interface UseChannelMessageActionsOptions {
   auth: AuthState | null;
@@ -27,6 +28,7 @@ interface UseChannelMessageActionsOptions {
   setReplyingToMessage: (message: Message | null) => void;
   openThread: (message: Message) => Promise<void>;
   togglePinnedMessage: (message: Message) => Promise<void>;
+  canManageMessages: boolean;
 }
 
 /** Edit, delete, react, and pin actions for channel message rows, with stable identities. */
@@ -45,6 +47,7 @@ export function useChannelMessageActions({
   setReplyingToMessage,
   openThread,
   togglePinnedMessage,
+  canManageMessages,
 }: UseChannelMessageActionsOptions) {
   // Read through a ref so saveMessageEdit keeps its identity when new messages arrive.
   const messagesRef = useRef(messages);
@@ -130,6 +133,11 @@ export function useChannelMessageActions({
     [auth, socket, channel, decryptMessageForDisplay, setMessages],
   );
 
+  const updatePoll = useCallback(
+    (poll: Poll) => setMessages((current) => updatePollInMessages(current, poll.id, () => poll)),
+    [setMessages],
+  );
+
   const messageActions = useMemo<ChannelMessageActions>(
     () => ({
       editingMessageId,
@@ -142,6 +150,8 @@ export function useChannelMessageActions({
       delete: deleteMessage,
       toggleReaction,
       togglePinned: (message) => void togglePinnedMessage(message),
+      updatePoll,
+      canManageMessages,
     }),
     [
       editingMessageId,
@@ -154,6 +164,8 @@ export function useChannelMessageActions({
       deleteMessage,
       toggleReaction,
       togglePinnedMessage,
+      updatePoll,
+      canManageMessages,
     ],
   );
 

@@ -15,6 +15,7 @@ import type { OAuthProviderAvailability } from '@/hooks/useOAuthSignIn';
 import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
 import { ForgotPasswordForm, ResetPasswordForm } from './auth/PasswordResetForms';
+import { CancelDeletionForm } from './auth/CancelDeletionForm';
 import { TwoFactorLoginForm } from './auth/TwoFactorLoginForm';
 import { Button, TextField } from './ui';
 import styles from './AuthScreen.module.css';
@@ -29,6 +30,8 @@ export interface AuthScreenProps {
   submitForgotPassword: (event: FormEvent<HTMLFormElement>) => void;
   submitResetPassword: (event: FormEvent<HTMLFormElement>) => void;
   submitTwoFactorLogin: (event: FormEvent<HTMLFormElement>) => void;
+  submitCancelDeletion: (event: FormEvent<HTMLFormElement>) => void;
+  canCancelDeletion: boolean;
   notice: string | null;
   verificationHint: string | null;
   verificationToken: string;
@@ -77,6 +80,10 @@ function headings(t: Translate): Record<AuthMode, { title: string; description: 
       title: t('auth.heading.twoFactor.title'),
       description: t('auth.heading.twoFactor.description'),
     },
+    'cancel-deletion': {
+      title: t('auth.heading.cancelDeletion.title'),
+      description: t('auth.heading.cancelDeletion.description'),
+    },
   };
 }
 
@@ -96,6 +103,8 @@ export function AuthScreen({
   submitForgotPassword,
   submitResetPassword,
   submitTwoFactorLogin,
+  submitCancelDeletion,
+  canCancelDeletion,
   notice,
   verificationHint,
   verificationToken,
@@ -106,7 +115,8 @@ export function AuthScreen({
 }: AuthScreenProps) {
   const t = useTranslation();
   const isLogin = mode === 'login';
-  const isPasswordRecovery = mode === 'forgot' || mode === 'reset' || mode === 'two-factor';
+  const isPasswordRecovery =
+    mode === 'forgot' || mode === 'reset' || mode === 'two-factor' || mode === 'cancel-deletion';
   // The token only arrives through the emailed link, so there is nothing to confirm without it.
   const showVerification = !isPasswordRecovery && Boolean(verificationToken);
   const heading = headings(t)[mode];
@@ -196,6 +206,17 @@ export function AuthScreen({
             </>
           ) : null}
 
+          {mode === 'cancel-deletion' ? (
+            <>
+              {feedback}
+              <CancelDeletionForm
+                isSubmitting={isSubmitting}
+                onSubmit={submitCancelDeletion}
+                onBack={() => setMode('login')}
+              />
+            </>
+          ) : null}
+
           {!isPasswordRecovery ? (
             <>
               <div className={styles.modeSwitch} role="group" aria-label={t('auth.modeGroup')}>
@@ -278,6 +299,16 @@ export function AuthScreen({
                 <Button type="submit" fullWidth>
                   {isLogin ? t('auth.action.signIn') : t('auth.action.createAccount')}
                 </Button>
+                {isLogin && canCancelDeletion ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    fullWidth
+                    onClick={() => setMode('cancel-deletion')}
+                  >
+                    {t('auth.action.cancelDeletion')}
+                  </Button>
+                ) : null}
                 {isLogin && canResendVerification ? (
                   <Button
                     type="button"

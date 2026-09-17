@@ -1,0 +1,48 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reason {
+  min-height: var(--control-height-sm);
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: var(--font-size-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+.reason:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.selected,
+.selected:hover {
+  color: var(--text-primary);
+  background: var(--surface-selected);
+}
+
+.notice {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.error {
+  margin: 0;
+  color: var(--state-danger);
+  font-size: var(--font-size-sm);
+}

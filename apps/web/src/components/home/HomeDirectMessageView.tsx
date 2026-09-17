@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageSquare, Phone, Users, Video } from 'lucide-react';
 import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
 import { directCallId } from '@/hooks/useDirectCall';
@@ -23,6 +23,7 @@ import { UserAvatar } from './UserAvatar';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import type { HomeDirectCall, HomePanelActions, HomePanelState } from './types';
 import styles from './HomePanel.module.css';
+import { clearMessageJump, usePendingMessageJump } from '@/utils/pendingMessageJump';
 
 type HomeDirectMessageViewProps = {
   auth: AuthState;
@@ -36,6 +37,8 @@ type HomeDirectMessageViewProps = {
   actions: Pick<
     HomePanelActions,
     | 'sendDirectMessage'
+    | 'sendDirectVoiceMessage'
+    | 'reportComposerError'
     | 'setDirectMessageDraft'
     | 'setReplyingToDirectMessage'
     | 'editDirectMessage'
@@ -43,12 +46,13 @@ type HomeDirectMessageViewProps = {
     | 'toggleDirectReaction'
     | 'toggleDirectPin'
     | 'loadDirectPins'
+    | 'updateDirectPoll'
     | 'renameGroupConversation'
     | 'addGroupMember'
     | 'removeGroupMember'
   >;
   call: HomeDirectCall;
-  onSendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onSendDirectMessage: HomePanelActions['sendDirectMessage'];
 };
 
 export function HomeDirectMessageView({
@@ -77,12 +81,24 @@ export function HomeDirectMessageView({
     activeConversation && call.outgoingCall?.conversationId === activeConversation.id,
   );
 
+  // A jump requested before this conversation opened (Saved Messages) runs once the message renders.
+  const pendingJump = usePendingMessageJump();
+  const activeConversationId = activeConversation?.id;
+  useEffect(() => {
+    if (!pendingJump || pendingJump.conversationId !== activeConversationId) return;
+    if (!directMessages.some((message) => message.id === pendingJump.messageId)) return;
+    clearMessageJump();
+    // Effects run after commit, so the row is already in the DOM (the DM timeline is not virtualized).
+    jumpToDirectMessage(pendingJump.messageId);
+  }, [pendingJump, activeConversationId, directMessages]);
+
   const rowActions: DirectMessageRowActions = {
     onReply: actions.setReplyingToDirectMessage,
     onEdit: actions.editDirectMessage,
     onDelete: actions.deleteDirectMessage,
     onReact: actions.toggleDirectReaction,
     onTogglePin: actions.toggleDirectPin,
+    onPollUpdate: actions.updateDirectPoll,
     onJumpToMessage: jumpToDirectMessage,
   };
 
@@ -212,6 +228,8 @@ export function HomeDirectMessageView({
             actions={rowActions}
           />
           <DirectMessageComposer
+            // Keyed so files picked in one conversation are never sent to another.
+            key={activeConversation.id}
             placeholderName={isGroup ? title : `@${dmPartner?.username}`}
             draft={directMessageDraft}
             pendingAction={pendingAction}
@@ -219,6 +237,9 @@ export function HomeDirectMessageView({
             replyingToName={replyingToName}
             onCancelReply={() => actions.setReplyingToDirectMessage(null)}
             onSendDirectMessage={onSendDirectMessage}
+            onSendVoiceMessage={actions.sendDirectVoiceMessage}
+            onComposerError={actions.reportComposerError}
+            conversationId={activeConversation.id}
             onDraftChange={actions.setDirectMessageDraft}
           />
         </>

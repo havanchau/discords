@@ -126,9 +126,51 @@
   color: var(--text-muted);
 }
 
+.reactionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.reactionRow button {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+  color: var(--text-primary);
+  background: var(--surface-hover);
+  cursor: pointer;
+}
+
+.reactionRow button:hover {
+  background: var(--surface-active);
+}
+
+.reactionRow button.reactionActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.reactionRow strong {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.messageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: var(--space-1);
+}
+
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--surface-base);

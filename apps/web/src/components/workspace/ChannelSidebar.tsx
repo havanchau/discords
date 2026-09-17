@@ -7,6 +7,7 @@ import {
   Loader2,
   LogOut,
   MessageSquare,
+  MessagesSquare,
   Search,
   Settings,
   UserPlus,
@@ -114,7 +115,13 @@ export function ChannelSidebar({
       <ChannelRow
         key={item.id}
         channel={item}
-        icon={<Hash size={16} aria-hidden="true" />}
+        icon={
+          item.type === 'FORUM' ? (
+            <MessagesSquare size={16} aria-hidden="true" />
+          ) : (
+            <Hash size={16} aria-hidden="true" />
+          )
+        }
         active={channel?.id === item.id}
         badge={channelBadges[item.id]}
         activeCall={activeCalls[item.id]}
@@ -150,6 +157,12 @@ export function ChannelSidebar({
                 <DropdownMenuItem onSelect={() => setTimeout(onCreateCategory, 0)}>
                   <FolderPlus size={16} aria-hidden="true" />
                   {t('sidebar.menu.createCategory')}
+                </DropdownMenuItem>
+              ) : null}
+              {canManageChannels ? (
+                <DropdownMenuItem onSelect={() => setTimeout(() => onCreateChannel('FORUM'), 0)}>
+                  <MessagesSquare size={16} aria-hidden="true" />
+                  {t('channel.dialog.createForum')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem onSelect={() => setTimeout(onOpenEvents, 0)}>

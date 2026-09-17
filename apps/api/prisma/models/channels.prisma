@@ -1,0 +1,83 @@
+enum ChannelType {
+  TEXT
+  VOICE
+  FORUM
+}
+
+model ChannelCategory {
+  id        String    @id @default(cuid())
+  serverId  String
+  name      String
+  position  Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channels  Channel[]
+
+  @@index([serverId, position])
+}
+
+model Channel {
+  id                        String                      @id @default(cuid())
+  serverId                  String
+  categoryId                String?
+  name                      String
+  type                      ChannelType                 @default(TEXT)
+  topic                     String?
+  avatarUrl                 String?
+  position                  Int                         @default(0)
+  isPrivate                 Boolean                     @default(false)
+  slowmodeSeconds           Int                         @default(0)
+  /// Shown above the new-post form of a FORUM channel; null on every other type.
+  postGuidelines            String?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  server                    Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category                  ChannelCategory?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  messages                  Message[]
+  threads                   Thread[]
+  pins                      MessagePin[]
+  permissionOverrides       ChannelPermissionOverride[]
+  readStates                ReadState[]
+  notificationPreferences   NotificationPreference[]
+  pushNotificationThrottles PushNotificationThrottle[]
+  events                    ServerEvent[]
+  scheduledMessages         ScheduledMessage[]
+  autoModAlertRules         AutoModRule[]
+  forumTags                 ForumTag[]
+  webhooks                  ServerWebhook[]
+
+  @@unique([serverId, name])
+  @@index([categoryId])
+}
+
+model ChannelPermissionOverride {
+  id        String        @id @default(cuid())
+  channelId String
+  roleId    String?
+  memberId  String?
+  allow     String[]      @default([])
+  deny      String[]      @default([])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  channel   Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  role      Role?         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  member    ServerMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([roleId])
+  @@index([memberId])
+}
+
+model ReadState {
+  id                String   @id @default(cuid())
+  userId            String
+  channelId         String
+  lastReadMessageId String?
+  lastReadAt        DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel           Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@index([channelId, lastReadAt])
+}

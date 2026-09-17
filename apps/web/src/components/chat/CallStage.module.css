@@ -99,6 +99,10 @@
   font-size: var(--font-size-sm);
 }
 
+.callStageHeader .soundboardPlayed {
+  color: var(--text-secondary);
+}
+
 .callControls {
   display: flex;
   gap: var(--space-2);

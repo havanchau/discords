@@ -1,9 +1,18 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { copyFile, mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from 'fs/promises';
 import { basename, extname, join } from 'path';
 import { randomUUID } from 'crypto';
+
+/** The last path segment of every stored file: `buildStorageKey` names it `<uuid><extension>`. */
+const STORED_FILE_NAME_PATTERN =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(\.[a-z0-9]{1,5})$/;
 
 /** An abandoned resumable upload leaves its chunks behind; they are swept on the next chunk write. */
 const CHUNK_DIR_TTL_MS = 6 * 60 * 60 * 1000;
@@ -94,6 +103,8 @@ async function moveFile(sourcePath: string, targetPath: string) {
 
 @Injectable()
 export class UploadsService {
+  private readonly logger = new Logger(UploadsService.name);
+
   constructor(private readonly config: ConfigService) {
     if (this.storageDriver === 'cloudinary') {
       cloudinary.config({
@@ -138,6 +149,72 @@ export class UploadsService {
     } catch (error) {
       await rm(file.path, { force: true });
       throw error;
+    }
+  }
+
+  /**
+   * Stores a small asset multer held in memory (sticker, soundboard clip). The caller has already
+   * sniffed the bytes and passes the detected type with a matching server-built file name.
+   */
+  async uploadBuffer(file: IncomingUploadChunk) {
+    if (file.buffer.length > this.maxUploadBytes) {
+      throw new BadRequestException('File is too large');
+    }
+    if (!this.isAllowedFile(file)) {
+      throw new BadRequestException('Unsupported file type');
+    }
+    await mkdir(this.uploadTmpDir, { recursive: true });
+    const tempPath = join(this.uploadTmpDir, `${randomUUID()}.upload`);
+    await writeFile(tempPath, file.buffer);
+    try {
+      return await this.uploadFromPath({
+        path: tempPath,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.buffer.length,
+      });
+    } finally {
+      // Local storage already moved the file; this only cleans up after a failed upload.
+      await rm(tempPath, { force: true });
+    }
+  }
+
+  /**
+   * Deletes a file this service stored, by its public URL. Only for rows that own their file (a
+   * sticker or soundboard clip stored through `uploadBuffer`): a URL a client chose, such as an avatar,
+   * may be shared with other rows and is never deleted. Anything that is not a generated file name is
+   * ignored, so the URL can never name another path.
+   */
+  async removeStoredFile(url: string, mimeType: string) {
+    const fileName = url.split('?')[0].split('/').pop() ?? '';
+    const match = STORED_FILE_NAME_PATTERN.exec(fileName);
+    if (!match) {
+      this.logger.warn('Stored file removal skipped: not a generated file name');
+      return;
+    }
+    if (this.storageDriver !== 'cloudinary') {
+      const localDir = this.config.get<string>('STORAGE_LOCAL_DIR', 'uploads');
+      await rm(join(localDir, fileName), { force: true });
+      return;
+    }
+    const resourceType = this.cloudinaryResourceType(normalizeMimeType(mimeType));
+    // Mirrors `uploadPathToCloudinary`: the extension is part of a raw public id only.
+    const key = this.buildStorageKeyFor(match[1], match[2]);
+    await cloudinary.uploader.destroy(resourceType === 'raw' ? key : key.replace(/\.[^.]+$/, ''), {
+      resource_type: resourceType,
+      invalidate: true,
+    });
+  }
+
+  /** For cleanup after the row is gone: a failure leaves an orphaned file, logged without the URL. */
+  async removeStoredFileQuietly(url: string, mimeType: string) {
+    try {
+      await this.removeStoredFile(url, mimeType);
+    } catch (error) {
+      this.logger.error(
+        'Stored file could not be removed',
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 
@@ -243,10 +320,14 @@ export class UploadsService {
   }
 
   private buildStorageKey(extension: string) {
+    return this.buildStorageKeyFor(randomUUID(), extension);
+  }
+
+  private buildStorageKeyFor(id: string, extension: string) {
     const prefix = this.config
       .get<string>('CLOUDINARY_FOLDER', 'discord-clone/uploads')
       .replace(/^\/+|\/+$/g, '');
-    return `${prefix}/${randomUUID()}${extension}`;
+    return `${prefix}/${id}${extension}`;
   }
 
   // One chunk buffer in memory at a time, written with async I/O so the event loop stays free.

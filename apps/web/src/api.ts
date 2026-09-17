@@ -84,18 +84,36 @@ export function configureAuthRefresh(config: AuthRefreshConfig) {
  */
 import type {
   Json,
+  AcceptServerOnboardingInput,
+  AcceptServerOnboardingResult,
+  AccountDeletionScheduledResult as ServerAccountDeletionScheduledResult,
   AuditLogEntry as ServerAuditLogEntry,
+  AutoModAction,
+  AutoModRuleView as ServerAutoModRuleView,
+  AutoModTriggerType,
+  CreateAutoModRuleInput,
+  UpdateAutoModRuleInput,
   AuthSessionEntry as ServerAuthSessionEntry,
   BlockedUserEntry as ServerBlockedUserEntry,
   Channel as ServerChannel,
   ChannelCategory as ServerChannelCategory,
   ChannelPermissionOverride as ServerChannelPermissionOverride,
   CreateServerEventInput as ServerCreateServerEventInput,
+  CreatePollInput as ServerCreatePollInput,
+  CreateSavedMessageInput as ServerCreateSavedMessageInput,
   CustomStatus as ServerCustomStatus,
   DirectConversation as ServerDirectConversation,
   DirectMessage as ServerDirectMessage,
   DirectMessageReaction as ServerDirectMessageReaction,
   DirectMessageReplyPreview as ServerDirectMessageReplyPreview,
+  ExportJobView as ServerExportJobView,
+  CreateForumPostInput as ServerCreateForumPostInput,
+  ForumPostListResult as ServerForumPostListResult,
+  ForumPostView as ServerForumPostView,
+  ForumTagView,
+  UpdateForumTagsInput,
+  ForwardMessageInput as ServerForwardMessageInput,
+  ForwardOrigin as ServerForwardOrigin,
   FriendEntry as ServerFriendEntry,
   FriendRequestEntry as ServerFriendRequestEntry,
   FriendsSummary as ServerFriendsSummary,
@@ -104,35 +122,85 @@ import type {
   Message as ServerMessage,
   MessageAttachment as ServerMessageAttachment,
   MessageReaction as ServerMessageReaction,
+  CreateMessageReportInput,
+  CreateMessageReportResult as ServerCreateMessageReportResult,
+  MessageReportReason,
+  MessageReportStatus,
+  MessageReportView as ServerMessageReportView,
+  UpdateMessageReportInput,
   NotificationItem as ServerNotificationItem,
   NotificationPreference as ServerNotificationPreference,
+  PollOptionView as ServerPollOptionView,
+  PollUpdatedPayload as ServerPollUpdatedPayload,
+  PollView as ServerPollView,
   PublicUser as ServerPublicUser,
   Role as ServerRole,
+  SavedMessageView as ServerSavedMessageView,
+  CreateScheduledMessageInput as ServerCreateScheduledMessageInput,
+  ScheduledMessageUpdatedPayload,
+  ScheduledMessageView as ServerScheduledMessageView,
+  UpdateScheduledMessageInput as ServerUpdateScheduledMessageInput,
   ServerBanEntry as ServerServerBanEntry,
   ServerDetail as ServerServerDetail,
   ServerEmoji as ServerServerEmoji,
   ServerEventView as ServerServerEventView,
   ServerMemberDetail as ServerServerMemberDetail,
+  ServerOnboardingView,
   ServerSummary as ServerServerSummary,
+  SelfAssignQuestion,
+  UpdateServerOnboardingInput,
   ThreadMessageResult as ServerThreadMessageResult,
   ThreadSummary as ServerThreadSummary,
   User as ServerUser,
   UserProfile as ServerUserProfile,
   UserProfileServerContext as ServerUserProfileServerContext,
+  VoiceAttachmentMetadata,
+  DiscoveryJoinResult,
+  DiscoveryServerCard,
+  DiscoveryServerPage,
+  ReportServerInput,
+  ServerDiscoverySettings,
+  ServerTemplateSummary as ServerServerTemplateSummary,
+  UpdateServerDiscoveryInput,
+  ChannelWebhook as ServerChannelWebhook,
+  CreateWebhookInput,
+  CreateWebhookResult as ServerCreateWebhookResult,
+  WebhookSecret,
+  AuthorizeBotInput,
+  BotAuthorizationView,
+  BotSecret,
+  CreateBotInput,
+  CreateBotResult as ServerCreateBotResult,
+  OwnedBot as ServerOwnedBot,
+  ServerSticker as ServerServerSticker,
+  SoundboardClip as ServerSoundboardClip,
+  SoundboardPlayedPayload,
 } from '@discord-clone/shared';
 
+export type AccountDeletionScheduledResult = Json<ServerAccountDeletionScheduledResult>;
 export type AuditLogEntry = Json<ServerAuditLogEntry>;
+export type AutoModRule = Json<ServerAutoModRuleView>;
+export type { AutoModAction, AutoModTriggerType, CreateAutoModRuleInput, UpdateAutoModRuleInput };
 export type AuthSessionEntry = Json<ServerAuthSessionEntry>;
 export type BlockedUserEntry = Json<ServerBlockedUserEntry>;
 export type Channel = Json<ServerChannel>;
 export type ChannelCategory = Json<ServerChannelCategory>;
 export type ChannelPermissionOverride = Json<ServerChannelPermissionOverride>;
+export type CreatePollInput = Json<ServerCreatePollInput>;
+export type CreateSavedMessageInput = Json<ServerCreateSavedMessageInput>;
 export type CreateServerEventInput = Json<ServerCreateServerEventInput>;
 export type CustomStatus = Json<ServerCustomStatus>;
 export type DirectConversation = Json<ServerDirectConversation>;
 export type DirectMessage = Json<ServerDirectMessage>;
 export type DirectMessageReaction = Json<ServerDirectMessageReaction>;
 export type DirectMessageReplyPreview = Json<ServerDirectMessageReplyPreview>;
+export type ExportJob = Json<ServerExportJobView>;
+export type CreateForumPostInput = Json<ServerCreateForumPostInput>;
+export type ForumPost = Json<ServerForumPostView>;
+export type ForumPostListResult = Json<ServerForumPostListResult>;
+export type { ForumTagView, UpdateForumTagsInput };
+export type ForwardMessageInput = Json<ServerForwardMessageInput>;
+export type ForwardOrigin = Json<ServerForwardOrigin>;
 export type FriendEntry = Json<ServerFriendEntry>;
 export type FriendRequestEntry = Json<ServerFriendRequestEntry>;
 export type FriendsSummary = Json<ServerFriendsSummary>;
@@ -141,16 +209,58 @@ export type LinkPreview = Json<ServerLinkPreview>;
 export type Message = Json<ServerMessage>;
 export type MessageAttachment = Json<ServerMessageAttachment>;
 export type MessageReaction = Json<ServerMessageReaction>;
+export type MessageReport = Json<ServerMessageReportView>;
+export type CreateMessageReportResult = Json<ServerCreateMessageReportResult>;
+export type {
+  CreateMessageReportInput,
+  MessageReportReason,
+  MessageReportStatus,
+  UpdateMessageReportInput,
+};
 export type NotificationItem = Json<ServerNotificationItem>;
 export type NotificationPreference = Json<ServerNotificationPreference>;
+export type Poll = Json<ServerPollView>;
+export type PollOption = Json<ServerPollOptionView>;
+export type PollUpdatedPayload = Json<ServerPollUpdatedPayload>;
 export type PublicUser = Json<ServerPublicUser>;
 export type Role = Json<ServerRole>;
+export type SavedMessage = Json<ServerSavedMessageView>;
+export type ScheduledMessage = Json<ServerScheduledMessageView>;
+export type CreateScheduledMessageInput = Json<ServerCreateScheduledMessageInput>;
+export type UpdateScheduledMessageInput = Json<ServerUpdateScheduledMessageInput>;
+export type { ScheduledMessageUpdatedPayload };
 export type ServerBanEntry = Json<ServerServerBanEntry>;
 export type ServerDetail = Json<ServerServerDetail>;
 export type ServerEmoji = Json<ServerServerEmoji>;
 export type ServerEventView = Json<ServerServerEventView>;
 export type ServerMemberDetail = Json<ServerServerMemberDetail>;
+export type ServerOnboarding = Json<ServerOnboardingView>;
+export type {
+  AcceptServerOnboardingInput,
+  AcceptServerOnboardingResult,
+  SelfAssignQuestion,
+  UpdateServerOnboardingInput,
+};
 export type ServerSummary = Json<ServerServerSummary>;
+export type ChannelWebhook = Json<ServerChannelWebhook>;
+export type CreateWebhookResult = Json<ServerCreateWebhookResult>;
+export type { CreateWebhookInput, WebhookSecret };
+export type OwnedBot = Json<ServerOwnedBot>;
+export type CreateBotResult = Json<ServerCreateBotResult>;
+export type BotAuthorization = Json<BotAuthorizationView>;
+export type { AuthorizeBotInput, BotSecret, CreateBotInput };
+export type ServerTemplateSummary = Json<ServerServerTemplateSummary>;
+export type ServerSticker = Json<ServerServerSticker>;
+export type SoundboardClip = Json<ServerSoundboardClip>;
+export type { SoundboardPlayedPayload };
+export type {
+  DiscoveryJoinResult,
+  DiscoveryServerCard,
+  DiscoveryServerPage,
+  ReportServerInput,
+  ServerDiscoverySettings,
+  UpdateServerDiscoveryInput,
+};
 export type ThreadMessageResult = Json<ServerThreadMessageResult>;
 export type ThreadSummary = Json<ServerThreadSummary>;
 export type User = Json<ServerUser>;
@@ -181,6 +291,25 @@ export async function apiRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+/** A file route that needs the bearer token, so it cannot be a plain link. */
+export async function apiDownload(path: string, token: string): Promise<Blob> {
+  let response = await fetch(`${API_URL}${path}`, { headers: buildHeaders({}, token) });
+
+  if (response.status === 401 && authRefreshConfig) {
+    const nextAuth = await refreshAuth();
+    response = await fetch(`${API_URL}${path}`, {
+      headers: buildHeaders({}, nextAuth.accessToken),
+    });
+  }
+
+  if (!response.ok) {
+    const error = await readErrorBody(response);
+    throw new ApiError(error.message, error.code, response.status, response.statusText);
+  }
+
+  return response.blob();
 }
 
 export async function uploadFile(file: File, token: string): Promise<MessageAttachment> {
@@ -217,6 +346,40 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
 
   const result = (await response.json()) as { attachment: MessageAttachment };
   return result.attachment;
+}
+
+/**
+ * Posts a multipart form to an API route that stores the file itself (stickers, soundboard clips).
+ * `apiRequest` always sends JSON, so the browser must set the multipart boundary here.
+ */
+export async function postMultipart<T>(path: string, form: FormData, token: string): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'X-Locale': requestLocale },
+    body: form,
+  });
+
+  if (response.status === 401 && authRefreshConfig) {
+    const nextAuth = await refreshAuth();
+    return postMultipart(path, form, nextAuth.accessToken);
+  }
+
+  if (!response.ok) {
+    const error = await readErrorBody(response);
+    throw new ApiError(error.message, error.code, response.status, response.statusText);
+  }
+
+  return (await response.json()) as T;
+}
+
+/** Uploads a message's files; `voice` is the metadata of the single recording a voice send carries. */
+export async function uploadMessageAttachments(
+  files: File[],
+  token: string,
+  voice?: VoiceAttachmentMetadata | null,
+): Promise<MessageAttachment[]> {
+  const attachments = await Promise.all(files.map((file) => uploadFile(file, token)));
+  return voice ? attachments.map((attachment) => ({ ...attachment, ...voice })) : attachments;
 }
 
 const CHUNKED_UPLOAD_THRESHOLD_BYTES = 5 * 1024 * 1024;
@@ -281,6 +444,11 @@ async function uploadFileInChunks(file: File, token: string): Promise<MessageAtt
 
 function createUploadId() {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** Absolute URL of an API route, for a URL someone copies out of the app (a webhook URL). */
+export function apiEndpointUrl(path: string) {
+  return new URL(`${API_URL}${path}`, window.location.origin).toString();
 }
 
 export function assetUrl(url: string) {

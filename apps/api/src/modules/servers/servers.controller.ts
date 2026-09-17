@@ -3,13 +3,16 @@ import { CurrentUser } from '@/common/current-user.decorator';
 import { RateLimit } from '@/common/rate-limit.decorator';
 import { RequestUser } from '@/common/request-user';
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
+import { AcceptOnboardingDto } from './dto/accept-onboarding.dto';
 import { CreateBanDto } from './dto/create-ban.dto';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { TimeoutMemberDto } from './dto/timeout-member.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import { ServerModerationService } from './server-moderation.service';
+import { ServerOnboardingService } from './server-onboarding.service';
 import { ServersService } from './servers.service';
 
 @UseGuards(JwtAuthGuard)
@@ -18,6 +21,7 @@ export class ServersController {
   constructor(
     private readonly servers: ServersService,
     private readonly moderation: ServerModerationService,
+    private readonly onboarding: ServerOnboardingService,
   ) {}
 
   @RateLimit({ keyPrefix: 'server-create', limit: 5, windowMs: 60_000 })
@@ -44,6 +48,31 @@ export class ServersController {
     @Body() dto: UpdateServerDto,
   ) {
     return this.servers.updateServer(user.id, serverId, dto);
+  }
+
+  @Get('servers/:serverId/onboarding')
+  getOnboarding(@CurrentUser() user: RequestUser, @Param('serverId') serverId: string) {
+    return this.onboarding.getOnboarding(user.id, serverId);
+  }
+
+  @RateLimit({ keyPrefix: 'server-onboarding-update', limit: 20, windowMs: 60_000 })
+  @Patch('servers/:serverId/onboarding')
+  updateOnboarding(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Body() dto: UpdateOnboardingDto,
+  ) {
+    return this.onboarding.updateOnboarding(user.id, serverId, dto);
+  }
+
+  @RateLimit({ keyPrefix: 'server-onboarding-accept', limit: 10, windowMs: 60_000 })
+  @Post('servers/:serverId/onboarding/accept')
+  acceptOnboarding(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Body() dto: AcceptOnboardingDto,
+  ) {
+    return this.onboarding.acceptOnboarding(user.id, serverId, dto);
   }
 
   @Get('servers/:serverId/audit-logs')

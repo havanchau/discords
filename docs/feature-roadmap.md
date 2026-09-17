@@ -315,3 +315,96 @@ until a browser pass has run — see each spec's test plan.
 - [ ] Add profile banner, pronouns, about me, and expiring custom status to the account profile.
 - [ ] Add per-server nickname and avatar with one shared identity resolver.
 - [ ] Replace the inline member-sidebar popover with a reusable profile card opened from the member list, channel messages, and direct messages.
+
+## Wave 3.2 Backlog — 2026-09-17
+
+Fourth roadmap wave. Specs were reviewed and approved on 2026-09-17; open decisions are rows 8–29 in [open-questions.md](features/open-questions.md), and until answered the "Assumption used" column is the decision.
+
+### Status — 2026-09-17 (paused)
+
+Work is paused after the bot API (phase 1) and resumes at stickers and soundboard. Polls through message reports are committed; AutoMod, account deletion, server onboarding, forum channels, server templates and discovery, keyboard shortcuts, incoming webhooks, and the bot API are not.
+
+- **Implemented, committed in `fdafde0`:** polls, saved messages, forward message (including `DirectMessageAttachment`), voice messages, scheduled messages, message reports. Each spec has a "Deviations" section describing what was built differently from the reviewed draft.
+- **Verification so far:** `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check`, `ui:scan`, `docs:check`, and Prettier pass. Migration SQL was checked with `prisma migrate diff` against the pre-change schema. No migration has been applied to any database, and no manual or browser scenario from any test plan has run, so every checklist item stays unchecked.
+- **Pending migrations, in order:** `20260917000000_add_polls`, `20260917001000_add_saved_messages`, `20260917002000_add_message_forwarding`, `20260917003000_add_voice_messages`, `20260917004000_add_scheduled_messages`, `20260917005000_add_message_reports`, `20260917006000_add_automod`, `20260917007000_add_account_deletion_and_export`, `20260917008000_add_server_onboarding`, `20260917009000_add_forum_channels`, `20260917010000_add_server_templates`, `20260917011000_add_server_discovery`, `20260917012000_add_incoming_webhooks`, `20260917013000_add_bot_api`, `20260917014000_add_stickers_and_soundboard`.
+- **AutoMod:** [automod.md](features/automod.md) implemented, uncommitted, with a "Deviations" section; migration `20260917006000_add_automod`.
+- **Account deletion and export:** [account-deletion-and-export.md](features/account-deletion-and-export.md) implemented, uncommitted, with a "Deviations" section; migration `20260917007000_add_account_deletion_and_export`.
+- **Server onboarding:** [server-onboarding.md](features/server-onboarding.md) implemented, uncommitted, with a "Deviations" section; migration `20260917008000_add_server_onboarding`.
+- **Forum channels:** [forum-channels.md](features/forum-channels.md) implemented, uncommitted, with a "Deviations" section; migration `20260917009000_add_forum_channels`.
+- **Server templates and discovery:** [server-templates-and-discovery.md](features/server-templates-and-discovery.md) implemented, uncommitted, with a "Deviations" section; migrations `20260917010000_add_server_templates` and `20260917011000_add_server_discovery`.
+- **Keyboard shortcuts:** [keyboard-shortcuts.md](features/keyboard-shortcuts.md) implemented, uncommitted, with a "Deviations" section; web client only, no migration.
+- **Incoming webhooks:** [incoming-webhooks.md](features/incoming-webhooks.md) implemented, uncommitted, with a "Deviations" section; migration `20260917012000_add_incoming_webhooks`. It introduced `User.kind` (`HUMAN | WEBHOOK`), which the bot API extends with `BOT`.
+- **Bot API (phase 1, REST only):** [bot-api.md](features/bot-api.md) implemented, uncommitted, with a "Deviations" section; migration `20260917013000_add_bot_api`. Bots call an explicit `/bot-api/*` allowlist with `Authorization: Bot <token>`; gateway access (phase 2) and slash commands (phase 3) are not built. Next migration timestamp after stickers and soundboard: `20260917015000`.
+- **Stickers and soundboard:** [stickers-and-soundboard.md](features/stickers-and-soundboard.md) implemented, uncommitted web client and API i18n on top of the API committed in `8d60e21`, with a "Deviations" section; migration `20260917014000_add_stickers_and_soundboard`. Not run in a browser; see "Stickers And Soundboard — Remaining Work".
+- **Skipped:** [stage-channels.md](features/stage-channels.md), blocked on an SFU that has no implementation.
+- **File-size split (no behavior change):** the Prisma schema is now a folder (`apps/api/prisma/schema.prisma` plus `prisma/models/*.prisma`, empty `prisma migrate diff` against the single file), and the web locale catalogs are per-area modules under `apps/web/src/i18n/locales/{en,vi}/`, read by `scripts/i18n-scan.mjs`.
+- **Decision taken during implementation:** no `@nestjs/schedule` dependency; scheduled messages reuse the `setInterval` sweep with a conditional claim from saved-message reminders.
+
+### Stickers And Soundboard — Remaining Work
+
+- [x] API: map the sticker and soundboard error messages in `apps/api/src/common/i18n/error-codes.ts` with `en` and `vi` entries.
+- [x] API: review the edits that carry `stickerId` through send, forward, format, and export.
+- [x] Web: `useServerStickers` and `useServerSoundboard` hooks with query keys, multipart `postMultipart` in `api.ts`, and refetch on `server:stickers-updated` / `server:soundboard-updated`.
+- [x] Web: sticker picker in the composer, sending `stickerId` over the socket `message:create` path with the REST fallback.
+- [x] Web: sticker rendering in `MessageAttachments` (channel and direct messages) and `ThreadPanel`, including the placeholder when the sticker was deleted.
+- [x] Web: Stickers and Soundboard sections in server settings, `MANAGE_SERVER` only, with client-side type, size, and duration checks.
+- [x] Web: soundboard panel in the call controls that emits `soundboard:play`, local playback of `soundboard:played` mounted in the app shell, and the "X played Y" line.
+- [x] Web: `en`/`vi` catalog keys in `apps/web/src/i18n/locales/{en,vi}/stickers-soundboard.ts`.
+- [x] Docs: "Deviations" section in `stickers-and-soundboard.md`.
+- [x] Thread composer sticker picker; sticker replies go through the thread REST route with `stickerId`.
+- [x] i18n for `Not in this call` and `Too many upload chunks`, and translated socket acks for `message:create` and `soundboard:play` (see `i18n-localization.md` Deviations).
+- [x] Verify: `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check`, `ui:scan`, and Prettier pass; the migration's sticker and soundboard statements match SQL generated from the schema (`prisma migrate diff --from-empty`). `docs:check` is run with this doc change.
+- [ ] Apply the migration to a local database and run the manual scenarios in the spec's test plan (sticker send and delete placeholder, soundboard in a two-client call, 31st sticker limit, `403` without `MANAGE_SERVER`), then check desktop and 390x844 layouts of the composer, call controls, and settings sections.
+- [ ] Commit the stickers and soundboard work.
+
+### Follow-Ups Found During Implementation
+
+Fixed on 2026-09-17 per [wave-3-2-follow-ups.md](features/wave-3-2-follow-ups.md) (implemented, typecheck/lint/build and scans pass; manual scenarios not run yet):
+
+- [x] Validate socket `message:create` / `thread:message:create` bodies with `CreateMessageDto`, as REST does. `byteSize` stays client-reported on both paths.
+- [x] E2EE: `/poll` is refused and Forward is hidden in, and not offered into, a channel this client encrypts; scheduling was already hidden. Enforced in the client only, since the API has no encrypted-channel flag.
+- [x] AutoMod refuses `e2ee:v1:` content while an enabled rule applies to the author in that channel.
+- [x] `POST /auth/account-deletion/cancel` requires the 2FA code when enabled and is limited per email address.
+- [x] `i18n:check` covers files directly under `apps/web/src/` and skips deleted files; `ui:scan` and `check:file-size` include untracked files.
+- [x] Invite join posts to `POST /invites/:code/join` and opens the joined server.
+- [x] Channel polls bump unread badges live; DM polls update unread state and create a DM notification.
+- [x] "Jump to message" from Saved Messages scrolls to the message once it has loaded.
+- [x] `server:onboarding-updated` refreshes the rules gate in open tabs.
+- [x] Thread and forum messages have react, save, report and delete actions in the thread panel.
+- [x] Account export includes saved server templates and filed server reports.
+- [x] Role create, edit, delete, add and remove require holding the role's permissions (shared `canGrantRoles` with bot authorize).
+- [x] Notifications and AutoMod alerts name a bot by its display name.
+- [x] Deleting a sticker or soundboard clip deletes its stored file.
+- [ ] Add `VOICE_MAX_BYTES=26214400` to the API `.env.example` (agents cannot edit `.env*` files).
+- [ ] Add the optional `PRIVATE_STORAGE_LOCAL_DIR` (account export files, local storage driver) to the API `.env.example`.
+- [ ] Account deletion clears avatar and banner URLs but does not remove the files: `avatarUrl`/`bannerUrl` are client-chosen URLs that may be shared with other rows, so deleting them needs upload ownership tracking first.
+- [ ] `ServerReport` rows from discovery have no review surface: it needs a platform-level reviewer, which does not exist (open question 16); discovery is not production-ready until one exists.
+- [ ] `apps/web/src/AppShell.tsx` is at about 875 of 1000 lines; later features must add logic in new hooks and components.
+- [ ] Run the manual scenarios in [wave-3-2-follow-ups.md](features/wave-3-2-follow-ups.md).
+
+### Delivery Order
+
+1. Messaging: [polls.md](features/polls.md), [saved-messages.md](features/saved-messages.md), [forward-message.md](features/forward-message.md), [voice-messages.md](features/voice-messages.md), [scheduled-messages.md](features/scheduled-messages.md). `DirectMessageAttachment` lands with the first of forward, voice, or scheduled messages.
+2. Safety: [message-reports.md](features/message-reports.md), [automod.md](features/automod.md), [account-deletion-and-export.md](features/account-deletion-and-export.md).
+3. Community: [server-onboarding.md](features/server-onboarding.md), [forum-channels.md](features/forum-channels.md), [server-templates-and-discovery.md](features/server-templates-and-discovery.md).
+4. Integrations and UX: [keyboard-shortcuts.md](features/keyboard-shortcuts.md), [incoming-webhooks.md](features/incoming-webhooks.md), [bot-api.md](features/bot-api.md), [stickers-and-soundboard.md](features/stickers-and-soundboard.md).
+5. Blocked on [voice-sfu.md](features/voice-sfu.md): [stage-channels.md](features/stage-channels.md).
+
+### Checklist
+
+- [ ] Create, vote in, and close polls with realtime results.
+- [ ] Save messages and receive reminders.
+- [ ] Forward channel and direct messages with access re-checks.
+- [ ] Record and send voice messages in channels and direct messages.
+- [ ] Schedule, edit, and cancel messages for later delivery.
+- [ ] Report messages and members to a server moderator queue.
+- [ ] Enforce AutoMod rules on message send and edit.
+- [ ] Delete an account and export personal data.
+- [ ] Require rules acceptance and offer self-assign roles on join.
+- [ ] Create forum channels with thread posts and tags.
+- [ ] Create servers from templates and list servers in discovery.
+- [ ] Navigate with global keyboard shortcuts and a quick switcher.
+- [ ] Post channel messages through incoming webhooks.
+- [ ] Install token-authenticated bots in servers.
+- [ ] Use server stickers and soundboard clips.
+- [ ] Host stage channels with speakers and audience.

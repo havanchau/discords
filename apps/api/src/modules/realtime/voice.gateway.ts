@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,11 +7,22 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import {
+  RealtimeEvents,
+  SOUNDBOARD_PLAY_LIMIT,
+  SOUNDBOARD_PLAY_WINDOW_MS,
+  type SoundboardPlayedPayload,
+} from '@discord-clone/shared';
+import {
+  parseSoundboardPlay,
+  SoundboardPlaybackService,
+} from '@/modules/soundboard/soundboard-playback.service';
 import { CallParticipant, CallRegistryService } from './call-registry.service';
 import { DmCallMode } from './dm-call-rings';
 import { DmCallsService, parseDmCallKey } from './dm-calls.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
+import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
 import { getSocketUser } from './socket-user';
 
@@ -27,6 +38,8 @@ export class VoiceGateway {
     private readonly dmCalls: DmCallsService,
     private readonly publisher: RealtimePublisher,
     private readonly rateLimit: SocketRateLimitService,
+    private readonly soundboard: SoundboardPlaybackService,
+    private readonly socketErrors: SocketErrorTranslator,
   ) {}
 
   @SubscribeMessage('voice:join')
@@ -131,6 +144,43 @@ export class VoiceGateway {
   async leaveVoice(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
     await this.calls.leave(client, body.channelId);
     return { ok: true };
+  }
+
+  /**
+   * Plays a server soundboard clip for everyone in the caller's call. There is no SFU, so nothing is
+   * mixed into the media: each client plays the broadcast url locally. Refusals are acknowledged with
+   * `{ error }` so the client can show them, like `message:create`.
+   */
+  @SubscribeMessage('soundboard:play')
+  async playSoundboardClip(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
+    try {
+      await this.rateLimit.assert(
+        client,
+        RealtimeEvents.SoundboardPlay,
+        SOUNDBOARD_PLAY_LIMIT,
+        SOUNDBOARD_PLAY_WINDOW_MS,
+      );
+      const user = getSocketUser(client);
+      const command = parseSoundboardPlay(body);
+      if (parseDmCallKey(command.channelId)) {
+        throw new ForbiddenException('Soundboard is only available in server voice calls');
+      }
+      const participant = await this.calls.requireParticipant(client, command.channelId);
+      const clip = await this.soundboard.authorizePlay(user.id, command);
+      const payload: SoundboardPlayedPayload = {
+        ...clip,
+        triggeredBy: { id: user.id, displayName: participant.displayName },
+      };
+      this.publisher.emitToRoom(
+        this.calls.callRoom(command.channelId),
+        RealtimeEvents.SoundboardPlayed,
+        payload,
+      );
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
+      throw error;
+    }
   }
 
   @SubscribeMessage('webrtc:offer')

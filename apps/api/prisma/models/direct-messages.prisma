@@ -1,0 +1,96 @@
+model DirectConversation {
+  id                String                     @id @default(cuid())
+  isGroup           Boolean                    @default(false)
+  name              String?
+  ownerId           String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  owner             User?                      @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members           DirectConversationMember[]
+  messages          DirectMessage[]
+  readStates        DirectReadState[]
+  scheduledMessages ScheduledMessage[]
+}
+
+model DirectConversationMember {
+  conversationId String
+  userId         String
+  joinedAt       DateTime           @default(now())
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model DirectMessage {
+  id                           String                    @id @default(cuid())
+  conversationId               String
+  authorId                     String
+  content                      String
+  replyToMessageId             String?
+  pinnedAt                     DateTime?
+  pinnedById                   String?
+  // Forward snapshot: plain ids with no foreign key, so the copy survives the source being deleted.
+  forwardedFromMessageId       String?
+  forwardedFromDirectMessageId String?
+  forwardOriginAuthorName      String?
+  forwardOriginContent         String?
+  forwardOriginLabel           String?
+  editedAt                     DateTime?
+  deletedAt                    DateTime?
+  createdAt                    DateTime                  @default(now())
+  conversation                 DirectConversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author                       User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions                    DirectMessageReaction[]
+  attachments                  DirectMessageAttachment[]
+  poll                         Poll?
+
+  @@index([authorId])
+  @@index([conversationId, createdAt])
+  @@index([conversationId, pinnedAt])
+}
+
+model DirectMessageAttachment {
+  id              String        @id @default(cuid())
+  directMessageId String
+  fileName        String
+  mimeType        String
+  byteSize        Int
+  url             String
+  /// Same voice metadata as MessageAttachment.
+  kind            String?
+  durationMs      Int?
+  waveform        Json?
+  /// Only a forwarded sticker lands here (stickers are not sent directly in DMs); SetNull on delete.
+  stickerId       String?
+  createdAt       DateTime       @default(now())
+  directMessage   DirectMessage  @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  sticker         ServerSticker? @relation(fields: [stickerId], references: [id], onDelete: SetNull)
+
+  @@index([directMessageId])
+  @@index([stickerId])
+}
+
+model DirectMessageReaction {
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime      @default(now())
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
+}
+
+model DirectReadState {
+  id                String             @id @default(cuid())
+  userId            String
+  conversationId    String
+  lastReadMessageId String?
+  lastReadAt        DateTime           @default(now())
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation      DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([conversationId, lastReadAt])
+}

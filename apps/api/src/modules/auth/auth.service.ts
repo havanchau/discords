@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -68,9 +74,9 @@ export class AuthService {
   async resendVerification(email: string, locale: Locale = 'en') {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      select: { id: true, email: true, emailVerifiedAt: true, locale: true },
+      select: { id: true, email: true, emailVerifiedAt: true, locale: true, kind: true },
     });
-    if (user && !user.emailVerifiedAt) {
+    if (user && user.kind === 'HUMAN' && !user.emailVerifiedAt) {
       this.deliverVerificationEmail(
         this.reissueVerificationEmail(
           user.id,
@@ -87,7 +93,12 @@ export class AuthService {
       where: { email: dto.email.toLowerCase() },
     });
 
-    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+    // A webhook's synthetic user has an unusable password already; the kind check does not rely on it.
+    if (
+      !user ||
+      user.kind !== 'HUMAN' ||
+      !(await bcrypt.compare(dto.password, user.passwordHash))
+    ) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -100,6 +111,8 @@ export class AuthService {
 
   /* Final step shared by password and provider sign-in: hand off to 2FA when enabled, else open a session. */
   async completeSignIn(user: { id: string; twoFactorEnabledAt: Date | null }, userAgent?: string) {
+    // Before the 2FA hand-off, so a pending deletion is reported without spending a code.
+    await this.assertNotPendingDeletion(user.id);
     if (user.twoFactorEnabledAt) {
       return {
         twoFactorRequired: true,
@@ -223,6 +236,8 @@ export class AuthService {
   }
 
   async createSession(userId: string, userAgent?: string) {
+    // Every sign-in path (password, 2FA, email verification, provider) ends here.
+    await this.assertNotPendingDeletion(userId);
     const refreshToken = randomUUID();
     const refreshHash = await bcrypt.hash(refreshToken, 12);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
@@ -243,6 +258,27 @@ export class AuthService {
       expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
       ...(await this.getMe(userId)),
     };
+  }
+
+  /*
+   * An account in its deletion grace period (or already anonymized) cannot open a session. Reached
+   * only after the credentials were accepted, so it does not reveal the state of someone else's
+   * account. Cancelling goes through `POST /auth/account-deletion/cancel`.
+   *
+   * A non-HUMAN user (a webhook's synthetic author or a bot) never opens a session on any sign-in
+   * path; a bot authenticates only with its bot token, on `/bot-api/*`.
+   */
+  private async assertNotPendingDeletion(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { deletionRequestedAt: true, kind: true },
+    });
+    if (!user || user.kind !== 'HUMAN') {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    if (user.deletionRequestedAt) {
+      throw new ForbiddenException('Account is scheduled for deletion');
+    }
   }
 
   private signAccessToken(userId: string, sessionId: string) {

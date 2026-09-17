@@ -1,0 +1,86 @@
+enum MessageReportTargetType {
+  MESSAGE
+  USER
+}
+
+enum MessageReportReason {
+  SPAM
+  HARASSMENT
+  NSFW
+  HATE_SPEECH
+  OTHER
+}
+
+enum MessageReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// A member's flag on a server message or member, triaged by that server's MANAGE_MESSAGES holders.
+// For MESSAGE reports targetUserId is the message author, so the report still names who was
+// reported after the message row is gone.
+model MessageReport {
+  id           String                  @id @default(cuid())
+  serverId     String
+  reporterId   String
+  targetType   MessageReportTargetType
+  messageId    String?
+  targetUserId String?
+  reason       MessageReportReason
+  details      String?
+  status       MessageReportStatus     @default(OPEN)
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime                @default(now())
+  server       Server                  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  reporter     User                    @relation("MessageReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  message      Message?                @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  targetUser   User?                   @relation("MessageReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  resolvedBy   User?                   @relation("MessageReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([serverId, status, createdAt])
+  @@index([reporterId, messageId, status])
+}
+
+enum AutoModTriggerType {
+  KEYWORD
+  REGEX
+  MENTION_SPAM
+  INVITE_LINK
+  EXTERNAL_LINK
+}
+
+enum AutoModAction {
+  BLOCK_MESSAGE
+  ALERT_ONLY
+  TIMEOUT_AUTHOR
+}
+
+// A server's automatic content rule, evaluated on every channel message send and edit.
+// createdById is a plain id with no foreign key, so a rule outlives the account that created it.
+model AutoModRule {
+  id               String             @id @default(cuid())
+  serverId         String
+  name             String
+  triggerType      AutoModTriggerType
+  terms            String[]           @default([])
+  pattern          String?
+  mentionLimit     Int?
+  allowedDomains   String[]           @default([])
+  action           AutoModAction
+  alsoAllowMessage Boolean            @default(false)
+  timeoutMinutes   Int?
+  alertChannelId   String?
+  exemptRoleIds    String[]           @default([])
+  exemptChannelIds String[]           @default([])
+  position         Int                @default(0)
+  enabled          Boolean            @default(true)
+  createdById      String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  server           Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  alertChannel     Channel?           @relation(fields: [alertChannelId], references: [id], onDelete: SetNull)
+
+  @@index([serverId, position])
+}

@@ -1,9 +1,8 @@
 import { memo, useState } from 'react';
 import {
   Edit3,
-  FileArchive,
-  FileAudio2,
-  FileText,
+  Flag,
+  Forward,
   Lock,
   MessageSquareReply,
   Pin,
@@ -12,19 +11,12 @@ import {
   Trash2,
   Unlock,
 } from 'lucide-react';
-import { assetUrl, AuthState, Message, MessageAttachment } from '@/api';
-import {
-  accentClass,
-  attachmentKind,
-  formatBytes,
-  initials,
-  isSameMessageDay,
-  previewText,
-  QUICK_REACTIONS,
-} from '@/helpers';
+import { assetUrl, AuthState, Message } from '@/api';
+import { accentClass, initials, isSameMessageDay, previewText, QUICK_REACTIONS } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import {
+  Badge,
   Button,
   IconButton,
   Tooltip,
@@ -39,38 +31,43 @@ import {
   PopoverTrigger,
 } from '@/components/ui';
 import { useServerEmojiContext } from '@/contexts/ServerEmojiContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ProfileCard } from '@/components/profile/ProfileCard';
+import { SaveMessageAction } from '@/components/saved/SaveMessageAction';
 import type { MemberIdentity } from '@/utils/memberIdentity';
 import { EmojiPicker, ReactionEmoji } from './EmojiPicker';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import { extractMarkdownLinks } from '@/utils/markdown';
 import { MarkdownContent } from './MarkdownContent';
+import type { PreviewAttachment } from './AttachmentPreviewDialog';
+import { ForwardedHeader } from './ForwardedHeader';
+import { ForwardMessageDialog } from './ForwardMessageDialog';
+import { MessageAttachments } from './MessageAttachments';
+import { PollCard } from './PollCard';
+import { ReportMessageDialog } from './ReportMessageDialog';
 import styles from './MessageRow.module.css';
 import type { ChatPanelMessageActions } from './types';
 
 const MAX_LINK_PREVIEWS = 3;
 
-interface PreviewAttachment {
-  url: string;
-  fileName: string;
-  kind: 'image' | 'video';
-}
-
 function MessageContent({
   message,
   accessToken,
-  onOpenThread,
+  canClosePoll,
+  actions,
   onJumpToMessage,
 }: {
   message: Message;
   accessToken: string;
-  onOpenThread: (message: Message) => void;
+  canClosePoll: boolean;
+  actions: Pick<ChatPanelMessageActions, 'openThread' | 'updatePoll'>;
   onJumpToMessage: (messageId: string) => void;
 }) {
   const t = useTranslation();
   const dates = useDateFormat();
   const { resolveEmoji } = useServerEmojiContext();
-  const links = extractMarkdownLinks(message.content);
+  // A poll message's text is its question, which the card already shows.
+  const links = message.poll ? [] : extractMarkdownLinks(message.content);
 
   return (
     <>
@@ -88,7 +85,15 @@ function MessageContent({
           <span>{previewText(message.replyToMessage)}</span>
         </button>
       ) : null}
-      {message.content ? (
+      {message.forwardOrigin ? <ForwardedHeader origin={message.forwardOrigin} /> : null}
+      {message.poll ? (
+        <PollCard
+          poll={message.poll}
+          accessToken={accessToken}
+          canClose={canClosePoll}
+          onPollUpdate={actions.updatePoll}
+        />
+      ) : message.content ? (
         <MarkdownContent
           className={styles.content}
           content={message.content}
@@ -116,7 +121,7 @@ function MessageContent({
           type="button"
           className={styles.threadPreview}
           data-testid="thread-preview"
-          onClick={() => onOpenThread(message)}
+          onClick={() => actions.openThread(message)}
         >
           <MessageSquareReply size={14} aria-hidden="true" />
           <strong>{message.thread.replyCount}</strong>
@@ -141,101 +146,6 @@ function MessageContent({
         />
       ))}
     </>
-  );
-}
-
-function MessageAttachments({
-  attachments,
-  onPreview,
-}: {
-  attachments: MessageAttachment[];
-  onPreview: (attachment: PreviewAttachment) => void;
-}) {
-  const t = useTranslation();
-
-  if (!attachments.length) return null;
-
-  return (
-    <div className={styles.attachmentGrid}>
-      {attachments.map((attachment) => {
-        const kind = attachmentKind(attachment);
-        const url = assetUrl(attachment.url);
-
-        if (kind === 'image') {
-          return (
-            <button
-              type="button"
-              key={attachment.id ?? attachment.url}
-              className={`${styles.attachment} ${styles.imageAttachment}`}
-              onClick={() => onPreview({ url, fileName: attachment.fileName, kind: 'image' })}
-            >
-              <img src={url} alt={attachment.fileName} />
-            </button>
-          );
-        }
-
-        if (kind === 'video') {
-          return (
-            <div
-              key={attachment.id ?? attachment.url}
-              className={`${styles.attachment} ${styles.videoAttachment}`}
-            >
-              <video src={url} controls preload="metadata" />
-              <span>
-                {attachment.fileName}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onPreview({ url, fileName: attachment.fileName, kind: 'video' })}
-                >
-                  {t('attachment.openPreview')}
-                </Button>
-              </span>
-            </div>
-          );
-        }
-
-        if (kind === 'audio') {
-          return (
-            <div
-              key={attachment.id ?? attachment.url}
-              className={`${styles.attachment} ${styles.audioAttachment}`}
-            >
-              <div className={styles.audioAttachmentHeader}>
-                <FileAudio2 size={18} aria-hidden="true" />
-                <span>
-                  <strong>{attachment.fileName}</strong>
-                  <small>{formatBytes(attachment.byteSize)}</small>
-                </span>
-              </div>
-              <div className={styles.audioWaveform} aria-hidden="true">
-                {Array.from({ length: 18 }, (_, index) => (
-                  <i key={index} />
-                ))}
-              </div>
-              <audio src={url} controls preload="metadata" />
-            </div>
-          );
-        }
-
-        const Icon = kind === 'archive' ? FileArchive : FileText;
-        return (
-          <a
-            key={attachment.id ?? attachment.url}
-            className={styles.fileAttachment}
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon size={22} aria-hidden="true" />
-            <span>
-              <strong>{attachment.fileName}</strong>
-              <small>{formatBytes(attachment.byteSize)}</small>
-            </span>
-          </a>
-        );
-      })}
-    </div>
   );
 }
 
@@ -264,8 +174,12 @@ export const MessageRow = memo(function MessageRow({
   onJumpToMessage,
 }: MessageRowProps) {
   const t = useTranslation();
+  const { isChannelEncrypted } = useWorkspace();
   const dates = useDateFormat();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isSaveOpen, setIsSaveOpen] = useState(false);
+  const [isForwardOpen, setIsForwardOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [areActionsVisible, setAreActionsVisible] = useState(false);
   const showDateDivider = !isSameMessageDay(previousMessage?.createdAt, message.createdAt);
@@ -273,12 +187,32 @@ export const MessageRow = memo(function MessageRow({
     !previousMessage ||
     showDateDivider ||
     previousMessage.authorId !== message.authorId ||
+    // One webhook can post under a different name each time.
+    previousMessage.author.displayName !== message.author.displayName ||
     new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() >
       7 * 60 * 1000;
 
   const canManage = message.authorId === auth.user.id && !message.deletedAt;
+  // Poll questions are immutable, so a poll message offers delete but not edit.
+  const canEdit = canManage && !message.poll;
+  const canClosePoll = message.authorId === auth.user.id || actions.canManageMessages;
   const isEditing = actions.editingMessageId === message.id;
   const isPinned = pinnedMessageIds.includes(message.id);
+  // An encrypted message is stored as ciphertext, which a forward would copy unreadably; in a channel
+  // this client encrypts, a readable older message would leak out of it as plaintext.
+  const canForward = !message.isEncrypted && !isChannelEncrypted(message.channelId);
+  // Reports go to this server's moderators; the API refuses reporting your own message.
+  const canReport = Boolean(serverId) && message.authorId !== auth.user.id;
+  const isPopoverOpen = isEmojiOpen || isSaveOpen;
+  // A webhook author is not a member and has no profile to open.
+  const isWebhookAuthor = message.author.kind === 'WEBHOOK';
+  // A bot is a member with a profile, so only the badge sets it apart.
+  const isBotAuthor = message.author.kind === 'BOT';
+  const authorAvatar = authorIdentity.avatarUrl ? (
+    <img src={assetUrl(authorIdentity.avatarUrl)} alt={authorIdentity.displayName} />
+  ) : (
+    initials(authorIdentity.displayName)
+  );
 
   function copyMessageContent() {
     void navigator.clipboard?.writeText(message.content);
@@ -300,15 +234,21 @@ export const MessageRow = memo(function MessageRow({
             data-message-id={message.id}
             tabIndex={-1}
             onMouseEnter={() => setAreActionsVisible(true)}
-            onMouseLeave={() => !isEmojiOpen && setAreActionsVisible(false)}
+            onMouseLeave={() => !isPopoverOpen && setAreActionsVisible(false)}
             onFocusCapture={() => setAreActionsVisible(true)}
             onBlurCapture={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget) && !isEmojiOpen) {
+              if (!event.currentTarget.contains(event.relatedTarget) && !isPopoverOpen) {
                 setAreActionsVisible(false);
               }
             }}
           >
-            {isFirstInGroup ? (
+            {isFirstInGroup && isWebhookAuthor ? (
+              <span
+                className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
+              >
+                {authorAvatar}
+              </span>
+            ) : isFirstInGroup ? (
               <PopoverRoot open={isProfileOpen} onOpenChange={setIsProfileOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -316,14 +256,7 @@ export const MessageRow = memo(function MessageRow({
                     className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
                     aria-label={t('members.viewProfile', { name: authorIdentity.displayName })}
                   >
-                    {authorIdentity.avatarUrl ? (
-                      <img
-                        src={assetUrl(authorIdentity.avatarUrl)}
-                        alt={authorIdentity.displayName}
-                      />
-                    ) : (
-                      initials(authorIdentity.displayName)
-                    )}
+                    {authorAvatar}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="right" align="start">
@@ -346,6 +279,23 @@ export const MessageRow = memo(function MessageRow({
               {isFirstInGroup && (
                 <div className={styles.meta}>
                   <strong>{authorIdentity.displayName}</strong>
+                  {isWebhookAuthor ? (
+                    <Badge
+                      variant="neutral"
+                      className={styles.webhookBadge}
+                      title={t('message.webhookBadgeLabel')}
+                    >
+                      {t('message.webhookBadge')}
+                    </Badge>
+                  ) : isBotAuthor ? (
+                    <Badge
+                      variant="neutral"
+                      className={styles.webhookBadge}
+                      title={t('message.botBadgeLabel')}
+                    >
+                      {t('message.botBadge')}
+                    </Badge>
+                  ) : null}
                   <span>{dates.dateTime(message.createdAt)}</span>
                   {message.editedAt ? <span>{t('message.edited')}</span> : null}
                 </div>
@@ -381,7 +331,8 @@ export const MessageRow = memo(function MessageRow({
                 <MessageContent
                   message={message}
                   accessToken={auth.accessToken}
-                  onOpenThread={actions.openThread}
+                  canClosePoll={canClosePoll}
+                  actions={actions}
                   onJumpToMessage={onJumpToMessage}
                 />
               )}
@@ -437,6 +388,21 @@ export const MessageRow = memo(function MessageRow({
                       <Pin size={14} aria-hidden="true" />
                     </IconButton>
                   </Tooltip>
+                  <SaveMessageAction
+                    sourceType="CHANNEL"
+                    messageId={message.id}
+                    onOpenChange={setIsSaveOpen}
+                  />
+                  {canForward ? (
+                    <Tooltip content={t('forward.action')}>
+                      <IconButton
+                        label={t('forward.action')}
+                        onClick={() => setIsForwardOpen(true)}
+                      >
+                        <Forward size={14} aria-hidden="true" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
                   <div className={styles.quickReactions} title={t('message.action.quickReactions')}>
                     {QUICK_REACTIONS.map((emoji) => (
                       <button
@@ -464,19 +430,28 @@ export const MessageRow = memo(function MessageRow({
                       </PopoverContent>
                     </PopoverRoot>
                   </div>
+                  {canReport ? (
+                    <Tooltip content={t('report.action')}>
+                      <IconButton label={t('report.action')} onClick={() => setIsReportOpen(true)}>
+                        <Flag size={14} aria-hidden="true" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
                   {canManage && (
                     <>
-                      <Tooltip content={t('message.action.edit')}>
-                        <IconButton
-                          label={t('message.action.edit')}
-                          onClick={() => {
-                            actions.setEditingMessageId(message.id);
-                            actions.setEditingDraft(message.content);
-                          }}
-                        >
-                          <Edit3 size={14} aria-hidden="true" />
-                        </IconButton>
-                      </Tooltip>
+                      {canEdit && (
+                        <Tooltip content={t('message.action.edit')}>
+                          <IconButton
+                            label={t('message.action.edit')}
+                            onClick={() => {
+                              actions.setEditingMessageId(message.id);
+                              actions.setEditingDraft(message.content);
+                            }}
+                          >
+                            <Edit3 size={14} aria-hidden="true" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip content={t('message.action.delete')}>
                         <IconButton
                           label={t('message.action.delete')}
@@ -506,20 +481,32 @@ export const MessageRow = memo(function MessageRow({
               <Pin size={14} aria-hidden="true" />{' '}
               {isPinned ? t('message.menu.unpin') : t('message.menu.pin')}
             </ContextMenuItem>
+            {canForward ? (
+              <ContextMenuItem onClick={() => setIsForwardOpen(true)}>
+                <Forward size={14} aria-hidden="true" /> {t('forward.menu')}
+              </ContextMenuItem>
+            ) : null}
             <ContextMenuItem onClick={copyMessageContent}>
               {t('message.menu.copyText')}
             </ContextMenuItem>
+            {canReport ? (
+              <ContextMenuItem variant="danger" onClick={() => setIsReportOpen(true)}>
+                <Flag size={14} aria-hidden="true" /> {t('report.menu')}
+              </ContextMenuItem>
+            ) : null}
             {canManage && (
               <>
                 <ContextMenuSeparator />
-                <ContextMenuItem
-                  onClick={() => {
-                    actions.setEditingMessageId(message.id);
-                    actions.setEditingDraft(message.content);
-                  }}
-                >
-                  <Edit3 size={14} aria-hidden="true" /> {t('message.menu.edit')}
-                </ContextMenuItem>
+                {canEdit && (
+                  <ContextMenuItem
+                    onClick={() => {
+                      actions.setEditingMessageId(message.id);
+                      actions.setEditingDraft(message.content);
+                    }}
+                  >
+                    <Edit3 size={14} aria-hidden="true" /> {t('message.menu.edit')}
+                  </ContextMenuItem>
+                )}
                 <ContextMenuItem variant="danger" onClick={() => void actions.delete(message.id)}>
                   <Trash2 size={14} aria-hidden="true" /> {t('message.menu.delete')}
                 </ContextMenuItem>
@@ -528,6 +515,20 @@ export const MessageRow = memo(function MessageRow({
           </ContextMenuContent>
         )}
       </ContextMenuRoot>
+      {isForwardOpen ? (
+        <ForwardMessageDialog
+          sourceType="CHANNEL"
+          messageId={message.id}
+          onOpenChange={setIsForwardOpen}
+        />
+      ) : null}
+      {isReportOpen && serverId ? (
+        <ReportMessageDialog
+          serverId={serverId}
+          messageId={message.id}
+          onOpenChange={setIsReportOpen}
+        />
+      ) : null}
     </div>
   );
 });

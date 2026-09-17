@@ -40,6 +40,12 @@ export class DirectMessageActionsService {
     if (message.authorId !== userId) {
       throw new ForbiddenException('Only the author can edit this message');
     }
+    // The text of a poll message is its question, which is immutable.
+    const poll = await this.prisma.poll.findUnique({
+      where: { directMessageId: messageId },
+      select: { id: true },
+    });
+    if (poll) throw new ForbiddenException('Poll messages cannot be edited');
     const content = dto.content.trim();
     if (!content) throw new BadRequestException('Message content cannot be empty');
 

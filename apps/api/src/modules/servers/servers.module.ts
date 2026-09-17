@@ -2,14 +2,25 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { PermissionsModule } from '@/modules/permissions/permissions.module';
 import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
+import { ServerDiscoveryController } from './server-discovery.controller';
+import { ServerDiscoveryService } from './server-discovery.service';
 import { ServerModerationService } from './server-moderation.service';
+import { ServerOnboardingService } from './server-onboarding.service';
+import { ServerTemplatesController } from './server-templates.controller';
+import { ServerTemplatesService } from './server-templates.service';
 import { ServersController } from './servers.controller';
 import { ServersService } from './servers.service';
 
 @Module({
   imports: [AuthModule, PermissionsModule, RealtimePublisherModule],
-  controllers: [ServersController],
-  providers: [ServersService, ServerModerationService],
+  controllers: [ServersController, ServerTemplatesController, ServerDiscoveryController],
+  providers: [
+    ServersService,
+    ServerModerationService,
+    ServerOnboardingService,
+    ServerTemplatesService,
+    ServerDiscoveryService,
+  ],
   exports: [ServersService],
 })
 export class ServersModule {}
