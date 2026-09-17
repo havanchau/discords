@@ -84,7 +84,15 @@ export function configureAuthRefresh(config: AuthRefreshConfig) {
  */
 import type {
   Json,
+  AcceptServerOnboardingInput,
+  AcceptServerOnboardingResult,
+  AccountDeletionScheduledResult as ServerAccountDeletionScheduledResult,
   AuditLogEntry as ServerAuditLogEntry,
+  AutoModAction,
+  AutoModRuleView as ServerAutoModRuleView,
+  AutoModTriggerType,
+  CreateAutoModRuleInput,
+  UpdateAutoModRuleInput,
   AuthSessionEntry as ServerAuthSessionEntry,
   BlockedUserEntry as ServerBlockedUserEntry,
   Channel as ServerChannel,
@@ -98,6 +106,12 @@ import type {
   DirectMessage as ServerDirectMessage,
   DirectMessageReaction as ServerDirectMessageReaction,
   DirectMessageReplyPreview as ServerDirectMessageReplyPreview,
+  ExportJobView as ServerExportJobView,
+  CreateForumPostInput as ServerCreateForumPostInput,
+  ForumPostListResult as ServerForumPostListResult,
+  ForumPostView as ServerForumPostView,
+  ForumTagView,
+  UpdateForumTagsInput,
   ForwardMessageInput as ServerForwardMessageInput,
   ForwardOrigin as ServerForwardOrigin,
   FriendEntry as ServerFriendEntry,
@@ -131,16 +145,39 @@ import type {
   ServerEmoji as ServerServerEmoji,
   ServerEventView as ServerServerEventView,
   ServerMemberDetail as ServerServerMemberDetail,
+  ServerOnboardingView,
   ServerSummary as ServerServerSummary,
+  SelfAssignQuestion,
+  UpdateServerOnboardingInput,
   ThreadMessageResult as ServerThreadMessageResult,
   ThreadSummary as ServerThreadSummary,
   User as ServerUser,
   UserProfile as ServerUserProfile,
   UserProfileServerContext as ServerUserProfileServerContext,
   VoiceAttachmentMetadata,
+  DiscoveryJoinResult,
+  DiscoveryServerCard,
+  DiscoveryServerPage,
+  ReportServerInput,
+  ServerDiscoverySettings,
+  ServerTemplateSummary as ServerServerTemplateSummary,
+  UpdateServerDiscoveryInput,
+  ChannelWebhook as ServerChannelWebhook,
+  CreateWebhookInput,
+  CreateWebhookResult as ServerCreateWebhookResult,
+  WebhookSecret,
+  AuthorizeBotInput,
+  BotAuthorizationView,
+  BotSecret,
+  CreateBotInput,
+  CreateBotResult as ServerCreateBotResult,
+  OwnedBot as ServerOwnedBot,
 } from '@discord-clone/shared';
 
+export type AccountDeletionScheduledResult = Json<ServerAccountDeletionScheduledResult>;
 export type AuditLogEntry = Json<ServerAuditLogEntry>;
+export type AutoModRule = Json<ServerAutoModRuleView>;
+export type { AutoModAction, AutoModTriggerType, CreateAutoModRuleInput, UpdateAutoModRuleInput };
 export type AuthSessionEntry = Json<ServerAuthSessionEntry>;
 export type BlockedUserEntry = Json<ServerBlockedUserEntry>;
 export type Channel = Json<ServerChannel>;
@@ -154,6 +191,11 @@ export type DirectConversation = Json<ServerDirectConversation>;
 export type DirectMessage = Json<ServerDirectMessage>;
 export type DirectMessageReaction = Json<ServerDirectMessageReaction>;
 export type DirectMessageReplyPreview = Json<ServerDirectMessageReplyPreview>;
+export type ExportJob = Json<ServerExportJobView>;
+export type CreateForumPostInput = Json<ServerCreateForumPostInput>;
+export type ForumPost = Json<ServerForumPostView>;
+export type ForumPostListResult = Json<ServerForumPostListResult>;
+export type { ForumTagView, UpdateForumTagsInput };
 export type ForwardMessageInput = Json<ServerForwardMessageInput>;
 export type ForwardOrigin = Json<ServerForwardOrigin>;
 export type FriendEntry = Json<ServerFriendEntry>;
@@ -189,7 +231,30 @@ export type ServerDetail = Json<ServerServerDetail>;
 export type ServerEmoji = Json<ServerServerEmoji>;
 export type ServerEventView = Json<ServerServerEventView>;
 export type ServerMemberDetail = Json<ServerServerMemberDetail>;
+export type ServerOnboarding = Json<ServerOnboardingView>;
+export type {
+  AcceptServerOnboardingInput,
+  AcceptServerOnboardingResult,
+  SelfAssignQuestion,
+  UpdateServerOnboardingInput,
+};
 export type ServerSummary = Json<ServerServerSummary>;
+export type ChannelWebhook = Json<ServerChannelWebhook>;
+export type CreateWebhookResult = Json<ServerCreateWebhookResult>;
+export type { CreateWebhookInput, WebhookSecret };
+export type OwnedBot = Json<ServerOwnedBot>;
+export type CreateBotResult = Json<ServerCreateBotResult>;
+export type BotAuthorization = Json<BotAuthorizationView>;
+export type { AuthorizeBotInput, BotSecret, CreateBotInput };
+export type ServerTemplateSummary = Json<ServerServerTemplateSummary>;
+export type {
+  DiscoveryJoinResult,
+  DiscoveryServerCard,
+  DiscoveryServerPage,
+  ReportServerInput,
+  ServerDiscoverySettings,
+  UpdateServerDiscoveryInput,
+};
 export type ThreadMessageResult = Json<ServerThreadMessageResult>;
 export type ThreadSummary = Json<ServerThreadSummary>;
 export type User = Json<ServerUser>;
@@ -220,6 +285,25 @@ export async function apiRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+/** A file route that needs the bearer token, so it cannot be a plain link. */
+export async function apiDownload(path: string, token: string): Promise<Blob> {
+  let response = await fetch(`${API_URL}${path}`, { headers: buildHeaders({}, token) });
+
+  if (response.status === 401 && authRefreshConfig) {
+    const nextAuth = await refreshAuth();
+    response = await fetch(`${API_URL}${path}`, {
+      headers: buildHeaders({}, nextAuth.accessToken),
+    });
+  }
+
+  if (!response.ok) {
+    const error = await readErrorBody(response);
+    throw new ApiError(error.message, error.code, response.status, response.statusText);
+  }
+
+  return response.blob();
 }
 
 export async function uploadFile(file: File, token: string): Promise<MessageAttachment> {
@@ -330,6 +414,11 @@ async function uploadFileInChunks(file: File, token: string): Promise<MessageAtt
 
 function createUploadId() {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** Absolute URL of an API route, for a URL someone copies out of the app (a webhook URL). */
+export function apiEndpointUrl(path: string) {
+  return new URL(`${API_URL}${path}`, window.location.origin).toString();
 }
 
 export function assetUrl(url: string) {

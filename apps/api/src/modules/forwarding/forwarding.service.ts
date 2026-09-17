@@ -12,6 +12,10 @@ import {
   storedAttachmentSelect,
   toAttachmentInput,
 } from '@/modules/messages/message-attachments';
+import {
+  carriedStickerAttachment,
+  isStickerAttachment,
+} from '@/modules/messages/message-stickers';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PrismaService } from '@/modules/prisma/prisma.service';
@@ -47,6 +51,7 @@ export class ForwardingService {
         channelId: true,
         content: true,
         deletedAt: true,
+        authorNameOverride: true,
         author: { select: { displayName: true } },
         channel: { select: { name: true } },
         attachments: attachmentSelect,
@@ -62,7 +67,8 @@ export class ForwardingService {
     const snapshot = carriedForwardSnapshot(source) ?? {
       forwardedFromMessageId: messageId,
       forwardedFromDirectMessageId: null,
-      forwardOriginAuthorName: source.author.displayName,
+      // A webhook post is credited to the name it was posted with.
+      forwardOriginAuthorName: source.authorNameOverride ?? source.author.displayName,
       forwardOriginContent: source.content,
       forwardOriginLabel: source.channel.name,
     };
@@ -101,14 +107,33 @@ export class ForwardingService {
     snapshot: ForwardSnapshot,
     attachments: StoredAttachment[],
   ) {
-    // Voice metadata is carried, and re-validated by the destination's send path like any send.
-    const input = { content: dto.comment ?? '', attachments: attachments.map(toAttachmentInput) };
+    // Voice metadata is carried, and re-validated by the destination's send path like any send. A
+    // sticker is carried as a snapshot row outside the request attachments, which refuse that kind.
+    const input = {
+      content: dto.comment ?? '',
+      attachments: attachments
+        .filter((attachment) => !isStickerAttachment(attachment))
+        .map(toAttachmentInput),
+    };
+    const stickers = attachments.filter(isStickerAttachment).map(carriedStickerAttachment);
     if (dto.destinationType === 'conversation') {
       // The direct-message send path persists, then emits `dm:created` and unread counts itself.
-      return this.directMessages.createMessage(userId, dto.destinationId, input, snapshot);
+      return this.directMessages.createMessage(
+        userId,
+        dto.destinationId,
+        input,
+        snapshot,
+        stickers,
+      );
     }
 
-    const result = await this.messages.createMessage(userId, dto.destinationId, input, snapshot);
+    const result = await this.messages.createMessage(
+      userId,
+      dto.destinationId,
+      input,
+      snapshot,
+      stickers,
+    );
     // Persist first, emit second. `createMessage` does not broadcast (the socket gateway does for a
     // normal send), so a REST forward emits the same events here.
     const message = result.message;

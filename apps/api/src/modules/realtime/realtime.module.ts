@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessagesModule } from '@/modules/messages/messages.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { PermissionsModule } from '@/modules/permissions/permissions.module';
+import { SoundboardModule } from '@/modules/soundboard/soundboard.module';
 import { CallRegistryService } from './call-registry.service';
 import { DmCallsService } from './dm-calls.service';
 import { MessagesGateway } from './messages.gateway';
@@ -23,6 +24,7 @@ import { VoiceGateway } from './voice.gateway';
     NotificationsModule,
     PermissionsModule,
     RealtimePublisherModule,
+    SoundboardModule,
   ],
   providers: [
     RealtimeGateway,

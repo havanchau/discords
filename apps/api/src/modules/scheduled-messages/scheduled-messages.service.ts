@@ -38,6 +38,10 @@ export class ScheduledMessagesService {
 
   async createForChannel(userId: string, channelId: string, dto: CreateScheduledMessageDto) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
+    // The sweep would refuse it at send time (`requireCanPostInChannel`); refuse it now instead.
+    if (channel.type === 'FORUM') {
+      throw new BadRequestException('Use forum posts on a FORUM channel');
+    }
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
     return this.create(userId, { channelId, conversationId: null }, dto);
   }

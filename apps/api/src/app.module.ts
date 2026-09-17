@@ -4,10 +4,15 @@ import { APP_GUARD } from '@nestjs/core';
 import { I18nModule } from './common/i18n/i18n.module';
 import { RateLimitGuard } from './common/rate-limit.guard';
 import { AuthModule } from './modules/auth/auth.module';
+import { AutoModModule } from './modules/automod/automod.module';
+import { BotsModule } from './modules/bots/bots.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
 import { EmojisModule } from './modules/emojis/emojis.module';
+import { SoundboardModule } from './modules/soundboard/soundboard.module';
+import { StickersModule } from './modules/stickers/stickers.module';
 import { EventsModule } from './modules/events/events.module';
+import { ForumModule } from './modules/forum/forum.module';
 import { ForwardingModule } from './modules/forwarding/forwarding.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { HealthModule } from './modules/health/health.module';
@@ -27,6 +32,7 @@ import { ScheduledMessagesModule } from './modules/scheduled-messages/scheduled-
 import { ServersModule } from './modules/servers/servers.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -36,6 +42,7 @@ import { UsersModule } from './modules/users/users.module';
     RedisModule,
     HealthModule,
     AuthModule,
+    AutoModModule,
     UsersModule,
     FriendsModule,
     DirectMessagesModule,
@@ -44,7 +51,10 @@ import { UsersModule } from './modules/users/users.module';
     ChannelsModule,
     MessagesModule,
     EmojisModule,
+    StickersModule,
+    SoundboardModule,
     EventsModule,
+    ForumModule,
     LinkPreviewsModule,
     NotificationsModule,
     PermissionsModule,
@@ -54,6 +64,8 @@ import { UsersModule } from './modules/users/users.module';
     SavedMessagesModule,
     ScheduledMessagesModule,
     UploadsModule,
+    WebhooksModule,
+    BotsModule,
     PushModule,
     RealtimeModule,
   ],

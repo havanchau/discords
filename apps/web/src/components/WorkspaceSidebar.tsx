@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { DiscoveryDialog } from './discovery/DiscoveryDialog';
 import { ChannelSidebar } from './workspace/ChannelSidebar';
 import { ServerRail } from './workspace/ServerRail';
 import { ServerEventsDialog } from './events/ServerEventsDialog';
@@ -32,6 +33,11 @@ export function WorkspaceSidebar({
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ChannelCategory | null>(null);
   const [isEventsOpen, setIsEventsOpen] = useState(false);
+  const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
+  const memberServerIds = useMemo(
+    () => new Set(workspace.servers.map((item) => item.id)),
+    [workspace.servers],
+  );
   const { server } = workspace;
   const { openSavedMessages } = useWorkspace();
 
@@ -43,6 +49,7 @@ export function WorkspaceSidebar({
         openHome={actions.openHome}
         openServer={actions.openServer}
         onAddServer={() => setServerAction('create')}
+        onOpenDiscovery={() => setIsDiscoveryOpen(true)}
         onOpenSavedMessages={openSavedMessages}
       />
 
@@ -69,6 +76,13 @@ export function WorkspaceSidebar({
           onOpenChange={setIsEventsOpen}
         />
       ) : null}
+
+      <DiscoveryDialog
+        open={isDiscoveryOpen}
+        onOpenChange={setIsDiscoveryOpen}
+        memberServerIds={memberServerIds}
+        openServer={actions.openServer}
+      />
 
       <EditCategoryDialog
         category={editingCategory}

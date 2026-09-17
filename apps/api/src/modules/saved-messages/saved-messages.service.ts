@@ -125,6 +125,7 @@ export class SavedMessagesService {
           content: true,
           authorId: true,
           deletedAt: true,
+          authorNameOverride: true,
           author: { select: { displayName: true } },
         },
       });
@@ -145,7 +146,8 @@ export class SavedMessagesService {
         serverId: message.serverId,
         content: message.content,
         authorId: message.authorId,
-        authorName: message.author.displayName,
+        // A webhook post is saved under the name it was posted with.
+        authorName: message.authorNameOverride ?? message.author.displayName,
       };
     }
 

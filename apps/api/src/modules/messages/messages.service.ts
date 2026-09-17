@@ -1,22 +1,31 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
+import { Channel, Prisma } from '@prisma/client';
 import type { Message, ThreadSummary } from '@discord-clone/shared';
-import { formatForwardOrigin, ForwardSnapshot } from '@/common/forward-snapshot';
+import { ForwardSnapshot } from '@/common/forward-snapshot';
+import {
+  AutoModAlert,
+  AutoModScreeningService,
+  AutoModScreenInput,
+} from '@/modules/automod/automod-screening.service';
 import { ChannelsService } from '@/modules/channels/channels.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import { formatPoll, pollInclude, withoutViewerVotes } from '@/modules/polls/poll.format';
+import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PushService } from '@/modules/push/push.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { formatAttachment, readVoiceMaxBytes, toAttachmentCreateData } from './message-attachments';
+import { formatMessage, messageInclude } from './message.format';
+import { readVoiceMaxBytes, toAttachmentCreateData } from './message-attachments';
+import { resolveStickerAttachment, StickerAttachmentData } from './message-stickers';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { slowmodeRetryAfterSeconds } from './slowmode';
@@ -28,6 +37,7 @@ import {
 
 @Injectable()
 export class MessagesService {
+  private readonly logger = new Logger(MessagesService.name);
   private readonly voiceMaxBytes: number;
 
   constructor(
@@ -36,6 +46,7 @@ export class MessagesService {
     private readonly permissions: PermissionsService,
     private readonly push: PushService,
     private readonly realtime: RealtimePublisher,
+    private readonly automod: AutoModScreeningService,
     config: ConfigService,
   ) {
     this.voiceMaxBytes = readVoiceMaxBytes(config);
@@ -77,7 +88,7 @@ export class MessagesService {
         })
       : [];
     const replyMap = new Map(
-      replyMessages.map((message) => [message.id, this.formatMessage(message, userId)]),
+      replyMessages.map((message) => [message.id, formatMessage(message, userId)]),
     );
     const threadMap = await this.getThreadSummariesForRoots(
       userId,
@@ -88,7 +99,7 @@ export class MessagesService {
       messages: messages
         .reverse()
         .map((message) =>
-          this.formatMessage(
+          formatMessage(
             message,
             userId,
             replyMap.get(message.replyToMessageId ?? ''),
@@ -143,29 +154,56 @@ export class MessagesService {
       messages: pins
         .map((pin) => pin.message)
         .filter((message) => !message.deletedAt)
-        .map((message) => this.formatMessage(message, userId)),
+        .map((message) => formatMessage(message, userId)),
     };
   }
 
-  /** Every gate a new top-level channel message passes; polls reuse it so the two cannot drift. */
+  /**
+   * Every gate a new top-level channel message passes. Socket and REST sends, forwards, scheduled
+   * sends and channel polls all come through here, so the gates cannot drift between them.
+   */
   async requireCanPostInChannel(userId: string, channelId: string) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
+    // A FORUM channel takes only forum posts, so every top-level send path is refused here at once.
+    if (channel.type === 'FORUM') {
+      throw new BadRequestException('Use forum posts on a FORUM channel');
+    }
+    return this.passSendGates(userId, channel);
+  }
+
+  /** The same gates for a forum post, the only top-level message a FORUM channel accepts. */
+  async requireCanPostInForum(userId: string, channelId: string) {
+    const channel = await this.channels.requireReadableForumChannel(userId, channelId);
+    return this.passSendGates(userId, channel);
+  }
+
+  private async passSendGates(userId: string, channel: Channel) {
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
     await this.permissions.requireNotTimedOut(userId, channel.serverId);
+    await this.permissions.requireOnboardingAccepted(userId, channel.serverId);
     await this.enforceSlowmode(userId, channel);
     return channel;
   }
 
-  /** `forward` is set only by the forwarding module; a forward may have no text of its own. */
+  /**
+   * `forward` and `carriedStickers` are set only by the forwarding module; a forward may have no text
+   * of its own. `dto.stickerId` must name a sticker of this channel's server.
+   */
   async createMessage(
     userId: string,
     channelId: string,
     dto: CreateMessageDto,
     forward?: ForwardSnapshot,
+    carriedStickers: StickerAttachmentData[] = [],
   ) {
     const channel = await this.requireCanPostInChannel(userId, channelId);
     const content = dto.content.trim();
-    const attachments = dto.attachments ?? [];
+    const sticker = await resolveStickerAttachment(this.prisma, dto.stickerId, channel.serverId);
+    const attachments = [
+      ...toAttachmentCreateData(dto.attachments ?? [], this.voiceMaxBytes),
+      ...(sticker ? [sticker] : []),
+      ...carriedStickers,
+    ];
 
     if (!content && attachments.length === 0 && !forward) {
       throw new ForbiddenException('Message content cannot be empty without attachments');
@@ -183,6 +221,13 @@ export class MessagesService {
         throw new NotFoundException('Reply target not found');
       }
     }
+    // A forward carries the source text too, so a rule cannot be dodged by forwarding.
+    const autoModAlerts = await this.enforceAutoMod({
+      userId,
+      serverId: channel.serverId,
+      channelId,
+      texts: [content, forward?.forwardOriginContent],
+    });
 
     const message = await this.prisma.message.create({
       data: {
@@ -192,9 +237,7 @@ export class MessagesService {
         content,
         replyToMessageId: dto.replyToMessageId,
         ...forward,
-        attachments: attachments.length
-          ? { create: toAttachmentCreateData(attachments, this.voiceMaxBytes) }
-          : undefined,
+        attachments: attachments.length ? { create: attachments } : undefined,
       },
       include: messageInclude,
     });
@@ -214,12 +257,13 @@ export class MessagesService {
       channelName: channel.name,
       content,
     });
+    await this.postAutoModAlerts(autoModAlerts);
 
     return {
-      message: this.formatMessage(
+      message: formatMessage(
         message,
         userId,
-        replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined,
+        replyToMessage ? formatMessage(replyToMessage, userId) : undefined,
       ),
     };
   }
@@ -238,9 +282,9 @@ export class MessagesService {
     const threadSummary = thread ? await this.getThreadSummary(userId, thread.id) : null;
 
     return {
-      rootMessage: this.formatMessage(rootMessage, userId, undefined, threadSummary ?? undefined),
+      rootMessage: formatMessage(rootMessage, userId, undefined, threadSummary ?? undefined),
       thread: threadSummary,
-      messages: messages.map((message) => this.formatMessage(message, userId)),
+      messages: messages.map((message) => formatMessage(message, userId)),
     };
   }
 
@@ -252,12 +296,23 @@ export class MessagesService {
       Permission.SendMessages,
     );
     await this.permissions.requireNotTimedOut(userId, rootMessage.serverId);
+    await this.permissions.requireOnboardingAccepted(userId, rootMessage.serverId);
     const content = dto.content.trim();
-    const attachments = dto.attachments ?? [];
+    const sticker = await resolveStickerAttachment(this.prisma, dto.stickerId, rootMessage.serverId);
+    const attachments = [
+      ...toAttachmentCreateData(dto.attachments ?? [], this.voiceMaxBytes),
+      ...(sticker ? [sticker] : []),
+    ];
 
     if (!content && attachments.length === 0) {
       throw new ForbiddenException('Message content cannot be empty without attachments');
     }
+    const autoModAlerts = await this.enforceAutoMod({
+      userId,
+      serverId: rootMessage.serverId,
+      channelId: rootMessage.channelId,
+      texts: [content],
+    });
 
     const thread = await this.prisma.thread.upsert({
       where: { rootMessageId },
@@ -290,21 +345,15 @@ export class MessagesService {
         content,
         threadId: thread.id,
         replyToMessageId: dto.replyToMessageId ?? rootMessageId,
-        attachments: attachments.length
-          ? { create: toAttachmentCreateData(attachments, this.voiceMaxBytes) }
-          : undefined,
+        attachments: attachments.length ? { create: attachments } : undefined,
       },
       include: messageInclude,
     });
 
     await this.prisma.thread.update({ where: { id: thread.id }, data: { updatedAt: new Date() } });
     const threadSummary = await this.getThreadSummary(userId, thread.id);
-    const formattedMessage = this.formatMessage(
-      message,
-      userId,
-      this.formatMessage(rootMessage, userId),
-    );
-    const formattedRoot = this.formatMessage(rootMessage, userId, undefined, threadSummary);
+    const formattedMessage = formatMessage(message, userId, formatMessage(rootMessage, userId));
+    const formattedRoot = formatMessage(rootMessage, userId, undefined, threadSummary);
 
     this.realtime.emitToRoom(
       this.realtime.channelRoom(rootMessage.channelId),
@@ -324,6 +373,7 @@ export class MessagesService {
       channelName: rootMessage.channel.name,
       content,
     });
+    await this.postAutoModAlerts(autoModAlerts);
 
     return { thread: threadSummary, rootMessage: formattedRoot, message: formattedMessage };
   }
@@ -340,25 +390,35 @@ export class MessagesService {
     if (message.authorId !== userId) {
       throw new ForbiddenException('Only the author can edit this message');
     }
+    await this.permissions.requireOnboardingAccepted(userId, message.serverId);
     // The text of a poll message is its question, which is immutable.
     if (message.poll) {
       throw new ForbiddenException('Poll messages cannot be edited');
     }
+    const content = dto.content.trim();
+    // A blocked edit throws here, so the stored content stands.
+    const autoModAlerts = await this.enforceAutoMod({
+      userId,
+      serverId: message.serverId,
+      channelId: message.channelId,
+      texts: [content],
+    });
 
     const updated = await this.prisma.message.update({
       where: { id: messageId },
       data: {
-        content: dto.content.trim(),
+        content,
         editedAt: new Date(),
       },
       include: messageInclude,
     });
-    const formatted = this.formatMessage(updated, userId);
+    const formatted = formatMessage(updated, userId);
     this.realtime.emitToRoom(
       this.realtime.channelRoom(formatted.channelId),
       updated.threadId ? 'thread:message:updated' : 'message:updated',
       formatted,
     );
+    await this.postAutoModAlerts(autoModAlerts);
     return { message: formatted };
   }
 
@@ -404,6 +464,7 @@ export class MessagesService {
     }
     await this.channels.requireReadableChannel(userId, message.channelId);
     await this.permissions.requireNotTimedOut(userId, message.serverId);
+    await this.permissions.requireOnboardingAccepted(userId, message.serverId);
 
     const where = {
       messageId_userId_emoji: {
@@ -486,11 +547,40 @@ export class MessagesService {
         })
       : null;
 
-    return this.formatMessage(
+    return formatMessage(
       message,
       userId,
-      replyToMessage ? this.formatMessage(replyToMessage, userId) : undefined,
+      replyToMessage ? formatMessage(replyToMessage, userId) : undefined,
     );
+  }
+
+  /**
+   * AutoMod for every channel send path (socket, REST, forward, scheduled send, poll). A blocking rule
+   * posts its alerts and throws; otherwise the caller posts the returned alerts after persisting.
+   */
+  async enforceAutoMod(input: AutoModScreenInput) {
+    const verdict = await this.automod.screen(input);
+    if (verdict.blockedBy === null) return verdict.alerts;
+    await this.postAutoModAlerts(verdict.alerts);
+    throw new BadRequestException(`Message blocked by AutoMod: ${verdict.blockedBy}`);
+  }
+
+  /** Posted as the server owner past every send gate, AutoMod included, so an alert cannot loop. */
+  async postAutoModAlerts(alerts: AutoModAlert[]) {
+    for (const alert of alerts) {
+      try {
+        const message = await this.prisma.message.create({ data: alert, include: messageInclude });
+        this.realtime.emitToRoom(
+          this.realtime.channelRoom(alert.channelId),
+          'message:created',
+          formatMessage(message, alert.authorId),
+        );
+      } catch (error) {
+        // The author's message is already stored (or refused); failing the request over a lost alert
+        // would only invite a retry and a duplicate.
+        this.logger.error(`AutoMod alert to channel ${alert.channelId} failed`, errorStack(error));
+      }
+    }
   }
 
   /* Top-level messages only; deleted messages still count so deleting cannot reset the cooldown. */
@@ -561,6 +651,11 @@ export class MessagesService {
       id: thread.id,
       rootMessageId: thread.rootMessageId,
       channelId: thread.channelId,
+      title: thread.title,
+      tags: thread.tags
+        .map(({ tag }) => tag)
+        .sort((left, right) => left.position - right.position)
+        .map(({ id, name }) => ({ id, name })),
       replyCount: thread._count.messages,
       lastReplyAt: lastReply?.createdAt ?? thread.updatedAt,
       participants: thread.participants.map((participant) => ({
@@ -570,7 +665,26 @@ export class MessagesService {
     };
   }
 
-  private async notifyMentionedUsers(input: {
+  /**
+   * Root messages carrying their thread summaries, in the order given; unknown ids are skipped. The
+   * caller has already checked that the viewer can read the channel.
+   */
+  async listThreadRoots(userId: string, rootMessageIds: string[]): Promise<Message[]> {
+    const [roots, threadMap] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { id: { in: rootMessageIds } },
+        include: messageInclude,
+      }),
+      this.getThreadSummariesForRoots(userId, rootMessageIds),
+    ]);
+    const rootMap = new Map(roots.map((root) => [root.id, root]));
+    return rootMessageIds.flatMap((id) => {
+      const root = rootMap.get(id);
+      return root ? [formatMessage(root, userId, undefined, threadMap.get(id))] : [];
+    });
+  }
+
+  async notifyMentionedUsers(input: {
     authorId: string;
     authorUsername: string;
     serverId: string;
@@ -611,53 +725,6 @@ export class MessagesService {
     );
   }
 
-  /**
-   * The one place a message becomes the shape the client reads. Fields are listed explicitly so the
-   * response is the declared contract and not whatever columns the query happened to select.
-   */
-  private formatMessage(
-    message: MessageWithDetails,
-    userId: string,
-    replyToMessage?: Message | null,
-    thread?: ThreadSummary | null,
-  ): Message {
-    const reactionMap = new Map<string, { emoji: string; count: number; me: boolean }>();
-
-    message.reactions.forEach((reaction) => {
-      const current = reactionMap.get(reaction.emoji) ?? {
-        emoji: reaction.emoji,
-        count: 0,
-        me: false,
-      };
-      reactionMap.set(reaction.emoji, {
-        ...current,
-        count: current.count + 1,
-        me: current.me || reaction.userId === userId,
-      });
-    });
-
-    return {
-      id: message.id,
-      channelId: message.channelId,
-      serverId: message.serverId,
-      authorId: message.authorId,
-      content: message.content,
-      createdAt: message.createdAt,
-      editedAt: message.editedAt,
-      deletedAt: message.deletedAt,
-      author: message.author,
-      attachments: message.attachments.map(formatAttachment),
-      reactions: [...reactionMap.values()],
-      replyToMessageId: message.replyToMessageId,
-      // A reply preview never needs the poll, and it would carry the viewer's vote into broadcasts.
-      replyToMessage: replyToMessage ? { ...replyToMessage, poll: null } : replyToMessage,
-      threadId: message.threadId,
-      thread: thread ?? null,
-      poll: message.poll && !message.deletedAt ? formatPoll(message.poll, userId) : null,
-      forwardOrigin: message.deletedAt ? null : formatForwardOrigin(message),
-    };
-  }
-
   private async writeAuditLog(
     serverId: string,
     actorId: string,
@@ -670,22 +737,6 @@ export class MessagesService {
     });
   }
 }
-
-const messageInclude = {
-  author: {
-    select: {
-      id: true,
-      username: true,
-      displayName: true,
-      avatarUrl: true,
-    },
-  },
-  attachments: true,
-  reactions: true,
-  poll: { include: pollInclude },
-} satisfies Prisma.MessageInclude;
-
-type MessageWithDetails = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
 
 const threadSummaryInclude = {
   messages: {
@@ -700,10 +751,15 @@ const threadSummaryInclude = {
       },
     },
   },
+  tags: { select: { tag: { select: { id: true, name: true, position: true } } } },
   _count: { select: { messages: true } },
 } satisfies Prisma.ThreadInclude;
 
 type ThreadWithSummary = Prisma.ThreadGetPayload<{ include: typeof threadSummaryInclude }>;
 function parseMentions(content: string) {
   return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);
+}
+
+function errorStack(error: unknown) {
+  return error instanceof Error ? error.stack : String(error);
 }

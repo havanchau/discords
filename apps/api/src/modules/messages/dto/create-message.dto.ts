@@ -92,6 +92,12 @@ export class CreateMessageDto {
   @IsString()
   replyToMessageId?: string;
 
+  /** A sticker of the destination's server, added as a `kind: 'sticker'` attachment by the service. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  stickerId?: string;
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

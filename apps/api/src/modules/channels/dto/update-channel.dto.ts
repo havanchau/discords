@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { FORUM_POST_GUIDELINES_MAX_LENGTH } from '@discord-clone/shared';
 import { SLOWMODE_OPTIONS_SECONDS } from '@/modules/messages/slowmode';
 
 export class UpdateChannelDto {
@@ -40,6 +41,12 @@ export class UpdateChannelDto {
   @IsString()
   @MaxLength(64)
   categoryId?: string | null;
+
+  /** FORUM channels only; blank text clears it. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(FORUM_POST_GUIDELINES_MAX_LENGTH)
+  postGuidelines?: string;
 
   @IsOptional()
   @IsString()

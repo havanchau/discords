@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { apiRequest, AuthState, Channel, ChannelCategory, ServerDetail } from '@/api';
 import { ActiveDialog } from '@/components/chat/types';
+import type { ChannelCreateType } from '@/components/workspace/types';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useWorkspaceStore } from '@/query/useWorkspaceStore';
 import { formText } from '@/utils/formText';
@@ -101,12 +102,14 @@ export function useWorkspaceNavigation({
       const formData = new FormData(event.currentTarget);
       const name = formText(formData, 'name').trim();
       const description = formText(formData, 'description').trim();
+      // A template replays its structure into the new server; the response is the same `{ server }`.
+      const templateId = formText(formData, 'templateId');
       if (!name) return;
       setPendingAction('create-server');
       setWorkspaceError(null);
       try {
         const data = await apiRequest<{ server: ServerDetail }>(
-          '/servers',
+          templateId ? `/servers/from-template/${encodeURIComponent(templateId)}` : '/servers',
           { method: 'POST', body: JSON.stringify({ name, description }) },
           auth.accessToken,
         );
@@ -151,7 +154,7 @@ export function useWorkspaceNavigation({
       if (!auth || !server) return;
       const formData = new FormData(event.currentTarget);
       const name = formText(formData, 'name').trim();
-      const type = (formData.get('type') ?? 'TEXT') as 'TEXT' | 'VOICE';
+      const type = (formData.get('type') ?? 'TEXT') as ChannelCreateType;
       const categoryId = formText(formData, 'categoryId') || undefined;
       if (!name) return;
       setPendingAction('create-channel');
@@ -278,7 +281,8 @@ export function useWorkspaceNavigation({
   );
 
   const textChannels = useMemo(
-    () => server?.channels.filter((item) => item.type === 'TEXT') ?? [],
+    // Forum channels are listed with text channels; only voice channels have their own group.
+    () => server?.channels.filter((item) => item.type !== 'VOICE') ?? [],
     [server],
   );
 

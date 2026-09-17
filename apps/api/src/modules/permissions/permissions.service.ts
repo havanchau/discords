@@ -7,6 +7,7 @@ import {
   PermissionMember,
   PermissionValue,
 } from './channel-permission';
+import { memberNeedsOnboarding, RULES_NOT_ACCEPTED_MESSAGE } from './onboarding-gate';
 
 export { Permission };
 export type { PermissionValue };
@@ -67,6 +68,27 @@ export class PermissionsService {
     });
     if (member && member.kind !== 'OWNER' && member.timeoutUntil && member.timeoutUntil > now) {
       throw new ForbiddenException(`You are timed out until ${member.timeoutUntil.toISOString()}`);
+    }
+  }
+
+  /**
+   * Refuses members that rules screening still blocks. Sits beside `requireNotTimedOut` on every
+   * participation path: sends (via `MessagesService.requireCanPostInChannel`), thread replies, edits,
+   * reactions, poll votes and voice joins.
+   */
+  async requireOnboardingAccepted(userId: string, serverId: string) {
+    const member = await this.prisma.serverMember.findUnique({
+      where: { userId_serverId: { userId, serverId } },
+      select: {
+        kind: true,
+        onboardingAcceptedAt: true,
+        server: { select: { onboardingEnabled: true } },
+        roles: { select: { role: { select: { permissions: true } } } },
+      },
+    });
+    // Membership itself is checked by the caller's access check, as for `requireNotTimedOut`.
+    if (member && memberNeedsOnboarding(member.server, member)) {
+      throw new ForbiddenException(RULES_NOT_ACCEPTED_MESSAGE);
     }
   }
 

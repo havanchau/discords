@@ -44,6 +44,7 @@ import type { ActiveDialog, ActivePanel } from './components/chat/types';
 import { AuthGate } from './components/app/AuthGate';
 import { AuthenticatedWorkspace } from './components/app/AuthenticatedWorkspace';
 import { conversationDisplayName } from './components/home/conversationDisplay';
+import { KeyboardShortcuts } from './components/shortcuts/KeyboardShortcuts';
 
 // Shared empty value so channels without pins pass the same array to memoized rows each render.
 const NO_PINNED_MESSAGE_IDS: string[] = [];
@@ -603,6 +604,16 @@ export function AppShell() {
 
   return (
     <WorkspaceProvider value={workspaceContextValue}>
+      <KeyboardShortcuts
+        viewerId={auth.user.id}
+        visibleTextChannels={visibleTextChannels}
+        channelBadges={channelBadges}
+        activeConversation={activeConversation}
+        openHome={openHome}
+        openDirectConversation={homeProps.actions.openDirectConversation}
+        markChannelRead={markChannelRead}
+        markDirectConversationRead={markDirectConversationRead}
+      />
       <AuthenticatedWorkspace
         auth={auth}
         socket={socket}

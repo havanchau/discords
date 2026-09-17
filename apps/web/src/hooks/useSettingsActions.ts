@@ -483,6 +483,7 @@ export function useSettingsActions({
       const positionValue = formText(form, 'position').trim();
       const slowmodeValue = form.get('slowmodeSeconds');
       const categoryValue = form.get('categoryId');
+      const guidelinesValue = form.get('postGuidelines');
       const result = await apiRequest<{ channel: Channel }>(
         `/channels/${channel.id}`,
         {
@@ -495,6 +496,8 @@ export function useSettingsActions({
             slowmodeSeconds: slowmodeValue === null ? undefined : Number(slowmodeValue),
             // The select is only rendered when the server has categories; '' means "No category".
             categoryId: categoryValue === null ? undefined : formText(form, 'categoryId') || null,
+            // Rendered only for a FORUM channel; the API refuses it on any other type.
+            postGuidelines: guidelinesValue === null ? undefined : formText(form, 'postGuidelines'),
           }),
         },
         auth.accessToken,

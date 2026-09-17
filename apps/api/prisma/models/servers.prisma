@@ -1,0 +1,222 @@
+enum MemberKind {
+  OWNER
+  MEMBER
+  BOT
+}
+
+model Server {
+  id                      String                   @id @default(cuid())
+  name                    String
+  description             String?
+  avatarUrl               String?
+  ownerId                 String
+  deletedAt               DateTime?
+  /// Rules screening: members must accept `rulesText` before they can participate.
+  onboardingEnabled       Boolean                  @default(false)
+  rulesText               String?
+  /// SelfAssignQuestion[] ({ id, prompt, roleIds, multiSelect }); re-validated against roles on read.
+  selfAssignQuestions     Json?
+  /// Public discovery: shown in `GET /discovery/servers` while true (and the 2-member floor holds).
+  listed                  Boolean                  @default(false)
+  /// Lowercase discovery tags, 0-5; kept when the server is unlisted so re-listing restores them.
+  tags                    String[]                 @default([])
+  /// The server's discovery invite (no maxUses/expiry), created on first listing. A plain id with no
+  /// foreign key: a missing or revoked invite is re-created on the next discovery join.
+  discoveryInviteId       String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  owner                   User                     @relation("ServerOwner", fields: [ownerId], references: [id])
+  members                 ServerMember[]
+  roles                   Role[]
+  channels                Channel[]
+  invites                 Invite[]
+  notificationPreferences NotificationPreference[]
+  auditLogs               AuditLog[]
+  bans                    ServerBan[]
+  channelCategories       ChannelCategory[]
+  emojis                  ServerEmoji[]
+  stickers                ServerSticker[]
+  soundboardClips         SoundboardClip[]
+  events                  ServerEvent[]
+  messageReports          MessageReport[]
+  autoModRules            AutoModRule[]
+  templates               ServerTemplate[]
+  serverReports           ServerReport[]
+  webhooks                ServerWebhook[]
+
+  @@index([listed, deletedAt])
+}
+
+model ServerEmoji {
+  id        String   @id @default(cuid())
+  serverId  String
+  name      String
+  url       String
+  creatorId String
+  createdAt DateTime @default(now())
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  creator   User     @relation("EmojiCreator", fields: [creatorId], references: [id])
+
+  @@unique([serverId, name])
+}
+
+// A static PNG/WEBP image members send as a message attachment. Size and type were checked on the
+// uploaded bytes at create time; attachment rows keep a SetNull reference so a deleted sticker degrades
+// to a placeholder instead of rewriting message history.
+model ServerSticker {
+  id                       String                    @id @default(cuid())
+  serverId                 String
+  name                     String
+  url                      String
+  mimeType                 String
+  byteSize                 Int
+  creatorId                String
+  createdAt                DateTime                  @default(now())
+  server                   Server                    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  creator                  User                      @relation("StickerCreator", fields: [creatorId], references: [id])
+  messageAttachments       MessageAttachment[]
+  directMessageAttachments DirectMessageAttachment[]
+
+  @@unique([serverId, name])
+}
+
+// A short audio clip played client-side for everyone in a server voice call. `durationMs` is reported
+// by the uploader's browser and range-checked; the byte cap on the real upload is the backstop.
+model SoundboardClip {
+  id         String   @id @default(cuid())
+  serverId   String
+  name       String
+  url        String
+  mimeType   String
+  byteSize   Int
+  durationMs Int
+  creatorId  String
+  createdAt  DateTime @default(now())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  creator    User     @relation("SoundboardClipCreator", fields: [creatorId], references: [id])
+
+  @@unique([serverId, name])
+}
+
+model ServerBan {
+  id         String   @id @default(cuid())
+  serverId   String
+  userId     String
+  bannedById String
+  reason     String?
+  createdAt  DateTime @default(now())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user       User     @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  bannedBy   User     @relation("BanIssuer", fields: [bannedById], references: [id])
+
+  @@unique([serverId, userId])
+  @@index([userId])
+}
+
+model ServerMember {
+  id                   String                      @id @default(cuid())
+  userId               String
+  serverId             String
+  kind                 MemberKind                  @default(MEMBER)
+  nickname             String?
+  avatarUrl            String?
+  timeoutUntil         DateTime?
+  /// When the member accepted the server rules; null means not yet. Leaves with the member row.
+  onboardingAcceptedAt DateTime?
+  joinedAt             DateTime                    @default(now())
+  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server               Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  roles                MemberRole[]
+  permissionOverrides  ChannelPermissionOverride[]
+
+  @@unique([userId, serverId])
+}
+
+model Role {
+  id                  String                      @id @default(cuid())
+  serverId            String
+  name                String
+  color               String?
+  position            Int                         @default(0)
+  permissions         String[]                    @default([])
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  server              Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members             MemberRole[]
+  permissionOverrides ChannelPermissionOverride[]
+
+  @@unique([serverId, name])
+}
+
+model MemberRole {
+  memberId String
+  roleId   String
+  member   ServerMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role     Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, roleId])
+}
+
+model ServerEvent {
+  id          String                @id @default(cuid())
+  serverId    String
+  channelId   String?
+  creatorId   String
+  name        String
+  description String?
+  location    String?
+  startAt     DateTime
+  endAt       DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  server      Server                @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel     Channel?              @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  creator     User                  @relation("EventCreator", fields: [creatorId], references: [id])
+  interests   ServerEventInterest[]
+
+  @@index([serverId, startAt])
+}
+
+model ServerEventInterest {
+  eventId   String
+  userId    String
+  createdAt DateTime    @default(now())
+  event     ServerEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  serverId  String
+  actorId   String
+  action    String
+  targetId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  actor     User     @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([serverId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  serverId  String
+  channelId String?
+  creatorId String
+  maxUses   Int?
+  usedCount Int       @default(0)
+  expiresAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, revokedAt, expiresAt])
+  @@index([creatorId])
+}

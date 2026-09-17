@@ -6,6 +6,7 @@ import { memberIdentityOf } from '@/utils/memberIdentity';
 import { ProfileCard } from './profile/ProfileCard';
 import {
   Avatar,
+  Badge,
   Button,
   ContextMenuContent,
   ContextMenuItem,
@@ -160,7 +161,20 @@ export function MemberSidebar({
                             <strong style={topRole?.color ? { color: topRole.color } : undefined}>
                               {identity.displayName}
                             </strong>
-                            {subtitle ? <span>{subtitle}</span> : null}
+                            {member.kind === 'BOT' ? (
+                              <span className={styles.botLine}>
+                                <Badge
+                                  variant="neutral"
+                                  className={styles.botBadge}
+                                  title={t('members.botBadgeLabel')}
+                                >
+                                  {t('message.botBadge')}
+                                </Badge>
+                                {subtitle}
+                              </span>
+                            ) : subtitle ? (
+                              <span>{subtitle}</span>
+                            ) : null}
                           </div>
                         </Button>
                       </PopoverTrigger>
@@ -182,10 +196,13 @@ export function MemberSidebar({
                       <ShieldCheck size={14} aria-hidden="true" />
                       {t('members.manageRoles')}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => onDirectMessage(member.user.id)}>
-                      <MessageSquare size={14} aria-hidden="true" />
-                      {t('members.message')}
-                    </ContextMenuItem>
+                    {/* A bot has no inbox: it reads channels over the bot API only. */}
+                    {member.kind === 'BOT' ? null : (
+                      <ContextMenuItem onClick={() => onDirectMessage(member.user.id)}>
+                        <MessageSquare size={14} aria-hidden="true" />
+                        {t('members.message')}
+                      </ContextMenuItem>
+                    )}
                   </ContextMenuContent>
                 </ContextMenuRoot>
               );

@@ -1,0 +1,28 @@
+export const webhooks = {
+  'error.fallback.cannot-create-webhook': 'Không thể tạo webhook',
+  'error.fallback.cannot-delete-webhook': 'Không thể xoá webhook',
+  'error.fallback.cannot-load-webhooks': 'Không thể tải danh sách webhook',
+  'error.fallback.cannot-regenerate-webhook': 'Không thể tạo lại URL webhook',
+  'message.webhookBadge': 'Webhook',
+  'message.webhookBadgeLabel': 'Được đăng bởi webhook, không phải thành viên máy chủ',
+  'webhook.action.chooseAvatar': 'Chọn ảnh đại diện',
+  'webhook.action.confirmDelete': 'Xác nhận xoá',
+  'webhook.action.confirmRegenerate': 'Xác nhận URL mới',
+  'webhook.action.copyUrl': 'Sao chép URL',
+  'webhook.action.create': 'Tạo webhook',
+  'webhook.action.delete': 'Xoá webhook {name}',
+  'webhook.action.dismiss': 'Xong',
+  'webhook.action.regenerate': 'Tạo lại URL cho {name}',
+  'webhook.createdAt': 'Tạo lúc {date}',
+  'webhook.empty': 'Kênh này chưa có webhook nào.',
+  'webhook.error.avatarType': 'Hãy chọn ảnh PNG, JPEG, GIF hoặc WebP.',
+  'webhook.field.avatar': 'Ảnh đại diện webhook',
+  'webhook.field.name': 'Tên webhook',
+  'webhook.loading': 'Đang tải webhook',
+  'webhook.secret.urlLabel': 'URL webhook',
+  'webhook.secret.warning':
+    'Hãy sao chép URL này ngay. URL sẽ không được hiển thị lại, và bất kỳ ai có nó đều có thể đăng vào kênh này.',
+  'webhook.section.hint':
+    'Cho phép dịch vụ bên ngoài đăng vào kênh này qua một URL bí mật. Tạo lại hoặc xoá webhook sẽ vô hiệu hoá URL cũ ngay lập tức.',
+  'webhook.section.title': 'Webhook ({count}/{max})',
+} as const;

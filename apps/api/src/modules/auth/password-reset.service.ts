@@ -27,10 +27,10 @@ export class PasswordResetService {
   async requestReset(email: string, locale: Locale = 'en') {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
-      select: { id: true, email: true, locale: true },
+      select: { id: true, email: true, locale: true, kind: true },
     });
     const okResponse = { ok: true, message: this.i18n.t(locale, 'auth.forgotPassword.ok') };
-    if (!user) return okResponse;
+    if (!user || user.kind !== 'HUMAN') return okResponse;
 
     const token = randomBytes(32).toString('base64url');
     await this.prisma.$transaction([

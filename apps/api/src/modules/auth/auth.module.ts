@@ -43,6 +43,6 @@ import { TwoFactorService } from './two-factor.service';
     TwoFactorChallengeService,
     TwoFactorService,
   ],
-  exports: [AuthService, JwtAuthGuard, JwtModule],
+  exports: [AuthService, JwtAuthGuard, JwtModule, TwoFactorService],
 })
 export class AuthModule {}

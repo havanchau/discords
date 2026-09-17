@@ -13,6 +13,7 @@ export const RealtimeEvents = {
   ThreadMessageCreated: 'thread:message:created',
   ThreadMessageUpdated: 'thread:message:updated',
   ThreadMessageDeleted: 'thread:message:deleted',
+  ForumPostCreated: 'forum:post-created',
   ConversationJoin: 'conversation:join',
   DmCreated: 'dm:created',
   DmUnread: 'dm:unread',
@@ -30,8 +31,11 @@ export const RealtimeEvents = {
   FriendRequest: 'friend:request',
   FriendUpdated: 'friend:updated',
   ServerMemberRemoved: 'server:member-removed',
+  AccountDeleted: 'user:account-deleted',
   ServerMemberUpdated: 'server:member-updated',
   ServerEmojisUpdated: 'server:emojis-updated',
+  ServerStickersUpdated: 'server:stickers-updated',
+  ServerSoundboardUpdated: 'server:soundboard-updated',
   ServerEventsUpdated: 'server:events-updated',
   PollUpdated: 'poll:updated',
   ScheduledMessageUpdated: 'scheduled-message:updated',
@@ -52,6 +56,8 @@ export const RealtimeEvents = {
   VoiceUserLeft: 'voice:user-left',
   VoiceActive: 'voice:active',
   VoiceEnded: 'voice:ended',
+  SoundboardPlay: 'soundboard:play',
+  SoundboardPlayed: 'soundboard:played',
   WebRtcOffer: 'webrtc:offer',
   WebRtcAnswer: 'webrtc:answer',
   WebRtcIceCandidate: 'webrtc:ice-candidate',
@@ -66,4 +72,9 @@ export interface PresenceUpdatePayload {
   userId: string;
   status?: UserStatus;
   customStatus?: CustomStatus | null;
+}
+
+/** Sent to every server the account belonged to once it is anonymized, so rosters drop the member. */
+export interface AccountDeletedPayload {
+  userId: string;
 }

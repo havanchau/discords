@@ -132,17 +132,17 @@ function isStandaloneCopy(text) {
 }
 
 function checkCatalogs() {
-  const en = readCatalogKeys('en');
-  const vi = readCatalogKeys('vi');
-  const problems = [];
+  const en = readCatalog('en');
+  const vi = readCatalog('vi');
+  const problems = [...en.problems, ...vi.problems];
 
-  for (const key of en) {
-    if (!vi.has(key))
-      problems.push({ file: `${catalogDir}/vi.ts`, line: 1, text: key, kind: 'missing key' });
+  for (const [key, where] of en.keys) {
+    if (!vi.keys.has(key))
+      problems.push({ file: where.file, line: where.line, text: key, kind: 'missing key in vi' });
   }
-  for (const key of vi) {
-    if (!en.has(key))
-      problems.push({ file: `${catalogDir}/en.ts`, line: 1, text: key, kind: 'missing key' });
+  for (const [key, where] of vi.keys) {
+    if (!en.keys.has(key))
+      problems.push({ file: where.file, line: where.line, text: key, kind: 'missing key in en' });
   }
   return problems;
 }
@@ -222,15 +222,43 @@ function readApiCatalogKeys(locale) {
   return keys;
 }
 
-function readCatalogKeys(locale) {
-  const file = path.join(catalogDir, 'locales', `${locale}.ts`);
-  if (!fs.existsSync(file)) return new Set();
-  const keys = new Set();
-  for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const match = /^\s*'([^']+)':/.exec(line);
-    if (match) keys.add(match[1]);
+// Each locale is a folder of per-area modules merged by its index.ts. A later spread silently wins
+// over an earlier one, so a key defined in two modules is reported, as is a module index.ts skips.
+function readCatalog(locale) {
+  const dir = path.join(catalogDir, 'locales', locale);
+  const keys = new Map();
+  const problems = [];
+  if (!fs.existsSync(dir)) return { keys, problems };
+  const indexFile = path.join(dir, 'index.ts');
+  const indexText = fs.existsSync(indexFile) ? fs.readFileSync(indexFile, 'utf8') : '';
+  const modules = fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith('.ts') && name !== 'index.ts')
+    .sort();
+  for (const name of modules) {
+    const file = path.join(dir, name);
+    if (!indexText.includes(`from './${name.slice(0, -'.ts'.length)}';`)) {
+      problems.push({ file: indexFile, line: 1, text: name, kind: 'module not merged' });
+    }
+    fs.readFileSync(file, 'utf8')
+      .split(/\r?\n/)
+      .forEach((line, index) => {
+        const match = /^\s*'([^']+)':/.exec(line);
+        if (!match) return;
+        const previous = keys.get(match[1]);
+        if (previous) {
+          problems.push({
+            file,
+            line: index + 1,
+            text: `${match[1]} (also ${previous.file}:${previous.line})`,
+            kind: 'duplicate key',
+          });
+          return;
+        }
+        keys.set(match[1], { file, line: index + 1 });
+      });
   }
-  return keys;
+  return { keys, problems };
 }
 
 function report(problems) {

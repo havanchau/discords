@@ -118,6 +118,17 @@ export class CallRegistryService {
     await this.redis.client.del(this.socketCallsKey(client.id));
   }
 
+  /** The socket's own participant entry, pruned of stale heartbeats like every other read. */
+  async requireParticipant(client: Socket, channelId: string) {
+    const participant = (await this.listParticipants(channelId)).find(
+      (item) => item.socketId === client.id,
+    );
+    if (!participant) {
+      throw new UnauthorizedException('Not in this call');
+    }
+    return participant;
+  }
+
   async assertPeer(client: Socket, channelId: string, targetSocketId: string) {
     const socketIds = new Set(
       (await this.listParticipants(channelId)).map((participant) => participant.socketId),

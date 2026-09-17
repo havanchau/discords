@@ -9,6 +9,7 @@ import { NotificationsService } from '@/modules/notifications/notifications.serv
 import { countDirectUnread } from '@/modules/messages/unread-counts';
 import { findBlockBetween } from '@/modules/friends/user-blocks';
 import { readVoiceMaxBytes, toAttachmentCreateData } from '@/modules/messages/message-attachments';
+import type { StickerAttachmentData } from '@/modules/messages/message-stickers';
 import type { ForwardSnapshot } from '@/common/forward-snapshot';
 import {
   directConversationInclude,
@@ -74,16 +75,23 @@ export class DirectMessagesService {
     };
   }
 
-  /** `forward` is set only by the forwarding module; a forward may have no text of its own. */
+  /**
+   * `forward` and `carriedStickers` are set only by the forwarding module; a forward may have no text
+   * of its own. Stickers are never sent directly in a DM, only carried by a forward.
+   */
   async createMessage(
     userId: string,
     conversationId: string,
     dto: CreateDirectMessageDto,
     forward?: ForwardSnapshot,
+    carriedStickers: StickerAttachmentData[] = [],
   ) {
     await this.requireConversationMember(userId, conversationId);
     const content = dto.content.trim();
-    const attachments = dto.attachments ?? [];
+    const attachments = [
+      ...toAttachmentCreateData(dto.attachments ?? [], this.voiceMaxBytes),
+      ...carriedStickers,
+    ];
     if (!content && !attachments.length && !forward) {
       throw new ForbiddenException('Message content cannot be empty');
     }
@@ -116,9 +124,7 @@ export class DirectMessagesService {
         content,
         replyToMessageId: dto.replyToMessageId,
         ...forward,
-        attachments: attachments.length
-          ? { create: toAttachmentCreateData(attachments, this.voiceMaxBytes) }
-          : undefined,
+        attachments: attachments.length ? { create: attachments } : undefined,
       },
       include: directMessageInclude,
     });

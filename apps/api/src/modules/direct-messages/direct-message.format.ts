@@ -1,7 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { formatForwardOrigin } from '@/common/forward-snapshot';
-import { formatAttachment } from '@/modules/messages/message-attachments';
+import {
+  attachmentStickerInclude,
+  formatAttachment,
+} from '@/modules/messages/message-attachments';
 import { formatPoll, pollInclude } from '@/modules/polls/poll.format';
 
 const authorSelect = {
@@ -17,7 +20,7 @@ export const directMessageInclude = {
     select: { emoji: true, userId: true },
     orderBy: { createdAt: 'asc' as const },
   },
-  attachments: { orderBy: { createdAt: 'asc' as const } },
+  attachments: { include: attachmentStickerInclude, orderBy: { createdAt: 'asc' as const } },
   poll: { include: pollInclude },
 } satisfies Prisma.DirectMessageInclude;
 

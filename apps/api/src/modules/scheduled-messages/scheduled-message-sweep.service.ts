@@ -31,6 +31,9 @@ const FAILURE_REASON_KEYS: Record<ScheduledMessageFailureReason, ApiMessageKey> 
   REPLY_TARGET_MISSING: 'scheduledMessage.failure.REPLY_TARGET_MISSING',
   REJECTED: 'scheduledMessage.failure.REJECTED',
   INTERRUPTED: 'scheduledMessage.failure.INTERRUPTED',
+  AUTOMOD_BLOCKED: 'scheduledMessage.failure.AUTOMOD_BLOCKED',
+  ACCOUNT_DELETION: 'scheduledMessage.failure.ACCOUNT_DELETION',
+  RULES_NOT_ACCEPTED: 'scheduledMessage.failure.RULES_NOT_ACCEPTED',
   UNKNOWN: 'scheduledMessage.failure.UNKNOWN',
 };
 
@@ -108,8 +111,15 @@ export class ScheduledMessageSweepService implements OnApplicationBootstrap, OnM
       });
 
       for (const { id } of due) {
+        // An author with a pending account deletion never gets a claim: the request already failed
+        // their pending rows, and this also closes the gap between that update and a concurrent tick.
         const { count } = await this.prisma.scheduledMessage.updateMany({
-          where: { id, status: 'PENDING', sendAt: { lte: now } },
+          where: {
+            id,
+            status: 'PENDING',
+            sendAt: { lte: now },
+            author: { deletionRequestedAt: null },
+          },
           data: { status: 'SENDING', claimedAt: now },
         });
         // Another instance claimed it, or the author edited or cancelled it in between.

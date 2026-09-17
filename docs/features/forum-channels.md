@@ -52,6 +52,8 @@ Acceptance criteria:
 
 ### Data model
 
+Decision (open question 21): the post title and tags live on `Thread`, not on the root `Message`, and tags are a normalized per-channel table instead of a `String[]` column.
+
 ```prisma
 enum ChannelType {
   TEXT
@@ -61,14 +63,44 @@ enum ChannelType {
 
 model Channel {
   // ...existing fields unchanged...
-  tags           String[] @default([])
   postGuidelines String?
+  forumTags      ForumTag[]
+}
+
+model Thread {
+  // ...existing fields unchanged...
+  /// Set only on a forum post; a thread started from a reply has no title.
+  title String?
+  tags  ThreadTag[]
+}
+
+model ForumTag {
+  id        String      @id @default(cuid())
+  channelId String
+  name      String
+  position  Int         @default(0)
+  createdAt DateTime    @default(now())
+  channel   Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  threads   ThreadTag[]
+
+  @@unique([channelId, name])
+  @@index([channelId, position])
+}
+
+model ThreadTag {
+  threadId String
+  tagId    String
+  thread   Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tag      ForumTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, tagId])
+  @@index([tagId])
 }
 ```
 
-`Thread` and `ThreadParticipant` are reused as-is — no new columns. A forum post _is_ a `Thread` whose `rootMessage.channelId` points at a `FORUM` channel; nothing distinguishes it structurally from a reply-originated thread except that its root message was created through the new forum-post endpoint instead of `createMessage`.
+A forum post _is_ a `Thread` with a non-null `title` whose channel is a `FORUM` channel. `ThreadParticipant`, reply storage, and `ThreadPanel` are reused unchanged.
 
-New migration: `<timestamp>_add_forum_channels` — adds the `FORUM` enum value and the two `Channel` columns (`tags` defaults to `[]`, `postGuidelines` nullable, so existing rows need no backfill).
+New migration: `20260917009000_add_forum_channels` — adds the `FORUM` enum value, `Channel.postGuidelines`, `Thread.title`, and the two tables. Every new column is nullable and the tables are new, so existing rows need no backfill. The migration never uses the `FORUM` value, so `ALTER TYPE ... ADD VALUE` stays valid inside Prisma's migration run on PostgreSQL 12+ (the repository runs 16).
 
 ### API
 
@@ -98,7 +130,29 @@ Reuses the existing thread-reply endpoint and `ThreadSummary` shape (`packages/s
 | New `ForumPost` model separate from `Thread`                     | Clean domain separation; posts could gain post-only fields (title, tags) without touching `Thread`                                                | Duplicates reply storage, read-state, and the whole `ThreadPanel` UI; two code paths to keep in sync for something functionally identical                                                                                | Ruled out — the duplication cost is not justified since `Thread` has no post-incompatible constraint                 |
 | Channel-level `tags: String[]` vs. a normalized `ForumTag` table | Simple, one migration, matches the repo's existing preference for `String[]` columns (`Role.permissions`, `ChannelPermissionOverride.allow/deny`) | No tag reuse across channels/servers, no tag color/description, renaming a tag requires updating every post that used it (out of scope: tags are not stored per-post beyond the array on the message/thread — see below) | **Chosen** for v1; a normalized table is a natural follow-up if tag reuse across channels becomes a real requirement |
 
-**Open design gap acknowledged**: this doc reuses `Thread` but `Thread` has no `title` or `tags` columns today. The technical approach above does not add them to `Thread`, which is an inconsistency worth flagging — see `open-questions.md` for how title/tags should actually be stored (new `Thread.title`/`Thread.tags` columns is the likely answer, not covered in the Data model section above pending that decision).
+| Option                                             | Pros                                                                                                  | Cons                                                                                | Verdict                                                                                             |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Title and tags on `Thread`                         | The post is the thread; listing and sorting read one table; the root message stays a plain `Message`  | A nullable `title` on every thread                                                  | **Chosen** (open question 21)                                                                       |
+| Title and tags on the root `Message`               | No `Thread` change                                                                                    | Every message row carries post-only columns; listing joins back to the root message | Ruled out                                                                                           |
+| Normalized `ForumTag` + `ThreadTag` vs. `String[]` | Renaming a tag updates every post at once; deleting a tag cascades; the per-post limit is a row count | Two tables and a replace-set endpoint instead of one array column                   | **Chosen** over the `String[]` row above, which could not rename a tag without rewriting every post |
+
+## Deviations From The Original Design
+
+Written back after implementation, so the doc matches the code:
+
+- **Title and tags storage** (open question 21): `Thread.title` plus normalized `ForumTag`/`ThreadTag` tables, as in Data model above, instead of `Channel.tags String[]`. Tag names are unique per channel case-insensitively (checked by `ForumTagsService`; the database index is case-sensitive). Migration `20260917009000_add_forum_channels`.
+- **Tags have their own endpoints**, because a normalized tag carries an id: `GET /channels/:channelId/forum-tags` (anyone who can view the channel) and `PUT /channels/:channelId/forum-tags` with the full set `{ tags: [{ id?, name }] }` (`MANAGE_CHANNELS`). An entry with an id renames and reorders that tag, one without creates a tag, and a stored tag left out is deleted and drops off every post. Unknown ids return `404 Forum tag not found`; duplicate names `400 Forum tag names must be unique`. The change is audited as `FORUM_TAGS_UPDATE`. `PATCH /channels/:channelId` carries only `postGuidelines` (refused with `400 Channel is not a forum channel` on other types; blank clears it), and `POST /servers/:serverId/channels` accepts `type: 'FORUM'` and `postGuidelines` but not tags.
+- **Post request and response.** `POST /channels/:channelId/forum-posts` takes `{ title, tagIds?, content, attachments? }` (tag ids, not names) and returns `201 { thread, rootMessage }`; an unknown tag id returns `400 Unknown forum tag`, a blank title `400 Forum post title is required`. It is rate-limited (10 per minute) and audited as `FORUM_POST_CREATE`. `GET /channels/:channelId/forum-posts?cursor=&tagId=` returns `{ posts: ForumPostView[], nextCursor }` with `ForumPostView = { thread, rootMessage }` rather than bare `ThreadSummary[]`, because the card needs the author and excerpt and `ThreadPanel` opens from the root message. Pages hold 25 posts; the cursor is the last thread id, so a post that gains a reply while paging can move to an earlier page. Posts whose root message was deleted are not listed. Both endpoints refuse a non-forum channel with `400 Channel is not a forum channel`.
+- **`ThreadSummary` gains `title` and `tags`** (null and empty on reply-originated threads), so thread events and the thread panel header show the post title.
+- **Code placement.** Forum logic lives in `apps/api/src/modules/forum/` (`ForumPostsService`, `ForumTagsService`, `ForumController`), not in `messages.service.ts`, which is kept well under the file-size limit. `MessagesService` gains only `requireCanPostInForum`, `listThreadRoots`, and a public `notifyMentionedUsers`; `ChannelsService` gains `requireReadableForumChannel`.
+- **Send chain.** A post goes through the same gates as any top-level send: view, `SEND_MESSAGES`, timeout, rules screening (onboarding), and slowmode (the root post is a top-level message, so the channel slowmode spaces posts), then AutoMod screening of the title and body together. Replies use `createThreadMessage` unchanged, which already applies onboarding and AutoMod.
+- **Top-level messages in a FORUM channel are refused in one place.** `MessagesService.requireCanPostInChannel` throws `400 Use forum posts on a FORUM channel` right after the view check, so every path that uses it is covered: socket `message:create` (acknowledged with the error), REST `POST /channels/:channelId/messages`, forwarding into a channel, scheduled channel sends at send time, and channel polls. Scheduling a message into a forum channel is also refused up front in `ScheduledMessagesService.createForChannel` with the same message. No scheduled-send failure code was added: a channel's type cannot change and no forum channel existed before this migration, so a pending scheduled message can never target one; if it somehow did, the sweep would record `REJECTED`. AutoMod alert channels were already restricted to `TEXT` (`automod.service.ts`).
+- **`GET /channels/:channelId/messages` still answers on a FORUM channel** (it returns the root posts). The web client does not render it, but the existing channel open flow uses it to mark the channel read, and channel search runs on it.
+- **Realtime.** `forum:post-created` carries `{ thread, rootMessage }`; the post also sends `unread:updated` to viewers like a channel send. The web list invalidates its query on `forum:post-created`, `thread:message:created`, `message:updated`, `message:deleted` and `thread:message:deleted` for the channel instead of splicing the cache, because the activity order and per-viewer fields make a refetch of one page simpler and correct.
+- **Unread.** `RealtimeUnreadService.countByChannel` now counts `FORUM` channels with `TEXT`. As for text channels today, replies count toward the badge on reload but do not push a live `unread:updated`.
+- **Account export** adds `forumPostTitle` to each exported message that is a forum post root.
+- **Web.** `components/forum/ForumChannelView.tsx`, `ForumPostCard.tsx`, `NewForumPostDialog.tsx` replace the message list, typing line and composer inside `ChatPanel.tsx` for a FORUM channel (`AppShell.tsx` is unchanged). Forum channels are listed with text channels and use the `MessagesSquare` icon; managers create one from the server menu ("Create forum channel"). Channel settings add a post guidelines field and `components/settings/ForumTagsSection.tsx`, which saves the tag set on its own. The "New post" button is shown to everyone who can view the channel and disabled only while timed out: the client has no channel-override evaluation, so a missing `SEND_MESSAGES` override shows the API's `403` in the dialog instead of hiding the button. The post form's attachments use `uploadMessageAttachments` with a plain file picker, not the full composer (no voice recording, no slash commands, no encryption).
+- **Not covered for forum posts:** post deletion, reactions, pins, saving and reporting have no entry point in the forum view or the thread panel (the thread panel had none before either); the API endpoints work on root and reply messages as for any thread. Channel search results cannot jump to a post, because there is no message list to scroll. Title and tags cannot be edited after creation, as specified.
 
 ## Risks & Rollback
 
@@ -108,13 +162,16 @@ Reuses the existing thread-reply endpoint and `ThreadSummary` shape (`packages/s
 
 ## Test Plan
 
-- **Automated**: none — `RULE.md` forbids `*.test.ts`/`*.spec.ts` files. Verify with `npm run typecheck`, `npm run lint`, `npm run build`.
+- **Automated**: none — `RULE.md` forbids `*.test.ts`/`*.spec.ts` files. Verify with `npm run typecheck`, `npm run lint`, `npm run build`, `npm run check:file-size`, `npm run i18n:check`, `npm run ui:scan`, `npm run docs:check`.
 - **Manual**:
-  1. Manager creates a `FORUM` channel with tags `bug`, `idea` → member without `SEND_MESSAGES` override cannot see "New post" → member with the permission creates a post tagged `bug` → post appears in the list.
-  2. A second member replies inside the post → post moves to the top of the list (activity sort) and reply count increments.
-  3. Failure case: creating a post with a tag not in the channel's tag set returns `400 Unknown tag`; posting directly to `POST /channels/:channelId/messages` on a `FORUM` channel returns `400`.
+  1. Manager opens the server menu → "Create forum channel" → opens its settings, adds tags `bug` and `idea`, saves tags, sets post guidelines, saves.
+  2. A member with `SEND_MESSAGES` → "New post" → guidelines show under the dialog title → title, tag `bug`, message, one image → post appears at the top with its tag; other members see it appear without reload and get an unread badge.
+  3. A second member opens the post, replies in the thread panel (header shows the post title) → the post moves to the top and its reply count increments.
+  4. Filter by `idea` → "No posts with this tag."; rename `bug` in settings → the card shows the new name; delete it → the tag disappears from the post.
+  5. Failure cases: `POST /channels/:channelId/forum-posts` with a tag id from another channel → `400 Unknown forum tag`; `POST /channels/:channelId/messages`, socket `message:create`, `POST /channels/:channelId/polls`, a forward into the forum channel, and `POST /channels/:channelId/scheduled-messages` → `400 Use forum posts on a FORUM channel`; a member denied `SEND_MESSAGES` by an override → `403` shown in the dialog; a timed-out member → "New post" disabled; an AutoMod keyword in the title → blocked; a member who has not accepted the rules → `403`.
 
 ## Deployment Notes
 
-- Run the new migration before deploying the API (adds an enum value — Postgres requires it to be committed before it can be used by a subsequent statement in the same deploy, so deploy schema first, then the code that writes `FORUM` rows).
-- New `forum.*` i18n keys land in both `en` and `vi` catalogs in the same change (`docs/features/i18n-localization.md`).
+- Run migration `20260917009000_add_forum_channels` before deploying the API. It adds an enum value and never uses it in the same migration, so it is valid on PostgreSQL 12+; deploy the schema first, then the code that writes `FORUM` rows.
+- New API error codes and `forum.*` web keys land in both `en` and `vi` catalogs in the same change (`docs/features/i18n-localization.md`).
+- Deploy API before web: an older API rejects `type: 'FORUM'` at channel creation, so the new web client's forum menu would fail against it.

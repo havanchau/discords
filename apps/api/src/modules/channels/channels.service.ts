@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
@@ -21,13 +21,15 @@ export class ChannelsService {
     const name = this.servers.normalizeChannelName(dto.name);
     if (dto.categoryId) await this.requireCategoryInServer(serverId, dto.categoryId);
     const channelCount = await this.prisma.channel.count({ where: { serverId } });
+    const type = dto.type || 'TEXT';
 
     const channel = await this.prisma.channel.create({
       data: {
         serverId,
         name,
-        type: dto.type || 'TEXT',
+        type,
         topic: dto.topic,
+        postGuidelines: type === 'FORUM' ? normalizeGuidelines(dto.postGuidelines) : undefined,
         categoryId: dto.categoryId,
         position: channelCount,
       },
@@ -75,6 +77,9 @@ export class ChannelsService {
       Permission.ManageChannels,
     );
     if (dto.categoryId) await this.requireCategoryInServer(existing.serverId, dto.categoryId);
+    if (dto.postGuidelines !== undefined && existing.type !== 'FORUM') {
+      throw new BadRequestException('Channel is not a forum channel');
+    }
     const channel = await this.prisma.channel.update({
       where: { id: channelId },
       data: {
@@ -85,6 +90,7 @@ export class ChannelsService {
         position: dto.position,
         slowmodeSeconds: dto.slowmodeSeconds,
         categoryId: dto.categoryId,
+        postGuidelines: normalizeGuidelines(dto.postGuidelines),
       },
     });
     await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_UPDATE', channel.id, {
@@ -161,6 +167,15 @@ export class ChannelsService {
     return channel;
   }
 
+  /** A readable channel that must be a FORUM channel (forum posts and tags). */
+  async requireReadableForumChannel(userId: string, channelId: string) {
+    const channel = await this.requireReadableChannel(userId, channelId);
+    if (channel.type !== 'FORUM') {
+      throw new BadRequestException('Channel is not a forum channel');
+    }
+    return channel;
+  }
+
   private async requireCategoryInServer(serverId: string, categoryId: string) {
     const category = await this.prisma.channelCategory.findFirst({
       where: { id: categoryId, serverId },
@@ -180,4 +195,10 @@ export class ChannelsService {
       data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
     });
   }
+}
+
+/** Undefined keeps the stored value; blank text clears it. */
+function normalizeGuidelines(value: string | undefined) {
+  if (value === undefined) return undefined;
+  return value.trim() || null;
 }

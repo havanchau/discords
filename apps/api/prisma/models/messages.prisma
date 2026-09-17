@@ -1,0 +1,241 @@
+model Poll {
+  id              String         @id @default(cuid())
+  messageId       String?        @unique
+  directMessageId String?        @unique
+  creatorId       String
+  question        String
+  allowMultiple   Boolean        @default(false)
+  showVoters      Boolean        @default(false)
+  expiresAt       DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  message         Message?       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  directMessage   DirectMessage? @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  creator         User           @relation(fields: [creatorId], references: [id])
+  options         PollOption[]
+  votes           PollVote[]
+
+  @@index([expiresAt])
+}
+
+model PollOption {
+  id       String     @id @default(cuid())
+  pollId   String
+  label    String
+  position Int
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes    PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  pollId    String
+  optionId  String
+  userId    String
+  createdAt DateTime   @default(now())
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pollId, optionId, userId])
+  @@index([pollId, userId])
+}
+
+model Message {
+  id                           String              @id @default(cuid())
+  channelId                    String
+  serverId                     String
+  authorId                     String
+  content                      String
+  replyToMessageId             String?
+  threadId                     String?
+  // Forward snapshot: plain ids with no foreign key, so the copy survives the source being deleted.
+  forwardedFromMessageId       String?
+  forwardedFromDirectMessageId String?
+  forwardOriginAuthorName      String?
+  forwardOriginContent         String?
+  forwardOriginLabel           String?
+  // Per-post name and avatar a webhook supplied; null means the author row's own values.
+  authorNameOverride           String?
+  authorAvatarOverride         String?
+  editedAt                     DateTime?
+  deletedAt                    DateTime?
+  createdAt                    DateTime            @default(now())
+  channel                      Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  thread                       Thread?             @relation("ThreadMessages", fields: [threadId], references: [id], onDelete: Cascade)
+  threadRoot                   Thread?             @relation("ThreadRoot")
+  author                       User                @relation(fields: [authorId], references: [id])
+  attachments                  MessageAttachment[]
+  reactions                    MessageReaction[]
+  pin                          MessagePin?
+  poll                         Poll?
+  reports                      MessageReport[]
+
+  @@index([channelId, createdAt])
+  @@index([channelId, authorId, createdAt])
+  @@index([threadId, createdAt])
+}
+
+model Thread {
+  id            String              @id @default(cuid())
+  channelId     String
+  serverId      String
+  rootMessageId String              @unique
+  createdById   String
+  /// Set only on a forum post; a thread started from a reply has no title.
+  title         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  channel       Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  rootMessage   Message             @relation("ThreadRoot", fields: [rootMessageId], references: [id], onDelete: Cascade)
+  createdBy     User                @relation("ThreadCreator", fields: [createdById], references: [id])
+  messages      Message[]           @relation("ThreadMessages")
+  participants  ThreadParticipant[]
+  tags          ThreadTag[]
+
+  @@index([channelId, updatedAt])
+  @@index([serverId])
+}
+
+// A FORUM channel's tag set. Names are unique per channel, compared case-insensitively by the service.
+model ForumTag {
+  id        String      @id @default(cuid())
+  channelId String
+  name      String
+  position  Int         @default(0)
+  createdAt DateTime    @default(now())
+  channel   Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  threads   ThreadTag[]
+
+  @@unique([channelId, name])
+  @@index([channelId, position])
+}
+
+model ThreadTag {
+  threadId String
+  tagId    String
+  thread   Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tag      ForumTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, tagId])
+  @@index([tagId])
+}
+
+model ThreadParticipant {
+  threadId   String
+  userId     String
+  lastReadAt DateTime?
+  joinedAt   DateTime @default(now())
+  thread     Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, userId])
+  @@index([userId])
+}
+
+model MessageAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  fileName   String
+  mimeType   String
+  byteSize   Int
+  url        String
+  /// 'voice' for a recorded voice message; null for any other file, including a shared audio file.
+  kind       String?
+  durationMs Int?
+  /// number[] of 20-100 peak buckets, each 0-100. Client-computed, validated for shape only.
+  waveform   Json?
+  /// Set with kind 'sticker'; SetNull when the sticker is deleted, which renders a placeholder.
+  stickerId  String?
+  createdAt  DateTime       @default(now())
+  message    Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sticker    ServerSticker? @relation(fields: [stickerId], references: [id], onDelete: SetNull)
+
+  @@index([stickerId])
+}
+
+model MessageReaction {
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
+}
+
+model MessagePin {
+  messageId  String   @id
+  channelId  String
+  pinnedById String
+  createdAt  DateTime @default(now())
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  pinnedBy   User     @relation("MessagePins", fields: [pinnedById], references: [id])
+
+  @@index([channelId, createdAt])
+}
+
+enum SavedMessageSourceType {
+  CHANNEL
+  DIRECT
+}
+
+// A per-user bookmark holding a snapshot of the message at save time. Source ids carry no foreign
+// key, so the bookmark outlives the message, channel or conversation it came from.
+model SavedMessage {
+  id                 String                 @id @default(cuid())
+  ownerId            String
+  sourceType         SavedMessageSourceType
+  channelId          String?
+  conversationId     String?
+  serverId           String?
+  originalMessageId  String
+  snapshotContent    String
+  snapshotAuthorId   String
+  snapshotAuthorName String
+  remindAt           DateTime?
+  remindedAt         DateTime?
+  createdAt          DateTime               @default(now())
+  owner              User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, sourceType, originalMessageId])
+  @@index([ownerId, createdAt])
+  @@index([remindAt, remindedAt])
+}
+
+enum ScheduledMessageStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
+
+// A message the author composed now for the server to send at `sendAt`. Every live-send check runs
+// again at send time; `failureReason` holds a stable code the client translates.
+model ScheduledMessage {
+  id               String                 @id @default(cuid())
+  authorId         String
+  channelId        String?
+  conversationId   String?
+  content          String
+  /// MessageAttachmentInputDto[]; re-validated by the send path when the message is posted.
+  attachments      Json?
+  replyToMessageId String?
+  sendAt           DateTime
+  status           ScheduledMessageStatus @default(PENDING)
+  failureReason    String?
+  sentMessageId    String?
+  /// Set when a sweep claims the row, so a claim left behind by a stopped process can be failed.
+  claimedAt        DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  author           User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel          Channel?               @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  conversation     DirectConversation?    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([status, sendAt])
+  @@index([authorId, channelId, status])
+  @@index([authorId, conversationId, status])
+}

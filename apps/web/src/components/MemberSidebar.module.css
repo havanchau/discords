@@ -120,6 +120,23 @@
   line-height: var(--line-height-tight);
 }
 
+/* A bot's badge leads its subtitle line. */
+.memberInfo .botLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Outranks `.memberInfo span`, which would otherwise mute the badge like the subtitle. */
+.memberInfo .botBadge {
+  flex: none;
+  padding-inline: var(--space-1);
+  color: var(--text-on-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
 .popoverContent {
   width: 260px;
   overflow: hidden;

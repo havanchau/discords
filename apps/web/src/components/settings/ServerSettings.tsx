@@ -3,8 +3,12 @@ import { Button, IconButton, TextField } from '@/components/ui';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
+import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
+import { ServerDiscoverySettings } from './ServerDiscoverySettings';
+import { ServerOnboardingSettings } from './ServerOnboardingSettings';
+import { ServerTemplatesSection } from './ServerTemplatesSection';
 import { ReportsSection } from './ReportsSection';
 import type { SettingsModalFields } from './types';
 import styles from '@/components/SettingsModal.module.css';
@@ -176,6 +180,22 @@ export function ServerSettings({
           createEmoji={createEmoji}
           deleteEmoji={deleteEmoji}
         />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <AutoModSection server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerOnboardingSettings server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerDiscoverySettings server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerTemplatesSection server={server} />
       ) : null}
 
       {memberHasServerPermission(server, auth.user.id, 'BAN_MEMBERS') ? (

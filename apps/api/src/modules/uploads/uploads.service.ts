@@ -141,6 +141,33 @@ export class UploadsService {
     }
   }
 
+  /**
+   * Stores a small asset multer held in memory (sticker, soundboard clip). The caller has already
+   * sniffed the bytes and passes the detected type with a matching server-built file name.
+   */
+  async uploadBuffer(file: IncomingUploadChunk) {
+    if (file.buffer.length > this.maxUploadBytes) {
+      throw new BadRequestException('File is too large');
+    }
+    if (!this.isAllowedFile(file)) {
+      throw new BadRequestException('Unsupported file type');
+    }
+    await mkdir(this.uploadTmpDir, { recursive: true });
+    const tempPath = join(this.uploadTmpDir, `${randomUUID()}.upload`);
+    await writeFile(tempPath, file.buffer);
+    try {
+      return await this.uploadFromPath({
+        path: tempPath,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.buffer.length,
+      });
+    } finally {
+      // Local storage already moved the file; this only cleans up after a failed upload.
+      await rm(tempPath, { force: true });
+    }
+  }
+
   async uploadChunk(
     userId: string,
     file: IncomingUploadChunk,

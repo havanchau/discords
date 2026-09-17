@@ -44,9 +44,15 @@ export class PollsService {
   ) {}
 
   async createChannelPoll(userId: string, channelId: string, dto: CreatePollDto) {
-    // The same gates as sending a message: view, send, timeout, slowmode.
+    // The same gates as sending a message: view, send, timeout, rules screening, slowmode.
     const channel = await this.messages.requireCanPostInChannel(userId, channelId);
     const input = this.normalizeInput(dto);
+    const autoModAlerts = await this.messages.enforceAutoMod({
+      userId,
+      serverId: channel.serverId,
+      channelId: channel.id,
+      texts: [input.question, ...input.options],
+    });
 
     const messageId = await this.prisma.$transaction(async (tx) => {
       const created = await tx.message.create({
@@ -78,6 +84,7 @@ export class PollsService {
       'message:created',
       withoutViewerVotes(message),
     );
+    await this.messages.postAutoModAlerts(autoModAlerts);
     return { message };
   }
 
@@ -135,7 +142,10 @@ export class PollsService {
 
   async vote(userId: string, pollId: string, dto: VotePollDto) {
     const context = await this.requirePollContext(userId, pollId);
-    if (context.serverId) await this.permissions.requireNotTimedOut(userId, context.serverId);
+    if (context.serverId) {
+      await this.permissions.requireNotTimedOut(userId, context.serverId);
+      await this.permissions.requireOnboardingAccepted(userId, context.serverId);
+    }
 
     const optionIds = [...new Set(dto.optionIds)];
     if (!context.poll.allowMultiple && optionIds.length !== 1) {

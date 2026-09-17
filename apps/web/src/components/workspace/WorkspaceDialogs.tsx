@@ -1,7 +1,8 @@
 import { Loader2, Plus, UserPlus } from 'lucide-react';
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { Button, DialogContent, DialogRoot, TextField } from '@/components/ui';
+import { TemplatePicker } from './TemplatePicker';
 import styles from './WorkspaceDialogs.module.css';
 import type { ChannelCreateType, ServerAction } from './types';
 
@@ -35,9 +36,11 @@ export function WorkspaceDialogs({
   createChannel,
 }: WorkspaceDialogsProps) {
   const t = useTranslation();
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
   async function submitCreateServer(event: FormEvent<HTMLFormElement>) {
     await createServer(event);
+    setTemplateId(null);
     setServerAction(null);
   }
 
@@ -107,6 +110,10 @@ export function WorkspaceDialogs({
             </form>
           ) : (
             <form onSubmit={(event) => void submitCreateServer(event)} className={styles.form}>
+              <TemplatePicker value={templateId} onChange={setTemplateId} />
+              {templateId ? (
+                <input name="templateId" type="hidden" value={templateId} readOnly />
+              ) : null}
               <TextField
                 name="name"
                 label={t('server.field.name')}
@@ -143,7 +150,9 @@ export function WorkspaceDialogs({
           title={
             channelCreateType === 'VOICE'
               ? t('channel.dialog.createVoice')
-              : t('channel.dialog.createText')
+              : channelCreateType === 'FORUM'
+                ? t('channel.dialog.createForum')
+                : t('channel.dialog.createText')
           }
         >
           <form onSubmit={(event) => void submitCreateChannel(event)} className={styles.form}>

@@ -1,0 +1,46 @@
+// A reusable snapshot of a server's structure. The JSON columns hold plain arrays that reference each
+// other by array index, because the ids of the server they will create do not exist yet; they are
+// re-validated on every read (server-template.rules.ts). Built-in starter templates live in code, not
+// in this table, so every row here is a private template of one source server.
+model ServerTemplate {
+  id             String   @id @default(cuid())
+  sourceServerId String?
+  creatorId      String
+  name           String
+  /// Reserved for user-submitted public templates; always false in v1.
+  isPublic       Boolean  @default(false)
+  /// TemplateRole[] ({ name, color, permissions, position }); `@everyone` included.
+  roles          Json
+  /// TemplateCategory[] ({ name, position }).
+  categories     Json
+  /// TemplateChannel[] ({ name, type, topic, categoryIndex, position, isPrivate, slowmodeSeconds,
+  /// postGuidelines, forumTags }).
+  channels       Json
+  /// TemplateOverride[] ({ channelIndex, roleIndex, memberSelf, allow, deny }).
+  overrides      Json
+  /// TemplateOnboarding ({ enabled, rulesText, questions: [{ prompt, roleIndexes, multiSelect }] }).
+  onboarding     Json?
+  createdAt      DateTime @default(now())
+  sourceServer   Server?  @relation(fields: [sourceServerId], references: [id], onDelete: SetNull)
+  creator        User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId, createdAt])
+  @@index([sourceServerId])
+}
+
+// A report against a listed server as a whole, filed from discovery by any signed-in user. Kept
+// separate from MessageReport (open question 15): it has no server-side moderator queue, because the
+// people who would triage it are the server's own managers.
+model ServerReport {
+  id         String              @id @default(cuid())
+  serverId   String
+  reporterId String
+  reason     MessageReportReason
+  details    String?
+  createdAt  DateTime            @default(now())
+  server     Server              @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  reporter   User                @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, createdAt])
+  @@index([reporterId, serverId, createdAt])
+}

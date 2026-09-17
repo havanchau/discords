@@ -52,6 +52,7 @@ export class MessagesGateway {
       content: string;
       replyToMessageId?: string;
       attachments?: MessageAttachmentInputDto[];
+      stickerId?: string;
     },
   ) {
     await this.rateLimit.assert(client, 'message:create', 20, 60_000);
@@ -62,6 +63,7 @@ export class MessagesGateway {
         content: body.content,
         replyToMessageId: body.replyToMessageId,
         attachments: body.attachments,
+        stickerId: body.stickerId,
       });
     } catch (error) {
       // Business refusals (timeout, slowmode, permissions) are acknowledged so the client can show
@@ -100,6 +102,7 @@ export class MessagesGateway {
       content: string;
       replyToMessageId?: string;
       attachments?: MessageAttachmentInputDto[];
+      stickerId?: string;
     },
   ) {
     await this.rateLimit.assert(client, 'thread:message:create', 20, 60_000);
@@ -108,6 +111,7 @@ export class MessagesGateway {
       content: body.content,
       replyToMessageId: body.replyToMessageId,
       attachments: body.attachments,
+      stickerId: body.stickerId,
     });
   }
 

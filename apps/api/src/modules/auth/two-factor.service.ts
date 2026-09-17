@@ -163,6 +163,35 @@ export class TwoFactorService {
     return { ok: true };
   }
 
+  /**
+   * Re-authentication for an account-level action, with the same checks and the same error as
+   * `disable`. The second factor is consumed only after the password matched, so a wrong password
+   * never burns a recovery code or a time step.
+   */
+  async verifyReauthentication(
+    userId: string,
+    password: string,
+    code: string | undefined,
+    options: { requireSecondFactor: boolean },
+  ) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        id: true,
+        passwordHash: true,
+        twoFactorSecret: true,
+        twoFactorLastUsedStep: true,
+      },
+    });
+    if (!(await bcrypt.compare(password, user.passwordHash))) {
+      throw new BadRequestException('Invalid password or code');
+    }
+    if (!options.requireSecondFactor || !user.twoFactorSecret) return;
+    if (!code || !(await this.consumeCode(user, code))) {
+      throw new BadRequestException('Invalid password or code');
+    }
+  }
+
   async regenerateRecoveryCodes(userId: string, code: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },

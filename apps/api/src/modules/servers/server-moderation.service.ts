@@ -6,6 +6,7 @@ import type { ServerBanEntry } from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateBanDto } from './dto/create-ban.dto';
 import { TimeoutMemberDto } from './dto/timeout-member.dto';
+import { setMemberTimeout } from './member-timeout';
 
 const moderationUserSelect = {
   id: true,
@@ -63,11 +64,13 @@ export class ServerModerationService {
     const timeoutUntil = dto.durationMinutes
       ? new Date(Date.now() + dto.durationMinutes * 60_000)
       : null;
-    const member = await this.prisma.serverMember.update({
-      where: { id: target.id },
-      data: { timeoutUntil },
-      select: { id: true, userId: true, timeoutUntil: true },
-    });
+    const member = await setMemberTimeout(
+      this.prisma,
+      this.realtime,
+      serverId,
+      target.id,
+      timeoutUntil,
+    );
 
     await (timeoutUntil
       ? this.writeAuditLog(serverId, userId, 'MEMBER_TIMEOUT', target.id, {
@@ -78,12 +81,6 @@ export class ServerModerationService {
       : this.writeAuditLog(serverId, userId, 'MEMBER_TIMEOUT_CLEAR', target.id, {
           userId: target.userId,
         }));
-    this.realtime.emitToRoom(this.realtime.serverRoom(serverId), 'server:member-updated', {
-      serverId,
-      memberId: member.id,
-      userId: member.userId,
-      timeoutUntil: member.timeoutUntil,
-    });
     return { member };
   }
 
@@ -109,7 +106,12 @@ export class ServerModerationService {
     if (dto.userId === userId) throw new ForbiddenException('Cannot ban yourself');
 
     const [target, server] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: dto.userId }, select: moderationUserSelect }),
+      // A bot is a member and can be banned, which also stops it being authorized again. A webhook's
+      // synthetic user is not a member and cannot be banned; revoke the webhook instead.
+      this.prisma.user.findFirst({
+        where: { id: dto.userId, kind: { in: ['HUMAN', 'BOT'] } },
+        select: moderationUserSelect,
+      }),
       this.prisma.server.findUniqueOrThrow({ where: { id: serverId }, select: { ownerId: true } }),
     ]);
     if (!target) throw new NotFoundException('User not found');

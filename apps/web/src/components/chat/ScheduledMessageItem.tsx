@@ -19,6 +19,9 @@ const FAILURE_REASON_KEYS: Record<NonNullable<ScheduledMessage['failureReason']>
   REPLY_TARGET_MISSING: 'scheduled.failure.REPLY_TARGET_MISSING',
   REJECTED: 'scheduled.failure.REJECTED',
   INTERRUPTED: 'scheduled.failure.INTERRUPTED',
+  AUTOMOD_BLOCKED: 'scheduled.failure.AUTOMOD_BLOCKED',
+  ACCOUNT_DELETION: 'scheduled.failure.ACCOUNT_DELETION',
+  RULES_NOT_ACCEPTED: 'scheduled.failure.RULES_NOT_ACCEPTED',
   UNKNOWN: 'scheduled.failure.UNKNOWN',
 };
 

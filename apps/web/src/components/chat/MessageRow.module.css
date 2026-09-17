@@ -129,6 +129,16 @@
   font-weight: var(--font-weight-normal);
 }
 
+/* Outranks `.meta span`, which would otherwise mute the badge like the timestamp. */
+.meta .webhookBadge {
+  align-self: center;
+  padding-inline: var(--space-1);
+  color: var(--text-on-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
 .content {
   margin: 0;
   color: var(--text-primary);

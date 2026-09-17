@@ -16,6 +16,7 @@ import { accentClass, initials, isSameMessageDay, previewText, QUICK_REACTIONS }
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import {
+  Badge,
   Button,
   IconButton,
   Tooltip,
@@ -184,6 +185,8 @@ export const MessageRow = memo(function MessageRow({
     !previousMessage ||
     showDateDivider ||
     previousMessage.authorId !== message.authorId ||
+    // One webhook can post under a different name each time.
+    previousMessage.author.displayName !== message.author.displayName ||
     new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() >
       7 * 60 * 1000;
 
@@ -198,6 +201,15 @@ export const MessageRow = memo(function MessageRow({
   // Reports go to this server's moderators; the API refuses reporting your own message.
   const canReport = Boolean(serverId) && message.authorId !== auth.user.id;
   const isPopoverOpen = isEmojiOpen || isSaveOpen;
+  // A webhook author is not a member and has no profile to open.
+  const isWebhookAuthor = message.author.kind === 'WEBHOOK';
+  // A bot is a member with a profile, so only the badge sets it apart.
+  const isBotAuthor = message.author.kind === 'BOT';
+  const authorAvatar = authorIdentity.avatarUrl ? (
+    <img src={assetUrl(authorIdentity.avatarUrl)} alt={authorIdentity.displayName} />
+  ) : (
+    initials(authorIdentity.displayName)
+  );
 
   function copyMessageContent() {
     void navigator.clipboard?.writeText(message.content);
@@ -227,7 +239,13 @@ export const MessageRow = memo(function MessageRow({
               }
             }}
           >
-            {isFirstInGroup ? (
+            {isFirstInGroup && isWebhookAuthor ? (
+              <span
+                className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
+              >
+                {authorAvatar}
+              </span>
+            ) : isFirstInGroup ? (
               <PopoverRoot open={isProfileOpen} onOpenChange={setIsProfileOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -235,14 +253,7 @@ export const MessageRow = memo(function MessageRow({
                     className={`${styles.avatar} ${styles.messageAvatar} avatar ${accentClass(message.authorId)}`}
                     aria-label={t('members.viewProfile', { name: authorIdentity.displayName })}
                   >
-                    {authorIdentity.avatarUrl ? (
-                      <img
-                        src={assetUrl(authorIdentity.avatarUrl)}
-                        alt={authorIdentity.displayName}
-                      />
-                    ) : (
-                      initials(authorIdentity.displayName)
-                    )}
+                    {authorAvatar}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent side="right" align="start">
@@ -265,6 +276,23 @@ export const MessageRow = memo(function MessageRow({
               {isFirstInGroup && (
                 <div className={styles.meta}>
                   <strong>{authorIdentity.displayName}</strong>
+                  {isWebhookAuthor ? (
+                    <Badge
+                      variant="neutral"
+                      className={styles.webhookBadge}
+                      title={t('message.webhookBadgeLabel')}
+                    >
+                      {t('message.webhookBadge')}
+                    </Badge>
+                  ) : isBotAuthor ? (
+                    <Badge
+                      variant="neutral"
+                      className={styles.webhookBadge}
+                      title={t('message.botBadgeLabel')}
+                    >
+                      {t('message.botBadge')}
+                    </Badge>
+                  ) : null}
                   <span>{dates.dateTime(message.createdAt)}</span>
                   {message.editedAt ? <span>{t('message.edited')}</span> : null}
                 </div>

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
-import { RealtimeEvents } from '@discord-clone/shared';
+import { RealtimeEvents, type AccountDeletedPayload } from '@discord-clone/shared';
 import { apiRequest, AuthState, ServerBanEntry, ServerDetail } from '@/api';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { PatchServer, PatchServers } from '@/query/useWorkspaceStore';
@@ -134,11 +134,25 @@ export function useServerModeration({
       );
     };
 
+    // An anonymized account left every server at once; the open server drops it from the roster.
+    const handleAccountDeleted = (payload: AccountDeletedPayload) => {
+      patchServer((current) =>
+        current.members.some((member) => member.user.id === payload.userId)
+          ? {
+              ...current,
+              members: current.members.filter((member) => member.user.id !== payload.userId),
+            }
+          : current,
+      );
+    };
+
     socket.on(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
     socket.on(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
+    socket.on(RealtimeEvents.AccountDeleted, handleAccountDeleted);
     return () => {
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
+      socket.off(RealtimeEvents.AccountDeleted, handleAccountDeleted);
     };
   }, [socket, openHome, patchServer, patchServers]);
 

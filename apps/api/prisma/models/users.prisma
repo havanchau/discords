@@ -1,0 +1,150 @@
+enum UserStatus {
+  ONLINE
+  OFFLINE
+  IDLE
+  DND
+  INVISIBLE
+}
+
+/// What a `User` row stands for. Only HUMAN rows can sign in or be found by other people; a WEBHOOK
+/// row exists so webhook-posted messages have an author (`Message.authorId` is required).
+enum UserKind {
+  HUMAN
+  WEBHOOK
+  BOT
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+model User {
+  id                        String                     @id @default(cuid())
+  email                     String                     @unique
+  username                  String                     @unique
+  displayName               String
+  passwordHash              String
+  avatarUrl                 String?
+  bio                       String?
+  bannerUrl                 String?
+  pronouns                  String?
+  customStatusText          String?
+  customStatusEmoji         String?
+  customStatusExpiresAt     DateTime?
+  locale                    String?
+  kind                      UserKind                   @default(HUMAN)
+  status                    UserStatus                 @default(OFFLINE)
+  emailVerifiedAt           DateTime?
+  twoFactorSecret           String?
+  twoFactorPendingSecret    String?
+  twoFactorEnabledAt        DateTime?
+  twoFactorLastUsedStep     Int?
+  /// Account deletion: requested and scheduled while in the grace period; completed once anonymized.
+  deletionRequestedAt       DateTime?
+  deletionScheduledAt       DateTime?
+  deletionCompletedAt       DateTime?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  sessions                  Session[]
+  emailVerificationTokens   EmailVerificationToken[]
+  passwordResetTokens       PasswordResetToken[]
+  oauthAccounts             OAuthAccount[]
+  oauthLoginCodes           OAuthLoginCode[]
+  twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
+  memberships               ServerMember[]
+  messages                  Message[]
+  messagePins               MessagePin[]               @relation("MessagePins")
+  readStates                ReadState[]
+  notificationPreferences   NotificationPreference[]
+  pushSubscriptions         PushSubscription[]
+  pushNotificationThrottles PushNotificationThrottle[]
+  auditLogs                 AuditLog[]                 @relation("AuditActor")
+  createdServers            Server[]                   @relation("ServerOwner")
+  sentFriendRequests        FriendRequest[]            @relation("FriendRequester")
+  receivedFriendRequests    FriendRequest[]            @relation("FriendReceiver")
+  conversations             DirectConversationMember[]
+  directMessages            DirectMessage[]
+  createdThreads            Thread[]                   @relation("ThreadCreator")
+  threadParticipants        ThreadParticipant[]
+  directReadStates          DirectReadState[]
+  notifications             Notification[]              @relation("NotificationUser")
+  actedNotifications        Notification[]              @relation("NotificationActor")
+  directMessageReactions    DirectMessageReaction[]
+  ownedConversations        DirectConversation[]       @relation("ConversationOwner")
+  serverBans                ServerBan[]                @relation("BannedUser")
+  issuedServerBans          ServerBan[]                @relation("BanIssuer")
+  createdEmojis             ServerEmoji[]              @relation("EmojiCreator")
+  createdStickers           ServerSticker[]            @relation("StickerCreator")
+  createdSoundboardClips    SoundboardClip[]           @relation("SoundboardClipCreator")
+  createdServerEvents       ServerEvent[]              @relation("EventCreator")
+  serverEventInterests      ServerEventInterest[]
+  blocksCreated             UserBlock[]                 @relation("UserBlocker")
+  blocksReceived            UserBlock[]                 @relation("UserBlocked")
+  createdPolls              Poll[]
+  pollVotes                 PollVote[]
+  savedMessages             SavedMessage[]
+  scheduledMessages         ScheduledMessage[]
+  filedMessageReports       MessageReport[]            @relation("MessageReportReporter")
+  receivedMessageReports    MessageReport[]            @relation("MessageReportTarget")
+  resolvedMessageReports    MessageReport[]            @relation("MessageReportResolver")
+  exportJobs                ExportJob[]
+  serverTemplates           ServerTemplate[]
+  filedServerReports        ServerReport[]
+  createdWebhooks           ServerWebhook[]            @relation("WebhookCreator")
+  webhook                   ServerWebhook?             @relation("WebhookUser")
+  ownedBots                 Bot[]                      @relation("BotOwner")
+  bot                       Bot?                       @relation("BotUser")
+
+  @@index([deletionScheduledAt])
+}
+
+model FriendRequest {
+  id          String       @id @default(cuid())
+  requesterId String
+  receiverId  String
+  status      FriendStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  requester   User         @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    User         @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([receiverId])
+}
+
+model UserBlock {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+enum ExportJobStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+// A self-service export of the owner's own data. The archive lives in private storage under
+// `fileKey` and is served only through the owner-checked download route until `expiresAt`.
+model ExportJob {
+  id           String          @id @default(cuid())
+  userId       String
+  status       ExportJobStatus @default(PENDING)
+  fileKey      String?
+  errorMessage String?
+  expiresAt    DateTime?
+  createdAt    DateTime        @default(now())
+  completedAt  DateTime?
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+}

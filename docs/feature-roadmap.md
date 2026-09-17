@@ -322,23 +322,58 @@ Fourth roadmap wave. Specs were reviewed and approved on 2026-09-17; open decisi
 
 ### Status — 2026-09-17 (paused)
 
-Work is paused after item 6 of the delivery order below and resumes at AutoMod. Nothing is committed.
+Work is paused after the bot API (phase 1) and resumes at stickers and soundboard. Polls through message reports are committed; AutoMod, account deletion, server onboarding, forum channels, server templates and discovery, keyboard shortcuts, incoming webhooks, and the bot API are not.
 
-- **Implemented, uncommitted:** polls, saved messages, forward message (including `DirectMessageAttachment`), voice messages, scheduled messages, message reports. Each spec has a "Deviations" section describing what was built differently from the reviewed draft.
+- **Implemented, committed in `fdafde0`:** polls, saved messages, forward message (including `DirectMessageAttachment`), voice messages, scheduled messages, message reports. Each spec has a "Deviations" section describing what was built differently from the reviewed draft.
 - **Verification so far:** `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check`, `ui:scan`, `docs:check`, and Prettier pass. Migration SQL was checked with `prisma migrate diff` against the pre-change schema. No migration has been applied to any database, and no manual or browser scenario from any test plan has run, so every checklist item stays unchecked.
-- **Pending migrations, in order:** `20260917000000_add_polls`, `20260917001000_add_saved_messages`, `20260917002000_add_message_forwarding`, `20260917003000_add_voice_messages`, `20260917004000_add_scheduled_messages`, `20260917005000_add_message_reports`.
-- **Next:** [automod.md](features/automod.md). `re2js@2.8.6` is already added to `apps/api` for regex rules; no AutoMod code exists yet. Next migration timestamp: `20260917006000`.
+- **Pending migrations, in order:** `20260917000000_add_polls`, `20260917001000_add_saved_messages`, `20260917002000_add_message_forwarding`, `20260917003000_add_voice_messages`, `20260917004000_add_scheduled_messages`, `20260917005000_add_message_reports`, `20260917006000_add_automod`, `20260917007000_add_account_deletion_and_export`, `20260917008000_add_server_onboarding`, `20260917009000_add_forum_channels`, `20260917010000_add_server_templates`, `20260917011000_add_server_discovery`, `20260917012000_add_incoming_webhooks`, `20260917013000_add_bot_api`, `20260917014000_add_stickers_and_soundboard` (untracked).
+- **AutoMod:** [automod.md](features/automod.md) implemented, uncommitted, with a "Deviations" section; migration `20260917006000_add_automod`.
+- **Account deletion and export:** [account-deletion-and-export.md](features/account-deletion-and-export.md) implemented, uncommitted, with a "Deviations" section; migration `20260917007000_add_account_deletion_and_export`.
+- **Server onboarding:** [server-onboarding.md](features/server-onboarding.md) implemented, uncommitted, with a "Deviations" section; migration `20260917008000_add_server_onboarding`.
+- **Forum channels:** [forum-channels.md](features/forum-channels.md) implemented, uncommitted, with a "Deviations" section; migration `20260917009000_add_forum_channels`.
+- **Server templates and discovery:** [server-templates-and-discovery.md](features/server-templates-and-discovery.md) implemented, uncommitted, with a "Deviations" section; migrations `20260917010000_add_server_templates` and `20260917011000_add_server_discovery`.
+- **Keyboard shortcuts:** [keyboard-shortcuts.md](features/keyboard-shortcuts.md) implemented, uncommitted, with a "Deviations" section; web client only, no migration.
+- **Incoming webhooks:** [incoming-webhooks.md](features/incoming-webhooks.md) implemented, uncommitted, with a "Deviations" section; migration `20260917012000_add_incoming_webhooks`. It introduced `User.kind` (`HUMAN | WEBHOOK`), which the bot API extends with `BOT`.
+- **Bot API (phase 1, REST only):** [bot-api.md](features/bot-api.md) implemented, uncommitted, with a "Deviations" section; migration `20260917013000_add_bot_api`. Bots call an explicit `/bot-api/*` allowlist with `Authorization: Bot <token>`; gateway access (phase 2) and slash commands (phase 3) are not built. Next migration timestamp after stickers and soundboard: `20260917015000`.
+- **Stickers and soundboard (in progress):** [stickers-and-soundboard.md](features/stickers-and-soundboard.md) — API side started, untracked: migration `20260917014000_add_stickers_and_soundboard`, `modules/stickers`, `modules/soundboard` (multipart upload with byte sniffing in `uploads/file-signature.ts`), `soundboard:play` in `voice.gateway.ts`, `MessageAttachment.stickerId` resolved by `messages/message-stickers.ts`, and `packages/shared/src/stickers-soundboard.ts`. Not started: web client, spec deviations, verification. See "Stickers And Soundboard — Remaining Work".
 - **Skipped:** [stage-channels.md](features/stage-channels.md), blocked on an SFU that has no implementation.
+- **File-size split (no behavior change):** the Prisma schema is now a folder (`apps/api/prisma/schema.prisma` plus `prisma/models/*.prisma`, empty `prisma migrate diff` against the single file), and the web locale catalogs are per-area modules under `apps/web/src/i18n/locales/{en,vi}/`, read by `scripts/i18n-scan.mjs`.
 - **Decision taken during implementation:** no `@nestjs/schedule` dependency; scheduled messages reuse the `setInterval` sweep with a conditional claim from saved-message reminders.
+
+### Stickers And Soundboard — Remaining Work
+
+- [ ] API: map the new sticker and soundboard error messages (`Sticker limit reached`, `Sticker name already exists`, `Sticker not found`, `Sticker file is too large`, `Sticker must be a PNG or WEBP image`, the soundboard equivalents, `Soundboard is only available in server voice calls`) in `apps/api/src/common/i18n/error-codes.ts` with `en` and `vi` entries; none exist yet.
+- [ ] API: review the unstaged edits in `direct-messages`, `forwarding`, `messages`, `realtime`, `uploads`, and `users/account-export-collector.ts` that carry `stickerId` through send, forward, format, and export.
+- [ ] Web: `api.ts` calls, `useServerStickers` and `useServerSoundboard` hooks with query keys, and refetch on `server:stickers-updated` / `server:soundboard-updated`.
+- [ ] Web: sticker picker in the composer, sending via `stickerId` over REST and the socket `message:create` path.
+- [ ] Web: sticker rendering in `MessageRow`, `ThreadPanel`, and direct messages (forwarded stickers), including the placeholder when the sticker was deleted.
+- [ ] Web: Stickers and Soundboard sections in server settings (upload, name, list with delete, limit counter), `MANAGE_SERVER` only, with client-side duration and size checks for clips.
+- [ ] Web: soundboard panel in the call UI that emits `soundboard:play`, plays `soundboard:played` locally with `Audio`, and shows who triggered it.
+- [ ] Web: `en`/`vi` catalog keys in `apps/web/src/i18n/locales/{en,vi}/` for every new string.
+- [ ] Docs: add a "Deviations" section to `stickers-and-soundboard.md` (migration `20260917014000` instead of `20260917030000`, a `stickerId` reference instead of an `AttachmentKind` enum, multipart upload with byte sniffing instead of `{ name, url }`, forwarded stickers in DMs).
+- [ ] Verify: `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check`, `ui:scan`, `docs:check`, Prettier, and `prisma migrate diff` for the new migration; then commit the wave's uncommitted features.
 
 ### Follow-Ups Found During Implementation
 
 - [ ] Add `VOICE_MAX_BYTES=26214400` to the API `.env.example` (agents cannot edit `.env*` files).
+- [ ] Add the optional `PRIVATE_STORAGE_LOCAL_DIR` (account export files, local storage driver) to the API `.env.example`.
+- [ ] Account deletion clears avatar and banner URLs but does not remove the files from upload storage; `UploadsService` has no delete operation.
 - [ ] Validate attachments on the socket `message:create` path (URL allowlist and size); today only the REST DTO validates them, and `byteSize` is client-reported. Pre-existing, not caused by this wave.
 - [ ] Decide whether polls, scheduled messages, and forwarding should be blocked in end-to-end encrypted channels at the API; polls store question and options in plaintext, and saved messages snapshot ciphertext.
+- [ ] AutoMod skips `e2ee:v1:` ciphertext, and any member can produce it with any passphrase, so encryption bypasses every rule. Consider a server setting that blocks encrypted messages while AutoMod is enabled.
+- [ ] The public `POST /auth/account-deletion/cancel` endpoint confirms a correct password (409 versus 400) without a 2FA code; it is rate-limited per IP only. Review whether it should also require the TOTP code or a per-account limit.
+- [ ] `i18n:check` and `ui:scan`/`check:file-size` gaps: the i18n scan never matches files directly under `apps/web/src/` (`AppShell.tsx`, `api.ts`), and the size and UI scans read only git-tracked files, so new untracked files are unchecked until staged.
+- [ ] Invite join is broken: the web posts to `/servers/invites/:code/join` (`apps/web/src/hooks/useWorkspaceNavigation.ts`) and expects `{ server }`, but the API route is `POST /invites/:code/join` returning `{ serverId, channelId, member, joinedNow }`.
 - [ ] Channel polls created over REST do not bump unread badges live, and DM polls send no DM notification.
 - [ ] "Jump to message" from saved messages opens the channel or DM but does not scroll to the message.
+- [ ] Rules screening has no realtime event: a member whose tab loaded before screening was turned on sees `403` refusals until the server detail is refetched (for example on reload).
+- [ ] The web join flow posts to `/servers/invites/:code/join` and reads `{ server }`, while the API route is `POST /invites/:code/join` returning `{ serverId, channelId, member, joinedNow }`. Seen while reading the join flow for onboarding; not investigated or changed.
 - [ ] `apps/web/src/AppShell.tsx` is at about 850 of 1000 lines; later features must add logic in new hooks and components.
+- [ ] Forum posts have no delete, reaction, save or report entry point in the forum view or thread panel; the thread panel never had message actions.
+- [ ] `ServerReport` rows from discovery have no review surface (open question 16); discovery is not production-ready until one exists.
+- [ ] Account export does not include the caller's saved server templates or filed server reports.
+- [ ] `RolesService.addMemberRole` lets any `MANAGE_ROLES` holder assign any role (to a person or a bot) with no check that the role's permissions are ones they hold; bot authorize enforces that check, member-role edits do not. Pre-existing.
+- [ ] Bot push notifications and AutoMod alerts name a bot by its `bot-<hex>` username instead of its display name.
 
 ### Delivery Order
 

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import {
   DEFAULT_VOICE_MAX_BYTES,
+  STICKER_ATTACHMENT_KIND,
   VOICE_ATTACHMENT_KIND,
   VOICE_MESSAGE_MAX_DURATION_MS,
   VOICE_WAVEFORM_MAX_BUCKETS,
@@ -21,7 +22,18 @@ export interface StoredAttachment {
   kind: string | null;
   durationMs: number | null;
   waveform: Prisma.JsonValue;
+  stickerId: string | null;
 }
+
+/** Read with every attachment that is formatted, so a sticker row can name its live sticker. */
+export const attachmentStickerInclude = {
+  sticker: { select: { id: true, name: true } },
+} as const;
+
+type FormattableAttachment = StoredAttachment & {
+  id: string;
+  sticker: { id: string; name: string } | null;
+};
 
 /** Called from service constructors, so a malformed value stops the boot instead of lifting the cap. */
 export function readVoiceMaxBytes(config: ConfigService): number {
@@ -107,18 +119,37 @@ function readStoredVoice(attachment: StoredAttachment) {
   } as const;
 }
 
-export function formatAttachment(attachment: StoredAttachment & { id: string }): MessageAttachment {
-  return {
+export function formatAttachment(attachment: FormattableAttachment): MessageAttachment {
+  const base = {
     id: attachment.id,
     fileName: attachment.fileName,
     mimeType: attachment.mimeType,
     byteSize: attachment.byteSize,
     url: attachment.url,
+  };
+  if (attachment.kind === STICKER_ATTACHMENT_KIND) {
+    const sticker = attachment.sticker;
+    // A deleted sticker keeps its row but no longer exposes the image: the client shows a placeholder.
+    return {
+      ...base,
+      url: sticker ? attachment.url : '',
+      kind: STICKER_ATTACHMENT_KIND,
+      durationMs: null,
+      waveform: null,
+      sticker: sticker ? { id: sticker.id, name: sticker.name } : null,
+    };
+  }
+  return {
+    ...base,
     ...(readStoredVoice(attachment) ?? { kind: null, durationMs: null, waveform: null }),
   };
 }
 
-/** Turns a stored attachment back into send input, keeping voice metadata (used by forwarding). */
+/**
+ * Turns a stored non-sticker attachment back into send input, keeping voice metadata (used by
+ * forwarding). Sticker rows are carried separately (`message-stickers.ts`), because a request can
+ * never name `kind: 'sticker'` itself.
+ */
 export function toAttachmentInput(attachment: StoredAttachment): MessageAttachmentInputDto {
   return {
     fileName: attachment.fileName,
@@ -137,4 +168,5 @@ export const storedAttachmentSelect = {
   kind: true,
   durationMs: true,
   waveform: true,
+  stickerId: true,
 } as const;

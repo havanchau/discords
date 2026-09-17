@@ -67,13 +67,17 @@ export class RealtimeAccessService {
     return memberships.map((membership) => membership.serverId);
   }
 
-  /** Authorizes a call id (channel id or `dm:<conversationId>`) and returns the joiner's names. */
+  /**
+   * Authorizes a call id (channel id or `dm:<conversationId>`) and returns the joiner's names. A server
+   * voice join is refused while rules screening blocks the member; DM calls are not screened.
+   */
   async authorizeCallJoin(userId: string, callId: string) {
     const dmConversationId = parseDmCallKey(callId);
     if (dmConversationId) {
       await this.dmCalls.authorizeCall(userId, dmConversationId);
     } else {
-      await this.requireChannelMember(userId, callId);
+      const channel = await this.requireChannelMember(userId, callId);
+      await this.permissions.requireOnboardingAccepted(userId, channel.serverId);
     }
     return this.prisma.user.findUniqueOrThrow({
       where: { id: userId },

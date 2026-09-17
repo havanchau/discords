@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { VOICE_ATTACHMENT_KIND, type ScheduledMessageFailureReason } from '@discord-clone/shared';
 import type { MessageAttachmentInputDto } from '@/modules/messages/dto/create-message.dto';
 import { Permission } from '@/modules/permissions/channel-permission';
+import { RULES_NOT_ACCEPTED_MESSAGE } from '@/modules/permissions/onboarding-gate';
 
 const MINUTE_MS = 60_000;
 const MIN_LEAD_MS = MINUTE_MS;
@@ -28,6 +29,9 @@ export const SCHEDULED_MESSAGE_FAILURE_REASONS: readonly ScheduledMessageFailure
   'REPLY_TARGET_MISSING',
   'REJECTED',
   'INTERRUPTED',
+  'AUTOMOD_BLOCKED',
+  'ACCOUNT_DELETION',
+  'RULES_NOT_ACCEPTED',
   'UNKNOWN',
 ];
 
@@ -57,6 +61,8 @@ export function failureReasonOf(error: unknown): ScheduledMessageFailureReason {
   if (message.startsWith('Missing permission: ')) return 'MISSING_PERMISSION';
   if (message === 'You cannot message this user') return 'BLOCKED';
   if (message === 'Reply target not found') return 'REPLY_TARGET_MISSING';
+  if (message.startsWith('Message blocked by AutoMod: ')) return 'AUTOMOD_BLOCKED';
+  if (message === RULES_NOT_ACCEPTED_MESSAGE) return 'RULES_NOT_ACCEPTED';
   if (
     message === 'Channel not found' ||
     message === 'Conversation not found' ||

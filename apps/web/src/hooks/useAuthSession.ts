@@ -1,11 +1,11 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { apiRequest, AuthState, configureAuthRefresh } from '@/api';
+import { ApiError, apiRequest, AuthState, configureAuthRefresh } from '@/api';
 import { AUTH_KEY } from '@/helpers';
 import { TwoFactorRequiredResponse, useOAuthSignIn } from './useOAuthSignIn';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { formText } from '@/utils/formText';
 
-export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'two-factor';
+export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'two-factor' | 'cancel-deletion';
 
 interface VerificationRequiredResponse {
   verificationRequired: true;
@@ -15,6 +15,8 @@ interface VerificationRequiredResponse {
 
 // Must match the API's unverified-login message in auth.service.ts.
 const EMAIL_NOT_VERIFIED_MESSAGE = 'Email is not verified';
+// The stable code of the API's sign-in refusal for an account in its deletion grace period.
+const PENDING_DELETION_CODE = 'ACCOUNT_IS_SCHEDULED_FOR_DELETION';
 
 type AuthResponse = AuthState | VerificationRequiredResponse | TwoFactorRequiredResponse;
 
@@ -38,6 +40,8 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
   // email verification form.
   const [notice, setNotice] = useState<string | null>(null);
   const [twoFactorChallenge, setTwoFactorChallenge] = useState('');
+  // Set when sign in was refused because the account is scheduled for deletion.
+  const [canCancelDeletion, setCanCancelDeletion] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,6 +145,9 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
         err instanceof Error ? err.message : t('error.fallback.authentication-failed');
       if (mode === 'login' && message === EMAIL_NOT_VERIFIED_MESSAGE) {
         setPendingVerificationEmail(payload.email);
+      }
+      if (mode === 'login' && err instanceof ApiError && err.code === PENDING_DELETION_CODE) {
+        setCanCancelDeletion(true);
       }
       setError(message);
     }
@@ -247,6 +254,29 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     }
   }
 
+  async function submitCancelDeletion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    const form = new FormData(event.currentTarget);
+    try {
+      await apiRequest('/auth/account-deletion/cancel', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: formText(form, 'email'),
+          password: formText(form, 'password'),
+        }),
+      });
+      setCanCancelDeletion(false);
+      setMode('login');
+      setNotice(t('notice.deletionCancelled'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('error.fallback.cannot-cancel-deletion'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return {
     auth,
     setAuth,
@@ -268,6 +298,8 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
       submitForgotPassword,
       submitResetPassword,
       submitTwoFactorLogin,
+      submitCancelDeletion,
+      canCancelDeletion,
       notice,
       verificationHint,
       verificationToken,

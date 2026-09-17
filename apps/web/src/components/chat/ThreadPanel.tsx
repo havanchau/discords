@@ -42,7 +42,7 @@ export function ThreadPanel({
       <header className={styles.header}>
         <span>
           <MessageSquareReply size={18} aria-hidden="true" />
-          {t('thread.title')}
+          {rootMessage.thread?.title ?? t('thread.title')}
         </span>
         <IconButton label={t('thread.close')} onClick={onClose}>
           <X size={18} aria-hidden="true" />

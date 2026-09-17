@@ -1,0 +1,18 @@
+// A bot account owned by a person. It acts as its own synthetic `User` (`botUserId`, kind BOT) and joins
+// servers as a `ServerMember` with kind BOT, so every member permission check applies to it. Only the
+// SHA-256 of the token is stored; the token carries the bot id, so the row is found by primary key.
+// Deleting the bot keeps that user row, so messages it already posted keep their author.
+model Bot {
+  id        String   @id @default(cuid())
+  ownerId   String
+  botUserId String   @unique
+  name      String
+  avatarUrl String?
+  tokenHash String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner     User     @relation("BotOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  botUser   User     @relation("BotUser", fields: [botUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
