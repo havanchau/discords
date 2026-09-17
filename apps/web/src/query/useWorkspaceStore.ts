@@ -24,6 +24,29 @@ const noServers: ServerSummary[] = [];
  * could disagree with the copy inside `server.channels` after a rename; selecting a channel now
  * records only its id.
  */
+const ACTIVE_SERVER_KEY = 'discord-clone-active-server-id';
+const ACTIVE_CHANNEL_KEY = 'discord-clone-active-channel-id';
+
+function getStoredActiveServerId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_SERVER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getStoredActiveChannelId(serverId: string | null): string | null {
+  try {
+    if (!serverId) return localStorage.getItem(ACTIVE_CHANNEL_KEY);
+    return (
+      localStorage.getItem(`${ACTIVE_CHANNEL_KEY}:${serverId}`) ??
+      localStorage.getItem(ACTIVE_CHANNEL_KEY)
+    );
+  } catch {
+    return null;
+  }
+}
+
 export function useWorkspaceStore({
   token,
   userId,
@@ -31,8 +54,13 @@ export function useWorkspaceStore({
   onError,
 }: UseWorkspaceStoreOptions) {
   const queryClient = useQueryClient();
-  const [activeServerId, setActiveServerId] = useState<string | null>(null);
-  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [activeServerId, setActiveServerId] = useState<string | null>(() => {
+    const stored = getStoredActiveServerId();
+    return stored === 'home' ? null : stored;
+  });
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(() =>
+    getStoredActiveChannelId(getStoredActiveServerId()),
+  );
   const hasOpenedInitialServer = useRef(false);
 
   const serversKey = queryKeys.servers(userId ?? 'anonymous');
@@ -82,12 +110,55 @@ export function useWorkspaceStore({
     onError(error instanceof Error ? error.message : '');
   }, [serversQuery.error, onUnauthorized, onError]);
 
-  // Opening the first server is a first-load convenience, not a rule: once the user goes home,
-  // staying there has to survive the list refetching.
+  // Persist active server and channel selection
   useEffect(() => {
-    if (hasOpenedInitialServer.current || activeServerId || !servers.length) return;
+    try {
+      if (activeServerId) {
+        localStorage.setItem(ACTIVE_SERVER_KEY, activeServerId);
+      } else if (hasOpenedInitialServer.current) {
+        localStorage.setItem(ACTIVE_SERVER_KEY, 'home');
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [activeServerId]);
+
+  useEffect(() => {
+    try {
+      if (activeChannelId) {
+        localStorage.setItem(ACTIVE_CHANNEL_KEY, activeChannelId);
+        if (activeServerId) {
+          localStorage.setItem(`${ACTIVE_CHANNEL_KEY}:${activeServerId}`, activeChannelId);
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [activeServerId, activeChannelId]);
+
+  // Opening initial server on first load
+  useEffect(() => {
+    if (hasOpenedInitialServer.current || !servers.length) return;
+
+    const storedServerId = getStoredActiveServerId();
+    if (storedServerId === 'home') {
+      hasOpenedInitialServer.current = true;
+      setActiveServerId(null);
+      return;
+    }
+
+    if (activeServerId && servers.some((item) => item.id === activeServerId)) {
+      hasOpenedInitialServer.current = true;
+      return;
+    }
+
+    const storedServer = storedServerId ? servers.find((s) => s.id === storedServerId) : null;
     hasOpenedInitialServer.current = true;
-    setActiveServerId(servers[0].id);
+    if (storedServer) {
+      setActiveServerId(storedServer.id);
+    } else {
+      setActiveServerId(servers[0].id);
+    }
   }, [servers, activeServerId]);
 
   // The open channel must exist in the open server, whether the server just loaded or the channel
@@ -95,7 +166,17 @@ export function useWorkspaceStore({
   useEffect(() => {
     if (!server) return;
     if (server.channels.some((item) => item.id === activeChannelId)) return;
-    setActiveChannelId(server.channels[0]?.id ?? null);
+
+    const storedChannelId = getStoredActiveChannelId(server.id);
+    const storedChannel = storedChannelId
+      ? server.channels.find((item) => item.id === storedChannelId)
+      : null;
+
+    if (storedChannel) {
+      setActiveChannelId(storedChannel.id);
+    } else {
+      setActiveChannelId(server.channels[0]?.id ?? null);
+    }
   }, [server, activeChannelId]);
 
   /** The only write path into the open server. Does nothing when no server is open. */
