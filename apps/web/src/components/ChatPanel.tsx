@@ -174,6 +174,7 @@ export function ChatPanel({
         channel={session.channel}
         messageActions={messageActions}
         composer={composer}
+        isChannelEncrypted={encryption.isChannelEncrypted}
       />
 
       <ThreadPanel

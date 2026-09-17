@@ -1,4 +1,4 @@
-import { MessageSquare, Plus } from 'lucide-react';
+import { Bookmark, MessageSquare, Plus } from 'lucide-react';
 import type { ServerDetail, ServerSummary } from '@/api';
 import { initials } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -12,6 +12,7 @@ interface ServerRailProps {
   openHome: () => void;
   openServer: (serverId: string) => Promise<void>;
   onAddServer: () => void;
+  onOpenSavedMessages: () => void;
 }
 
 export function ServerRail({
@@ -20,6 +21,7 @@ export function ServerRail({
   openHome,
   openServer,
   onAddServer,
+  onOpenSavedMessages,
 }: ServerRailProps) {
   const t = useTranslation();
 
@@ -35,6 +37,18 @@ export function ServerRail({
           onClick={openHome}
         >
           <MessageSquare size={20} aria-hidden="true" />
+        </Button>
+      </Tooltip>
+
+      <Tooltip content={t('serverRail.savedMessages')} side="right">
+        <Button
+          type="button"
+          variant="ghost"
+          className={styles.serverButton}
+          aria-label={t('serverRail.savedMessages')}
+          onClick={onOpenSavedMessages}
+        >
+          <Bookmark size={20} aria-hidden="true" />
         </Button>
       </Tooltip>
 

@@ -8,17 +8,22 @@ import { ChannelsModule } from './modules/channels/channels.module';
 import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
 import { EmojisModule } from './modules/emojis/emojis.module';
 import { EventsModule } from './modules/events/events.module';
+import { ForwardingModule } from './modules/forwarding/forwarding.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { HealthModule } from './modules/health/health.module';
 import { LinkPreviewsModule } from './modules/link-previews/link-previews.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
+import { PollsModule } from './modules/polls/polls.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { PushModule } from './modules/push/push.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { SavedMessagesModule } from './modules/saved-messages/saved-messages.module';
+import { ScheduledMessagesModule } from './modules/scheduled-messages/scheduled-messages.module';
 import { ServersModule } from './modules/servers/servers.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
@@ -34,6 +39,7 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     FriendsModule,
     DirectMessagesModule,
+    ForwardingModule,
     ServersModule,
     ChannelsModule,
     MessagesModule,
@@ -42,7 +48,11 @@ import { UsersModule } from './modules/users/users.module';
     LinkPreviewsModule,
     NotificationsModule,
     PermissionsModule,
+    PollsModule,
+    ReportsModule,
     RolesModule,
+    SavedMessagesModule,
+    ScheduledMessagesModule,
     UploadsModule,
     PushModule,
     RealtimeModule,

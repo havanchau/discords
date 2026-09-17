@@ -87,6 +87,13 @@ model User {
   serverEventInterests      ServerEventInterest[]
   blocksCreated             UserBlock[]                 @relation("UserBlocker")
   blocksReceived            UserBlock[]                 @relation("UserBlocked")
+  createdPolls              Poll[]
+  pollVotes                 PollVote[]
+  savedMessages             SavedMessage[]
+  scheduledMessages         ScheduledMessage[]
+  filedMessageReports       MessageReport[]            @relation("MessageReportReporter")
+  receivedMessageReports    MessageReport[]            @relation("MessageReportTarget")
+  resolvedMessageReports    MessageReport[]            @relation("MessageReportResolver")
 }
 
 model EmailVerificationToken {
@@ -187,6 +194,7 @@ model Server {
   channelCategories       ChannelCategory[]
   emojis                  ServerEmoji[]
   events                  ServerEvent[]
+  messageReports          MessageReport[]
 }
 
 model ServerEmoji {
@@ -295,9 +303,54 @@ model Channel {
   notificationPreferences   NotificationPreference[]
   pushNotificationThrottles PushNotificationThrottle[]
   events                    ServerEvent[]
+  scheduledMessages         ScheduledMessage[]
 
   @@unique([serverId, name])
   @@index([categoryId])
+}
+
+model Poll {
+  id              String         @id @default(cuid())
+  messageId       String?        @unique
+  directMessageId String?        @unique
+  creatorId       String
+  question        String
+  allowMultiple   Boolean        @default(false)
+  showVoters      Boolean        @default(false)
+  expiresAt       DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  message         Message?       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  directMessage   DirectMessage? @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  creator         User           @relation(fields: [creatorId], references: [id])
+  options         PollOption[]
+  votes           PollVote[]
+
+  @@index([expiresAt])
+}
+
+model PollOption {
+  id       String     @id @default(cuid())
+  pollId   String
+  label    String
+  position Int
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes    PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  pollId    String
+  optionId  String
+  userId    String
+  createdAt DateTime   @default(now())
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pollId, optionId, userId])
+  @@index([pollId, userId])
 }
 
 model ServerEvent {
@@ -351,23 +404,31 @@ model ChannelPermissionOverride {
 }
 
 model Message {
-  id               String              @id @default(cuid())
-  channelId        String
-  serverId         String
-  authorId         String
-  content          String
-  replyToMessageId String?
-  threadId         String?
-  editedAt         DateTime?
-  deletedAt        DateTime?
-  createdAt        DateTime            @default(now())
-  channel          Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  thread           Thread?             @relation("ThreadMessages", fields: [threadId], references: [id], onDelete: Cascade)
-  threadRoot       Thread?             @relation("ThreadRoot")
-  author           User                @relation(fields: [authorId], references: [id])
-  attachments      MessageAttachment[]
-  reactions        MessageReaction[]
-  pin              MessagePin?
+  id                           String              @id @default(cuid())
+  channelId                    String
+  serverId                     String
+  authorId                     String
+  content                      String
+  replyToMessageId             String?
+  threadId                     String?
+  // Forward snapshot: plain ids with no foreign key, so the copy survives the source being deleted.
+  forwardedFromMessageId       String?
+  forwardedFromDirectMessageId String?
+  forwardOriginAuthorName      String?
+  forwardOriginContent         String?
+  forwardOriginLabel           String?
+  editedAt                     DateTime?
+  deletedAt                    DateTime?
+  createdAt                    DateTime            @default(now())
+  channel                      Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  thread                       Thread?             @relation("ThreadMessages", fields: [threadId], references: [id], onDelete: Cascade)
+  threadRoot                   Thread?             @relation("ThreadRoot")
+  author                       User                @relation(fields: [authorId], references: [id])
+  attachments                  MessageAttachment[]
+  reactions                    MessageReaction[]
+  pin                          MessagePin?
+  poll                         Poll?
+  reports                      MessageReport[]
 
   @@index([channelId, createdAt])
   @@index([channelId, authorId, createdAt])
@@ -405,14 +466,19 @@ model ThreadParticipant {
 }
 
 model MessageAttachment {
-  id        String   @id @default(cuid())
-  messageId String
-  fileName  String
-  mimeType  String
-  byteSize  Int
-  url       String
-  createdAt DateTime @default(now())
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  messageId  String
+  fileName   String
+  mimeType   String
+  byteSize   Int
+  url        String
+  /// 'voice' for a recorded voice message; null for any other file, including a shared audio file.
+  kind       String?
+  durationMs Int?
+  /// number[] of 20-100 peak buckets, each 0-100. Client-computed, validated for shape only.
+  waveform   Json?
+  createdAt  DateTime @default(now())
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 model MessageReaction {
@@ -554,16 +620,17 @@ model UserBlock {
 }
 
 model DirectConversation {
-  id         String                     @id @default(cuid())
-  isGroup    Boolean                    @default(false)
-  name       String?
-  ownerId    String?
-  createdAt  DateTime                   @default(now())
-  updatedAt  DateTime                   @updatedAt
-  owner      User?                      @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  members    DirectConversationMember[]
-  messages   DirectMessage[]
-  readStates DirectReadState[]
+  id                String                     @id @default(cuid())
+  isGroup           Boolean                    @default(false)
+  name              String?
+  ownerId           String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  owner             User?                      @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  members           DirectConversationMember[]
+  messages          DirectMessage[]
+  readStates        DirectReadState[]
+  scheduledMessages ScheduledMessage[]
 }
 
 model DirectConversationMember {
@@ -577,23 +644,48 @@ model DirectConversationMember {
 }
 
 model DirectMessage {
-  id               String                  @id @default(cuid())
-  conversationId   String
-  authorId         String
-  content          String
-  replyToMessageId String?
-  pinnedAt         DateTime?
-  pinnedById       String?
-  editedAt         DateTime?
-  deletedAt        DateTime?
-  createdAt        DateTime                @default(now())
-  conversation     DirectConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  author           User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  reactions        DirectMessageReaction[]
+  id                           String                    @id @default(cuid())
+  conversationId               String
+  authorId                     String
+  content                      String
+  replyToMessageId             String?
+  pinnedAt                     DateTime?
+  pinnedById                   String?
+  // Forward snapshot: plain ids with no foreign key, so the copy survives the source being deleted.
+  forwardedFromMessageId       String?
+  forwardedFromDirectMessageId String?
+  forwardOriginAuthorName      String?
+  forwardOriginContent         String?
+  forwardOriginLabel           String?
+  editedAt                     DateTime?
+  deletedAt                    DateTime?
+  createdAt                    DateTime                  @default(now())
+  conversation                 DirectConversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author                       User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions                    DirectMessageReaction[]
+  attachments                  DirectMessageAttachment[]
+  poll                         Poll?
 
   @@index([authorId])
   @@index([conversationId, createdAt])
   @@index([conversationId, pinnedAt])
+}
+
+model DirectMessageAttachment {
+  id              String        @id @default(cuid())
+  directMessageId String
+  fileName        String
+  mimeType        String
+  byteSize        Int
+  url             String
+  /// Same voice metadata as MessageAttachment.
+  kind            String?
+  durationMs      Int?
+  waveform        Json?
+  createdAt       DateTime      @default(now())
+  directMessage   DirectMessage @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+
+  @@index([directMessageId])
 }
 
 model DirectMessageReaction {
@@ -639,4 +731,112 @@ model Notification {
   @@index([conversationId])
   @@index([channelId])
   @@index([messageId])
+}
+
+enum SavedMessageSourceType {
+  CHANNEL
+  DIRECT
+}
+
+// A per-user bookmark holding a snapshot of the message at save time. Source ids carry no foreign
+// key, so the bookmark outlives the message, channel or conversation it came from.
+model SavedMessage {
+  id                 String                 @id @default(cuid())
+  ownerId            String
+  sourceType         SavedMessageSourceType
+  channelId          String?
+  conversationId     String?
+  serverId           String?
+  originalMessageId  String
+  snapshotContent    String
+  snapshotAuthorId   String
+  snapshotAuthorName String
+  remindAt           DateTime?
+  remindedAt         DateTime?
+  createdAt          DateTime               @default(now())
+  owner              User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, sourceType, originalMessageId])
+  @@index([ownerId, createdAt])
+  @@index([remindAt, remindedAt])
+}
+
+enum ScheduledMessageStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
+
+// A message the author composed now for the server to send at `sendAt`. Every live-send check runs
+// again at send time; `failureReason` holds a stable code the client translates.
+model ScheduledMessage {
+  id               String                 @id @default(cuid())
+  authorId         String
+  channelId        String?
+  conversationId   String?
+  content          String
+  /// MessageAttachmentInputDto[]; re-validated by the send path when the message is posted.
+  attachments      Json?
+  replyToMessageId String?
+  sendAt           DateTime
+  status           ScheduledMessageStatus @default(PENDING)
+  failureReason    String?
+  sentMessageId    String?
+  /// Set when a sweep claims the row, so a claim left behind by a stopped process can be failed.
+  claimedAt        DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  author           User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel          Channel?               @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  conversation     DirectConversation?    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([status, sendAt])
+  @@index([authorId, channelId, status])
+  @@index([authorId, conversationId, status])
+}
+
+enum MessageReportTargetType {
+  MESSAGE
+  USER
+}
+
+enum MessageReportReason {
+  SPAM
+  HARASSMENT
+  NSFW
+  HATE_SPEECH
+  OTHER
+}
+
+enum MessageReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// A member's flag on a server message or member, triaged by that server's MANAGE_MESSAGES holders.
+// For MESSAGE reports targetUserId is the message author, so the report still names who was
+// reported after the message row is gone.
+model MessageReport {
+  id           String                  @id @default(cuid())
+  serverId     String
+  reporterId   String
+  targetType   MessageReportTargetType
+  messageId    String?
+  targetUserId String?
+  reason       MessageReportReason
+  details      String?
+  status       MessageReportStatus     @default(OPEN)
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime                @default(now())
+  server       Server                  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  reporter     User                    @relation("MessageReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  message      Message?                @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  targetUser   User?                   @relation("MessageReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  resolvedBy   User?                   @relation("MessageReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([serverId, status, createdAt])
+  @@index([reporterId, messageId, status])
 }

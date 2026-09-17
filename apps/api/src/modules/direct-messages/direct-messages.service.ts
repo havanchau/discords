@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { DirectConversation } from '@discord-clone/shared';
 import type { DirectMessage } from '@discord-clone/shared';
@@ -7,6 +8,8 @@ import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { countDirectUnread } from '@/modules/messages/unread-counts';
 import { findBlockBetween } from '@/modules/friends/user-blocks';
+import { readVoiceMaxBytes, toAttachmentCreateData } from '@/modules/messages/message-attachments';
+import type { ForwardSnapshot } from '@/common/forward-snapshot';
 import {
   directConversationInclude,
   directMessageInclude,
@@ -16,11 +19,16 @@ import {
 
 @Injectable()
 export class DirectMessagesService {
+  private readonly voiceMaxBytes: number;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
     private readonly notifications: NotificationsService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.voiceMaxBytes = readVoiceMaxBytes(config);
+  }
 
   async listConversations(userId: string): Promise<{ conversations: DirectConversation[] }> {
     const conversations = await this.prisma.directConversation.findMany({
@@ -61,15 +69,24 @@ export class DirectMessagesService {
       await this.markRead(userId, conversationId, latestMessage.id, { emit: true });
     }
     return {
-      messages: await formatDirectMessages(this.prisma, ordered),
+      messages: await formatDirectMessages(this.prisma, ordered, userId),
       nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
     };
   }
 
-  async createMessage(userId: string, conversationId: string, dto: CreateDirectMessageDto) {
+  /** `forward` is set only by the forwarding module; a forward may have no text of its own. */
+  async createMessage(
+    userId: string,
+    conversationId: string,
+    dto: CreateDirectMessageDto,
+    forward?: ForwardSnapshot,
+  ) {
     await this.requireConversationMember(userId, conversationId);
     const content = dto.content.trim();
-    if (!content) throw new ForbiddenException('Message content cannot be empty');
+    const attachments = dto.attachments ?? [];
+    if (!content && !attachments.length && !forward) {
+      throw new ForbiddenException('Message content cannot be empty');
+    }
     const conversation = await this.prisma.directConversation.findUniqueOrThrow({
       where: { id: conversationId },
       select: { isGroup: true, name: true },
@@ -93,7 +110,16 @@ export class DirectMessagesService {
     }
 
     const created = await this.prisma.directMessage.create({
-      data: { conversationId, authorId: userId, content, replyToMessageId: dto.replyToMessageId },
+      data: {
+        conversationId,
+        authorId: userId,
+        content,
+        replyToMessageId: dto.replyToMessageId,
+        ...forward,
+        attachments: attachments.length
+          ? { create: toAttachmentCreateData(attachments, this.voiceMaxBytes) }
+          : undefined,
+      },
       include: directMessageInclude,
     });
     const [message] = await formatDirectMessages(this.prisma, [created]);
@@ -121,7 +147,7 @@ export class DirectMessagesService {
           actorId: userId,
           type: 'DIRECT_MESSAGE',
           title: directMessageNotificationTitle(conversation, message.author.displayName),
-          body: message.content.slice(0, 180),
+          body: (message.content || message.forwardOrigin?.content || '').slice(0, 180),
           conversationId,
         }),
       ),

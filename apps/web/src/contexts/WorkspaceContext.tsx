@@ -1,9 +1,11 @@
 import { createContext, useContext, ReactNode } from 'react';
-import type { Channel, ServerDetail, ServerSummary } from '@/api';
+import type { Channel, DirectConversation, ServerDetail, ServerSummary } from '@/api';
 import type { ActiveDialog, ActivePanel } from '@/components/chat/types';
 
 export interface WorkspaceContextValue {
   servers: ServerSummary[];
+  /** Loaded DM conversations; read by the forward destination picker. */
+  directConversations: DirectConversation[];
   server: ServerDetail | null;
   channel: Channel | null;
   activePanel: ActivePanel;
@@ -15,6 +17,8 @@ export interface WorkspaceContextValue {
   selectChannel: (channel: Channel) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveDialog: (dialog: ActiveDialog) => void;
+  /** Saved Messages is reachable from the server rail and from a reminder notification. */
+  openSavedMessages: () => void;
   clearWorkspaceError: () => void;
   clearWorkspaceNotice: () => void;
 }

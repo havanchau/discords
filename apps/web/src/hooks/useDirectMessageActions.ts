@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useCallback, useRef, useState } from 'react';
-import { apiRequest, AuthState, DirectConversation, DirectMessage } from '@/api';
+import { apiRequest, AuthState, DirectConversation, DirectMessage, Poll } from '@/api';
 import { replaceConversationPreview, replaceDirectMessage } from '@/utils/directMessages';
+import { updatePollInMessages } from '@/utils/polls';
 import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseDirectMessageActionsOptions {
@@ -40,6 +41,12 @@ export function useDirectMessageActions({
       });
     },
     [setDirectConversations, setDirectMessages],
+  );
+
+  const updateDirectPoll = useCallback(
+    (poll: Poll) =>
+      setDirectMessages((current) => updatePollInMessages(current, poll.id, () => poll)),
+    [setDirectMessages],
   );
 
   async function runMessageAction(path: string, init: RequestInit, fallbackError: string) {
@@ -119,5 +126,6 @@ export function useDirectMessageActions({
     toggleDirectReaction,
     toggleDirectPin,
     loadDirectPins,
+    updateDirectPoll,
   };
 }

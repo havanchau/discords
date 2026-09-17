@@ -14,11 +14,22 @@ export const queryKeys = {
   /** Prefix for every server context of one user's profile, for invalidating them together. */
   userProfilesOf: (userId: string) => ['user-profile', userId] as const,
   serverBans: (serverId: string) => ['server-bans', serverId] as const,
+  messageReports: (serverId: string, status: string) =>
+    ['message-reports', serverId, status] as const,
+  /** Prefix for every status tab of one server's queue, for invalidating them together. */
+  messageReportsOf: (serverId: string) => ['message-reports', serverId] as const,
   auditLogs: (serverId: string) => ['audit-logs', serverId] as const,
   friends: (userId: string) => ['friends', userId] as const,
   directConversations: (userId: string) => ['direct-conversations', userId] as const,
   linkPreview: (url: string) => ['link-preview', url] as const,
+  /** `revision` changes with the vote counts, so an open voter list refetches after each vote. */
+  poll: (pollId: string, revision: string) => ['poll', pollId, revision] as const,
   serverInvites: (serverId: string) => ['server-invites', serverId] as const,
   channelOverrides: (channelId: string) => ['channel-overrides', channelId] as const,
+  savedMessages: (userId: string) => ['saved-messages', userId] as const,
+  scheduledMessages: (userId: string, destinationType: string, destinationId: string) =>
+    ['scheduled-messages', userId, destinationType, destinationId] as const,
+  /** Prefix for every destination's list of one user, for invalidating them together. */
+  scheduledMessagesOf: (userId: string) => ['scheduled-messages', userId] as const,
   notificationPreferences: (userId: string) => ['notification-preferences', userId] as const,
 } as const;

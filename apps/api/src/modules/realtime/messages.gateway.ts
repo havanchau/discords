@@ -10,6 +10,7 @@ import { Server, Socket } from 'socket.io';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { MessageAttachmentInputDto } from '@/modules/messages/dto/create-message.dto';
 import { ReactionDto } from '@/modules/messages/dto/reaction.dto';
+import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { CallRegistryService } from './call-registry.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
@@ -171,7 +172,7 @@ export class MessagesGateway {
     } satisfies ReactionDto);
     this.publisher.emitToRoom(this.publisher.channelRoom(body.channelId), 'reaction:updated', {
       channelId: body.channelId,
-      message: result.message,
+      message: withoutViewerVotes(result.message),
     });
     return result;
   }

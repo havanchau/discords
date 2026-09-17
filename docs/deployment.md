@@ -38,6 +38,7 @@ TWO_FACTOR_ENCRYPTION_KEY=replace-with-at-least-32-random-characters
 WEB_ORIGIN=https://your-vercel-domain.vercel.app,https://*.vercel.app
 STORAGE_DRIVER=cloudinary
 UPLOAD_MAX_BYTES=104857600
+VOICE_MAX_BYTES=26214400
 UPLOAD_CHUNK_BYTES=2097152
 UPLOAD_TMP_DIR=uploads/.chunks
 CLOUDINARY_CLOUD_NAME=

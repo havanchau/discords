@@ -26,6 +26,8 @@ import {
 } from '@/components/ui';
 import { EmojiPicker } from './EmojiPicker';
 import styles from './MessageComposer.module.css';
+import { ScheduledMessagesBar } from './ScheduledMessagesBar';
+import { ScheduleSendButton } from './ScheduleSendButton';
 import { cn } from '@/utils/cn';
 import { getSlashCommandSuggestions, parseSlashCommand } from '@/utils/slashCommands';
 import type { ChatPanelComposer, ChatPanelMessageActions } from './types';
@@ -34,9 +36,16 @@ interface MessageComposerProps {
   channel: Channel | null;
   composer: ChatPanelComposer;
   messageActions: Pick<ChatPanelMessageActions, 'setReplyingToMessage'>;
+  /** Scheduling is not offered here: the server would post the draft as plain text. */
+  isChannelEncrypted: boolean;
 }
 
-export function MessageComposer({ channel, composer, messageActions }: MessageComposerProps) {
+export function MessageComposer({
+  channel,
+  composer,
+  messageActions,
+  isChannelEncrypted,
+}: MessageComposerProps) {
   const t = useTranslation();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const isMessageSending = composer.pendingAction === 'send-message';
@@ -56,6 +65,13 @@ export function MessageComposer({ channel, composer, messageActions }: MessageCo
 
   return (
     <form onSubmit={(event) => void composer.sendMessage(event)} className={styles.composer}>
+      {channel ? (
+        <ScheduledMessagesBar
+          destination={{ type: 'channel', id: channel.id }}
+          className={styles.scheduledBar}
+        />
+      ) : null}
+
       {composer.replyingToMessage && (
         <div className={styles.composerReply} data-testid="composer-reply">
           <Reply size={14} aria-hidden="true" />
@@ -200,6 +216,18 @@ export function MessageComposer({ channel, composer, messageActions }: MessageCo
         }}
         autoComplete="off"
       />
+
+      {channel && !isChannelEncrypted ? (
+        <ScheduleSendButton
+          destination={{ type: 'channel', id: channel.id }}
+          draft={composer.draft}
+          files={composer.selectedFiles}
+          replyToMessageId={composer.replyingToMessage?.id}
+          className={styles.scheduleButton}
+          disabled={isComposerDisabled}
+          onScheduled={composer.clearAfterSchedule}
+        />
+      ) : null}
 
       <IconButton
         type="submit"

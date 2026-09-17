@@ -91,11 +91,15 @@ import type {
   ChannelCategory as ServerChannelCategory,
   ChannelPermissionOverride as ServerChannelPermissionOverride,
   CreateServerEventInput as ServerCreateServerEventInput,
+  CreatePollInput as ServerCreatePollInput,
+  CreateSavedMessageInput as ServerCreateSavedMessageInput,
   CustomStatus as ServerCustomStatus,
   DirectConversation as ServerDirectConversation,
   DirectMessage as ServerDirectMessage,
   DirectMessageReaction as ServerDirectMessageReaction,
   DirectMessageReplyPreview as ServerDirectMessageReplyPreview,
+  ForwardMessageInput as ServerForwardMessageInput,
+  ForwardOrigin as ServerForwardOrigin,
   FriendEntry as ServerFriendEntry,
   FriendRequestEntry as ServerFriendRequestEntry,
   FriendsSummary as ServerFriendsSummary,
@@ -104,10 +108,24 @@ import type {
   Message as ServerMessage,
   MessageAttachment as ServerMessageAttachment,
   MessageReaction as ServerMessageReaction,
+  CreateMessageReportInput,
+  CreateMessageReportResult as ServerCreateMessageReportResult,
+  MessageReportReason,
+  MessageReportStatus,
+  MessageReportView as ServerMessageReportView,
+  UpdateMessageReportInput,
   NotificationItem as ServerNotificationItem,
   NotificationPreference as ServerNotificationPreference,
+  PollOptionView as ServerPollOptionView,
+  PollUpdatedPayload as ServerPollUpdatedPayload,
+  PollView as ServerPollView,
   PublicUser as ServerPublicUser,
   Role as ServerRole,
+  SavedMessageView as ServerSavedMessageView,
+  CreateScheduledMessageInput as ServerCreateScheduledMessageInput,
+  ScheduledMessageUpdatedPayload,
+  ScheduledMessageView as ServerScheduledMessageView,
+  UpdateScheduledMessageInput as ServerUpdateScheduledMessageInput,
   ServerBanEntry as ServerServerBanEntry,
   ServerDetail as ServerServerDetail,
   ServerEmoji as ServerServerEmoji,
@@ -119,6 +137,7 @@ import type {
   User as ServerUser,
   UserProfile as ServerUserProfile,
   UserProfileServerContext as ServerUserProfileServerContext,
+  VoiceAttachmentMetadata,
 } from '@discord-clone/shared';
 
 export type AuditLogEntry = Json<ServerAuditLogEntry>;
@@ -127,12 +146,16 @@ export type BlockedUserEntry = Json<ServerBlockedUserEntry>;
 export type Channel = Json<ServerChannel>;
 export type ChannelCategory = Json<ServerChannelCategory>;
 export type ChannelPermissionOverride = Json<ServerChannelPermissionOverride>;
+export type CreatePollInput = Json<ServerCreatePollInput>;
+export type CreateSavedMessageInput = Json<ServerCreateSavedMessageInput>;
 export type CreateServerEventInput = Json<ServerCreateServerEventInput>;
 export type CustomStatus = Json<ServerCustomStatus>;
 export type DirectConversation = Json<ServerDirectConversation>;
 export type DirectMessage = Json<ServerDirectMessage>;
 export type DirectMessageReaction = Json<ServerDirectMessageReaction>;
 export type DirectMessageReplyPreview = Json<ServerDirectMessageReplyPreview>;
+export type ForwardMessageInput = Json<ServerForwardMessageInput>;
+export type ForwardOrigin = Json<ServerForwardOrigin>;
 export type FriendEntry = Json<ServerFriendEntry>;
 export type FriendRequestEntry = Json<ServerFriendRequestEntry>;
 export type FriendsSummary = Json<ServerFriendsSummary>;
@@ -141,10 +164,26 @@ export type LinkPreview = Json<ServerLinkPreview>;
 export type Message = Json<ServerMessage>;
 export type MessageAttachment = Json<ServerMessageAttachment>;
 export type MessageReaction = Json<ServerMessageReaction>;
+export type MessageReport = Json<ServerMessageReportView>;
+export type CreateMessageReportResult = Json<ServerCreateMessageReportResult>;
+export type {
+  CreateMessageReportInput,
+  MessageReportReason,
+  MessageReportStatus,
+  UpdateMessageReportInput,
+};
 export type NotificationItem = Json<ServerNotificationItem>;
 export type NotificationPreference = Json<ServerNotificationPreference>;
+export type Poll = Json<ServerPollView>;
+export type PollOption = Json<ServerPollOptionView>;
+export type PollUpdatedPayload = Json<ServerPollUpdatedPayload>;
 export type PublicUser = Json<ServerPublicUser>;
 export type Role = Json<ServerRole>;
+export type SavedMessage = Json<ServerSavedMessageView>;
+export type ScheduledMessage = Json<ServerScheduledMessageView>;
+export type CreateScheduledMessageInput = Json<ServerCreateScheduledMessageInput>;
+export type UpdateScheduledMessageInput = Json<ServerUpdateScheduledMessageInput>;
+export type { ScheduledMessageUpdatedPayload };
 export type ServerBanEntry = Json<ServerServerBanEntry>;
 export type ServerDetail = Json<ServerServerDetail>;
 export type ServerEmoji = Json<ServerServerEmoji>;
@@ -217,6 +256,16 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
 
   const result = (await response.json()) as { attachment: MessageAttachment };
   return result.attachment;
+}
+
+/** Uploads a message's files; `voice` is the metadata of the single recording a voice send carries. */
+export async function uploadMessageAttachments(
+  files: File[],
+  token: string,
+  voice?: VoiceAttachmentMetadata | null,
+): Promise<MessageAttachment[]> {
+  const attachments = await Promise.all(files.map((file) => uploadFile(file, token)));
+  return voice ? attachments.map((attachment) => ({ ...attachment, ...voice })) : attachments;
 }
 
 const CHUNKED_UPLOAD_THRESHOLD_BYTES = 5 * 1024 * 1024;

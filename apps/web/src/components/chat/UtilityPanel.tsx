@@ -14,6 +14,7 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import { buildMessageSearchSnippet } from '@/utils/messageSearch';
 import { Button, TextField } from '@/components/ui';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { buildMediaCollections } from '@/utils/mediaCollections';
 import type { ActivePanel } from './types';
 import type { ParsedMessageSearch } from '@/utils/messageSearch';
@@ -75,6 +76,7 @@ export function UtilityPanel({
 }: UtilityPanelProps) {
   const t = useTranslation();
   const dates = useDateFormat();
+  const { openSavedMessages } = useWorkspace();
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const trimmedSearch = searchQuery.trim();
   const canShowSearchResults =
@@ -334,7 +336,10 @@ export function UtilityPanel({
                   className={`${styles.notificationItem} ${notification.readAt ? '' : styles.notificationItemUnread}`}
                   onClick={() => {
                     void markNotificationRead(notification.id);
-                    if (notification.messageId) onJumpToMessage(notification.messageId);
+                    // A reminder's message may be in another channel or no longer readable; the
+                    // Saved Messages list re-checks access and offers the jump only when it works.
+                    if (notification.type === 'SAVED_MESSAGE_REMINDER') openSavedMessages();
+                    else if (notification.messageId) onJumpToMessage(notification.messageId);
                   }}
                 >
                   <Bell size={14} aria-hidden="true" />

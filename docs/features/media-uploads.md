@@ -41,6 +41,7 @@ Enable multi-format file uploads attached to channel messages and direct message
 - **Storage Configuration**:
   - `STORAGE_DRIVER`: `local` or `cloudinary`.
   - `UPLOAD_MAX_BYTES`: Default `104857600` (100 MB).
+  - `VOICE_MAX_BYTES`: Default `26214400` (25 MB). Extra ceiling for `kind: 'voice'` attachments, checked at message send in addition to `UPLOAD_MAX_BYTES` ([voice-messages.md](voice-messages.md)).
   - `UPLOAD_CHUNK_BYTES`: Default `2097152` (2 MB).
 
 ## Trade-offs

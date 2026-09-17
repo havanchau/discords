@@ -1,4 +1,5 @@
 import type { DirectConversation, DirectMessage } from '@/api';
+import { keepViewerPollState } from './polls';
 
 export interface ViewerReaction {
   emoji: string;
@@ -20,7 +21,7 @@ export function replaceDirectMessage(messages: DirectMessage[], updated: DirectM
   const next = messages.map((message) => {
     if (message.id === updated.id) {
       changed = true;
-      return updated;
+      return keepViewerPollState(message, updated);
     }
     if (message.replyToMessage?.id === updated.id) {
       changed = true;

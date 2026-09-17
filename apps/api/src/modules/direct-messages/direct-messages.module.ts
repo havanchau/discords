@@ -13,5 +13,6 @@ import { DirectMessagesService } from './direct-messages.service';
   imports: [AuthModule, PrismaModule, NotificationsModule, RealtimePublisherModule],
   controllers: [DirectMessagesController, DirectMessageActionsController],
   providers: [DirectMessagesService, DirectMessageActionsService, DirectConversationsService],
+  exports: [DirectMessagesService],
 })
 export class DirectMessagesModule {}

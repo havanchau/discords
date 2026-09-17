@@ -5,14 +5,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type { Message, ThreadSummary } from '@discord-clone/shared';
+import { formatForwardOrigin, ForwardSnapshot } from '@/common/forward-snapshot';
 import { ChannelsService } from '@/modules/channels/channels.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { formatPoll, pollInclude, withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PushService } from '@/modules/push/push.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { formatAttachment, readVoiceMaxBytes, toAttachmentCreateData } from './message-attachments';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { slowmodeRetryAfterSeconds } from './slowmode';
@@ -24,13 +28,18 @@ import {
 
 @Injectable()
 export class MessagesService {
+  private readonly voiceMaxBytes: number;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly channels: ChannelsService,
     private readonly permissions: PermissionsService,
     private readonly push: PushService,
     private readonly realtime: RealtimePublisher,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.voiceMaxBytes = readVoiceMaxBytes(config);
+  }
 
   async listMessages(
     userId: string,
@@ -64,18 +73,7 @@ export class MessagesService {
     const replyMessages = replyIds.length
       ? await this.prisma.message.findMany({
           where: { id: { in: replyIds } },
-          include: {
-            author: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatarUrl: true,
-              },
-            },
-            attachments: true,
-            reactions: true,
-          },
+          include: messageInclude,
         })
       : [];
     const replyMap = new Map(
@@ -134,18 +132,7 @@ export class MessagesService {
       where: { channelId },
       include: {
         message: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatarUrl: true,
-              },
-            },
-            attachments: true,
-            reactions: true,
-          },
+          include: messageInclude,
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -160,15 +147,27 @@ export class MessagesService {
     };
   }
 
-  async createMessage(userId: string, channelId: string, dto: CreateMessageDto) {
+  /** Every gate a new top-level channel message passes; polls reuse it so the two cannot drift. */
+  async requireCanPostInChannel(userId: string, channelId: string) {
     const channel = await this.channels.requireReadableChannel(userId, channelId);
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
     await this.permissions.requireNotTimedOut(userId, channel.serverId);
     await this.enforceSlowmode(userId, channel);
+    return channel;
+  }
+
+  /** `forward` is set only by the forwarding module; a forward may have no text of its own. */
+  async createMessage(
+    userId: string,
+    channelId: string,
+    dto: CreateMessageDto,
+    forward?: ForwardSnapshot,
+  ) {
+    const channel = await this.requireCanPostInChannel(userId, channelId);
     const content = dto.content.trim();
     const attachments = dto.attachments ?? [];
 
-    if (!content && attachments.length === 0) {
+    if (!content && attachments.length === 0 && !forward) {
       throw new ForbiddenException('Message content cannot be empty without attachments');
     }
 
@@ -192,46 +191,18 @@ export class MessagesService {
         authorId: userId,
         content,
         replyToMessageId: dto.replyToMessageId,
+        ...forward,
         attachments: attachments.length
-          ? {
-              create: attachments.map((attachment) => ({
-                fileName: attachment.fileName,
-                mimeType: attachment.mimeType,
-                byteSize: attachment.byteSize,
-                url: attachment.url,
-              })),
-            }
+          ? { create: toAttachmentCreateData(attachments, this.voiceMaxBytes) }
           : undefined,
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-        attachments: true,
-        reactions: true,
-      },
+      include: messageInclude,
     });
 
     const replyToMessage = dto.replyToMessageId
       ? await this.prisma.message.findUnique({
           where: { id: dto.replyToMessageId },
-          include: {
-            author: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatarUrl: true,
-              },
-            },
-            attachments: true,
-            reactions: true,
-          },
+          include: messageInclude,
         })
       : null;
 
@@ -320,14 +291,7 @@ export class MessagesService {
         threadId: thread.id,
         replyToMessageId: dto.replyToMessageId ?? rootMessageId,
         attachments: attachments.length
-          ? {
-              create: attachments.map((attachment) => ({
-                fileName: attachment.fileName,
-                mimeType: attachment.mimeType,
-                byteSize: attachment.byteSize,
-                url: attachment.url,
-              })),
-            }
+          ? { create: toAttachmentCreateData(attachments, this.voiceMaxBytes) }
           : undefined,
       },
       include: messageInclude,
@@ -347,7 +311,7 @@ export class MessagesService {
       'thread:message:created',
       {
         thread: threadSummary,
-        rootMessage: formattedRoot,
+        rootMessage: withoutViewerVotes(formattedRoot),
         message: formattedMessage,
       },
     );
@@ -365,13 +329,20 @@ export class MessagesService {
   }
 
   async updateMessage(userId: string, messageId: string, dto: UpdateMessageDto) {
-    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      include: { poll: { select: { id: true } } },
+    });
     if (!message) {
       throw new NotFoundException('Message not found');
     }
     await this.channels.requireReadableChannel(userId, message.channelId);
     if (message.authorId !== userId) {
       throw new ForbiddenException('Only the author can edit this message');
+    }
+    // The text of a poll message is its question, which is immutable.
+    if (message.poll) {
+      throw new ForbiddenException('Poll messages cannot be edited');
     }
 
     const updated = await this.prisma.message.update({
@@ -380,18 +351,7 @@ export class MessagesService {
         content: dto.content.trim(),
         editedAt: new Date(),
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-        attachments: true,
-        reactions: true,
-      },
+      include: messageInclude,
     });
     const formatted = this.formatMessage(updated, userId);
     this.realtime.emitToRoom(
@@ -511,18 +471,7 @@ export class MessagesService {
   async findMessageForUser(userId: string, messageId: string) {
     const message = await this.prisma.message.findUnique({
       where: { id: messageId },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-        attachments: true,
-        reactions: true,
-      },
+      include: messageInclude,
     });
 
     if (!message) {
@@ -533,18 +482,7 @@ export class MessagesService {
     const replyToMessage = message.replyToMessageId
       ? await this.prisma.message.findUnique({
           where: { id: message.replyToMessageId },
-          include: {
-            author: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatarUrl: true,
-              },
-            },
-            attachments: true,
-            reactions: true,
-          },
+          include: messageInclude,
         })
       : null;
 
@@ -708,18 +646,15 @@ export class MessagesService {
       editedAt: message.editedAt,
       deletedAt: message.deletedAt,
       author: message.author,
-      attachments: message.attachments.map((attachment) => ({
-        id: attachment.id,
-        fileName: attachment.fileName,
-        mimeType: attachment.mimeType,
-        byteSize: attachment.byteSize,
-        url: attachment.url,
-      })),
+      attachments: message.attachments.map(formatAttachment),
       reactions: [...reactionMap.values()],
       replyToMessageId: message.replyToMessageId,
-      replyToMessage,
+      // A reply preview never needs the poll, and it would carry the viewer's vote into broadcasts.
+      replyToMessage: replyToMessage ? { ...replyToMessage, poll: null } : replyToMessage,
       threadId: message.threadId,
       thread: thread ?? null,
+      poll: message.poll && !message.deletedAt ? formatPoll(message.poll, userId) : null,
+      forwardOrigin: message.deletedAt ? null : formatForwardOrigin(message),
     };
   }
 
@@ -747,6 +682,7 @@ const messageInclude = {
   },
   attachments: true,
   reactions: true,
+  poll: { include: pollInclude },
 } satisfies Prisma.MessageInclude;
 
 type MessageWithDetails = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;

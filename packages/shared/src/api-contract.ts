@@ -218,6 +218,75 @@ export interface Message {
   replyToMessage?: Message | null;
   threadId?: string | null;
   thread?: ThreadSummary | null;
+  /** Null for ordinary messages and for deleted poll messages. */
+  poll?: PollView | null;
+  /** Set only on a forwarded copy. */
+  forwardOrigin?: ForwardOrigin | null;
+}
+
+export type ForwardSourceType = 'CHANNEL' | 'DIRECT';
+
+/**
+ * What a forwarded message was copied from, snapshotted at forward time so the label survives the
+ * source being edited, deleted, or becoming unreadable. A poll is snapshotted as its question text.
+ */
+export interface ForwardOrigin {
+  sourceType: ForwardSourceType;
+  authorName: string;
+  content: string;
+  /** The source channel's name; null when the source was a direct message. */
+  channelName: string | null;
+}
+
+/** Body of `POST /messages/:id/forward` and `POST /direct-messages/:id/forward`. */
+export interface ForwardMessageInput {
+  destinationType: 'channel' | 'conversation';
+  destinationId: string;
+  comment?: string;
+}
+
+export type PollStatus = 'OPEN' | 'CLOSED';
+
+export interface PollOptionView {
+  id: string;
+  label: string;
+  voteCount: number;
+  /** Present only when the poll was created with `showVoters`. */
+  voters?: Array<Pick<User, 'id' | 'displayName' | 'avatarUrl'>>;
+}
+
+export interface PollView {
+  id: string;
+  question: string;
+  allowMultiple: boolean;
+  showVoters: boolean;
+  expiresAt: Date | null;
+  closedAt: Date | null;
+  status: PollStatus;
+  options: PollOptionView[];
+  /**
+   * The requesting user's current selection. Realtime payloads go to many users, so there it is
+   * always empty and clients keep the value they already hold.
+   */
+  votedOptionIds: string[];
+}
+
+export interface CreatePollInput {
+  question: string;
+  options: string[];
+  allowMultiple?: boolean;
+  showVoters?: boolean;
+  expiresAt?: string;
+}
+
+/** `poll:updated`: aggregate counts only, never who voted. */
+export interface PollUpdatedPayload {
+  pollId: string;
+  channelId: string | null;
+  conversationId: string | null;
+  status: PollStatus;
+  closedAt: Date | null;
+  options: Array<Pick<PollOptionView, 'id' | 'voteCount'>>;
 }
 
 export interface ThreadSummary {
@@ -245,6 +314,10 @@ export interface MessageAttachment {
   mimeType: string;
   byteSize: number;
   url: string;
+  /** 'voice' for a recorded voice message; absent or null for any other file. */
+  kind?: 'voice' | null;
+  durationMs?: number | null;
+  waveform?: number[] | null;
 }
 
 export interface MessageReaction {
@@ -333,4 +406,134 @@ export interface DirectMessage {
   pinnedAt?: Date | null;
   pinnedById?: string | null;
   reactions?: DirectMessageReaction[];
+  /** Absent only on the conversation-list preview, which does not load attachments. */
+  attachments?: MessageAttachment[];
+  poll?: PollView | null;
+  /** Set only on a forwarded copy. */
+  forwardOrigin?: ForwardOrigin | null;
+}
+
+export type SavedMessageSourceType = 'CHANNEL' | 'DIRECT';
+
+/** A user's bookmark: a snapshot taken at save time, not the live message. */
+export interface SavedMessageView {
+  id: string;
+  sourceType: SavedMessageSourceType;
+  snapshotContent: string;
+  /** `displayName` is the author's name at save time; `avatarUrl` is the author's current avatar. */
+  snapshotAuthor: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  channelId: string | null;
+  conversationId: string | null;
+  serverId: string | null;
+  originalMessageId: string;
+  /** Source labels, filled only while `isAccessible`, so a lost channel's name is not re-read. */
+  channelName: string | null;
+  serverName: string | null;
+  remindAt: Date | null;
+  remindedAt: Date | null;
+  /** Recomputed on every read: the caller can still read the source and the message still exists. */
+  isAccessible: boolean;
+  createdAt: Date;
+}
+
+export interface CreateSavedMessageInput {
+  sourceType: SavedMessageSourceType;
+  messageId: string;
+  remindAt?: string;
+}
+
+/** `SENDING` and `SENT` rows are never listed; a cancelled scheduled message is deleted. */
+export type ScheduledMessageStatus = 'PENDING' | 'SENDING' | 'SENT' | 'FAILED';
+
+/** Why a scheduled send was refused at send time; the client translates the code. */
+export type ScheduledMessageFailureReason =
+  | 'NO_ACCESS'
+  | 'MISSING_PERMISSION'
+  | 'TIMED_OUT'
+  | 'SLOWMODE'
+  | 'BLOCKED'
+  | 'REPLY_TARGET_MISSING'
+  | 'REJECTED'
+  | 'INTERRUPTED'
+  | 'UNKNOWN';
+
+/** One of the caller's own scheduled messages; exactly one of `channelId`/`conversationId` is set. */
+export interface ScheduledMessageView {
+  id: string;
+  channelId: string | null;
+  conversationId: string | null;
+  content: string;
+  attachments: MessageAttachment[];
+  replyToMessageId: string | null;
+  sendAt: Date;
+  status: ScheduledMessageStatus;
+  failureReason: ScheduledMessageFailureReason | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateScheduledMessageInput {
+  content: string;
+  attachments?: MessageAttachment[];
+  replyToMessageId?: string;
+  /** ISO 8601 instant, 1 minute to 30 days ahead. */
+  sendAt: string;
+}
+
+export interface UpdateScheduledMessageInput {
+  content?: string;
+  attachments?: MessageAttachment[];
+  sendAt?: string;
+}
+
+/** Sent to the author when a scheduled message was posted or failed. */
+export interface ScheduledMessageUpdatedPayload {
+  scheduledMessageId: string;
+  channelId: string | null;
+  conversationId: string | null;
+  status: ScheduledMessageStatus;
+}
+
+export const messageReportReasons = ['SPAM', 'HARASSMENT', 'NSFW', 'HATE_SPEECH', 'OTHER'] as const;
+export type MessageReportReason = (typeof messageReportReasons)[number];
+
+export const messageReportStatuses = ['OPEN', 'RESOLVED', 'DISMISSED'] as const;
+export type MessageReportStatus = (typeof messageReportStatuses)[number];
+
+export type MessageReportTargetType = 'MESSAGE' | 'USER';
+
+/** One report in a server's moderator queue, or the reporter's own report after filing it. */
+export interface MessageReportView {
+  id: string;
+  targetType: MessageReportTargetType;
+  reason: MessageReportReason;
+  details: string | null;
+  status: MessageReportStatus;
+  createdAt: Date;
+  reporter: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  /** Null once the message is deleted, so the queue shows it as no longer available. */
+  message: { id: string; content: string; channelId: string; authorId: string } | null;
+  targetUser: Pick<User, 'id' | 'displayName'> | null;
+  resolvedBy: Pick<User, 'id' | 'displayName'> | null;
+  resolvedAt: Date | null;
+}
+
+export interface CreateMessageReportInput {
+  targetType: MessageReportTargetType;
+  /** Required for MESSAGE reports; optional context for USER reports. */
+  messageId?: string;
+  /** Required for USER reports. */
+  targetUserId?: string;
+  reason: MessageReportReason;
+  details?: string;
+}
+
+export interface CreateMessageReportResult {
+  report: MessageReportView;
+  /** False when the reporter already had an open report on the same target. */
+  created: boolean;
+}
+
+export interface UpdateMessageReportInput {
+  status: Exclude<MessageReportStatus, 'OPEN'>;
 }

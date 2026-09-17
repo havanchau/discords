@@ -1,5 +1,6 @@
-import { apiRequest, type AuthState, type Channel, type ServerDetail } from '@/api';
+import { apiRequest, type AuthState, type Channel, type Message, type ServerDetail } from '@/api';
 import type { Translate } from '@/i18n/LocaleProvider';
+import { parsePollCommand } from './polls';
 import { parseSlashCommand } from './slashCommands';
 
 interface ExecuteSlashCommandOptions {
@@ -13,6 +14,8 @@ interface ExecuteSlashCommandOptions {
     preferredChannelId?: string | null,
   ) => Promise<void>;
   clearDraft: () => void;
+  /** Adds a message the API created, in case the realtime echo is missed. */
+  addMessage: (message: Message) => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
   t: Translate;
@@ -27,6 +30,7 @@ export async function executeSlashCommand({
   channel,
   openServer,
   clearDraft,
+  addMessage,
   setWorkspaceError,
   setWorkspaceNotice,
   t,
@@ -47,16 +51,26 @@ export async function executeSlashCommand({
   }
 
   if (command.name === 'poll') {
-    const [question, ...options] = command.args
-      .split('|')
-      .map((part) => part.trim())
-      .filter(Boolean);
-    return {
-      handled: false,
-      content: options.length
-        ? `📊 ${question}\n${options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`
-        : `📊 ${command.args || t('slash.poll.default')}`,
-    };
+    if (!channel) return { handled: true };
+    const parsed = parsePollCommand(command.args, Date.now());
+    if ('errorKey' in parsed) {
+      setWorkspaceError(t(parsed.errorKey, parsed.errorVars));
+      return { handled: true };
+    }
+    try {
+      const result = await apiRequest<{ message: Message }>(
+        `/channels/${channel.id}/polls`,
+        { method: 'POST', body: JSON.stringify(parsed.input) },
+        auth.accessToken,
+      );
+      addMessage(result.message);
+      clearDraft();
+    } catch (err) {
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-create-poll'),
+      );
+    }
+    return { handled: true };
   }
 
   if (!server) return { handled: true };

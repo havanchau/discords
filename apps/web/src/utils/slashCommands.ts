@@ -19,7 +19,7 @@ export const SLASH_COMMANDS: SlashCommandDefinition[] = [
     name: 'poll',
     descriptionKey: 'slash.poll.description',
     usage: '/poll Favorite color? | Red | Blue',
-    owner: 'client',
+    owner: 'server',
   },
   { name: 'invite', descriptionKey: 'slash.invite.description', usage: '/invite', owner: 'server' },
 ];

@@ -5,6 +5,7 @@ import { useDateFormat } from '@/i18n/useDateFormat';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
+import { ReportsSection } from './ReportsSection';
 import type { SettingsModalFields } from './types';
 import styles from '@/components/SettingsModal.module.css';
 import { cn } from '@/utils/cn';
@@ -187,6 +188,10 @@ export function ServerSettings({
           unbanUser={unbanUser}
           pendingAction={pendingAction}
         />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES') ? (
+        <ReportsSection serverId={server.id} />
       ) : null}
 
       <section className={cn(styles.settingsSection, 'audit-section')}>

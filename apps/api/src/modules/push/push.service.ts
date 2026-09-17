@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { PushSubscription } from '@prisma/client';
 import { I18nService } from '@/common/i18n/i18n.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { createVapidJwt, encryptWebPushPayload } from './web-push-crypto';
@@ -14,6 +15,12 @@ interface SendMentionPushInput {
   channelId: string;
   channelName: string;
   content: string;
+}
+
+interface SendGenericPushInput {
+  title: string;
+  body: string;
+  url: string;
 }
 
 @Injectable()
@@ -90,6 +97,31 @@ export class PushService {
       },
     });
 
+    await this.deliver(subscriptions, payload);
+  }
+
+  /**
+   * A push that is not tied to a channel template, e.g. a saved-message reminder. It follows the
+   * same "online users get no push" and global desktop-notification rules as a mention, but has no
+   * per-channel throttle: the caller sends it once.
+   */
+  async sendGenericPush(userId: string, input: SendGenericPushInput) {
+    if (!(await this.isPushAllowed(userId))) return;
+
+    const subscriptions = await this.prisma.pushSubscription.findMany({ where: { userId } });
+    if (!subscriptions.length) return;
+
+    const payload = JSON.stringify({
+      title: input.title,
+      body: truncate(input.body, 100),
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      data: { url: input.url },
+    });
+    await this.deliver(subscriptions, payload);
+  }
+
+  private async deliver(subscriptions: PushSubscription[], payload: string) {
     await Promise.allSettled(
       subscriptions.map(async (subscription) => {
         try {
@@ -112,6 +144,21 @@ export class PushService {
         }
       }),
     );
+  }
+
+  /** The rules every push shares: no push to an online user or one who turned desktop off. */
+  private async isPushAllowed(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    if (user?.status === 'ONLINE') return false;
+
+    const globalPreference = await this.prisma.notificationPreference.findFirst({
+      where: { userId, serverId: null, channelId: null },
+      select: { desktopEnabled: true },
+    });
+    return globalPreference?.desktopEnabled !== false;
   }
 
   private async shouldSendPush(userId: string, serverId: string, channelId: string) {

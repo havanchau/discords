@@ -1,5 +1,5 @@
 import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
-import type { AuthState, Channel, Message, NotificationItem } from '@/api';
+import type { AuthState, Channel, Message, NotificationItem, Poll } from '@/api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '@/helpers';
 import type { ComposerRestriction } from '@/hooks/useComposerRestrictions';
 import type { MemberIdentity } from '@/utils/memberIdentity';
@@ -91,6 +91,10 @@ export interface ChannelMessageActions {
   delete: (messageId: string) => Promise<void>;
   toggleReaction: (message: Message, emoji: string) => Promise<void>;
   togglePinned: (message: Message) => void;
+  /** Writes a vote or close result back into the channel's message list. */
+  updatePoll: (poll: Poll) => void;
+  /** Server-level approximation for showing "Close poll"; the API applies channel overrides. */
+  canManageMessages: boolean;
 }
 
 export interface ChatPanelMessageActions extends ChannelMessageActions {
@@ -108,6 +112,8 @@ export interface ChatPanelComposer {
   draft: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  /** Clears the draft, files and reply after the draft was scheduled instead of sent. */
+  clearAfterSchedule: () => void;
   setDraft: (value: string) => void;
   startVoiceRecording: () => Promise<void>;
   stopVoiceRecording: () => void;

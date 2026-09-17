@@ -315,3 +315,54 @@ until a browser pass has run — see each spec's test plan.
 - [ ] Add profile banner, pronouns, about me, and expiring custom status to the account profile.
 - [ ] Add per-server nickname and avatar with one shared identity resolver.
 - [ ] Replace the inline member-sidebar popover with a reusable profile card opened from the member list, channel messages, and direct messages.
+
+## Wave 3.2 Backlog — 2026-09-17
+
+Fourth roadmap wave. Specs were reviewed and approved on 2026-09-17; open decisions are rows 8–29 in [open-questions.md](features/open-questions.md), and until answered the "Assumption used" column is the decision.
+
+### Status — 2026-09-17 (paused)
+
+Work is paused after item 6 of the delivery order below and resumes at AutoMod. Nothing is committed.
+
+- **Implemented, uncommitted:** polls, saved messages, forward message (including `DirectMessageAttachment`), voice messages, scheduled messages, message reports. Each spec has a "Deviations" section describing what was built differently from the reviewed draft.
+- **Verification so far:** `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check`, `ui:scan`, `docs:check`, and Prettier pass. Migration SQL was checked with `prisma migrate diff` against the pre-change schema. No migration has been applied to any database, and no manual or browser scenario from any test plan has run, so every checklist item stays unchecked.
+- **Pending migrations, in order:** `20260917000000_add_polls`, `20260917001000_add_saved_messages`, `20260917002000_add_message_forwarding`, `20260917003000_add_voice_messages`, `20260917004000_add_scheduled_messages`, `20260917005000_add_message_reports`.
+- **Next:** [automod.md](features/automod.md). `re2js@2.8.6` is already added to `apps/api` for regex rules; no AutoMod code exists yet. Next migration timestamp: `20260917006000`.
+- **Skipped:** [stage-channels.md](features/stage-channels.md), blocked on an SFU that has no implementation.
+- **Decision taken during implementation:** no `@nestjs/schedule` dependency; scheduled messages reuse the `setInterval` sweep with a conditional claim from saved-message reminders.
+
+### Follow-Ups Found During Implementation
+
+- [ ] Add `VOICE_MAX_BYTES=26214400` to the API `.env.example` (agents cannot edit `.env*` files).
+- [ ] Validate attachments on the socket `message:create` path (URL allowlist and size); today only the REST DTO validates them, and `byteSize` is client-reported. Pre-existing, not caused by this wave.
+- [ ] Decide whether polls, scheduled messages, and forwarding should be blocked in end-to-end encrypted channels at the API; polls store question and options in plaintext, and saved messages snapshot ciphertext.
+- [ ] Channel polls created over REST do not bump unread badges live, and DM polls send no DM notification.
+- [ ] "Jump to message" from saved messages opens the channel or DM but does not scroll to the message.
+- [ ] `apps/web/src/AppShell.tsx` is at about 850 of 1000 lines; later features must add logic in new hooks and components.
+
+### Delivery Order
+
+1. Messaging: [polls.md](features/polls.md), [saved-messages.md](features/saved-messages.md), [forward-message.md](features/forward-message.md), [voice-messages.md](features/voice-messages.md), [scheduled-messages.md](features/scheduled-messages.md). `DirectMessageAttachment` lands with the first of forward, voice, or scheduled messages.
+2. Safety: [message-reports.md](features/message-reports.md), [automod.md](features/automod.md), [account-deletion-and-export.md](features/account-deletion-and-export.md).
+3. Community: [server-onboarding.md](features/server-onboarding.md), [forum-channels.md](features/forum-channels.md), [server-templates-and-discovery.md](features/server-templates-and-discovery.md).
+4. Integrations and UX: [keyboard-shortcuts.md](features/keyboard-shortcuts.md), [incoming-webhooks.md](features/incoming-webhooks.md), [bot-api.md](features/bot-api.md), [stickers-and-soundboard.md](features/stickers-and-soundboard.md).
+5. Blocked on [voice-sfu.md](features/voice-sfu.md): [stage-channels.md](features/stage-channels.md).
+
+### Checklist
+
+- [ ] Create, vote in, and close polls with realtime results.
+- [ ] Save messages and receive reminders.
+- [ ] Forward channel and direct messages with access re-checks.
+- [ ] Record and send voice messages in channels and direct messages.
+- [ ] Schedule, edit, and cancel messages for later delivery.
+- [ ] Report messages and members to a server moderator queue.
+- [ ] Enforce AutoMod rules on message send and edit.
+- [ ] Delete an account and export personal data.
+- [ ] Require rules acceptance and offer self-assign roles on join.
+- [ ] Create forum channels with thread posts and tags.
+- [ ] Create servers from templates and list servers in discovery.
+- [ ] Navigate with global keyboard shortcuts and a quick switcher.
+- [ ] Post channel messages through incoming webhooks.
+- [ ] Install token-authenticated bots in servers.
+- [ ] Use server stickers and soundboard clips.
+- [ ] Host stage channels with speakers and audience.

@@ -4,6 +4,7 @@ import { ServerRail } from './workspace/ServerRail';
 import { ServerEventsDialog } from './events/ServerEventsDialog';
 import { EditCategoryDialog } from './workspace/EditCategoryDialog';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { WorkspaceDialogs } from './workspace/WorkspaceDialogs';
 import type { ChannelCategory } from '@/api';
 import type { ChannelCreateType, ServerAction, WorkspaceSidebarProps } from './workspace/types';
@@ -32,6 +33,7 @@ export function WorkspaceSidebar({
   const [editingCategory, setEditingCategory] = useState<ChannelCategory | null>(null);
   const [isEventsOpen, setIsEventsOpen] = useState(false);
   const { server } = workspace;
+  const { openSavedMessages } = useWorkspace();
 
   return (
     <>
@@ -41,6 +43,7 @@ export function WorkspaceSidebar({
         openHome={actions.openHome}
         openServer={actions.openServer}
         onAddServer={() => setServerAction('create')}
+        onOpenSavedMessages={openSavedMessages}
       />
 
       <ChannelSidebar

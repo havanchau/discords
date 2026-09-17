@@ -1,5 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { formatForwardOrigin } from '@/common/forward-snapshot';
+import { formatAttachment } from '@/modules/messages/message-attachments';
+import { formatPoll, pollInclude } from '@/modules/polls/poll.format';
 
 const authorSelect = {
   id: true,
@@ -14,6 +17,8 @@ export const directMessageInclude = {
     select: { emoji: true, userId: true },
     orderBy: { createdAt: 'asc' as const },
   },
+  attachments: { orderBy: { createdAt: 'asc' as const } },
+  poll: { include: pollInclude },
 } satisfies Prisma.DirectMessageInclude;
 
 type DirectMessageWithDetails = Prisma.DirectMessageGetPayload<{
@@ -60,11 +65,13 @@ type ReplyPreview = Prisma.DirectMessageGetPayload<{ select: typeof replyPreview
 
 /*
  * One realtime payload goes to every conversation member, so reactions carry the reacting user ids
- * and each client derives its own "me" flag.
+ * and each client derives its own "me" flag. A poll's own selection is filled only when `viewerId`
+ * is given, i.e. for a response read by that one user.
  */
 export function formatDirectMessage(
   message: DirectMessageWithDetails,
   replyToMessage?: ReplyPreview | null,
+  viewerId: string | null = null,
 ) {
   const reactions = new Map<string, { emoji: string; count: number; userIds: string[] }>();
   message.reactions.forEach(({ emoji, userId }) => {
@@ -74,16 +81,40 @@ export function formatDirectMessage(
     reactions.set(emoji, current);
   });
 
+  // The raw forward columns are replaced by one `forwardOrigin` object.
+  const {
+    forwardedFromMessageId,
+    forwardedFromDirectMessageId,
+    forwardOriginAuthorName,
+    forwardOriginContent,
+    forwardOriginLabel,
+    attachments,
+    ...rest
+  } = message;
+  const isDeleted = Boolean(message.deletedAt);
+
   return {
-    ...message,
+    ...rest,
     reactions: [...reactions.values()],
+    attachments: isDeleted ? [] : attachments.map(formatAttachment),
     replyToMessage: replyToMessage ?? null,
+    poll: message.poll && !isDeleted ? formatPoll(message.poll, viewerId) : null,
+    forwardOrigin: isDeleted
+      ? null
+      : formatForwardOrigin({
+          forwardedFromMessageId,
+          forwardedFromDirectMessageId,
+          forwardOriginAuthorName,
+          forwardOriginContent,
+          forwardOriginLabel,
+        }),
   };
 }
 
 export async function formatDirectMessages(
   prisma: PrismaClient,
   messages: DirectMessageWithDetails[],
+  viewerId: string | null = null,
 ) {
   const replyIds = [
     ...new Set(
@@ -101,7 +132,7 @@ export async function formatDirectMessages(
   const replyById = new Map(replies.map((reply) => [reply.id, reply]));
 
   return messages.map((message) =>
-    formatDirectMessage(message, replyById.get(message.replyToMessageId ?? '')),
+    formatDirectMessage(message, replyById.get(message.replyToMessageId ?? ''), viewerId),
   );
 }
 

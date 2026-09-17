@@ -90,6 +90,10 @@ export function formatBytes(value: number) {
 
 export function attachmentKind(attachment: MessageAttachment) {
   if (attachment.mimeType.startsWith('image/')) return 'image';
+  // A voice note missing its metadata (older rows) falls through to the generic audio player.
+  if (attachment.kind === 'voice' && attachment.durationMs && attachment.waveform?.length) {
+    return 'voice';
+  }
   if (attachment.mimeType.startsWith('audio/')) return 'audio';
   if (attachment.mimeType.startsWith('video/')) return 'video';
   if (attachment.mimeType.includes('zip')) return 'archive';

@@ -1,4 +1,6 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsInt,
   IsOptional,
@@ -11,6 +13,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  VOICE_ATTACHMENT_KIND,
+  VOICE_MESSAGE_MAX_DURATION_MS,
+  VOICE_WAVEFORM_MAX_BUCKETS,
+  VOICE_WAVEFORM_MAX_PEAK,
+  VOICE_WAVEFORM_MIN_BUCKETS,
+} from '@discord-clone/shared';
 
 export class MessageAttachmentInputDto {
   @IsString()
@@ -51,6 +60,27 @@ export class MessageAttachmentInputDto {
     },
   )
   url!: string;
+
+  // Voice-message metadata. The services re-check it (`message-attachments.ts`) because the socket
+  // send path does not run this DTO through the validation pipe.
+  @IsOptional()
+  @IsIn([VOICE_ATTACHMENT_KIND])
+  kind?: typeof VOICE_ATTACHMENT_KIND | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(VOICE_MESSAGE_MAX_DURATION_MS)
+  durationMs?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(VOICE_WAVEFORM_MIN_BUCKETS)
+  @ArrayMaxSize(VOICE_WAVEFORM_MAX_BUCKETS)
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(VOICE_WAVEFORM_MAX_PEAK, { each: true })
+  waveform?: number[];
 }
 
 export class CreateMessageDto {

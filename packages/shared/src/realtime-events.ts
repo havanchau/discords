@@ -33,6 +33,8 @@ export const RealtimeEvents = {
   ServerMemberUpdated: 'server:member-updated',
   ServerEmojisUpdated: 'server:emojis-updated',
   ServerEventsUpdated: 'server:events-updated',
+  PollUpdated: 'poll:updated',
+  ScheduledMessageUpdated: 'scheduled-message:updated',
   NotificationCreated: 'notification:created',
   NotificationUnread: 'notification:unread',
   ChannelJoin: 'channel:join',

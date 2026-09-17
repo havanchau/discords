@@ -13,9 +13,17 @@ import type { PatchServer } from '@/query/useWorkspaceStore';
 
 // Socket payloads cross the same JSON boundary as HTTP responses, so dates arrive as strings.
 type PresenceUpdate = Json<PresenceUpdatePayload>;
-import { AuthState, DirectConversation, DirectMessage, Message, NotificationItem } from '@/api';
+import {
+  AuthState,
+  DirectConversation,
+  DirectMessage,
+  Message,
+  NotificationItem,
+  PollUpdatedPayload,
+} from '@/api';
 import { ChannelBadgeState } from '@/components/WorkspaceSidebar';
 import { ActiveCallSummary, SOCKET_URL } from '@/helpers';
+import { applyPollCounts, keepViewerPollState, updatePollInMessages } from '@/utils/polls';
 
 interface TypingUser {
   userId: string;
@@ -139,7 +147,9 @@ export function useRealtimeSocket({
     nextSocket.on(RealtimeEvents.MessageUpdated, async (message: Message) => {
       const displayMessage = await decryptMessageForDisplay(message);
       setMessages((current) =>
-        current.map((item) => (item.id === displayMessage.id ? displayMessage : item)),
+        current.map((item) =>
+          item.id === displayMessage.id ? keepViewerPollState(item, displayMessage) : item,
+        ),
       );
     });
 
@@ -233,8 +243,21 @@ export function useRealtimeSocket({
     nextSocket.on(RealtimeEvents.ReactionUpdated, async (payload: { message: Message }) => {
       const displayMessage = await decryptMessageForDisplay(payload.message);
       setMessages((current) =>
-        current.map((message) => (message.id === displayMessage.id ? displayMessage : message)),
+        current.map((message) =>
+          message.id === displayMessage.id ? keepViewerPollState(message, displayMessage) : message,
+        ),
       );
+    });
+
+    // Counts only: each list keeps its own messages' `votedOptionIds`.
+    nextSocket.on(RealtimeEvents.PollUpdated, (payload: PollUpdatedPayload) => {
+      const update = (poll: Parameters<typeof applyPollCounts>[0]) =>
+        applyPollCounts(poll, payload);
+      if (payload.channelId) {
+        setMessages((current) => updatePollInMessages(current, payload.pollId, update));
+      } else {
+        setDirectMessages((current) => updatePollInMessages(current, payload.pollId, update));
+      }
     });
 
     nextSocket.on(

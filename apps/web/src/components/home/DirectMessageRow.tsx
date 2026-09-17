@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
-import { Edit3, Pin, Reply, SmilePlus, Trash2 } from 'lucide-react';
-import type { DirectMessage } from '@/api';
+import { Edit3, Forward, Pin, Reply, SmilePlus, Trash2 } from 'lucide-react';
+import type { DirectMessage, Poll } from '@/api';
 import { QUICK_REACTIONS } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
@@ -16,8 +16,17 @@ import {
   TextField,
   Tooltip,
 } from '@/components/ui';
+import {
+  AttachmentPreviewDialog,
+  type PreviewAttachment,
+} from '@/components/chat/AttachmentPreviewDialog';
+import { ForwardedHeader } from '@/components/chat/ForwardedHeader';
+import { ForwardMessageDialog } from '@/components/chat/ForwardMessageDialog';
 import { LinkPreviewCard } from '@/components/chat/LinkPreviewCard';
 import { MarkdownContent } from '@/components/chat/MarkdownContent';
+import { MessageAttachments } from '@/components/chat/MessageAttachments';
+import { PollCard } from '@/components/chat/PollCard';
+import { SaveMessageAction } from '@/components/saved/SaveMessageAction';
 import styles from './DirectMessageRow.module.css';
 
 const MAX_LINK_PREVIEWS = 3;
@@ -29,6 +38,7 @@ export interface DirectMessageRowActions {
   onReact: (messageId: string, emoji: string) => Promise<void>;
   onTogglePin: (messageId: string) => Promise<void>;
   onJumpToMessage: (messageId: string) => void;
+  onPollUpdate: (poll: Poll) => void;
 }
 
 interface DirectMessageRowProps {
@@ -51,6 +61,9 @@ export const DirectMessageRow = memo(function DirectMessageRow({
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isSaveOpen, setIsSaveOpen] = useState(false);
+  const [isForwardOpen, setIsForwardOpen] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
   const isMine = message.authorId === viewerId;
   const isDeleted = Boolean(message.deletedAt);
   const reactions = toViewerReactions(message, viewerId);
@@ -91,6 +104,10 @@ export const DirectMessageRow = memo(function DirectMessageRow({
         </button>
       ) : null}
 
+      {!isDeleted && !isEditing && message.forwardOrigin ? (
+        <ForwardedHeader origin={message.forwardOrigin} />
+      ) : null}
+
       {isDeleted ? (
         <p className={cn(styles.body, styles.deleted)}>{t('message.deleted')}</p>
       ) : isEditing ? (
@@ -119,9 +136,19 @@ export const DirectMessageRow = memo(function DirectMessageRow({
             {t('common.cancel')}
           </Button>
         </form>
+      ) : message.poll ? (
+        // DMs have no moderators, so only the poll's creator can close it.
+        <PollCard
+          poll={message.poll}
+          accessToken={accessToken}
+          canClose={isMine}
+          onPollUpdate={actions.onPollUpdate}
+        />
       ) : (
         <>
-          <MarkdownContent className={styles.body} content={message.content} />
+          {message.content ? (
+            <MarkdownContent className={styles.body} content={message.content} />
+          ) : null}
           {extractMarkdownLinks(message.content).map((link, index) => (
             <LinkPreviewCard
               key={link}
@@ -132,6 +159,13 @@ export const DirectMessageRow = memo(function DirectMessageRow({
           ))}
         </>
       )}
+
+      {!isDeleted ? (
+        <MessageAttachments
+          attachments={message.attachments ?? []}
+          onPreview={setPreviewAttachment}
+        />
+      ) : null}
 
       {!isDeleted && reactions.length ? (
         <div className={styles.reactionRow}>
@@ -155,7 +189,7 @@ export const DirectMessageRow = memo(function DirectMessageRow({
       ) : null}
 
       {!isDeleted && !isEditing ? (
-        <div className={cn(styles.actions, isEmojiOpen && styles.actionsVisible)}>
+        <div className={cn(styles.actions, (isEmojiOpen || isSaveOpen) && styles.actionsVisible)}>
           <Tooltip content={t('message.action.reply')}>
             <IconButton
               label={t('message.action.reply')}
@@ -199,20 +233,38 @@ export const DirectMessageRow = memo(function DirectMessageRow({
               <Pin size={14} aria-hidden="true" />
             </IconButton>
           </Tooltip>
+          <SaveMessageAction
+            sourceType="DIRECT"
+            messageId={message.id}
+            size="sm"
+            onOpenChange={setIsSaveOpen}
+          />
+          <Tooltip content={t('forward.action')}>
+            <IconButton
+              label={t('forward.action')}
+              size="sm"
+              onClick={() => setIsForwardOpen(true)}
+            >
+              <Forward size={14} aria-hidden="true" />
+            </IconButton>
+          </Tooltip>
           {isMine ? (
             <>
-              <Tooltip content={t('message.action.edit')}>
-                <IconButton
-                  label={t('message.action.edit')}
-                  size="sm"
-                  onClick={() => {
-                    setEditDraft(message.content);
-                    setIsEditing(true);
-                  }}
-                >
-                  <Edit3 size={14} aria-hidden="true" />
-                </IconButton>
-              </Tooltip>
+              {/* Poll questions are immutable, so poll messages offer delete but not edit. */}
+              {message.poll ? null : (
+                <Tooltip content={t('message.action.edit')}>
+                  <IconButton
+                    label={t('message.action.edit')}
+                    size="sm"
+                    onClick={() => {
+                      setEditDraft(message.content);
+                      setIsEditing(true);
+                    }}
+                  >
+                    <Edit3 size={14} aria-hidden="true" />
+                  </IconButton>
+                </Tooltip>
+              )}
               <Tooltip content={t('message.action.delete')}>
                 <IconButton
                   label={t('message.action.delete')}
@@ -226,6 +278,19 @@ export const DirectMessageRow = memo(function DirectMessageRow({
             </>
           ) : null}
         </div>
+      ) : null}
+      {isForwardOpen ? (
+        <ForwardMessageDialog
+          sourceType="DIRECT"
+          messageId={message.id}
+          onOpenChange={setIsForwardOpen}
+        />
+      ) : null}
+      {previewAttachment ? (
+        <AttachmentPreviewDialog
+          previewAttachment={previewAttachment}
+          onClose={() => setPreviewAttachment(null)}
+        />
       ) : null}
     </article>
   );

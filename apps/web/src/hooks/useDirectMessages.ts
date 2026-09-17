@@ -7,10 +7,14 @@ import {
   FriendEntry,
   FriendRequestEntry,
   FriendsSummary,
+  uploadMessageAttachments,
 } from '@/api';
+import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
 import { usePersistentDrafts } from './usePersistentDrafts';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { formText } from '@/utils/formText';
+import { parsePollCommand } from '@/utils/polls';
+import { parseSlashCommand } from '@/utils/slashCommands';
 
 interface UseDirectMessagesOptions {
   auth: AuthState | null;
@@ -289,41 +293,97 @@ export function useDirectMessages({
     }
   }
 
-  async function sendDirectMessage(event: FormEvent<HTMLFormElement>) {
+  /** Resolves true when the message was sent, so the composer can clear its selected files. */
+  async function sendDirectMessage(event: FormEvent<HTMLFormElement>, files: File[] = []) {
     event.preventDefault();
-    if (!auth || !activeConversation) return;
+    if (!auth || !activeConversation) return false;
     const conversationId = activeConversation.id;
     const draftKey = activeDraftKey;
     const content = directMessageDraft.trim();
-    if (!content) return;
+    if (!content && !files.length) return false;
+    // `/poll` is the only slash command direct messages run; any other text is sent as typed.
+    // A message with files is always sent as a message, never parsed as a command.
+    const command = files.length ? null : parseSlashCommand(content);
+    const poll = command?.name === 'poll' ? parsePollCommand(command.args, Date.now()) : null;
+    if (poll && 'errorKey' in poll) {
+      setWorkspaceError(t(poll.errorKey, poll.errorVars));
+      return false;
+    }
     setPendingAction('direct-message');
     setWorkspaceError(null);
     try {
+      const attachments = await uploadMessageAttachments(files, auth.accessToken);
       const result = await apiRequest<{ message: DirectMessage }>(
-        `/direct-conversations/${conversationId}/messages`,
+        poll
+          ? `/conversations/${conversationId}/polls`
+          : `/direct-conversations/${conversationId}/messages`,
         {
           method: 'POST',
-          body: JSON.stringify({ content, replyToMessageId: replyingToDirectMessage?.id }),
+          body: JSON.stringify(
+            poll
+              ? poll.input
+              : { content, attachments, replyToMessageId: replyingToDirectMessage?.id },
+          ),
         },
         auth.accessToken,
       );
       directDrafts.clearDraft(draftKey);
-      await loadDirectConversations(auth.accessToken);
-      // The user may have switched conversations while the request was in flight.
-      if (activeConversationIdRef.current !== conversationId) return;
-      setReplyingToDirectMessage(null);
-      setDirectMessages((current) =>
-        current.some((item) => item.id === result.message.id)
-          ? current
-          : [...current, result.message],
-      );
+      await showSentDirectMessage(auth.accessToken, conversationId, result.message);
+      return true;
     } catch (err) {
       setWorkspaceError(
         err instanceof Error ? err.message : t('error.fallback.cannot-send-direct-message'),
       );
+      return false;
     } finally {
       setPendingAction(null);
     }
+  }
+
+  /** Sends a recorded voice note on its own, leaving the typed draft untouched. */
+  async function sendDirectVoiceMessage(file: File, voice: VoiceAttachmentMetadata | null) {
+    if (!auth || !activeConversation) return false;
+    const conversationId = activeConversation.id;
+    setPendingAction('direct-message');
+    setWorkspaceError(null);
+    try {
+      const attachments = await uploadMessageAttachments([file], auth.accessToken, voice);
+      const result = await apiRequest<{ message: DirectMessage }>(
+        `/direct-conversations/${conversationId}/messages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            content: '',
+            attachments,
+            replyToMessageId: replyingToDirectMessage?.id,
+          }),
+        },
+        auth.accessToken,
+      );
+      await showSentDirectMessage(auth.accessToken, conversationId, result.message);
+      return true;
+    } catch (err) {
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-send-direct-message'),
+      );
+      return false;
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function showSentDirectMessage(
+    token: string,
+    conversationId: string,
+    message: DirectMessage,
+  ) {
+    await loadDirectConversations(token);
+    // The user may have switched conversations while the request was in flight.
+    if (activeConversationIdRef.current !== conversationId) return;
+    setReplyingToDirectMessage(null);
+    setDirectMessages((current) =>
+      current.some((item) => item.id === message.id) ? current : [...current, message],
+    );
   }
 
   return {
@@ -353,5 +413,6 @@ export function useDirectMessages({
     markDirectConversationRead,
     startDirectConversation,
     sendDirectMessage,
+    sendDirectVoiceMessage,
   };
 }

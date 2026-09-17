@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { MessageSquare, Phone, Users, Video } from 'lucide-react';
 import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
 import { directCallId } from '@/hooks/useDirectCall';
@@ -36,6 +36,8 @@ type HomeDirectMessageViewProps = {
   actions: Pick<
     HomePanelActions,
     | 'sendDirectMessage'
+    | 'sendDirectVoiceMessage'
+    | 'reportComposerError'
     | 'setDirectMessageDraft'
     | 'setReplyingToDirectMessage'
     | 'editDirectMessage'
@@ -43,12 +45,13 @@ type HomeDirectMessageViewProps = {
     | 'toggleDirectReaction'
     | 'toggleDirectPin'
     | 'loadDirectPins'
+    | 'updateDirectPoll'
     | 'renameGroupConversation'
     | 'addGroupMember'
     | 'removeGroupMember'
   >;
   call: HomeDirectCall;
-  onSendDirectMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onSendDirectMessage: HomePanelActions['sendDirectMessage'];
 };
 
 export function HomeDirectMessageView({
@@ -83,6 +86,7 @@ export function HomeDirectMessageView({
     onDelete: actions.deleteDirectMessage,
     onReact: actions.toggleDirectReaction,
     onTogglePin: actions.toggleDirectPin,
+    onPollUpdate: actions.updateDirectPoll,
     onJumpToMessage: jumpToDirectMessage,
   };
 
@@ -212,6 +216,8 @@ export function HomeDirectMessageView({
             actions={rowActions}
           />
           <DirectMessageComposer
+            // Keyed so files picked in one conversation are never sent to another.
+            key={activeConversation.id}
             placeholderName={isGroup ? title : `@${dmPartner?.username}`}
             draft={directMessageDraft}
             pendingAction={pendingAction}
@@ -219,6 +225,9 @@ export function HomeDirectMessageView({
             replyingToName={replyingToName}
             onCancelReply={() => actions.setReplyingToDirectMessage(null)}
             onSendDirectMessage={onSendDirectMessage}
+            onSendVoiceMessage={actions.sendDirectVoiceMessage}
+            onComposerError={actions.reportComposerError}
+            conversationId={activeConversation.id}
             onDraftChange={actions.setDirectMessageDraft}
           />
         </>
