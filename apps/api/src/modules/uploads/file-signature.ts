@@ -5,7 +5,9 @@
  */
 
 function startsWith(buffer: Buffer, bytes: number[], offset = 0) {
-  return buffer.length >= offset + bytes.length && bytes.every((byte, i) => buffer[offset + i] === byte);
+  return (
+    buffer.length >= offset + bytes.length && bytes.every((byte, i) => buffer[offset + i] === byte)
+  );
 }
 
 function asciiAt(buffer: Buffer, text: string, offset: number) {

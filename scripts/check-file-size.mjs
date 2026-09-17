@@ -23,7 +23,10 @@ const ignoredPathParts = [
   '/generated/',
 ];
 
-const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+// Untracked files too, so a new file is checked before it is staged.
+const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+  encoding: 'utf8',
+})
   .split(/\r?\n/)
   .filter(Boolean)
   .filter((file) => sourceExtensions.has(extensionOf(file)))

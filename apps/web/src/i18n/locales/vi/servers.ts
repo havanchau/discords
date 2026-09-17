@@ -111,6 +111,7 @@ export const servers = {
   'server.action.join': 'Tham gia server',
   'server.dialog.actionGroup': 'Hành động với server',
   'server.dialog.create': 'Tạo server',
+  'server.notice.joined': 'Đã tham gia server',
   'server.dialog.join': 'Tham gia server',
   'server.dialog.tabCreate': 'Tạo',
   'server.dialog.tabJoin': 'Tham gia',

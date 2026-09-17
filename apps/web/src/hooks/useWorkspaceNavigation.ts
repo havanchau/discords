@@ -1,5 +1,12 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { apiRequest, AuthState, Channel, ChannelCategory, ServerDetail } from '@/api';
+import {
+  apiRequest,
+  AuthState,
+  Channel,
+  ChannelCategory,
+  DiscoveryJoinResult,
+  ServerDetail,
+} from '@/api';
 import { ActiveDialog } from '@/components/chat/types';
 import type { ChannelCreateType } from '@/components/workspace/types';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -68,15 +75,18 @@ export function useWorkspaceNavigation({
       setPendingAction('join-server');
       setWorkspaceError(null);
       try {
-        const data = await apiRequest<{ server: ServerDetail }>(
-          `/servers/invites/${code}/join`,
+        // The API answers with ids only (`servers.controller.ts` `POST /invites/:code/join`); the
+        // server detail loads when the refreshed rail opens it, as after a discovery join.
+        const data = await apiRequest<DiscoveryJoinResult>(
+          `/invites/${encodeURIComponent(code)}/join`,
           { method: 'POST' },
           auth.accessToken,
         );
-        seedServerDetail(data.server);
         await refreshServers();
+        openServerById(data.serverId);
+        if (data.channelId) selectChannel(data.channelId);
         setActiveDialog(null);
-        setWorkspaceNotice(`Joined ${data.server.name}`);
+        setWorkspaceNotice(t('server.notice.joined'));
       } catch (err) {
         setWorkspaceError(err instanceof Error ? err.message : t('error.fallback.invalid-invite'));
       } finally {
@@ -85,8 +95,9 @@ export function useWorkspaceNavigation({
     },
     [
       auth,
+      openServerById,
       refreshServers,
-      seedServerDetail,
+      selectChannel,
       setActiveDialog,
       setPendingAction,
       setWorkspaceError,

@@ -17,6 +17,11 @@ export interface WorkspaceContextValue {
   selectChannel: (channel: Channel) => void;
   setActivePanel: (panel: ActivePanel) => void;
   setActiveDialog: (dialog: ActiveDialog) => void;
+  /**
+   * Whether this client holds an E2EE key for the channel. Only the client knows: the API stores
+   * ciphertext without a channel flag, so features that would store plaintext there are blocked here.
+   */
+  isChannelEncrypted: (channelId: string) => boolean;
   /** Saved Messages is reachable from the server rail and from a reminder notification. */
   openSavedMessages: () => void;
   clearWorkspaceError: () => void;

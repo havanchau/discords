@@ -1,4 +1,4 @@
-import { FileArchive, FileAudio2, FileText } from 'lucide-react';
+import { FileArchive, FileAudio2, FileText, Sticker } from 'lucide-react';
 import { assetUrl, MessageAttachment } from '@/api';
 import { attachmentKind, formatBytes } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -24,6 +24,24 @@ export function MessageAttachments({
       {attachments.map((attachment) => {
         const kind = attachmentKind(attachment);
         const url = assetUrl(attachment.url);
+
+        if (kind === 'sticker') {
+          // A deleted sticker keeps its row but the API withholds the image: show a placeholder.
+          return attachment.sticker && attachment.url ? (
+            <img
+              key={attachment.id ?? attachment.url}
+              className={styles.sticker}
+              src={url}
+              alt={attachment.sticker.name}
+              title={attachment.sticker.name}
+            />
+          ) : (
+            <span key={attachment.id ?? attachment.fileName} className={styles.stickerDeleted}>
+              <Sticker size={18} aria-hidden="true" />
+              {t('sticker.deleted')}
+            </span>
+          );
+        }
 
         if (kind === 'image') {
           return (

@@ -35,7 +35,7 @@ export function ForwardMessageDialog({
 }: ForwardMessageDialogProps) {
   const t = useTranslation();
   const { auth } = useAuthContext();
-  const { servers, directConversations } = useWorkspace();
+  const { servers, directConversations, isChannelEncrypted } = useWorkspace();
   const forward = useForwardMessage(sourceType, messageId);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Destination | null>(null);
@@ -47,7 +47,8 @@ export function ForwardMessageDialog({
     () => [
       ...servers.flatMap((server) =>
         server.channels
-          .filter((channel) => channel.type === 'TEXT')
+          // A forward is stored as plaintext, so it is not offered into a channel this client encrypts.
+          .filter((channel) => channel.type === 'TEXT' && !isChannelEncrypted(channel.id))
           .map((channel) => ({
             type: 'channel' as const,
             id: channel.id,
@@ -62,7 +63,7 @@ export function ForwardMessageDialog({
         group: t('forward.directMessagesGroup'),
       })),
     ],
-    [servers, directConversations, viewerId, t],
+    [servers, directConversations, isChannelEncrypted, viewerId, t],
   );
 
   const normalizedQuery = query.trim().toLowerCase();

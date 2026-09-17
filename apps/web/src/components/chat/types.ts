@@ -2,6 +2,7 @@ import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from
 import type { AuthState, Channel, Message, NotificationItem, Poll } from '@/api';
 import type { ActiveCallSummary, CallMode, CallState, RemoteMedia } from '@/helpers';
 import type { ComposerRestriction } from '@/hooks/useComposerRestrictions';
+import type { SoundboardPlayback } from '@/hooks/useSoundboardPlayback';
 import type { MemberIdentity } from '@/utils/memberIdentity';
 import type { ParsedMessageSearch } from '@/utils/messageSearch';
 
@@ -77,6 +78,8 @@ export interface ChatPanelCall {
   toggleMute: () => void;
   toggleCamera: () => void;
   end: () => void;
+  /** Server channel calls only; DM calls have no soundboard. */
+  soundboard?: SoundboardPlayback;
 }
 
 /** What `useChannelMessageActions` owns: everything about the message itself. */
@@ -112,6 +115,8 @@ export interface ChatPanelComposer {
   draft: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  /** Sends a server sticker as its own message, keeping the draft and any reply target. */
+  sendSticker: (stickerId: string) => Promise<void>;
   /** Clears the draft, files and reply after the draft was scheduled instead of sent. */
   clearAfterSchedule: () => void;
   setDraft: (value: string) => void;
@@ -131,6 +136,9 @@ export interface ChatPanelThread {
   close: () => void;
   setDraft: (value: string) => void;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  sendSticker: (stickerId: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  toggleReaction: (message: Message, emoji: string) => Promise<void>;
 }
 
 export interface ChatPanelChannelAvatar {

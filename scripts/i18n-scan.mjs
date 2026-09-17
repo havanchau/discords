@@ -22,8 +22,10 @@ const files = execFileSync(
     '--cached',
     '--others',
     '--exclude-standard',
-    `${webRoot}/**/*.ts`,
-    `${webRoot}/**/*.tsx`,
+    // Without `:(glob)` magic a pathspec `*` also matches `/`, so this covers every depth, including
+    // files directly under src (`AppShell.tsx`, `api.ts`), which `src/**/*.ts` skipped.
+    `${webRoot}/*.ts`,
+    `${webRoot}/*.tsx`,
   ],
   {
     encoding: 'utf8',
@@ -31,6 +33,8 @@ const files = execFileSync(
 )
   .split(/\r?\n/)
   .filter(Boolean)
+  // `git ls-files --cached` still lists files deleted in the working tree.
+  .filter((file) => fs.existsSync(file))
   .filter((file) => !file.startsWith(catalogDir));
 
 for (const file of files) {
@@ -160,6 +164,7 @@ function checkErrorCodeMap() {
   )
     .split(/\r?\n/)
     .filter(Boolean)
+    .filter((file) => fs.existsSync(file))
     .filter((file) => !file.startsWith('apps/api/src/common/i18n/'))
     .map((file) => fs.readFileSync(file, 'utf8'))
     .join('\n');

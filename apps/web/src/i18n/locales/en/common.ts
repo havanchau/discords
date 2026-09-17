@@ -30,6 +30,7 @@ export const common = {
   'error.fallback.cannot-delete-automod-rule': 'Cannot delete AutoMod rule',
   'error.fallback.cannot-delete-category': 'Cannot delete category',
   'error.fallback.cannot-delete-emoji': 'Cannot delete emoji',
+  'error.fallback.cannot-delete-message': 'Cannot delete message',
   'error.fallback.cannot-delete-role': 'Cannot delete role',
   'error.fallback.cannot-download-export': 'Cannot download the export',
   'error.fallback.cannot-forward-message': 'Cannot forward message',

@@ -41,6 +41,7 @@ export const auth = {
   'auth.brand.tagline': 'Thời gian thực',
   'auth.error.passwordMismatch': 'Mật khẩu không khớp.',
   'auth.field.authCode': 'Mã xác thực',
+  'auth.field.cancelDeletionCodeHint': 'Chỉ cần khi đã bật xác thực hai lớp.',
   'auth.field.authCodeHint': 'Nhập mã 6 chữ số từ ứng dụng xác thực, hoặc một mã khôi phục.',
   'auth.field.authCodePlaceholder': '123456 hoặc mã khôi phục',
   'auth.field.confirmNewPassword': 'Xác nhận mật khẩu mới',

@@ -259,12 +259,15 @@ export function useAuthSession({ onClearAuth }: UseAuthSessionOptions) {
     setError(null);
     setIsSubmitting(true);
     const form = new FormData(event.currentTarget);
+    // Required by the API only when the account has two-factor authentication enabled.
+    const code = formText(form, 'code').trim();
     try {
       await apiRequest('/auth/account-deletion/cancel', {
         method: 'POST',
         body: JSON.stringify({
           email: formText(form, 'email'),
           password: formText(form, 'password'),
+          ...(code ? { code } : {}),
         }),
       });
       setCanCancelDeletion(false);

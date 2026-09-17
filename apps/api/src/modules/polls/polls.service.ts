@@ -9,11 +9,13 @@ import {
   findFormattedDirectMessage,
   requireConversationMembership,
 } from '@/modules/direct-messages/direct-message.format';
+import { DirectMessagesService } from '@/modules/direct-messages/direct-messages.service';
 import { findBlockBetween } from '@/modules/friends/user-blocks';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { RealtimeUnreadService } from '@/modules/realtime/realtime-unread.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
 import {
@@ -41,6 +43,8 @@ export class PollsService {
     private readonly messages: MessagesService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimePublisher,
+    private readonly unread: RealtimeUnreadService,
+    private readonly directMessages: DirectMessagesService,
   ) {}
 
   async createChannelPoll(userId: string, channelId: string, dto: CreatePollDto) {
@@ -84,6 +88,16 @@ export class PollsService {
       'message:created',
       withoutViewerVotes(message),
     );
+    // The same unread badges as a socket send (`MessagesGateway.emitUnreadUpdated`), which a REST
+    // poll never passed through.
+    const recipients = await this.unread.listUnreadRecipients(message);
+    recipients.forEach((recipient) => {
+      this.realtime.emitToRoom(this.realtime.userRoom(recipient.userId), 'unread:updated', {
+        channelId: channel.id,
+        count: 1,
+        mentions: recipient.mentions,
+      });
+    });
     await this.messages.postAutoModAlerts(autoModAlerts);
     return { message };
   }
@@ -93,7 +107,7 @@ export class PollsService {
     const input = this.normalizeInput(dto);
     const conversation = await this.prisma.directConversation.findUniqueOrThrow({
       where: { id: conversationId },
-      select: { isGroup: true },
+      select: { isGroup: true, name: true },
     });
     const recipientIds = await this.conversationRecipientIds(conversationId, userId);
     // Same rule as direct messages: blocks only apply to 1-1 conversations.
@@ -123,12 +137,12 @@ export class PollsService {
     });
 
     const message = await findFormattedDirectMessage(this.prisma, messageId);
-    this.realtime.emitToRooms(
-      [
-        this.realtime.conversationRoom(conversationId),
-        ...recipientIds.map((recipientId) => this.realtime.userRoom(recipientId)),
-      ],
-      'dm:created',
+    // Emits `dm:created`, the unread badges and the DM notification, exactly as a direct message.
+    await this.directMessages.announceCreatedMessage(
+      userId,
+      conversationId,
+      conversation,
+      recipientIds,
       message,
     );
     return { message };

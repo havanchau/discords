@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { I18nService } from '@/common/i18n/i18n.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { notificationAuthorName } from '@/modules/messages/message.format';
 import { setMemberTimeout } from '@/modules/servers/member-timeout';
 import {
   blocksMessage,
@@ -76,12 +77,19 @@ export class AutoModScreeningService {
    * Evaluates a send or edit against the server's enabled rules in position order. Every fired rule
    * is audited and applies its timeout here; the caller throws when `blockedBy` is set and posts the
    * alerts. Evaluation stops at the first blocking rule.
+   *
+   * E2EE ciphertext cannot be evaluated, and any member can produce it with any passphrase, so it is
+   * refused outright while a rule applies to this author in this channel. A server without enabled
+   * rules, an exempt channel and an exempt role keep encrypted messages working.
    */
   async screen(input: AutoModScreenInput): Promise<AutoModVerdict> {
+    const hasEncrypted = input.texts.some(
+      (text) => Boolean(text) && isEncryptedContent(text ?? ''),
+    );
     const texts = input.texts.filter(
       (text): text is string => Boolean(text?.trim()) && !isEncryptedContent(text ?? ''),
     );
-    if (!texts.length) return PASS;
+    if (!texts.length && !hasEncrypted) return PASS;
 
     const server = await this.loadRules(input.serverId);
     const rules = server.rules.filter((rule) => !rule.exemptChannelIds.includes(input.channelId));
@@ -96,18 +104,23 @@ export class AutoModScreeningService {
               kind: true,
               timeoutUntil: true,
               roles: { select: { roleId: true } },
-              user: { select: { username: true } },
+              user: { select: { username: true, displayName: true, kind: true } },
             },
           })
         : null;
     // Every member send path has already required membership; nothing to evaluate against otherwise.
     if (!member && input.webhookAuthorName === undefined) return PASS;
     const roleIds = new Set(member?.roles.map((role) => role.roleId));
+    const applicable = rules.filter(
+      (rule) => !rule.exemptRoleIds.some((roleId) => roleIds.has(roleId)),
+    );
+    if (hasEncrypted && applicable.length) {
+      throw new BadRequestException('Encrypted messages are blocked while AutoMod is enabled');
+    }
 
     const fired: CompiledAutoModRule[] = [];
     let blocking: CompiledAutoModRule | null = null;
-    for (const rule of rules) {
-      if (rule.exemptRoleIds.some((roleId) => roleIds.has(roleId))) continue;
+    for (const rule of applicable) {
       if (!texts.some((text) => ruleMatches(rule, text))) continue;
       fired.push(rule);
       if (blocksMessage(rule)) {
@@ -143,7 +156,9 @@ export class AutoModScreeningService {
       alerts: await this.buildAlerts(
         input,
         server,
-        member?.user.username ?? input.webhookAuthorName ?? input.userId,
+        (member ? notificationAuthorName(member.user) : undefined) ??
+          input.webhookAuthorName ??
+          input.userId,
         fired,
         blocking,
         texts,

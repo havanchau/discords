@@ -10,6 +10,8 @@ import { PrivateFileStorageService } from '@/modules/uploads/private-file-storag
 import { anonymizeAccount } from './account-anonymization';
 import {
   ACCOUNT_ANONYMIZATION_TIMEOUT_MS,
+  ACCOUNT_DELETION_CANCEL_LIMIT,
+  ACCOUNT_DELETION_CANCEL_WINDOW_MS,
   ACCOUNT_DELETION_GRACE_MS,
   ACCOUNT_DELETION_REQUEST_LIMIT,
   ACCOUNT_DELETION_REQUEST_WINDOW_MS,
@@ -34,6 +36,18 @@ export class AccountDeletionService {
       `account-deletion:${userId}`,
       ACCOUNT_DELETION_REQUEST_LIMIT,
       ACCOUNT_DELETION_REQUEST_WINDOW_MS,
+    );
+  }
+
+  /**
+   * Per email address, not per user id: an unknown address is counted the same way, so the limit
+   * does not reveal which addresses have an account.
+   */
+  hitCancelLimit(email: string) {
+    return this.limiter.hit(
+      `account-deletion-cancel:${email.trim().toLowerCase()}`,
+      ACCOUNT_DELETION_CANCEL_LIMIT,
+      ACCOUNT_DELETION_CANCEL_WINDOW_MS,
     );
   }
 
@@ -78,9 +92,9 @@ export class AccountDeletionService {
   }
 
   /**
-   * Public: the account has no session left. The password is the proof; a second factor is not
-   * asked, because cancelling only makes signing in possible again, and signing in still asks for it.
-   * An unknown email and a wrong password get the same error.
+   * Public: the account has no session left. The password is the proof, plus the authenticator or
+   * recovery code when two-factor authentication is enabled, so a leaked password alone cannot tell
+   * an attacker it is correct. An unknown email, a wrong password and a wrong code get the same error.
    */
   async cancelDeletion(dto: CancelAccountDeletionDto) {
     const user = await this.prisma.user.findUnique({
@@ -88,8 +102,8 @@ export class AccountDeletionService {
       select: { id: true, deletionRequestedAt: true },
     });
     if (!user) throw new BadRequestException('Invalid password or code');
-    await this.twoFactor.verifyReauthentication(user.id, dto.password, undefined, {
-      requireSecondFactor: false,
+    await this.twoFactor.verifyReauthentication(user.id, dto.password, dto.code, {
+      requireSecondFactor: true,
     });
     if (!user.deletionRequestedAt) {
       throw new ConflictException('Account is not scheduled for deletion');

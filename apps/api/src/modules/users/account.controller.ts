@@ -4,8 +4,6 @@ import {
   Get,
   Header,
   HttpCode,
-  HttpException,
-  HttpStatus,
   Param,
   Post,
   Res,
@@ -13,11 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import type { LimitResult } from '@/common/redis-fixed-window-limiter';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RateLimit } from '@/common/rate-limit.decorator';
 import { RequestUser } from '@/common/request-user';
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
+import { rejectWhenLimited } from './reject-when-limited';
 import { AccountDeletionService } from './account-deletion.service';
 import { AccountExportService } from './account-export.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
@@ -76,14 +74,4 @@ export class AccountController {
       disposition: `attachment; filename="${archive.fileName}"`,
     });
   }
-}
-
-/** Keyed by account rather than IP (the @RateLimit guard's key), with the guard's 429 shape. */
-function rejectWhenLimited(response: Response, limit: LimitResult) {
-  if (limit.allowed) return;
-  response.setHeader('Retry-After', String(limit.retryAfterSeconds));
-  throw new HttpException(
-    `Rate limit exceeded. Retry after ${limit.retryAfterSeconds}s.`,
-    HttpStatus.TOO_MANY_REQUESTS,
-  );
 }

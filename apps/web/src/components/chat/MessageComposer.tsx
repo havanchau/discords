@@ -11,6 +11,7 @@ import {
   Slash,
   SmilePlus,
   Square,
+  Sticker,
   X,
 } from 'lucide-react';
 import { Channel } from '@/api';
@@ -25,6 +26,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { EmojiPicker } from './EmojiPicker';
+import { StickerPicker } from './StickerPicker';
 import styles from './MessageComposer.module.css';
 import { ScheduledMessagesBar } from './ScheduledMessagesBar';
 import { ScheduleSendButton } from './ScheduleSendButton';
@@ -48,6 +50,7 @@ export function MessageComposer({
 }: MessageComposerProps) {
   const t = useTranslation();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [isStickerOpen, setIsStickerOpen] = useState(false);
   const isMessageSending = composer.pendingAction === 'send-message';
   const { disabledReason, slowmodeSeconds, retryAfterSeconds } = composer.restriction;
   const isComposerDisabled = !channel || isMessageSending || Boolean(disabledReason);
@@ -200,6 +203,29 @@ export function MessageComposer({
               setIsEmojiOpen(false);
             }}
           />
+        </PopoverContent>
+      </PopoverRoot>
+
+      <PopoverRoot open={isStickerOpen} onOpenChange={setIsStickerOpen}>
+        <PopoverTrigger asChild>
+          <IconButton
+            label={t('sticker.picker.open')}
+            className={styles.attachButton}
+            disabled={isComposerDisabled || retryAfterSeconds > 0}
+          >
+            <Sticker size={18} aria-hidden="true" />
+          </IconButton>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start">
+          {channel ? (
+            <StickerPicker
+              serverId={channel.serverId}
+              onSelect={(stickerId) => {
+                setIsStickerOpen(false);
+                void composer.sendSticker(stickerId);
+              }}
+            />
+          ) : null}
         </PopoverContent>
       </PopoverRoot>
 

@@ -74,3 +74,15 @@ export function formatMessage(
     forwardOrigin: message.deletedAt ? null : formatForwardOrigin(message),
   };
 }
+
+/**
+ * How a notification or alert names a message author. A bot's username is a generated `bot-<hex>`,
+ * so a bot is named by its display name (the name its owner gave it); people keep their username.
+ */
+export function notificationAuthorName(author: {
+  username: string;
+  displayName: string;
+  kind?: string | null;
+}) {
+  return author.kind === 'BOT' ? author.displayName : author.username;
+}

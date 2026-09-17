@@ -225,18 +225,48 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
     serverId: true,
     server: { select: { name: true } },
   } as const;
-  const [createdStickers, createdSoundboardClips] = await Promise.all([
-    prisma.serverSticker.findMany({
-      where: { creatorId: userId },
-      take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
-      select: assetSelect,
-    }),
-    prisma.soundboardClip.findMany({
-      where: { creatorId: userId },
-      take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
-      select: { ...assetSelect, durationMs: true },
-    }),
-  ]);
+  const [createdStickers, createdSoundboardClips, serverTemplates, serverReportsFiled] =
+    await Promise.all([
+      prisma.serverSticker.findMany({
+        where: { creatorId: userId },
+        take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
+        select: assetSelect,
+      }),
+      prisma.soundboardClip.findMany({
+        where: { creatorId: userId },
+        take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
+        select: { ...assetSelect, durationMs: true },
+      }),
+      // Saved templates are the owner's own copy of a server's structure (no messages, no members).
+      prisma.serverTemplate.findMany({
+        where: { creatorId: userId },
+        take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
+        orderBy: { createdAt: 'asc' },
+        select: {
+          name: true,
+          sourceServerId: true,
+          roles: true,
+          categories: true,
+          channels: true,
+          overrides: true,
+          onboarding: true,
+          createdAt: true,
+        },
+      }),
+      // Reports the owner filed against a listed server; never reports filed about the owner's servers.
+      prisma.serverReport.findMany({
+        where: { reporterId: userId },
+        take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
+        orderBy: { createdAt: 'asc' },
+        select: {
+          serverId: true,
+          reason: true,
+          details: true,
+          createdAt: true,
+          server: { select: { name: true } },
+        },
+      }),
+    ]);
 
   const { twoFactorEnabledAt, ...profileFields } = profile;
 
@@ -333,6 +363,11 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
     ),
     createdSoundboardClips: bounded(
       createdSoundboardClips.map(({ server, ...clip }) => ({ ...clip, serverName: server.name })),
+      ACCOUNT_EXPORT_LIST_LIMIT,
+    ),
+    serverTemplates: bounded(serverTemplates, ACCOUNT_EXPORT_LIST_LIMIT),
+    serverReportsFiled: bounded(
+      serverReportsFiled.map(({ server, ...report }) => ({ ...report, serverName: server.name })),
       ACCOUNT_EXPORT_LIST_LIMIT,
     ),
   };

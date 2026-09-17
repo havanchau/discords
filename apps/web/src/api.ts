@@ -172,6 +172,9 @@ import type {
   CreateBotInput,
   CreateBotResult as ServerCreateBotResult,
   OwnedBot as ServerOwnedBot,
+  ServerSticker as ServerServerSticker,
+  SoundboardClip as ServerSoundboardClip,
+  SoundboardPlayedPayload,
 } from '@discord-clone/shared';
 
 export type AccountDeletionScheduledResult = Json<ServerAccountDeletionScheduledResult>;
@@ -247,6 +250,9 @@ export type CreateBotResult = Json<ServerCreateBotResult>;
 export type BotAuthorization = Json<BotAuthorizationView>;
 export type { AuthorizeBotInput, BotSecret, CreateBotInput };
 export type ServerTemplateSummary = Json<ServerServerTemplateSummary>;
+export type ServerSticker = Json<ServerServerSticker>;
+export type SoundboardClip = Json<ServerSoundboardClip>;
+export type { SoundboardPlayedPayload };
 export type {
   DiscoveryJoinResult,
   DiscoveryServerCard,
@@ -340,6 +346,30 @@ export async function uploadFile(file: File, token: string): Promise<MessageAtta
 
   const result = (await response.json()) as { attachment: MessageAttachment };
   return result.attachment;
+}
+
+/**
+ * Posts a multipart form to an API route that stores the file itself (stickers, soundboard clips).
+ * `apiRequest` always sends JSON, so the browser must set the multipart boundary here.
+ */
+export async function postMultipart<T>(path: string, form: FormData, token: string): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'X-Locale': requestLocale },
+    body: form,
+  });
+
+  if (response.status === 401 && authRefreshConfig) {
+    const nextAuth = await refreshAuth();
+    return postMultipart(path, form, nextAuth.accessToken);
+  }
+
+  if (!response.ok) {
+    const error = await readErrorBody(response);
+    throw new ApiError(error.message, error.code, response.status, response.statusText);
+  }
+
+  return (await response.json()) as T;
 }
 
 /** Uploads a message's files; `voice` is the metadata of the single recording a voice send carries. */

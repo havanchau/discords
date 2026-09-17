@@ -110,6 +110,7 @@ export const servers = {
   'server.dialog.actionGroup': 'Server action',
   'server.dialog.create': 'Create a server',
   'server.dialog.join': 'Join a server',
+  'server.notice.joined': 'Joined the server',
   'server.dialog.tabCreate': 'Create',
   'server.dialog.tabJoin': 'Join',
   'server.field.description': 'Description',

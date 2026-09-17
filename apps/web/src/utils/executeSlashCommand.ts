@@ -5,6 +5,8 @@ import { parseSlashCommand } from './slashCommands';
 
 interface ExecuteSlashCommandOptions {
   content: string;
+  /** A poll stores its question and options in plaintext, so it is refused in an encrypted channel. */
+  isChannelEncrypted: boolean;
   auth: AuthState;
   server: ServerDetail | null;
   channel: Channel | null;
@@ -26,6 +28,7 @@ export type SlashCommandExecutionResult = { handled: false; content: string } | 
 export async function executeSlashCommand({
   content,
   auth,
+  isChannelEncrypted,
   server,
   channel,
   openServer,
@@ -52,6 +55,10 @@ export async function executeSlashCommand({
 
   if (command.name === 'poll') {
     if (!channel) return { handled: true };
+    if (isChannelEncrypted) {
+      setWorkspaceError(t('poll.error.encryptedChannel'));
+      return { handled: true };
+    }
     const parsed = parsePollCommand(command.args, Date.now());
     if ('errorKey' in parsed) {
       setWorkspaceError(t(parsed.errorKey, parsed.errorVars));

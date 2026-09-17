@@ -146,15 +146,25 @@ export function useServerModeration({
       );
     };
 
+    // `needsOnboarding` lives on the server detail, so screening changes refetch it.
+    const handleOnboardingUpdated = (payload: { serverId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.serverOnboarding(payload.serverId),
+      });
+    };
+
     socket.on(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
     socket.on(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
     socket.on(RealtimeEvents.AccountDeleted, handleAccountDeleted);
+    socket.on(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
       socket.off(RealtimeEvents.AccountDeleted, handleAccountDeleted);
+      socket.off(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
     };
-  }, [socket, openHome, patchServer, patchServers]);
+  }, [socket, openHome, patchServer, patchServers, queryClient]);
 
   // The server id is part of the query key, so a slow response for the previous server can no
   // longer land on the current one; the manual ref guard this used to need is gone.

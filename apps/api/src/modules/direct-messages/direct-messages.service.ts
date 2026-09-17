@@ -129,14 +129,27 @@ export class DirectMessagesService {
       include: directMessageInclude,
     });
     const [message] = await formatDirectMessages(this.prisma, [created]);
-    await Promise.all([
-      this.prisma.directConversation.update({
-        where: { id: conversationId },
-        data: { updatedAt: new Date() },
-      }),
-      this.markRead(userId, conversationId, message.id, { emit: false }),
-    ]);
+    await this.prisma.directConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+    await this.announceCreatedMessage(userId, conversationId, conversation, recipientIds, message);
+    return { message };
+  }
 
+  /**
+   * Everything after a direct message is stored: the author's read state, the live message, the
+   * recipients' unread badges and notifications. Direct polls call it too, so a poll arrives exactly
+   * like a message.
+   */
+  async announceCreatedMessage(
+    authorId: string,
+    conversationId: string,
+    conversation: { isGroup: boolean; name: string | null },
+    recipientIds: string[],
+    message: FormattedDirectMessage,
+  ) {
+    await this.markRead(authorId, conversationId, message.id, { emit: false });
     this.realtime.emitToRooms(
       [
         this.realtime.conversationRoom(conversationId),
@@ -150,7 +163,7 @@ export class DirectMessagesService {
       recipientIds.map((recipientId) =>
         this.notifications.create({
           userId: recipientId,
-          actorId: userId,
+          actorId: authorId,
           type: 'DIRECT_MESSAGE',
           title: directMessageNotificationTitle(conversation, message.author.displayName),
           body: (message.content || message.forwardOrigin?.content || '').slice(0, 180),
@@ -158,7 +171,6 @@ export class DirectMessagesService {
         }),
       ),
     );
-    return { message };
   }
 
   async markConversationRead(userId: string, conversationId: string, messageId?: string) {
@@ -250,6 +262,8 @@ export class DirectMessagesService {
     });
   }
 }
+
+type FormattedDirectMessage = Awaited<ReturnType<typeof formatDirectMessages>>[number];
 
 function directMessageNotificationTitle(
   conversation: { isGroup: boolean; name: string | null },

@@ -22,6 +22,7 @@ import { DmCallMode } from './dm-call-rings';
 import { DmCallsService, parseDmCallKey } from './dm-calls.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
+import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
 import { getSocketUser } from './socket-user';
 
@@ -38,6 +39,7 @@ export class VoiceGateway {
     private readonly publisher: RealtimePublisher,
     private readonly rateLimit: SocketRateLimitService,
     private readonly soundboard: SoundboardPlaybackService,
+    private readonly socketErrors: SocketErrorTranslator,
   ) {}
 
   @SubscribeMessage('voice:join')
@@ -176,7 +178,7 @@ export class VoiceGateway {
       );
       return { ok: true };
     } catch (error) {
-      if (error instanceof HttpException) return { error: error.message };
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
       throw error;
     }
   }

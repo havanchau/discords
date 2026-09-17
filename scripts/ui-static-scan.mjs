@@ -49,7 +49,10 @@ const componentModuleRules = [
   },
 ];
 
-const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+// Untracked files too, so a new file is checked before it is staged.
+const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+  encoding: 'utf8',
+})
   .split(/\r?\n/)
   .filter(Boolean)
   .filter((file) => file !== 'scripts/ui-static-scan.mjs')

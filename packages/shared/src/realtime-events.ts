@@ -37,6 +37,8 @@ export const RealtimeEvents = {
   ServerStickersUpdated: 'server:stickers-updated',
   ServerSoundboardUpdated: 'server:soundboard-updated',
   ServerEventsUpdated: 'server:events-updated',
+  /** `{ serverId }` after rules screening settings change; clients refetch the server detail. */
+  ServerOnboardingUpdated: 'server:onboarding-updated',
   PollUpdated: 'poll:updated',
   ScheduledMessageUpdated: 'scheduled-message:updated',
   NotificationCreated: 'notification:created',

@@ -13,6 +13,7 @@ import { discovery } from './discovery';
 import { shortcuts } from './shortcuts';
 import { webhooks } from './webhooks';
 import { bots } from './bots';
+import { stickersSoundboard } from './stickers-soundboard';
 
 export const vi = {
   ...common,
@@ -28,4 +29,5 @@ export const vi = {
   ...shortcuts,
   ...webhooks,
   ...bots,
+  ...stickersSoundboard,
 } as const;

@@ -157,6 +157,7 @@ Written back after implementation, so the doc matches the code:
 - `X-Locale` needs no CORS configuration change.
 - `class-validator` field messages stay English (see Trade-offs).
 - The ~70 non-`Error` fallback strings in the hooks were translated as well; they were not called out in the original scope but are user-facing.
+- Socket acks that refuse with `{ error }` (`message:create` in `messages.gateway.ts`, `soundboard:play` in `voice.gateway.ts`) never pass through the HTTP filter, so they were English. They now go through `SocketErrorTranslator` (`apps/api/src/modules/realtime/socket-error-translator.service.ts`), which uses the same literal-to-code lookup as the filter (`translateErrorMessage` in `common/http-exception.filter.ts`). The socket carries no `X-Locale`, so the locale is the user's stored `User.locale`, read only on a refusal, then the handshake's `Accept-Language`, then `en`. The ack stays `{ error: string }`, with no `code`.
 
 ## Risks & Rollback
 

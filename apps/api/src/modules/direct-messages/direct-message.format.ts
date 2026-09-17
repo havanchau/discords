@@ -1,10 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { formatForwardOrigin } from '@/common/forward-snapshot';
-import {
-  attachmentStickerInclude,
-  formatAttachment,
-} from '@/modules/messages/message-attachments';
+import { attachmentStickerInclude, formatAttachment } from '@/modules/messages/message-attachments';
 import { formatPoll, pollInclude } from '@/modules/polls/poll.format';
 
 const authorSelect = {

@@ -14,6 +14,7 @@ import { RealtimeHeartbeatService } from './realtime-heartbeat.service';
 import { RealtimePublisherModule } from './realtime-publisher.module';
 import { RealtimeUnreadService } from './realtime-unread.service';
 import { SocketAuthService } from './socket-auth.service';
+import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
 import { VoiceGateway } from './voice.gateway';
 
@@ -37,6 +38,7 @@ import { VoiceGateway } from './voice.gateway';
     RealtimeHeartbeatService,
     RealtimeUnreadService,
     SocketAuthService,
+    SocketErrorTranslator,
     SocketRateLimitService,
   ],
 })

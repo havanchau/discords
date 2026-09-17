@@ -120,7 +120,7 @@ export class SoundboardService {
     await this.permissions.requireServerPermission(userId, serverId, Permission.ManageServer);
     const clip = await this.prisma.soundboardClip.findFirst({
       where: { id: clipId, serverId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, url: true, mimeType: true },
     });
     if (!clip) throw new NotFoundException('Soundboard clip not found');
 
@@ -131,6 +131,7 @@ export class SoundboardService {
       }),
     ]);
     this.emitUpdated(serverId);
+    await this.uploads.removeStoredFileQuietly(clip.url, clip.mimeType);
     return { ok: true };
   }
 

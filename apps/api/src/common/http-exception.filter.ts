@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { I18nService } from './i18n/i18n.service';
+import type { Locale } from './i18n/locale';
 import { ERROR_MESSAGE_CODES, ERROR_MESSAGE_PREFIX_CODES } from './i18n/error-codes';
 import type { RequestUser } from './request-user';
 
@@ -55,22 +56,32 @@ export class TranslatingExceptionFilter implements ExceptionFilter {
     }
 
     const message = typeof rawMessage === 'string' ? rawMessage : exception.message;
-    const code = resolveCode(message);
+    const code = resolveErrorCode(message);
 
     response.status(status).json({
       statusCode: status,
       code: code ?? null,
-      message: code ? this.i18n.t(locale, code, { detail: detailOf(message, code) }) : message,
+      message: translateErrorMessage(this.i18n, locale, message),
     });
   }
 }
 
-function resolveCode(message: string) {
+/** The stable code behind a thrown English literal, or null when the literal is not mapped. */
+export function resolveErrorCode(message: string) {
   const exact = (ERROR_MESSAGE_CODES as Record<string, string>)[message];
   if (exact) return exact as Parameters<I18nService['t']>[1];
 
   const prefixed = ERROR_MESSAGE_PREFIX_CODES.find((entry) => message.startsWith(entry.prefix));
   return prefixed ? (prefixed.code as Parameters<I18nService['t']>[1]) : null;
+}
+
+/**
+ * The thrown literal in `locale`; an unmapped literal stays English. Shared with socket acks, which
+ * never pass through this filter.
+ */
+export function translateErrorMessage(i18n: I18nService, locale: Locale, message: string) {
+  const code = resolveErrorCode(message);
+  return code ? i18n.t(locale, code, { detail: detailOf(message, code) }) : message;
 }
 
 function detailOf(message: string, code: string) {

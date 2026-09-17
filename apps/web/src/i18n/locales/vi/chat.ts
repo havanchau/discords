@@ -88,6 +88,7 @@ export const chat = {
   'message.action.reply': 'Trả lời',
   'message.action.unpin': 'Bỏ ghim tin nhắn',
   'message.attachmentOnly': 'Tệp đính kèm',
+  'thread.action.confirmDelete': 'Bấm lần nữa để xoá',
   'message.deleted': 'Tin nhắn đã xoá',
   'message.edit.ariaLabel': 'Sửa tin nhắn',
   'message.edited': 'đã sửa',
@@ -120,6 +121,8 @@ export const chat = {
   'poll.ariaLabel': 'Bình chọn: {question}',
   'poll.close': 'Đóng bình chọn',
   'poll.closesAt': 'Đóng lúc {date}',
+  'poll.error.encryptedChannel':
+    'Không thể tạo bình chọn trong channel đã mã hoá: câu hỏi và lựa chọn được lưu dưới dạng không mã hoá.',
   'poll.error.tooManyOptions': 'Một cuộc bình chọn có tối đa 10 lựa chọn.',
   'poll.error.unknownFlag':
     'Tuỳ chọn bình chọn {flag} không hợp lệ. Dùng --multiple, --show-voters hoặc --expires=30m, 12h, 3d.',

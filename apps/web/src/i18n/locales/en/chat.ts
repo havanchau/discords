@@ -87,6 +87,7 @@ export const chat = {
   'message.action.reply': 'Reply',
   'message.action.unpin': 'Unpin message',
   'message.attachmentOnly': 'Attachment',
+  'thread.action.confirmDelete': 'Click again to delete',
   'message.deleted': 'Message deleted',
   'message.edit.ariaLabel': 'Edit message',
   'message.edited': 'edited',
@@ -119,6 +120,8 @@ export const chat = {
   'poll.ariaLabel': 'Poll: {question}',
   'poll.close': 'Close poll',
   'poll.closesAt': 'Closes {date}',
+  'poll.error.encryptedChannel':
+    'Polls are not available in an encrypted channel: their question and options are stored unencrypted.',
   'poll.error.tooManyOptions': 'A poll can have at most 10 options.',
   'poll.error.unknownFlag':
     'Unknown poll option {flag}. Use --multiple, --show-voters or --expires=30m, 12h, 3d.',

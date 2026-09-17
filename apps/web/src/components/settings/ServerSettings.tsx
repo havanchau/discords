@@ -6,6 +6,8 @@ import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
+import { ServerSoundboardSection } from './ServerSoundboardSection';
+import { ServerStickersSection } from './ServerStickersSection';
 import { ServerDiscoverySettings } from './ServerDiscoverySettings';
 import { ServerOnboardingSettings } from './ServerOnboardingSettings';
 import { ServerTemplatesSection } from './ServerTemplatesSection';
@@ -180,6 +182,14 @@ export function ServerSettings({
           createEmoji={createEmoji}
           deleteEmoji={deleteEmoji}
         />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerStickersSection server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerSoundboardSection server={server} />
       ) : null}
 
       {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (

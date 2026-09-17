@@ -41,6 +41,7 @@ export const auth = {
   'auth.brand.tagline': 'Realtime',
   'auth.error.passwordMismatch': 'Passwords do not match.',
   'auth.field.authCode': 'Authentication code',
+  'auth.field.cancelDeletionCodeHint': 'Required only if two-factor authentication is on.',
   'auth.field.authCodeHint':
     'Enter the 6-digit code from your authenticator app, or a recovery code.',
   'auth.field.authCodePlaceholder': '123456 or recovery code',

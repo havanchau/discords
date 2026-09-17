@@ -6,6 +6,7 @@ import { useAuthContext } from '@/contexts/appContexts';
 import { useSavedMessages } from '@/hooks/useSavedMessages';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { DialogContent, DialogRoot } from '@/components/ui';
+import { requestMessageJump } from '@/utils/pendingMessageJump';
 import { SavedMessageRow } from './SavedMessageRow';
 import styles from './SavedMessagesPanel.module.css';
 
@@ -57,6 +58,11 @@ export function SavedMessagesPanel({
   function jump(savedMessage: SavedMessage) {
     if (savedMessage.sourceType === 'CHANNEL') {
       if (!savedMessage.serverId || !savedMessage.channelId) return;
+      requestMessageJump({
+        messageId: savedMessage.originalMessageId,
+        channelId: savedMessage.channelId,
+        conversationId: null,
+      });
       onOpenChannel(savedMessage.serverId, savedMessage.channelId);
     } else {
       const conversation = savedMessage.conversationId
@@ -66,6 +72,11 @@ export function SavedMessagesPanel({
         setActionError(t('saved.conversationNotLoaded'));
         return;
       }
+      requestMessageJump({
+        messageId: savedMessage.originalMessageId,
+        channelId: null,
+        conversationId: conversation.id,
+      });
       onOpenConversation(conversation);
     }
     onOpenChange(false);

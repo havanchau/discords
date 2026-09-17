@@ -189,6 +189,7 @@ Written back after implementation, so the doc matches the code:
   - `MessageRow` shows a "Bot" badge for `author.kind === 'BOT'`, and the profile card still opens because a bot is a member.
   - Copy: `i18n/locales/{en,vi}/bots.ts`.
 - **New translated API errors**: `Bot already in this server`, `Bot limit reached`, `Bot name is too short`, `Bot not found`, `Cannot grant a bot permissions you do not have`, `Invalid bot token`, `Missing bot token`, `This bot is banned from this server`.
+- **Grant rule shared (2026-09-17):** `installerCanGrant` moved to `apps/api/src/modules/permissions/role-grant.ts` as `canGrantRoles`, and role create, edit, delete, add and remove now enforce it too. Mention push and AutoMod alerts name a bot by its display name. See [wave-3-2-follow-ups.md](./wave-3-2-follow-ups.md).
 
 ## Risks & Rollback
 

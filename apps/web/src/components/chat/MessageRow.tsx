@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui';
 import { useServerEmojiContext } from '@/contexts/ServerEmojiContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import { SaveMessageAction } from '@/components/saved/SaveMessageAction';
 import type { MemberIdentity } from '@/utils/memberIdentity';
@@ -173,6 +174,7 @@ export const MessageRow = memo(function MessageRow({
   onJumpToMessage,
 }: MessageRowProps) {
   const t = useTranslation();
+  const { isChannelEncrypted } = useWorkspace();
   const dates = useDateFormat();
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isSaveOpen, setIsSaveOpen] = useState(false);
@@ -196,8 +198,9 @@ export const MessageRow = memo(function MessageRow({
   const canClosePoll = message.authorId === auth.user.id || actions.canManageMessages;
   const isEditing = actions.editingMessageId === message.id;
   const isPinned = pinnedMessageIds.includes(message.id);
-  // An encrypted message is stored as ciphertext, which a forward would copy unreadably.
-  const canForward = !message.isEncrypted;
+  // An encrypted message is stored as ciphertext, which a forward would copy unreadably; in a channel
+  // this client encrypts, a readable older message would leak out of it as plaintext.
+  const canForward = !message.isEncrypted && !isChannelEncrypted(message.channelId);
   // Reports go to this server's moderators; the API refuses reporting your own message.
   const canReport = Boolean(serverId) && message.authorId !== auth.user.id;
   const isPopoverOpen = isEmojiOpen || isSaveOpen;

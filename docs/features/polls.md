@@ -149,6 +149,7 @@ Written back after implementation, so the doc matches the code:
 - Poll messages cannot be edited, and voting refuses timed-out members; both follow from existing rules (immutable question, timeout gates reactions) but were not written down.
 - `/poll` gained the `--multiple`, `--show-voters` and `--expires=` segments, since the manual DM scenario needs `showVoters` and the spec gave the composer no other way to set it.
 - Revoking a vote is not offered (open question 8 in [open-questions.md](open-questions.md): voting again replaces the vote; no remove action).
+- **Delivery (2026-09-17):** a channel poll emits `unread:updated` to unread recipients after `message:created`; a direct poll goes through `DirectMessagesService.announceCreatedMessage` (author read state, `dm:created`, `dm:unread`, `DIRECT_MESSAGE` notification). `/poll` is refused by the web client in a channel it encrypts. See [wave-3-2-follow-ups.md](./wave-3-2-follow-ups.md).
 
 ## Risks & Rollback
 

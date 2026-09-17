@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { AcceptServerOnboardingResult, ServerOnboardingView } from '@discord-clone/shared';
+import {
+  RealtimeEvents,
+  type AcceptServerOnboardingResult,
+  type ServerOnboardingView,
+} from '@discord-clone/shared';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { AcceptOnboardingDto } from './dto/accept-onboarding.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import {
@@ -22,6 +27,7 @@ export class ServerOnboardingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
+    private readonly realtime: RealtimePublisher,
   ) {}
 
   async getOnboarding(userId: string, serverId: string): Promise<ServerOnboardingView> {
@@ -84,6 +90,13 @@ export class ServerOnboardingService {
         },
       }),
     ]);
+    // Persist first, emit second. Open tabs refetch the server detail, so a member who has not
+    // accepted sees the rules gate instead of 403 refusals, and turning screening off lifts it.
+    this.realtime.emitToRoom(
+      this.realtime.serverRoom(serverId),
+      RealtimeEvents.ServerOnboardingUpdated,
+      { serverId },
+    );
     return formatView(updated, member.onboardingAcceptedAt !== null);
   }
 

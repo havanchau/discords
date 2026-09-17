@@ -115,7 +115,7 @@ export class StickersService {
     await this.permissions.requireServerPermission(userId, serverId, Permission.ManageServer);
     const sticker = await this.prisma.serverSticker.findFirst({
       where: { id: stickerId, serverId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, url: true, mimeType: true },
     });
     if (!sticker) throw new NotFoundException('Sticker not found');
 
@@ -126,6 +126,8 @@ export class StickersService {
       }),
     ]);
     this.emitUpdated(serverId);
+    // After the commit: sent messages already stopped exposing the url (their reference is null now).
+    await this.uploads.removeStoredFileQuietly(sticker.url, sticker.mimeType);
     return { ok: true };
   }
 
@@ -136,7 +138,6 @@ export class StickersService {
       { serverId },
     );
   }
-
 }
 
 function auditEntry(

@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import { resolveMemberIdentity } from '@/utils/memberIdentity';
 import { Button } from './ui';
 import { cn } from '@/utils/cn';
+import { clearMessageJump, usePendingMessageJump } from '@/utils/pendingMessageJump';
 import styles from './ChatPanel.module.css';
 import type {
   ActiveDialog,
@@ -62,6 +63,16 @@ export function ChatPanel({
   const jumpToMessage = useCallback((messageId: string) => {
     messageListRef.current?.scrollToMessage(messageId);
   }, []);
+
+  // A jump requested before this channel opened (Saved Messages) runs once its message has loaded.
+  const pendingJump = usePendingMessageJump();
+  const channelId = session.channel?.id;
+  useEffect(() => {
+    if (!pendingJump || pendingJump.channelId !== channelId || messages.isLoading) return;
+    if (!messages.visible.some((message) => message.id === pendingJump.messageId)) return;
+    clearMessageJump();
+    jumpToMessage(pendingJump.messageId);
+  }, [pendingJump, channelId, messages.isLoading, messages.visible, jumpToMessage]);
 
   // Announce incoming messages to screen readers
   const lastMessage = messages.all[messages.all.length - 1];
@@ -199,6 +210,13 @@ export function ChatPanel({
         onClose={thread.close}
         onDraftChange={thread.setDraft}
         onSend={thread.sendMessage}
+        onSendSticker={thread.sendSticker}
+        messageActions={{
+          viewerId: session.auth.user.id,
+          canManageMessages: messageActions.canManageMessages,
+          onToggleReaction: thread.toggleReaction,
+          onDeleteMessage: thread.deleteMessage,
+        }}
       />
 
       <AttachmentPreviewDialog

@@ -30,6 +30,7 @@ export const common = {
   'error.fallback.cannot-delete-automod-rule': 'Không xóa được quy tắc AutoMod',
   'error.fallback.cannot-delete-category': 'Không xoá được danh mục',
   'error.fallback.cannot-delete-emoji': 'Không xoá được emoji',
+  'error.fallback.cannot-delete-message': 'Không thể xoá tin nhắn',
   'error.fallback.cannot-delete-role': 'Không xoá được vai trò',
   'error.fallback.cannot-download-export': 'Không tải được bản xuất dữ liệu',
   'error.fallback.cannot-forward-message': 'Không thể chuyển tiếp tin nhắn',

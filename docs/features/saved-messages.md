@@ -109,6 +109,10 @@ Migration `20260917001000_add_saved_messages`. `channelId`/`conversationId`/`ser
 - **Reusing the notification inbox/push vs. a dedicated reminder channel**: the inbox and push paths already handle preference muting, throttling, and locale (`PushService.shouldSendPush`, `:114-132`; i18n resolution, `:76`); building a parallel delivery path would duplicate all of that for one notification type. Cost: a reminder is subject to the same "recipient is `ONLINE` skips push" rule as a mention, which may surprise a user expecting a reminder to always push.
 - **Access re-check at read time vs. at save/reminder time**: access can change after either of those moments (a member is removed from the channel later), so caching an `isAccessible` flag would go stale; recomputing on every `GET` costs one permission check per distinct source channel (DM membership and message liveness are one batched query each) but stays correct. Cost: the list endpoint is `O(channels)` permission checks; acceptable at the `max 100` page size.
 
+## Deviations From The Original Design
+
+- **Jump to message (2026-09-17):** "Jump" now also scrolls to the saved message. A pending jump (`apps/web/src/utils/pendingMessageJump.ts`, 10 s lifetime) is set before the channel or conversation opens and runs once that view has loaded the message; a message older than the loaded history is not reached. See [wave-3-2-follow-ups.md](./wave-3-2-follow-ups.md).
+
 ## Risks & Rollback
 
 - **Risk**: the sweep is a per-instance in-process timer with no distributed lock beyond the conditional claim. Because the claim runs before any delivery and only the instance whose claim affected the row delivers, two instances never both send the notification or the push. The cost is at-most-once delivery: if the process dies, or the notification/push call fails, between the claim and the delivery, that reminder is lost (logged, not retried).

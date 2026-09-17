@@ -125,6 +125,26 @@ Sending a sticker reuses `POST /channels/:channelId/messages` (`messages.control
 - **`MessageAttachment.kind` vs. a separate `StickerMessage` join table**: a sticker-in-a-message is genuinely still an attachment (an image the message carries), so extending the existing generic attachment model with a discriminator column reuses every existing attachment query, rendering path, and cascade-delete behavior; a parallel table would duplicate all of that for one extra field's worth of distinction.
 - **No animated stickers in this phase**: matches `custom-emoji.md`'s own precedent of deferring "animated emoji controls" (`custom-emoji.md:21`); APNG/Lottie playback and larger asset sizes are a meaningfully bigger client-rendering and storage-size question than this doc's static-image slice.
 
+## Deviations From The Original Design
+
+Written back after implementation, so the doc matches the code:
+
+- **Migration** is `20260917014000_add_stickers_and_soundboard`, not `20260917030000`. Both tables carry `mimeType` and `byteSize`; `SoundboardClip` also stores `durationMs`.
+- **No `AttachmentKind` enum.** `MessageAttachment.kind` was already a nullable string from voice messages, so a sticker row is `kind: 'sticker'` (`STICKER_ATTACHMENT_KIND`) plus a new nullable `stickerId` with `ON DELETE SET NULL`, on both `MessageAttachment` and `DirectMessageAttachment` (`apps/api/prisma/models/messages.prisma`, `direct-messages.prisma`).
+- **Sending uses `stickerId`, not a client-built attachment.** `CreateMessageDto.stickerId` (REST and the socket `message:create` / `thread:message:create` bodies) is resolved by `messages/message-stickers.ts` against the destination channel's server; a sticker of another server is `404 Sticker not found`. A request can never send `kind: 'sticker'` in `attachments` itself.
+- **Deleted sticker**: the attachment row stays, `formatAttachment` returns `url: ''` and `sticker: null`, and the client renders a "Sticker deleted" placeholder instead of the old image.
+- **Uploads are multipart, not `{ name, url }`.** `POST /servers/:serverId/stickers` takes `name` plus a `file` part (512 KB); `POST /servers/:serverId/soundboard` takes `name`, `durationMs` and a `file` part (512 KB). The API ignores the client MIME type and file name, sniffs the leading bytes (`uploads/file-signature.ts`: PNG/WEBP for stickers; MP3, OGG, WAV, WEBM, M4A for clips) and stores the file through `UploadsService.uploadBuffer`. `durationMs` is measured in the uploader's browser and only range-checked (1–5000 ms) by the API.
+- **Forwarding carries stickers.** A forwarded sticker message copies the attachment row with the source `stickerId`, into channels and DMs. This is the only way a sticker reaches a DM; the DM composer has no sticker picker.
+- **Soundboard play** checks, on every play: not a DM call (`dm:` ids are refused), the socket is a participant in the call registry, membership, not timed out, and rules accepted. `soundboard:played` carries `{ channelId, clipId, name, url, triggeredBy }`. The rate limit is 10 per 60 s, as designed.
+- **Client**:
+  - Clicking a sticker in the composer picker sends it at once as its own message, keeping the draft text and the reply target, like Discord. It is not queued with the draft.
+  - The thread panel renders sticker messages, and its composer has the same sticker picker; a sticker is sent as its own thread reply through `POST /messages/:messageId/thread/messages` with `stickerId`.
+  - Playback is mounted once in the app shell (`hooks/useSoundboardPlayback.ts`), so a participant hears clips while the call panel is off screen. The call header shows "X played Y" for 4 s, plus a note when the browser blocked playback.
+  - The soundboard button shows in the call controls only while the call's own channel is open, because the panel needs that channel's server.
+  - Settings gain "Stickers" and "Soundboard" sections (`ServerStickersSection`, `ServerSoundboardSection`) that load their own data instead of being passed through `AppShell`.
+- **Account export** includes the stickers and soundboard clips the user created.
+- **Known gap**: deleting a sticker or clip does not delete its file from upload storage, the same as custom emoji; `UploadsService` has no delete operation.
+
 ## Risks & Rollback
 
 - **Risk**: soundboard playback is not synchronized or guaranteed-audible for every participant (see Trade-offs) — this is a real, documented gap, not a bug to fix silently later without updating this doc when `voice-sfu.md` changes the story.
@@ -143,7 +163,7 @@ Not covered by automated tests per `RULE.md:77`. Verify with `npm run typecheck`
 
 ## Deployment Notes
 
-- Run migration `20260917030000_add_stickers_and_soundboard` before deploying the API.
+- Run migration `20260917014000_add_stickers_and_soundboard` before deploying the API.
 - New i18n keys ship in both `en` and `vi` in the same change, per `docs/features/i18n-localization.md:11`.
 - No new env var; uploads reuse the existing Cloudinary-backed upload pipeline and its existing size/type configuration.
 - This doc's soundboard design should be revisited (not silently left stale) once `voice-sfu.md` ships, per the Trade-offs note on server-side mixing.

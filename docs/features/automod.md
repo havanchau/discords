@@ -144,6 +144,7 @@ Written back after implementation, so the doc matches the code:
 - `MENTION_SPAM` counts distinct `@name` tokens case-insensitively without resolving users or roles (`@everyone` counts). `INVITE_LINK` matches any `http(s)://<host>/invite/<code>` URL plus `discords.gg/<code>`. `EXTERNAL_LINK` allows subdomains of an allowed domain, treats an unparsable URL as external, and does not implicitly allow the app's own origin.
 - New validation errors, all translated: `AutoMod rule not found`, `AutoMod rule limit reached`, `AutoMod rule name cannot be empty`, `Keyword rules need at least one term`, `Regex rules need a pattern`, `Pattern is not supported`, `Mention spam rules need a mention limit`, `Invalid allowed domain`, `Timeout rules need a timeout duration`, `This action needs an alert channel`; the block itself maps by prefix to `AUTOMOD_MESSAGE_BLOCKED`.
 - No composer change was needed: REST sends, thread replies and edits already show the translated error; the socket `message:create` acknowledgement carries the untranslated English literal, as it already does for timeout and slowmode.
+- **Encrypted content (2026-09-17):** `e2ee:v1:` ciphertext is no longer skipped silently. While an enabled rule applies to the author in that channel (after channel and role exemptions), a send or edit carrying ciphertext is refused with `400 Encrypted messages are blocked while AutoMod is enabled`. See [wave-3-2-follow-ups.md](./wave-3-2-follow-ups.md).
 
 ## Risks & Rollback
 

@@ -89,6 +89,7 @@ export function formatBytes(value: number) {
 }
 
 export function attachmentKind(attachment: MessageAttachment) {
+  if (attachment.kind === 'sticker') return 'sticker';
   if (attachment.mimeType.startsWith('image/')) return 'image';
   // A voice note missing its metadata (older rows) falls through to the generic audio player.
   if (attachment.kind === 'voice' && attachment.durationMs && attachment.waveform?.length) {

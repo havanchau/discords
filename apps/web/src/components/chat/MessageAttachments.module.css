@@ -12,6 +12,25 @@
   background: var(--surface-raised);
 }
 
+.sticker {
+  display: block;
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+}
+
+.stickerDeleted {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .imageAttachment {
   display: block;
   max-height: 350px;

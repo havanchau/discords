@@ -9,21 +9,19 @@ import type { BotAuthorizationServer, BotAuthorizationView } from '@discord-clon
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
-import { installerCanGrant, type InstallerGrantContext } from './bot-grant';
+import {
+  canGrantRoles,
+  granterMemberInclude,
+  loadRoleGrantContext,
+} from '@/modules/permissions/role-grant';
 import { AuthorizeBotDto } from './dto/authorize-bot.dto';
 
 const EVERYONE_ROLE_NAME = '@everyone';
 
-const installerMemberInclude = {
-  roles: { include: { role: true } },
-} satisfies Prisma.ServerMemberInclude;
-
-type InstallerMember = Prisma.ServerMemberGetPayload<{ include: typeof installerMemberInclude }>;
-
 /**
  * Adding a bot to a server and taking it out again. Both need `MANAGE_ROLES` in that server, since
  * choosing what a bot may do is the same trust as editing a role, and the installer can never grant
- * the bot a permission they do not hold themselves (`installerCanGrant`).
+ * the bot a permission they do not hold themselves (`canGrantRoles`).
  */
 @Injectable()
 export class BotAuthorizationService {
@@ -38,7 +36,7 @@ export class BotAuthorizationService {
     const bot = await this.requireInstallableBot(botId);
     const members = await this.prisma.serverMember.findMany({
       where: { userId, server: { deletedAt: null } },
-      include: { ...installerMemberInclude, server: { select: { id: true, name: true } } },
+      include: { ...granterMemberInclude, server: { select: { id: true, name: true } } },
       orderBy: { joinedAt: 'asc' },
     });
     const installable = members.filter(
@@ -50,7 +48,7 @@ export class BotAuthorizationService {
     const servers: BotAuthorizationServer[] = [];
     for (const member of installable) {
       const [context, roles, botMember, ban] = await Promise.all([
-        this.loadGrantContext(member),
+        loadRoleGrantContext(this.prisma, member),
         this.prisma.role.findMany({
           where: { serverId: member.serverId },
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
@@ -71,7 +69,7 @@ export class BotAuthorizationService {
         alreadyMember: Boolean(botMember),
         banned: Boolean(ban),
         grantableRoles: roles.filter((role) =>
-          installerCanGrant(context, everyone ? [role, everyone] : [role]),
+          canGrantRoles(context, everyone ? [role, everyone] : [role]),
         ),
       });
     }
@@ -107,8 +105,8 @@ export class BotAuthorizationService {
     if (!role) throw new NotFoundException('Role not found');
 
     const grantedRoles = everyone && everyone.id !== role.id ? [role, everyone] : [role];
-    const context = await this.loadGrantContext(installer);
-    if (!installerCanGrant(context, grantedRoles)) {
+    const context = await loadRoleGrantContext(this.prisma, installer);
+    if (!canGrantRoles(context, grantedRoles)) {
       throw new ForbiddenException('Cannot grant a bot permissions you do not have');
     }
 
@@ -195,23 +193,5 @@ export class BotAuthorizationService {
 
   private async requireInstaller(userId: string, serverId: string) {
     return this.permissions.requireServerPermission(userId, serverId, Permission.ManageRoles);
-  }
-
-  private async loadGrantContext(member: InstallerMember): Promise<InstallerGrantContext> {
-    const channels = await this.prisma.channel.findMany({
-      where: { serverId: member.serverId },
-      select: { id: true, isPrivate: true },
-    });
-    const overrides = await this.prisma.channelPermissionOverride.findMany({
-      where: { channelId: { in: channels.map((channel) => channel.id) } },
-      select: { channelId: true, roleId: true, memberId: true, allow: true, deny: true },
-      orderBy: { createdAt: 'asc' },
-    });
-    return {
-      member,
-      permissions: new Set(member.roles.flatMap(({ role }) => role.permissions)),
-      channels,
-      overrides,
-    };
   }
 }

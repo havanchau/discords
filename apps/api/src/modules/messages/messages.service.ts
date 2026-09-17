@@ -23,7 +23,7 @@ import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PushService } from '@/modules/push/push.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { formatMessage, messageInclude } from './message.format';
+import { formatMessage, messageInclude, notificationAuthorName } from './message.format';
 import { readVoiceMaxBytes, toAttachmentCreateData } from './message-attachments';
 import { resolveStickerAttachment, StickerAttachmentData } from './message-stickers';
 import { ReactionDto } from './dto/reaction.dto';
@@ -251,7 +251,7 @@ export class MessagesService {
 
     await this.notifyMentionedUsers({
       authorId: userId,
-      authorUsername: message.author.username,
+      authorUsername: notificationAuthorName(message.author),
       serverId: channel.serverId,
       channelId: channel.id,
       channelName: channel.name,
@@ -298,7 +298,11 @@ export class MessagesService {
     await this.permissions.requireNotTimedOut(userId, rootMessage.serverId);
     await this.permissions.requireOnboardingAccepted(userId, rootMessage.serverId);
     const content = dto.content.trim();
-    const sticker = await resolveStickerAttachment(this.prisma, dto.stickerId, rootMessage.serverId);
+    const sticker = await resolveStickerAttachment(
+      this.prisma,
+      dto.stickerId,
+      rootMessage.serverId,
+    );
     const attachments = [
       ...toAttachmentCreateData(dto.attachments ?? [], this.voiceMaxBytes),
       ...(sticker ? [sticker] : []),
@@ -367,7 +371,7 @@ export class MessagesService {
 
     await this.notifyMentionedUsers({
       authorId: userId,
-      authorUsername: message.author.username,
+      authorUsername: notificationAuthorName(message.author),
       serverId: rootMessage.serverId,
       channelId: rootMessage.channelId,
       channelName: rootMessage.channel.name,

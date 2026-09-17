@@ -16,6 +16,10 @@ export const DELETED_USER_DISPLAY_NAME = 'Deleted User';
 export const ACCOUNT_DELETION_REQUEST_LIMIT = 5;
 export const ACCOUNT_DELETION_REQUEST_WINDOW_MS = 15 * MINUTE_MS;
 
+/** Per email address on the public cancel endpoint, on top of its per-IP route limit. */
+export const ACCOUNT_DELETION_CANCEL_LIMIT = 5;
+export const ACCOUNT_DELETION_CANCEL_WINDOW_MS = 15 * MINUTE_MS;
+
 export const ACCOUNT_EXPORT_REQUEST_LIMIT = 3;
 export const ACCOUNT_EXPORT_REQUEST_WINDOW_MS = DAY_MS;
 /** How long a finished export can be downloaded. */

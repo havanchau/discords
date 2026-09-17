@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react';
-import { ArrowLeft, Lock, Mail } from 'lucide-react';
+import { ArrowLeft, KeyRound, Lock, Mail } from 'lucide-react';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { Button, TextField } from '@/components/ui';
 import styles from '@/components/AuthScreen.module.css';
@@ -33,6 +33,17 @@ export function CancelDeletionForm({ isSubmitting, onSubmit, onBack }: CancelDel
         autoComplete="current-password"
         placeholder="••••••••"
         leadingIcon={<Lock size={18} aria-hidden="true" />}
+      />
+      <TextField
+        label={t('auth.field.authCode')}
+        name="code"
+        autoComplete="one-time-code"
+        inputMode="text"
+        maxLength={9}
+        pattern="\d{6}|[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}"
+        placeholder={t('auth.field.authCodePlaceholder')}
+        hint={t('auth.field.cancelDeletionCodeHint')}
+        leadingIcon={<KeyRound size={18} aria-hidden="true" />}
       />
       <Button type="submit" fullWidth disabled={isSubmitting}>
         {t('auth.action.keepAccount')}

@@ -12,10 +12,7 @@ import {
   storedAttachmentSelect,
   toAttachmentInput,
 } from '@/modules/messages/message-attachments';
-import {
-  carriedStickerAttachment,
-  isStickerAttachment,
-} from '@/modules/messages/message-stickers';
+import { carriedStickerAttachment, isStickerAttachment } from '@/modules/messages/message-stickers';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PrismaService } from '@/modules/prisma/prisma.service';

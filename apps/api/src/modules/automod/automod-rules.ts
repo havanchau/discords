@@ -25,7 +25,7 @@ const URL_PATTERN = /https?:\/\/[^\s<>()]+/gi;
 // What the web client's `encryptChannelMessage` produces (`apps/web/src/e2ee.ts`).
 const ENCRYPTED_CONTENT_PATTERN = /^e2ee:v1:[A-Za-z0-9+/]+=*:[A-Za-z0-9+/]+=*$/;
 
-/** E2EE channel content is ciphertext the server cannot read, so it is never evaluated. */
+/** E2EE channel content is ciphertext the server cannot read: never evaluated, refused while a rule applies. */
 export function isEncryptedContent(text: string) {
   return ENCRYPTED_CONTENT_PATTERN.test(text);
 }

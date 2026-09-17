@@ -122,6 +122,7 @@ Written back after implementation, so the doc matches the code:
 - **Web.** The gate (`components/onboarding/RulesGate.tsx`, `SelfAssignQuestion.tsx`) replaces `ChatPanel` in `components/app/AuthenticatedWorkspace.tsx`, not in `AppShell.tsx`, which is near the file-size limit. Settings use `ServerOnboardingSettings.tsx` and `OnboardingQuestionEditor.tsx` with the AutoMod form patterns. Accepting refetches the server detail; a tab whose detail predates a change shows a "Continue" button that refetches it. A single-choice question uses checkboxes that keep one role checked, since there is no radio primitive.
 - No realtime event, as specified: a member whose tab loaded before screening was turned on sees the translated `403` until the server detail is refetched.
 - **Bots are exempt** (added with [bot-api.md](bot-api.md)): `memberNeedsOnboarding` returns false for a member of kind `BOT`, since a bot cannot accept rules and the admin who authorized it chose its role.
+- **Realtime (2026-09-17):** `PATCH /servers/:serverId/onboarding` emits `server:onboarding-updated` `{ serverId }` to the server room; clients refetch the server detail and onboarding. See [wave-3-2-follow-ups.md](./wave-3-2-follow-ups.md).
 
 ## Risks & Rollback
 

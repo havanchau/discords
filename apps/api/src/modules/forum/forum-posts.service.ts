@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import type { ForumPostListResult, ForumPostView, Message } from '@discord-clone/shared';
 import { ChannelsService } from '@/modules/channels/channels.service';
 import { readVoiceMaxBytes, toAttachmentCreateData } from '@/modules/messages/message-attachments';
+import { notificationAuthorName } from '@/modules/messages/message.format';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PrismaService } from '@/modules/prisma/prisma.service';
@@ -151,7 +152,7 @@ export class ForumPostsService {
     });
     await this.messages.notifyMentionedUsers({
       authorId: userId,
-      authorUsername: post.rootMessage.author.username,
+      authorUsername: notificationAuthorName(post.rootMessage.author),
       serverId: channel.serverId,
       channelId,
       channelName: channel.name,

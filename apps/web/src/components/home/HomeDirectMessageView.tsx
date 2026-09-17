@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageSquare, Phone, Users, Video } from 'lucide-react';
 import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
 import { directCallId } from '@/hooks/useDirectCall';
@@ -23,6 +23,7 @@ import { UserAvatar } from './UserAvatar';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import type { HomeDirectCall, HomePanelActions, HomePanelState } from './types';
 import styles from './HomePanel.module.css';
+import { clearMessageJump, usePendingMessageJump } from '@/utils/pendingMessageJump';
 
 type HomeDirectMessageViewProps = {
   auth: AuthState;
@@ -79,6 +80,17 @@ export function HomeDirectMessageView({
   const isRinging = Boolean(
     activeConversation && call.outgoingCall?.conversationId === activeConversation.id,
   );
+
+  // A jump requested before this conversation opened (Saved Messages) runs once the message renders.
+  const pendingJump = usePendingMessageJump();
+  const activeConversationId = activeConversation?.id;
+  useEffect(() => {
+    if (!pendingJump || pendingJump.conversationId !== activeConversationId) return;
+    if (!directMessages.some((message) => message.id === pendingJump.messageId)) return;
+    clearMessageJump();
+    // Effects run after commit, so the row is already in the DOM (the DM timeline is not virtualized).
+    jumpToDirectMessage(pendingJump.messageId);
+  }, [pendingJump, activeConversationId, directMessages]);
 
   const rowActions: DirectMessageRowActions = {
     onReply: actions.setReplyingToDirectMessage,

@@ -26,6 +26,7 @@ import { useServerEmojis } from './hooks/useServerEmojis';
 import { useServerEvents } from './hooks/useServerEvents';
 import { useServerModeration } from './hooks/useServerModeration';
 import { useSettingsActions } from './hooks/useSettingsActions';
+import { useSoundboardPlayback } from './hooks/useSoundboardPlayback';
 import { useTheme } from './hooks/useTheme';
 import { useThreadPanel } from './hooks/useThreadPanel';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
@@ -315,6 +316,8 @@ export function AppShell() {
       setWorkspaceError,
     });
 
+  const soundboard = useSoundboardPlayback(socket, callState?.channelId ?? null);
+
   function conversationLabel(conversationId: string, fallback: string) {
     const conversation = directConversations.find((item) => item.id === conversationId);
     return conversation && auth ? conversationDisplayName(conversation, auth.user.id) : fallback;
@@ -451,9 +454,10 @@ export function AppShell() {
     content: string,
     files: File[],
     voice?: VoiceAttachmentMetadata | null,
+    stickerId?: string,
   ) {
     if (!auth || !channel) return false;
-    if (!content && files.length === 0) return;
+    if (!content && files.length === 0 && !stickerId) return;
     setPendingAction('send-message');
     setWorkspaceError(null);
     try {
@@ -466,6 +470,7 @@ export function AppShell() {
         content: messageContent,
         attachments,
         replyToMessageId: replyingToMessage?.id,
+        stickerId,
       };
       socket?.emit('typing:stop', { channelId: channel.id });
       if (socket?.connected) {
@@ -502,6 +507,7 @@ export function AppShell() {
             content: messageContent,
             attachments,
             replyToMessageId: replyingToMessage?.id,
+            stickerId,
           }),
         },
         auth.accessToken,
@@ -528,6 +534,7 @@ export function AppShell() {
     if (!content && files.length === 0) return;
     const commandResult = await executeSlashCommand({
       content,
+      isChannelEncrypted: Boolean(channel && channelKeys[channel.id]),
       auth,
       server,
       channel,
@@ -597,6 +604,7 @@ export function AppShell() {
     selectChannel,
     setActivePanel,
     setActiveDialog,
+    isChannelEncrypted: (channelId: string) => Boolean(channelKeys[channelId]),
     openSavedMessages: () => setIsSavedMessagesOpen(true),
     clearWorkspaceError: () => setWorkspaceError(null),
     clearWorkspaceNotice: () => setWorkspaceNotice(null),
@@ -707,6 +715,7 @@ export function AppShell() {
             toggleMute,
             toggleCamera,
             end: endDirectCall,
+            soundboard,
           },
           messageActions: {
             ...messageActions,
@@ -722,6 +731,9 @@ export function AppShell() {
             draft: channelDraft.value,
             fileInputRef,
             sendMessage,
+            sendSticker: async (stickerId: string) => {
+              if (await sendChatMessage('', [], null, stickerId)) setReplyingToMessage(null);
+            },
             clearAfterSchedule: () => {
               channelDraft.clear();
               setSelectedFiles([]);
