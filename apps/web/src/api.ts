@@ -452,7 +452,8 @@ export function apiEndpointUrl(path: string) {
 }
 
 export function assetUrl(url: string) {
-  if (/^https?:\/\//i.test(url)) return url;
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url;
   return `${API_ORIGIN}${url}`;
 }
 
