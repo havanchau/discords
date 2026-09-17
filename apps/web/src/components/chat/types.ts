@@ -33,6 +33,7 @@ export interface ChatPanelMessages {
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
+  firstUnreadMessageId?: string | null;
   typingUsers: Array<{ userId: string; displayName: string }>;
   pinned: Message[];
   mediaSource: Message[];

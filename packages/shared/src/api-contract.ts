@@ -370,10 +370,16 @@ export interface MessageAttachment {
   sticker?: MessageStickerRef | null;
 }
 
+export interface ReactionUser {
+  id: string;
+  displayName: string;
+}
+
 export interface MessageReaction {
   emoji: string;
   count: number;
   me: boolean;
+  users?: ReactionUser[];
 }
 
 export interface FriendEntry {
@@ -432,6 +438,7 @@ export interface DirectMessageReaction {
   emoji: string;
   count: number;
   userIds: string[];
+  users?: ReactionUser[];
 }
 
 export interface DirectMessageReplyPreview {

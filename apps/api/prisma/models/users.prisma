@@ -73,6 +73,7 @@ model User {
   notifications             Notification[]              @relation("NotificationUser")
   actedNotifications        Notification[]              @relation("NotificationActor")
   directMessageReactions    DirectMessageReaction[]
+  messageReactions          MessageReaction[]
   ownedConversations        DirectConversation[]       @relation("ConversationOwner")
   serverBans                ServerBan[]                @relation("BannedUser")
   issuedServerBans          ServerBan[]                @relation("BanIssuer")

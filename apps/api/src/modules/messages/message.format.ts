@@ -15,7 +15,17 @@ export const messageInclude = {
     },
   },
   attachments: { include: attachmentStickerInclude },
-  reactions: true,
+  reactions: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          displayName: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  },
   poll: { include: pollInclude },
 } satisfies Prisma.MessageInclude;
 
@@ -34,18 +44,30 @@ export function formatMessage(
   replyToMessage?: Message | null,
   thread?: ThreadSummary | null,
 ): Message {
-  const reactionMap = new Map<string, { emoji: string; count: number; me: boolean }>();
+  const reactionMap = new Map<
+    string,
+    { emoji: string; count: number; me: boolean; users: Array<{ id: string; displayName: string }> }
+  >();
 
   message.reactions.forEach((reaction) => {
     const current = reactionMap.get(reaction.emoji) ?? {
       emoji: reaction.emoji,
       count: 0,
       me: false,
+      users: [],
     };
+    const userObj = reaction.user
+      ? { id: reaction.user.id, displayName: reaction.user.displayName }
+      : { id: reaction.userId, displayName: 'User' };
+    const users = current.users.some((u) => u.id === userObj.id)
+      ? current.users
+      : [...current.users, userObj];
+
     reactionMap.set(reaction.emoji, {
       ...current,
       count: current.count + 1,
       me: current.me || reaction.userId === userId,
+      users,
     });
   });
 

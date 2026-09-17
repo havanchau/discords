@@ -12,7 +12,14 @@ import {
   Unlock,
 } from 'lucide-react';
 import { assetUrl, AuthState, Message } from '@/api';
-import { accentClass, initials, isSameMessageDay, previewText, QUICK_REACTIONS } from '@/helpers';
+import {
+  accentClass,
+  getReactionTooltipText,
+  initials,
+  isSameMessageDay,
+  previewText,
+  QUICK_REACTIONS,
+} from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import {
@@ -347,16 +354,19 @@ export const MessageRow = memo(function MessageRow({
               {!message.deletedAt && (
                 <div className={styles.reactionRow} data-testid="reaction-row">
                   {message.reactions.map((reaction) => (
-                    <button
+                    <Tooltip
                       key={reaction.emoji}
-                      type="button"
-                      className={reaction.me ? styles.active : ''}
-                      onClick={() => void actions.toggleReaction(message, reaction.emoji)}
-                      title={t('message.reaction.title', { emoji: reaction.emoji })}
+                      content={getReactionTooltipText(reaction, t)}
                     >
-                      <ReactionEmoji emoji={reaction.emoji} />
-                      <strong>{reaction.count}</strong>
-                    </button>
+                      <button
+                        type="button"
+                        className={reaction.me ? styles.active : ''}
+                        onClick={() => void actions.toggleReaction(message, reaction.emoji)}
+                      >
+                        <ReactionEmoji emoji={reaction.emoji} />
+                        <strong>{reaction.count}</strong>
+                      </button>
+                    </Tooltip>
                   ))}
                 </div>
               )}

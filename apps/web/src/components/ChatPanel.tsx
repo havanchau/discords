@@ -159,6 +159,7 @@ export function ChatPanel({
             isLoadingMessages={messages.isLoading}
             isLoadingMoreMessages={messages.isLoadingMore}
             hasMoreMessages={messages.hasMore}
+            firstUnreadMessageId={messages.firstUnreadMessageId}
             searchQuery={messages.searchQuery}
             loadMoreMessages={messages.loadMore}
             renderMessage={(message, index) => (

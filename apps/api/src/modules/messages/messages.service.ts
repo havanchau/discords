@@ -98,6 +98,10 @@ export class MessagesService {
     const nextCursor = messages.length === 50 ? messages[messages.length - 1]?.id ?? null : null;
     const ordered = [...messages].reverse();
 
+    const readState = await this.prisma.readState.findUnique({
+      where: { userId_channelId: { userId, channelId } },
+    });
+
     return {
       messages: ordered.map((message) =>
         formatMessage(
@@ -108,6 +112,8 @@ export class MessagesService {
         ),
       ),
       nextCursor,
+      lastReadMessageId: readState?.lastReadMessageId ?? null,
+      lastReadAt: readState?.lastReadAt ?? null,
     };
   }
 

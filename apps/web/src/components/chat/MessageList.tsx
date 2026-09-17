@@ -24,6 +24,7 @@ interface MessageListProps {
   isLoadingMessages: boolean;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
+  firstUnreadMessageId?: string | null;
   searchQuery: string;
   loadMoreMessages: () => Promise<void>;
   renderMessage: (message: Message, index: number) => ReactNode;
@@ -54,6 +55,7 @@ export function MessageList({
   isLoadingMessages,
   isLoadingMoreMessages,
   hasMoreMessages,
+  firstUnreadMessageId,
   searchQuery,
   loadMoreMessages,
   renderMessage,
@@ -64,6 +66,7 @@ export function MessageList({
   const rowsRef = useRef<HTMLDivElement>(null);
   const [rowsOffset, setRowsOffset] = useState(0);
   const hasSearch = Boolean(searchQuery.trim());
+  const hasInitialScrolledRef = useRef(false);
 
   const virtualizer = useVirtualizer({
     count: visibleMessages.length,
@@ -75,6 +78,74 @@ export function MessageList({
     // Keeps the row being read in place when older messages are prepended.
     anchorTo: 'end',
   });
+
+  // Reset initial scroll tracking on channel change
+  useLayoutEffect(() => {
+    hasInitialScrolledRef.current = false;
+  }, [channel?.id]);
+
+  // Scroll to oldest unread message or default to bottom (newest message) on initial load
+  useLayoutEffect(() => {
+    if (hasInitialScrolledRef.current || isLoadingMessages || visibleMessages.length === 0) return;
+
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+
+    if (firstUnreadMessageId) {
+      const index = visibleMessages.findIndex((message) => message.id === firstUnreadMessageId);
+      if (index !== -1) {
+        virtualizer.scrollToIndex(index, { align: 'start' });
+        window.requestAnimationFrame(() => {
+          virtualizer.scrollToIndex(index, { align: 'start' });
+        });
+        hasInitialScrolledRef.current = true;
+        return;
+      }
+    }
+
+    // Default: scroll to the newest message at the bottom
+    virtualizer.scrollToIndex(visibleMessages.length - 1, { align: 'end' });
+    scrollElement.scrollTop = scrollElement.scrollHeight;
+
+    const scrollToBottom = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    };
+
+    window.requestAnimationFrame(() => {
+      scrollToBottom();
+      window.requestAnimationFrame(scrollToBottom);
+    });
+
+    hasInitialScrolledRef.current = true;
+  }, [channel?.id, firstUnreadMessageId, visibleMessages, isLoadingMessages, virtualizer]);
+
+  // Auto-scroll to bottom when new messages arrive while near bottom
+  const prevVisibleCountRef = useRef(visibleMessages.length);
+  useLayoutEffect(() => {
+    if (!hasInitialScrolledRef.current) {
+      prevVisibleCountRef.current = visibleMessages.length;
+      return;
+    }
+
+    if (visibleMessages.length > prevVisibleCountRef.current) {
+      const scrollElement = scrollRef.current;
+      if (scrollElement) {
+        const distanceFromBottom =
+          scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
+        if (distanceFromBottom < 250) {
+          scrollElement.scrollTop = scrollElement.scrollHeight;
+          window.requestAnimationFrame(() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
+          });
+        }
+      }
+    }
+    prevVisibleCountRef.current = visibleMessages.length;
+  }, [visibleMessages.length]);
 
   // The intro and "load older" row sit above the virtual rows; their height is the scroll margin.
   const hasNoMessages = visibleMessages.length === 0;
@@ -164,17 +235,26 @@ export function MessageList({
             className={styles.virtualRows}
             style={{ height: virtualizer.getTotalSize() }}
           >
-            {virtualizer.getVirtualItems().map((item) => (
-              <div
-                key={item.key}
-                ref={virtualizer.measureElement}
-                data-index={item.index}
-                className={styles.virtualRow}
-                style={{ transform: `translateY(${item.start - rowsOffset}px)` }}
-              >
-                {renderMessage(visibleMessages[item.index], item.index)}
-              </div>
-            ))}
+            {virtualizer.getVirtualItems().map((item) => {
+              const message = visibleMessages[item.index];
+              const isFirstUnread = message?.id === firstUnreadMessageId;
+              return (
+                <div
+                  key={item.key}
+                  ref={virtualizer.measureElement}
+                  data-index={item.index}
+                  className={styles.virtualRow}
+                  style={{ transform: `translateY(${item.start - rowsOffset}px)` }}
+                >
+                  {isFirstUnread && (
+                    <div className={styles.unreadDivider} data-testid="unread-divider">
+                      <span>{t('message.unreadDivider')}</span>
+                    </div>
+                  )}
+                  {renderMessage(message, item.index)}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

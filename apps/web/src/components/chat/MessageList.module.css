@@ -157,3 +157,29 @@
   left: 0;
   width: 100%;
 }
+
+.unreadDivider {
+  display: flex;
+  align-items: center;
+  margin: var(--space-3) var(--space-4);
+  color: var(--status-danger, #f23f43);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.unreadDivider::before,
+.unreadDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--status-danger, #f23f43);
+  opacity: 0.6;
+}
+
+.unreadDivider span {
+  padding: 0 var(--space-3);
+  background: var(--surface-bg, transparent);
+}

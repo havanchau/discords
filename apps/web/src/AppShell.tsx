@@ -377,10 +377,13 @@ export function AppShell() {
     clearChannelKeys();
   }, [auth, clearChannelKeys, clearDirectMessages]);
 
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState<string | null>(null);
+
   const openChannel = useEffectEvent(() => {
     if (!channel || !auth) return;
     setIsLoadingMessages(true);
     setMessageCursor(null);
+    setFirstUnreadMessageId(null);
     setTypingUsers([]);
     setChannelBadges((current) => {
       const next = { ...current };
@@ -391,7 +394,12 @@ export function AppShell() {
     threadPanel.close();
     setSearchResults(null);
     setWorkspaceError(null);
-    void apiRequest<{ messages: Message[]; nextCursor?: string | null }>(
+    void apiRequest<{
+      messages: Message[];
+      nextCursor?: string | null;
+      lastReadMessageId?: string | null;
+      lastReadAt?: string | null;
+    }>(
       `/channels/${channel.id}/messages`,
       {},
       auth.accessToken,
@@ -400,6 +408,27 @@ export function AppShell() {
         const displayMessages = await decryptMessagesForDisplay(result.messages);
         setMessages(displayMessages);
         setMessageCursor(result.nextCursor ?? null);
+
+        let unreadId: string | null = null;
+        if (result.lastReadAt && displayMessages.length > 0) {
+          const lastReadTime = new Date(result.lastReadAt).getTime();
+          const firstMsgTime = new Date(displayMessages[0].createdAt).getTime();
+          const lastMsgTime = new Date(displayMessages[displayMessages.length - 1].createdAt).getTime();
+
+          if (lastReadTime >= firstMsgTime && lastReadTime < lastMsgTime) {
+            const firstUnread = displayMessages.find(
+              (m) => new Date(m.createdAt).getTime() > lastReadTime,
+            );
+            unreadId = firstUnread?.id ?? null;
+          }
+        } else if (result.lastReadMessageId && displayMessages.length > 0) {
+          const idx = displayMessages.findIndex((m) => m.id === result.lastReadMessageId);
+          if (idx !== -1 && idx < displayMessages.length - 1) {
+            unreadId = displayMessages[idx + 1].id;
+          }
+        }
+        setFirstUnreadMessageId(unreadId);
+
         const lastMessage = result.messages[result.messages.length - 1];
         void markChannelRead(channel.id, lastMessage?.id);
       })
@@ -672,6 +701,7 @@ export function AppShell() {
             isLoading: isLoadingMessages,
             isLoadingMore: isLoadingMoreMessages,
             hasMore: Boolean(messageCursor),
+            firstUnreadMessageId,
             typingUsers,
             pinned: pinnedMessages,
             mediaSource: messages,

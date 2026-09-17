@@ -1,4 +1,5 @@
 import { Message, MessageAttachment } from './api';
+import type { Translate } from './i18n/LocaleProvider';
 
 export const AUTH_KEY = 'discord-clone-auth';
 export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
@@ -60,9 +61,50 @@ export function initials(value: string) {
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0])
+    .map((word) => word[0])
     .join('')
     .toUpperCase();
+}
+
+export function getReactionTooltipText(
+  reaction: { emoji: string; count: number; users?: Array<{ id: string; displayName: string }> },
+  t: Translate,
+): string {
+  const users = reaction.users ?? [];
+  const names = users.map((u) => u.displayName).filter(Boolean);
+
+  if (names.length === 0) {
+    return t('message.reaction.title', { emoji: reaction.emoji });
+  }
+
+  if (names.length === 1) {
+    return t('message.reaction.tooltip.1', { user: names[0], emoji: reaction.emoji });
+  }
+
+  if (names.length === 2) {
+    return t('message.reaction.tooltip.2', {
+      user1: names[0],
+      user2: names[1],
+      emoji: reaction.emoji,
+    });
+  }
+
+  if (names.length === 3) {
+    return t('message.reaction.tooltip.3', {
+      user1: names[0],
+      user2: names[1],
+      user3: names[2],
+      emoji: reaction.emoji,
+    });
+  }
+
+  const shown = names.slice(0, 3).join(', ');
+  const remaining = Math.max(0, reaction.count - 3);
+  return t('message.reaction.tooltip.more', {
+    users: shown,
+    count: remaining,
+    emoji: reaction.emoji,
+  });
 }
 
 export function accentClass(indexOrValue: number | string) {

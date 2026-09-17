@@ -14,7 +14,14 @@ const authorSelect = {
 export const directMessageInclude = {
   author: { select: authorSelect },
   reactions: {
-    select: { emoji: true, userId: true },
+    include: {
+      user: {
+        select: {
+          id: true,
+          displayName: true,
+        },
+      },
+    },
     orderBy: { createdAt: 'asc' as const },
   },
   attachments: { include: attachmentStickerInclude, orderBy: { createdAt: 'asc' as const } },
@@ -73,11 +80,25 @@ export function formatDirectMessage(
   replyToMessage?: ReplyPreview | null,
   viewerId: string | null = null,
 ) {
-  const reactions = new Map<string, { emoji: string; count: number; userIds: string[] }>();
-  message.reactions.forEach(({ emoji, userId }) => {
-    const current = reactions.get(emoji) ?? { emoji, count: 0, userIds: [] };
+  const reactions = new Map<
+    string,
+    {
+      emoji: string;
+      count: number;
+      userIds: string[];
+      users: Array<{ id: string; displayName: string }>;
+    }
+  >();
+  message.reactions.forEach(({ emoji, userId, user }) => {
+    const current = reactions.get(emoji) ?? { emoji, count: 0, userIds: [], users: [] };
     current.count += 1;
     current.userIds.push(userId);
+    const userObj = user
+      ? { id: user.id, displayName: user.displayName }
+      : { id: userId, displayName: 'User' };
+    if (!current.users.some((u) => u.id === userObj.id)) {
+      current.users.push(userObj);
+    }
     reactions.set(emoji, current);
   });
 

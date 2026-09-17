@@ -6,6 +6,7 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import { IconButton, PopoverContent, PopoverRoot, PopoverTrigger, Tooltip } from '@/components/ui';
 import { EmojiPicker, ReactionEmoji } from './EmojiPicker';
 import { ReportMessageDialog } from './ReportMessageDialog';
+import { getReactionTooltipText } from '@/helpers';
 import styles from './ThreadPanel.module.css';
 
 export interface ThreadMessageActionHandlers {
@@ -42,17 +43,17 @@ export function ThreadMessageActions({
       {message.reactions.length ? (
         <div className={styles.reactionRow}>
           {message.reactions.map((reaction) => (
-            <button
-              key={reaction.emoji}
-              type="button"
-              className={reaction.me ? styles.reactionActive : undefined}
-              aria-pressed={reaction.me}
-              title={t('message.reaction.title', { emoji: reaction.emoji })}
-              onClick={() => void onToggleReaction(message, reaction.emoji)}
-            >
-              <ReactionEmoji emoji={reaction.emoji} />
-              <strong>{reaction.count}</strong>
-            </button>
+            <Tooltip key={reaction.emoji} content={getReactionTooltipText(reaction, t)}>
+              <button
+                type="button"
+                className={reaction.me ? styles.reactionActive : undefined}
+                aria-pressed={reaction.me}
+                onClick={() => void onToggleReaction(message, reaction.emoji)}
+              >
+                <ReactionEmoji emoji={reaction.emoji} />
+                <strong>{reaction.count}</strong>
+              </button>
+            </Tooltip>
           ))}
         </div>
       ) : null}

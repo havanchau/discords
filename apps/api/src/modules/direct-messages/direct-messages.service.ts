@@ -55,8 +55,16 @@ export class DirectMessagesService {
     userId: string,
     conversationId: string,
     cursor?: string,
-  ): Promise<{ messages: DirectMessage[]; nextCursor: string | null }> {
+  ): Promise<{
+    messages: DirectMessage[];
+    nextCursor: string | null;
+    lastReadMessageId?: string | null;
+    lastReadAt?: Date | null;
+  }> {
     await this.requireConversationMember(userId, conversationId);
+    const readState = await this.prisma.directReadState.findUnique({
+      where: { userId_conversationId: { userId, conversationId } },
+    });
     const messages = await this.prisma.directMessage.findMany({
       where: { conversationId },
       include: directMessageInclude,
@@ -65,13 +73,11 @@ export class DirectMessagesService {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
     const ordered = [...messages].reverse();
-    const latestMessage = ordered[ordered.length - 1];
-    if (!cursor && latestMessage) {
-      await this.markRead(userId, conversationId, latestMessage.id, { emit: true });
-    }
     return {
       messages: await formatDirectMessages(this.prisma, ordered, userId),
       nextCursor: messages.length === 50 ? messages[messages.length - 1]?.id : null,
+      lastReadMessageId: readState?.lastReadMessageId ?? null,
+      lastReadAt: readState?.lastReadAt ?? null,
     };
   }
 
