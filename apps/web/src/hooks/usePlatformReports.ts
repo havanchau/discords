@@ -104,16 +104,18 @@ export function useResolvePlatformReport() {
       resolution: PlatformReportResolution;
       note?: ResolvePlatformReportInput['note'];
     }) =>
-      apiRequest<PlatformReportDetail['report']>(
+      apiRequest<{ report: PlatformReportDetail['report'] }>(
         `/platform/reports/${reportId}/${resolution === 'DISMISSED' ? 'dismiss' : 'delist'}`,
         { method: 'POST', body: JSON.stringify({ note } satisfies ResolvePlatformReportInput) },
         token,
       ),
-    onSuccess: (report) => {
+    onSuccess: ({ report }) => {
       queryClient.setQueryData(
         queryKeys.platformReportDetail(report.id),
         (current: PlatformReportDetail | undefined) => (current ? { ...current, report } : current),
       );
+      // A delist also changes the server summary (`listed`), which the resolve response omits.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platformReportDetail(report.id) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.platformReportsOf() });
     },
   });
