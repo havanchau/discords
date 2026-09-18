@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   RealtimeEvents,
@@ -22,8 +22,6 @@ const stageUserSelect = { id: true, username: true, displayName: true, avatarUrl
  */
 @Injectable()
 export class StageService {
-  private readonly logger = new Logger(StageService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
@@ -166,33 +164,15 @@ export class StageService {
   }
 
   /**
-   * After a kick or ban committed: tell open clients the removed member's rows are gone, and drop
-   * their connections from every stage room of the server so a banned speaker stops broadcasting.
+   * After a kick or ban committed: tell open clients the removed member's rows are gone. Ending their
+   * call connections (stage rooms included) is the moderation service's job.
    */
-  async afterMemberRemoved(serverId: string, userId: string, removed: RemovedStageRows) {
+  afterMemberRemoved(userId: string, removed: RemovedStageRows) {
     for (const channelId of removed.speakerChannelIds) {
       this.emitRoleChanged(channelId, userId, 'audience');
     }
     for (const channelId of removed.requestChannelIds) {
       this.emitRequestUpdated(channelId, userId, false);
-    }
-    if (this.livekit.transport !== 'livekit') return;
-
-    const stageChannels = await this.prisma.channel.findMany({
-      where: { serverId, type: 'STAGE' },
-      select: { id: true },
-    });
-    for (const channel of stageChannels) {
-      try {
-        await this.livekit.removeUser(channel.id, userId);
-      } catch (error) {
-        // The member row is already gone and the next join is refused; log so an operator can act.
-        this.logger.error(
-          `Could not disconnect removed member ${userId} from stage ${channel.id}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
     }
   }
 

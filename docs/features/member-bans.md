@@ -37,6 +37,7 @@ Acceptance criteria:
 - Unbanning a user who is not banned returns `404 Ban not found`.
 - Audit actions: `MEMBER_BAN` `{ userId, username, reason }`, `MEMBER_UNBAN` `{ userId }`.
 - After a kick or ban commits, the server emits `server:member-removed` `{ serverId, userId, reason: 'KICK' | 'BAN' }` to `server:<id>` and `user:<userId>`, and removes the user's sockets from `server:<id>` and every `channel:<id>` room of that server.
+- The same step ends the user's calls in that server (added 2026-09-18): every call-registry entry of theirs whose call id is one of the server's channels is removed, `voice:user-left` goes to the call room (the removed user's own sockets included, so their client ends the call), their sockets leave `call:<channelId>`, and `voice:active` / `voice:ended` is re-sent. Under `VOICE_TRANSPORT=livekit` their connections are also removed from those channels' LiveKit rooms, so media stops even if the client ignores the event. DM calls are not touched.
 
 ### Client
 
@@ -89,11 +90,12 @@ Migration `20260915003000_add_server_bans`.
 
 ## Risks & Rollback
 
-- **Risk**: a banned user already inside a voice call keeps their media connection until they leave.
+- **Risk** (resolved 2026-09-18): a kicked or banned user used to keep their call connection until they left; kick and ban now end it (Changes). If a LiveKit removal fails it is logged, and the user's next join is refused because they are no longer a member.
 - **Rollback**: revert code; the migration is additive.
 
 ## Test Plan
 
+- **Manual (calls)**: B is in a voice call in the server with A; the owner kicks B → A sees B leave, B's client ends the call; with LiveKit, B no longer appears in the room's participants.
 - **Manual**: owner bans member B with a reason → B's client returns Home with a notice; B's invite join fails; ban appears in Server settings → Unban → B can join again.
 
 ## Deployment Notes

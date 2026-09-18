@@ -103,13 +103,20 @@ export class LivekitService {
     }
   }
 
-  /** Disconnects every connection the user has in the room (kick or ban from the server). */
-  async removeUser(roomName: string, userId: string) {
+  /**
+   * Disconnects every connection the user has in any of these rooms (kick or ban from the server).
+   * One `listRooms` call narrows the names to rooms that exist, so a server with many channels costs
+   * one request plus one per live room.
+   */
+  async removeUserFromRooms(roomNames: string[], userId: string) {
     const rooms = this.rooms;
-    if (!rooms) return;
-    const identities = await this.userIdentities(rooms, roomName, userId);
-    for (const identity of identities) {
-      await rooms.removeParticipant(roomName, identity);
+    if (!rooms || !roomNames.length) return;
+    const liveRooms = await rooms.listRooms(roomNames);
+    for (const room of liveRooms) {
+      const identities = await this.userIdentities(rooms, room.name, userId);
+      for (const identity of identities) {
+        await rooms.removeParticipant(room.name, identity);
+      }
     }
   }
 

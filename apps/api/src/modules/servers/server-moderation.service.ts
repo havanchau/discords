@@ -1,9 +1,11 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { syncBotGatewayOnRemoval } from '@/modules/bots/bot-gateway-sync';
+import { LivekitService } from '@/modules/livekit/livekit.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { ServerBanEntry } from '@discord-clone/shared';
+import { CallRegistryService } from '@/modules/realtime/call-registry.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { deleteMemberStageRows } from '@/modules/stage/stage-member-cleanup';
 import { StageService } from '@/modules/stage/stage.service';
@@ -22,11 +24,15 @@ type RemovalReason = 'KICK' | 'BAN';
 
 @Injectable()
 export class ServerModerationService {
+  private readonly logger = new Logger(ServerModerationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimePublisher,
     private readonly stage: StageService,
+    private readonly calls: CallRegistryService,
+    private readonly livekit: LivekitService,
   ) {}
 
   async kick(userId: string, serverId: string, memberId: string) {
@@ -53,7 +59,7 @@ export class ServerModerationService {
       displayName: target.user.displayName,
     });
     await this.announceRemoval(serverId, target.userId, 'KICK');
-    await this.stage.afterMemberRemoved(serverId, target.userId, removedStageRows);
+    this.stage.afterMemberRemoved(target.userId, removedStageRows);
 
     return { ok: true };
   }
@@ -154,7 +160,7 @@ export class ServerModerationService {
       reason,
     });
     await this.announceRemoval(serverId, target.id, 'BAN');
-    await this.stage.afterMemberRemoved(serverId, target.id, removedStageRows);
+    this.stage.afterMemberRemoved(target.id, removedStageRows);
     // 201 for a new ban, 200 when the user was already banned (member-bans.md).
     return { ban, created };
   }
@@ -197,6 +203,29 @@ export class ServerModerationService {
     // `removeUsersFromRooms` above targets `userRoom(removedUserId)`, which a bot socket never
     // joins — a bot's own gateway socket (if any) is kept in sync separately.
     void syncBotGatewayOnRemoval(this.prisma, this.realtime, removedUserId, serverId);
+    await this.endCalls(
+      removedUserId,
+      channels.map((channel) => channel.id),
+    );
+  }
+
+  /**
+   * A removed member must not keep listening or talking in the server's calls (`member-bans.md`).
+   * The registry drop hangs up their client; the LiveKit removal stops media even if it does not.
+   */
+  private async endCalls(userId: string, channelIds: string[]) {
+    await this.calls.removeUser(userId, channelIds);
+    if (this.livekit.transport !== 'livekit') return;
+    try {
+      await this.livekit.removeUserFromRooms(channelIds, userId);
+    } catch (error) {
+      // The member row is already gone and their next join is refused; log so an operator can act.
+      this.logger.error(
+        `Could not disconnect removed member ${userId} from LiveKit: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   private async writeAuditLog(

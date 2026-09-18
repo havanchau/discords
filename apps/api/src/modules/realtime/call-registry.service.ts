@@ -110,6 +110,35 @@ export class CallRegistryService {
     await this.emitActiveCall(channelId);
   }
 
+  /**
+   * Ends a user's calls among `callIds` without their socket (kick or ban): drops their entries,
+   * tells the call room — their own sockets too, so their client hangs up — and moves their sockets
+   * out of it. Returns the call ids they were in.
+   */
+  async removeUser(userId: string, callIds: string[]) {
+    const leftCallIds: string[] = [];
+    for (const callId of callIds) {
+      const entries = await this.redis.client.hgetall(this.participantsKey(callId));
+      const socketIds = Object.entries(entries)
+        .filter(([, raw]) => this.parse(raw)?.userId === userId)
+        .map(([socketId]) => socketId);
+      if (!socketIds.length) continue;
+
+      const pipeline = this.redis.client.multi().hdel(this.participantsKey(callId), ...socketIds);
+      socketIds.forEach((socketId) => pipeline.srem(this.socketCallsKey(socketId), callId));
+      await pipeline.exec();
+
+      const room = this.callRoom(callId);
+      for (const socketId of socketIds) {
+        this.publisher.emitToRoom(room, 'voice:user-left', { channelId: callId, socketId, userId });
+      }
+      this.publisher.removeSocketsFromRoom(socketIds, room);
+      await this.emitActiveCall(callId);
+      leftCallIds.push(callId);
+    }
+    return leftCallIds;
+  }
+
   async leaveAll(client: Socket) {
     const channelIds = await this.redis.client.smembers(this.socketCallsKey(client.id));
     for (const channelId of channelIds) {

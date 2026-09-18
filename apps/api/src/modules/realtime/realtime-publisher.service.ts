@@ -26,6 +26,12 @@ export class RealtimePublisher {
     target.emit(event, payload);
   }
 
+  /** Takes specific sockets (on any instance) out of a room. */
+  removeSocketsFromRoom(socketIds: string[], room: string) {
+    if (!this.server || !socketIds.length) return;
+    this.server.in(socketIds).socketsLeave(room);
+  }
+
   /** Moves every connected socket of these users into a room, e.g. after joining a group DM. */
   joinUsersToRoom(userIds: string[], room: string) {
     if (!this.server || !userIds.length) return;

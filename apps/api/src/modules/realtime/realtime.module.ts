@@ -6,7 +6,7 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
 import { PermissionsModule } from '@/modules/permissions/permissions.module';
 import { SoundboardModule } from '@/modules/soundboard/soundboard.module';
 import { StageModule } from '@/modules/stage/stage.module';
-import { CallRegistryService } from './call-registry.service';
+import { CallRegistryModule } from './call-registry.module';
 import { DmCallsService } from './dm-calls.service';
 import { InteractionTimeoutService } from './interaction-timeout.service';
 import { MessagesGateway } from './messages.gateway';
@@ -23,6 +23,7 @@ import { VoiceGateway } from './voice.gateway';
 
 @Module({
   imports: [
+    CallRegistryModule,
     JwtModule,
     LivekitModule,
     MessagesModule,
@@ -37,7 +38,6 @@ import { VoiceGateway } from './voice.gateway';
     RealtimeGateway,
     MessagesGateway,
     VoiceGateway,
-    CallRegistryService,
     DmCallsService,
     PresenceService,
     RealtimeAccessService,

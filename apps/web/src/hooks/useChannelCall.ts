@@ -78,6 +78,11 @@ export function useChannelCall({
 
     const handleUserLeft = (payload: { channelId: string; socketId: string }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
+      // The server took this socket out of the call (kicked or banned from the server).
+      if (isLocalParticipant(payload)) {
+        endCall();
+        return;
+      }
       closePeer(payload.socketId);
       setRemoteMedia((current) => current.filter((item) => item.socketId !== payload.socketId));
     };
