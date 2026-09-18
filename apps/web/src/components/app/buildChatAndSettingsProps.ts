@@ -248,7 +248,7 @@ export function buildChatAndSettingsProps({
       },
       call: {
         state: callState,
-        active: activeCalls[0] ?? null,
+        active: channel ? (activeCalls[channel.id] ?? null) : null,
         remoteMedia,
         localVideoRef,
         start: startCall,

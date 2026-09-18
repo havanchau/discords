@@ -142,8 +142,9 @@ export function ChatPanel({
         </div>
       )}
 
-      {/* The stage view carries its own controls for a call in this stage. */}
-      {session.channel?.type === 'STAGE' && call.state?.channelId === session.channel.id ? null : (
+      {/* The stage view has its own join button and controls; only a call elsewhere shows here. */}
+      {session.channel?.type === 'STAGE' &&
+      (!call.state || call.state.channelId === session.channel.id) ? null : (
         <CallStage session={session} call={call} />
       )}
 
