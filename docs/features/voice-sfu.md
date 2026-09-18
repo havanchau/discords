@@ -177,10 +177,9 @@ Written back after implementing, so the doc matches the code:
   2-client video call still connected over `RTCPeerConnection` and a stage join was refused. Not
   verified: 8+ participants (acceptance criterion 1), a symmetric-NAT client using TURN (criterion
   5), and a production deployment.
-- **Pre-existing mesh issue seen during the rollback check, not changed here:** when someone joins,
-  both the newcomer and existing participants send an offer, and the browser logs
-  `InvalidStateError ... setRemoteDescription ... wrong state: stable` (offer glare); media still
-  connects.
+- **Pre-existing mesh issue seen during the rollback check, fixed in a follow-up the same day:**
+  when someone joined, both the newcomer and existing participants sent an offer (offer glare). Now
+  only the newcomer offers; see `voice-webrtc.md` → Offer direction in the mesh path.
 
 ## Risks & Rollback
 

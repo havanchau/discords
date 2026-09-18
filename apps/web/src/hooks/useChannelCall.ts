@@ -60,11 +60,9 @@ export function useChannelCall({
     const handleUserJoined = (payload: { channelId: string; participant: CallParticipant }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
       if (isLocalParticipant(payload.participant)) return;
+      // Mesh: the newcomer offers to everyone in its join ack, so waiting here avoids both sides
+      // offering at once (glare). LiveKit: the newcomer's media arrives through the room.
       setRemoteMedia((current) => upsertRemote(current, payload.participant));
-      // Under LiveKit the newcomer's media arrives through the room, not a peer connection.
-      if (callStateRef.current.transport !== 'livekit') {
-        void createOffer(payload.participant.socketId, payload.channelId);
-      }
     };
 
     const handleUserUpdated = (payload: { channelId: string; participant: CallParticipant }) => {
@@ -90,6 +88,12 @@ export function useChannelCall({
       offer: RTCSessionDescriptionInit;
     }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
+      const pending = peersRef.current.get(payload.fromSocketId);
+      if (pending?.signalingState === 'have-local-offer') {
+        // Two sockets joined at the same moment and offered to each other: the higher id yields.
+        if ((socket.id ?? '') < payload.fromSocketId) return;
+        await pending.setLocalDescription({ type: 'rollback' });
+      }
       const peer = createPeer(payload.fromSocketId, payload.channelId);
       await peer.setRemoteDescription(new RTCSessionDescription(payload.offer));
       const answer = await peer.createAnswer();
@@ -108,7 +112,8 @@ export function useChannelCall({
     }) => {
       if (payload.channelId !== callStateRef.current?.channelId) return;
       const peer = peersRef.current.get(payload.fromSocketId);
-      if (!peer) return;
+      // An answer to an offer this side rolled back (see `handleOffer`) is stale.
+      if (peer?.signalingState !== 'have-local-offer') return;
       await peer.setRemoteDescription(new RTCSessionDescription(payload.answer));
     };
 

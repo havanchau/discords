@@ -33,9 +33,9 @@ Which transport a call uses is decided per API deployment by the `VOICE_TRANSPOR
   - `apps/web/src/hooks/livekitCall.ts`: `connectLivekitCall` (lines 31-58) wires `RoomEvent.TrackSubscribed`/`TrackUnsubscribed` to rebuild each remote participant's `MediaStream` from subscribed tracks (`syncRemote`, lines 37-45) and `RoomEvent.Disconnected` to `onDisconnected` (line 50); `publishStream` (lines 65-77) publishes each captured track exactly once, tagged with the right `Track.Source` for camera/mic/screen. In `useChannelCall.ts`, `onDisconnected` shows `t('call.disconnected')` ("Disconnected from the call.") and ends the call (lines 303-308) unless the disconnect was the client's own `endCall()` (which clears `roomRef.current` first, line 243, so the stale-room check at line 305 skips it).
   - `apps/web/src/components/RemoteVideoTile.tsx`: renders the avatar fallback (lines 30-34) whenever the participant's stream has no video track (`hasVideo`, line 11) — true for an audio-only LiveKit or mesh stream — while a hidden/audio-only `<video>` element (`styles.audioOnly`, lines 22-28) keeps playing the audio track regardless of whether video is shown.
 
-### Known issue in the mesh path (pre-existing, not introduced by LiveKit)
+### Offer direction in the mesh path
 
-Both sides can send an offer when a peer joins (`createOffer` on the joiner's side, `useChannelCall.ts:222-224`, and again via `handleUserJoined` on the existing participant's side, lines 60-68), producing browser-logged `InvalidStateError: Failed to set remote description ... wrong state: stable` (offer glare) — observed during manual verification on 2026-09-18; media still connects despite the log. Not fixed by this change; recorded here since it is part of the mesh path this doc now documents in detail.
+Only the newcomer offers: it sends an offer to every participant in its `voice:join` ack (`useChannelCall.ts:233`), and existing participants only add the newcomer to their roster on `voice:user-joined`. Until 2026-09-18 existing participants also offered, so both sides offered at once (offer glare) and the browser logged `InvalidStateError ... wrong state: stable`. If two sockets join at the same moment and still offer to each other, `handleOffer` (`useChannelCall.ts:90`) lets the socket with the higher id roll back its own offer and answer, and the other side ignores the incoming offer; an answer to a rolled-back offer is dropped.
 
 ## Changes
 
@@ -68,7 +68,7 @@ See `voice-sfu.md`'s Trade-offs section for the full comparison (self-hosted Liv
 
 ## Risks & Rollback
 
-- **Risks**: on the mesh path, NAT traversal still fails on restrictive networks with no TURN server configured (unchanged limitation, now scoped to the rollback path only). Offer glare (see Current Behavior) can log a benign `InvalidStateError` on the mesh path.
+- **Risks**: on the mesh path, NAT traversal still fails on restrictive networks with no TURN server configured (unchanged limitation, now scoped to the rollback path only).
 - **Rollback**: set `VOICE_TRANSPORT=mesh` and redeploy the API — no code revert needed; already-connected LiveKit participants are not migrated (mixed-transport calls are unsupported, `voice-sfu.md` Edge Cases table).
 
 ## Test Plan
