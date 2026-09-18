@@ -13,6 +13,59 @@ model Bot {
   updatedAt DateTime @updatedAt
   owner     User     @relation("BotOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   botUser   User     @relation("BotUser", fields: [botUserId], references: [id], onDelete: Cascade)
+  slashCommands SlashCommand[]
 
   @@index([ownerId])
+}
+
+// A server-registered slash command (bot-gateway-and-slash-commands.md, phase 3). Per-server only:
+// a bot installed in several servers registers the same command once per server. Deleting the bot or
+// the server cascades; removing the bot from the server does not (a membership removal is not a
+// command deletion, so a re-authorized bot keeps its commands).
+model SlashCommand {
+  id          String   @id @default(cuid())
+  botId       String
+  serverId    String
+  name        String
+  description String
+  // SlashCommandOption[] (name, description, type, required); kept small and declared, not free text.
+  options     Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bot          Bot           @relation(fields: [botId], references: [id], onDelete: Cascade)
+  server       Server        @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  interactions Interaction[]
+
+  @@unique([serverId, name])
+  @@index([botId])
+}
+
+// One invocation of a slash command, from invoke to the bot's callback or its timeout. `token` is the
+// bearer credential the bot's callback authenticates with, matching the webhook/bot token shape
+// (`generateSecretToken`). `botId`/`serverId`/`channelId`/`invokerUserId` are plain ids, not foreign
+// keys: an interaction is a short-lived audit record of the invocation, not a live reference that
+// must be kept in sync if the channel or invoker is later deleted.
+model Interaction {
+  id            String            @id @default(cuid())
+  token         String            @unique
+  commandId     String
+  botId         String
+  serverId      String
+  channelId     String
+  invokerUserId String
+  args          Json
+  status        InteractionStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  respondedAt   DateTime?
+
+  command SlashCommand @relation(fields: [commandId], references: [id], onDelete: Cascade)
+
+  @@index([botId, status])
+}
+
+enum InteractionStatus {
+  PENDING
+  RESPONDED
+  TIMED_OUT
 }

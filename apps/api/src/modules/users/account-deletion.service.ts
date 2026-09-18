@@ -7,6 +7,7 @@ import { TwoFactorService } from '@/modules/auth/two-factor.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { PrivateFileStorageService } from '@/modules/uploads/private-file-storage.service';
+import { UploadsService } from '@/modules/uploads/uploads.service';
 import { anonymizeAccount } from './account-anonymization';
 import {
   ACCOUNT_ANONYMIZATION_TIMEOUT_MS,
@@ -28,6 +29,7 @@ export class AccountDeletionService {
     private readonly realtime: RealtimePublisher,
     private readonly storage: PrivateFileStorageService,
     private readonly limiter: RedisFixedWindowLimiter,
+    private readonly uploads: UploadsService,
   ) {}
 
   /** Per account, counted in Redis so the ceiling holds across API instances. */
@@ -151,8 +153,21 @@ export class AccountDeletionService {
           reason: 'KICK',
         });
       }
+      // The Bot row is already gone (deleted in the same transaction), so the gateway socket is
+      // disconnected directly by id rather than through a lookup that would now miss.
+      this.realtime.disconnectBotSocket(bot.botId);
     }
     await Promise.all(outcome.account.exportFileKeys.map((key) => this.storage.removeQuietly(key)));
+    // De-duplicated: an account whose avatar and banner were the same upload is checked once, not
+    // attempted twice (upload-ownership.md edge cases).
+    const orphanCandidates = new Set(
+      [outcome.account.avatarUrl, outcome.account.bannerUrl].filter(
+        (url): url is string => url !== null,
+      ),
+    );
+    await Promise.all(
+      [...orphanCandidates].map((url) => this.uploads.deleteUploadIfUnreferenced(url)),
+    );
     this.logger.log(`Account deletion completed for user ${userId}`);
   }
 

@@ -34,6 +34,7 @@ export const common = {
   'error.fallback.cannot-delete-role': 'Không xoá được vai trò',
   'error.fallback.cannot-download-export': 'Không tải được bản xuất dữ liệu',
   'error.fallback.cannot-forward-message': 'Không thể chuyển tiếp tin nhắn',
+  'error.fallback.cannot-load-audit-logs': 'Không tải được nhật ký kiểm tra',
   'error.fallback.cannot-load-automod-rules': 'Không tải được quy tắc AutoMod',
   'error.fallback.cannot-load-bans': 'Không tải được danh sách cấm',
   'error.fallback.cannot-load-channel-permissions': 'Không tải được quyền của kênh',

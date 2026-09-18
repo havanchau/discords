@@ -1,0 +1,157 @@
+# Feature Spec: Upload Ownership
+
+Tracks who uploaded a file and lets the server delete profile-image files it can prove are no longer referenced, closing the gap `feature-roadmap.md` calls out: "Account deletion clears avatar and banner URLs but does not remove the files: `avatarUrl`/`bannerUrl` are client-chosen URLs that may be shared with other rows, so deleting them needs upload ownership tracking first" (`docs/feature-roadmap.md:380`).
+
+Acceptance criteria:
+
+- A new `Upload` row is recorded for every file stored through `POST /uploads` (the generic single-file endpoint), with its owner, storage key, URL, and detected MIME type.
+- `PATCH /users/me` rejects an `avatarUrl`/`bannerUrl` value that is not an `Upload` the caller owns (`400`), instead of only checking the URL's shape as it does today.
+- Replacing a user's avatar or banner, or anonymizing the account, deletes the old file's stored bytes **only if** no other live `User.avatarUrl`, `User.bannerUrl`, or `Server.avatarUrl` still equals that URL.
+- A legacy `avatarUrl`/`bannerUrl` value with no matching `Upload` row (everything set before this change) is left alone forever — never deleted, never blocked from being cleared.
+- `npm run typecheck`, `npm run lint`, `npm run build` pass; the manual scenarios in Test Plan are run.
+
+## Scope
+
+**In scope**
+
+- `Upload` table recording ownership for files created via `POST /uploads` (the endpoint `UpdateMeDto.avatarUrl`/`bannerUrl` and `UpdateNicknameDto.avatarUrl` values must come from).
+- Ownership validation when a caller sets their own account `avatarUrl`/`bannerUrl` **and** their own per-server `ServerMember.avatarUrl` (found while reading the code — see Current Behavior; it is the identical client-chosen-URL problem, one call site further).
+- Reference-checked deletion of the old file when an account avatar/banner or a per-server avatar is replaced, and when an account is anonymized.
+- Backfill behavior for pre-existing rows (explicitly: do nothing to them — see Changes).
+- `Server.avatarUrl` is in scope for the *reference check* (it must be considered before deleting a file another row might still be using) but **not** for a new set-time ownership check, because no endpoint sets it today (see Decision below).
+
+**Out of scope**
+
+- Message attachments (`Message`/`DirectMessage` attachment URLs) — see "Why attachments are out of scope" below.
+- Sticker, soundboard, and emoji files — already handled by their own delete-time `removeStoredFileQuietly` calls (`apps/api/src/modules/stickers/stickers.service.ts:130`, and the same pattern in soundboard/emoji services), which do not have the avatar/banner sharing problem because each row owns a unique, server-generated key from `uploadBuffer` that only that one row ever references.
+- Adding a server-icon-set endpoint (`Server.avatarUrl` has no setter anywhere in `apps/api/src/modules` today — grepped, confirmed below) — out of scope to add one; this doc only makes sure the *reference check* does not delete a file a future or manually-set server icon still points at.
+- Building a garbage-collection sweep for orphaned `.chunks` temp files — unrelated to this doc; `sweepExpiredChunkDirs` (`apps/api/src/modules/uploads/uploads.service.ts:419-440`) already handles abandoned resumable uploads.
+
+## Current Behavior
+
+- `POST /uploads` (`apps/api/src/modules/uploads/uploads.controller.ts:44-85`) stores any allowed file type and returns `{ attachment: { fileName, mimeType, byteSize, url } }` with **no row written anywhere** — the URL is handed back to the client and the caller decides what to do with it. `UploadsService.upload` (`apps/api/src/modules/uploads/uploads.service.ts:140-153`) never touches Prisma.
+- `UpdateMeDto.avatarUrl`/`bannerUrl` (`apps/api/src/modules/users/dto/update-me.dto.ts:64-79`) are validated only by a regex, `UPLOADED_IMAGE_PATTERN` (`update-me.dto.ts:17-18`), checking the URL *shape* (`/uploads/<uuid>.<ext>` or a Cloudinary image delivery URL) — it never checks that the URL was actually issued to this caller, or issued at all; any syntactically valid URL of that shape is accepted, including another user's avatar URL or one nobody ever uploaded.
+- `UsersService.updateMe` (`apps/api/src/modules/users/users.service.ts:24`, referenced but not the focus of this doc) writes `avatarUrl`/`bannerUrl` straight onto `User` with no lookup of the old value and no deletion of anything.
+- `anonymizeAccount` (`apps/api/src/modules/users/account-anonymization.ts:33-58`) sets `avatarUrl: null, bannerUrl: null` (lines 46, 48) in the same `updateMany` that anonymizes the rest of the row — it does not read the prior values and cannot delete files it never looked at.
+- `UploadsService.removeStoredFile`/`removeStoredFileQuietly` (`apps/api/src/modules/uploads/uploads.service.ts:188-219`) already exist and already know how to delete a file by URL for both storage drivers (local disk, Cloudinary) — the comment on `removeStoredFile` (lines 182-186) already states the exact problem this doc solves: *"Only for rows that own their file... a URL a client chose, such as an avatar, may be shared with other rows and is never deleted."* This doc's job is to make an avatar/banner URL provably **not** shared before calling this same method, not to build new deletion logic.
+- The sticker/soundboard/emoji precedent (`apps/api/src/modules/stickers/stickers.service.ts:73-95, 116-131`) shows the pattern this doc follows for a row that *does* own its file: `uploadBuffer` mints a fresh server-generated key per row (never reused across rows, `buildStorageKey` in `uploads.service.ts:322-324` calls `randomUUID()` every time), so deletion needs no reference check — the URL structurally cannot be shared. Avatar/banner differ because they both flow through the same generic `POST /uploads` URL space, and a client is free to reuse any URL string it received (or guess/copy another one) in either field, or both.
+- `Server.avatarUrl` exists (`apps/api/prisma/models/servers.prisma:14`) but is never set by any endpoint — the only `avatarUrl` writes inside `apps/api/src/modules/servers/*.ts` are `servers.service.ts:185-219`, which write `ServerMember.avatarUrl` (a **per-server member identity override**, `updateMyMembership`/`UpdateNicknameDto`, unrelated to `Server.avatarUrl`), not the server's own icon. Discovery's own doc already noted "servers have no avatar editor" (`server-templates-and-discovery.md:164`), confirmed here for `Server.avatarUrl` specifically.
+- **A second, identical instance of the same problem**: `UpdateNicknameDto.avatarUrl` (`apps/api/src/modules/servers/dto/update-nickname.dto.ts:16-21`) validates a per-server avatar override with the exact same `UPLOADED_IMAGE_PATTERN` regex as `UpdateMeDto` (the file's own comment says "Matches the account avatar rule in `users/dto/update-me.dto.ts`") and the same shape-only check, no ownership. `updateMyMembership` (`servers.service.ts:181-219`) writes it straight onto `ServerMember` with no lookup of the old value and no deletion — same gap, same fix needed.
+
+## Changes
+
+### Rules / Flow
+
+1. **`Upload` row per generic upload.** `POST /uploads` records one `Upload` row (`ownerId`, `url`, `storageKey`, `mimeType`, `byteSize`, `createdAt`) immediately after `UploadsService.upload` succeeds, before the response is sent. `storageKey` is the value already computed internally (`buildStorageKey`/`buildStorageKeyFor`, currently private to `UploadsService` — becomes a returned field of the upload result, not re-derived from the URL later) so deletion never has to re-parse it out of a URL string.
+2. **Ownership check at set time.** `UsersService.updateMe` (`avatarUrl`/`bannerUrl`) and `ServersService.updateMyMembership` (`ServerMember.avatarUrl`) each look up `Upload.findFirst({ where: { url, ownerId: userId } })` when the corresponding field is present in the request. Not found → `400 Upload not found or not owned by you`. This replaces trusting the regex alone; the regex stays as a first-pass shape check (cheap, rejects garbage before a DB round trip) and the `Upload` lookup is the real authorization check.
+3. **No forced one-time use.** An `Upload` row can be referenced by both `avatarUrl` and `bannerUrl` at once (a user picking the same image for both), or reused later if the user reverts to a previous avatar — `Upload` records provenance, it is not a single-use claim ticket. This is why deletion needs the reference check in step 5, not just "delete on replace."
+4. **Replacing an avatar/banner/per-server avatar.** `updateMe` and `updateMyMembership` each read the caller's current value before the update, and after the update commits, call the new `maybeDeleteOrphanedUpload(oldUrl)` helper for each field that changed and had a non-null old value.
+5. **`maybeDeleteOrphanedUpload(url)`** (new, in `UploadsService` or a small new `upload-ownership.service.ts` — see Technical approach): counts `User.avatarUrl = url`, `User.bannerUrl = url`, `Server.avatarUrl = url`, and `ServerMember.avatarUrl = url` (four cheap indexed-or-scanned lookups, see DB/migration for the new indexes). If the total is `0`, it deletes the `Upload` row and calls `removeStoredFileQuietly(url, upload.mimeType)`; the `mimeType` comes from the `Upload` row, not from re-sniffing the file, since the row already has it. If nonzero, the file is left alone (another row still needs it) — this is also why a per-server avatar sharing the account avatar's URL is never deleted out from under the account.
+6. **Account anonymization.** `anonymizeAccount` (`account-anonymization.ts`) already runs inside a transaction; it is extended to read the account's `avatarUrl`/`bannerUrl` **before** the `updateMany` that nulls them (same transaction, same read-before-write shape the file already uses for `ownedServers`), and the caller (`account-deletion` service that invokes `anonymizeAccount`, outside the transaction, matching how `exportFileKeys` are already removed post-commit per the function's own `AnonymizedAccount` return shape) runs `maybeDeleteOrphanedUpload` for each non-null value after the transaction commits — mirroring the existing "private export files removed once the transaction has committed" comment (`account-anonymization.ts:7-8`) for exactly the same reason: never delete a file before the transaction that stops referencing it is durably committed.
+7. **Legacy rows.** An `avatarUrl`/`bannerUrl` set before this change has no `Upload` row. Nothing in this doc requires one to exist for a *read* — `maybeDeleteOrphanedUpload` on such a URL finds no `Upload` row, logs nothing, and skips the delete unconditionally (never guesses a storage key from the URL for a row it cannot prove ownership of). This is a deliberate, permanent gap: those files are never cleaned up by this feature. Re-uploading and re-setting the avatar (which every active user eventually does) is the only way a legacy file's slot gets replaced going forward, and even then only the *new* value becomes trackable — the old legacy file is still never deleted, by the same rule.
+8. **`Server.avatarUrl`.** No new setter is added (out of scope). The reference-check query in step 5 includes `Server.avatarUrl` so that *if* a server icon is ever set to the same URL as a user's avatar/banner (today: manually via direct DB write only, since no endpoint exists — or in the future, once a server-icon endpoint ships), deleting the user's file will not silently break the server's icon. This is a forward-compatibility guard, not a feature being shipped.
+
+### Edge cases
+
+| Case | Expected behavior |
+|---|---|
+| `avatarUrl` set to a URL never uploaded (bad shape) | `400` from the existing `@Matches` regex — unchanged. |
+| `avatarUrl` set to a real `/uploads/<uuid>.<ext>` URL uploaded by a *different* user | `400 Upload not found or not owned by you` (new). |
+| `avatarUrl` set to null (clearing it) | Old file's orphan check still runs; no new value to validate. |
+| Same URL set as both `avatarUrl` and `bannerUrl` | Allowed (see Rule 3); replacing just one of them later does not delete the file because the other field still references it. |
+| Legacy `avatarUrl` with no `Upload` row, user clears it | Cleared as today; no deletion attempted (no row, no key, nothing to delete). |
+| Two fields both point at the same `Upload`, then the account is deleted | `maybeDeleteOrphanedUpload` runs once per distinct URL (de-duplicated before the post-commit loop), so the file is deleted once, not attempted twice. |
+| `removeStoredFileQuietly` fails (disk or Cloudinary error) mid-deletion | Already logs and swallows (`uploads.service.ts:210-219`, unchanged) — the `Upload` row is deleted from the DB first, in the same flow order the sticker/soundboard precedent uses (DB row gone, then best-effort file cleanup), so a failed file delete leaves an orphaned file but never a dangling `Upload` row pointing at a URL no user references. |
+| Concurrent request changes `avatarUrl` again between the update and the orphan check | Rare race, same class of risk `server-templates-and-discovery.md`'s report-dedup already accepts (`server-templates-and-discovery.md:39`, "the cost is one duplicate queue row"); here the cost of losing the race is at worst a file kept alive one extra cycle (never a wrongly-deleted file still in use, because the reference check re-reads `User`/`Server` at delete time, not from stale in-memory state). |
+
+## Technical Approach
+
+**Files touched**
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/models/uploads.prisma` (new file, following the repo's one-file-per-domain `prisma/models/*.prisma` convention) | New `Upload` model. |
+| `apps/api/prisma/migrations/20260918004000_add_upload_ownership/` | New migration. |
+| `apps/api/src/modules/uploads/uploads.service.ts` | `upload()` returns `storageKey` in its result; new `findOwnedUpload(userId, url)` and `deleteUploadIfUnreferenced(url)` methods (naming: the latter wraps the reference-count query plus `removeStoredFileQuietly`, and deletes the `Upload` row). |
+| `apps/api/src/modules/uploads/uploads.controller.ts` | After `uploads.upload(file)`, write the `Upload` row (`this.uploads.recordUpload(user.id, attachment)`); requires `@CurrentUser()` on the existing `upload()` handler (it does not take one today — `uploads.controller.ts:78`). |
+| `apps/api/src/modules/users/users.service.ts` | `updateMe`: look up owned `Upload` for `avatarUrl`/`bannerUrl` before writing; read old values before the write; call `deleteUploadIfUnreferenced` for each changed, previously-non-null field after the write commits. |
+| `apps/api/src/modules/servers/servers.service.ts` | `updateMyMembership`: the same ownership lookup and old-value-read/post-commit-delete pattern for `ServerMember.avatarUrl`. |
+| `apps/api/src/modules/users/account-anonymization.ts` | Read `avatarUrl`/`bannerUrl` before the `updateMany`; return them on `AnonymizedAccount` (new fields) alongside the existing `serverIds`/`exportFileKeys`/`removedBots`. |
+| `apps/api/src/modules/users/*` (the caller of `anonymizeAccount`, e.g. `account-deletion-sweep.service.ts` or `account-anonymization` invocation site — grep confirms `anonymizeAccount` is called from the deletion sweep service) | After commit, call `deleteUploadIfUnreferenced` for each returned URL, next to the existing post-commit `exportFileKeys` cleanup. |
+| `apps/api/prisma/seed.ts` | No change required — seed data does not go through `POST /uploads`. |
+
+**API contract**
+
+- `POST /uploads` response shape is unchanged from the caller's perspective (`{ attachment: { fileName, mimeType, byteSize, url } }`); the new `Upload` row is an internal side effect, not a new field in the response.
+- `PATCH /users/me` gains one new error case: `400 Upload not found or not owned by you` when `avatarUrl`/`bannerUrl` is set to a URL that is not an owned `Upload`.
+- `PATCH /servers/:serverId/members/me` (`servers.controller.ts:83-89`, backed by `updateMyMembership`) gains the identical `400 Upload not found or not owned by you` case for `avatarUrl`.
+
+**DB / migration**
+
+```prisma
+model Upload {
+  id         String   @id @default(cuid())
+  ownerId    String
+  url        String   @unique
+  storageKey String
+  mimeType   String
+  byteSize   Int
+  createdAt  DateTime @default(now())
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+}
+```
+
+- `Upload.url` is `@unique`: `POST /uploads` always mints a fresh `buildStorageKey()` (`randomUUID()`-based, `uploads.service.ts:322-324`), so two uploads never produce the same URL — a unique constraint documents that invariant rather than relying on convention. If a future caller of `uploadBuffer` (stickers/soundboard/emoji) is ever changed to also write an `Upload` row, this doc does not require that — those flows keep their own delete path unchanged (Scope).
+- `Upload.ownerId` has `onDelete: Cascade`: if a `User` row could ever be hard-deleted this would remove their `Upload` rows too; in practice `User` rows are never hard-deleted (anonymized in place, `account-anonymization.ts`), so this FK is mostly documentation of intent, matching the repo's existing `onDelete: Cascade` default for owned-by-user rows (e.g. `ExportJob.user`, `apps/api/prisma/models/users.prisma:147`).
+- Supporting indexes for the reference-count query in Rule 5, since `User.avatarUrl`/`User.bannerUrl`/`Server.avatarUrl`/`ServerMember.avatarUrl` have no index today: `@@index([avatarUrl])` and `@@index([bannerUrl])` added to `User`, `@@index([avatarUrl])` added to `Server`, `@@index([avatarUrl])` added to `ServerMember`. These are the only schema changes to `User`/`Server`/`ServerMember` beyond adding the `uploads Upload[]` back-relation on `User`.
+- Migration name: `20260918004000_add_upload_ownership` — the task brief reserves `20260918000000`–`20260918003999` for other in-flight docs in this batch; this one takes the next free slot, `20260918004000`, ahead of `platform-report-review.md`'s `20260918005000`.
+- All new columns are additive (new table, new indexes); no existing column changes type or nullability. Lock duration on `User`/`Server`: adding an index to a populated table takes a brief lock proportional to table size — both tables are expected to stay small relative to, say, `Message`, so this is not flagged as a high-risk migration, but it is still worth running outside peak hours in production per `rules/database.md`'s general caution on large-table `ALTER`s.
+
+**Libraries** — none new; reuses Prisma and the existing `UploadsService` storage-driver abstraction.
+
+## Trade-offs
+
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| **`Upload` table recording every generic upload, checked at set time (chosen)** | Makes "does the caller own this URL" a real, provable check instead of a shape regex; enables safe deletion via a reference count instead of guessing; matches the repo's existing preference for an explicit row over inferring intent from a string | One new table, one new write on every `POST /uploads`, one new read on every `updateMe` that touches avatar/banner | **Chosen** — the alternative below cannot deliver the acceptance criterion "reject foreign URLs" at all |
+| Derive ownership by re-parsing the URL and trusting whichever request set it first (no new table) | Zero schema change | There is nothing in a URL string that encodes who uploaded it or when — `buildStorageKey` embeds only a random UUID, not a user id (`uploads.service.ts:322-331`) — so "ownership" would have to mean "first user who happened to reference it," which is not ownership and does not stop a user from pointing their avatar at someone else's already-uploaded file | Ruled out — does not meet the acceptance criterion and is not meaningfully different from today's regex-only check |
+| Delete the old file unconditionally on every avatar/banner change, no reference check | Simpler: no counting query needed | Exactly the bug this doc exists to avoid — the roadmap note explicitly says these URLs "may be shared with other rows"; an unconditional delete on replace would delete a file another row (e.g. the same URL reused for both avatar and banner) still needs | Ruled out — reintroduces data loss risk instead of fixing it |
+| Backfill `Upload` rows for existing `avatarUrl`/`bannerUrl` values by scanning `User`/`Server` and synthesizing rows | Every current image becomes trackable and eventually cleanable | The synthesized row's `storageKey` would have to be *guessed* from the URL (same fragile parsing `removeStoredFile`'s `STORED_FILE_NAME_PATTERN` already does defensively, `uploads.service.ts:14-15, 188-194`) with no way to confirm it is even a file this service ever stored (could be a hand-crafted URL from before validation existed, or a Cloudinary URL uploaded by some other path); a wrong guess risks deleting or mismarking a file it does not actually own | Ruled out — the task brief itself says "leave files, never delete" for legacy rows; backfilling ownership on unverifiable data would violate that explicitly-chosen safety margin |
+| A generic `is this URL referenced anywhere` reference count across *every* table with an image column, forever extensible | Most "correct" in the abstract — no future column is missed | Unbounded scope creep: every new feature with an image field would need to remember to register itself in a shared reference-counter; today only four columns exist (`User.avatarUrl`, `User.bannerUrl`, `Server.avatarUrl`, `ServerMember.avatarUrl`) and message attachments are excluded (see below) | Ruled out for now — the four-column, named check in Rule 5 is simple enough to review by reading the code, and a truly generic version can be built later if a fifth image-bearing column appears (the doc's own reasoning would need to be re-run at that point, which is preferable to a clever abstraction nobody re-derives from) |
+
+**Why message attachments are out of scope**: `Message`/`DirectMessage` attachments are not client-chosen free-text URLs the way `avatarUrl`/`bannerUrl` are — they are structured attachment rows created at send time from the exact upload result `POST /uploads` (or the chunked path) just returned, in the same request, and a message's attachments are deleted (or already orphaned, per `stickers.service.ts`-style handling for other file-owning rows) through the message's own lifecycle, not through a user-editable profile field. Wiring `Upload` ownership into the attachment path would need to change how messages record and later garbage-collect attachments — a materially different, larger change than "stop deleting-then-leaking two profile fields," and outside what `feature-roadmap.md:380`'s follow-up asked for. It is called out here rather than silently dropped: a future doc should confirm whether attachments are ever queried against `Upload` at all, or whether they should get their own dedicated tracking column instead of sharing this table.
+
+## Risks & Rollback
+
+- **What can break**: `updateMe` now makes one extra DB read (the `Upload` ownership lookup) per avatar/banner change — negligible volume, not a hot path.
+- **Not covered**: legacy files with no `Upload` row are never cleaned up (deliberate, see Rule 7); message attachments (deliberate, see Trade-offs); a server-icon setter is not built, so `Server.avatarUrl` participates only in the reference check, never in ownership validation.
+- **Rollback**: revert the code; the migration is additive (new table, new indexes) and safe to leave in place or drop independently — dropping it does not affect `User`/`Server` data since no existing column changes.
+
+## Test Plan
+
+**Automated**: none — the repo forbids `*.test.ts`/`*.spec.ts` files (`RULE.md`). Verified with `npm run typecheck`, `npm run lint`, `npm run build`.
+
+**Manual**
+
+1. Upload a file via the existing upload flow, set it as the account's avatar → `PATCH /users/me` succeeds; an `Upload` row exists for that URL owned by the caller.
+2. Set `avatarUrl` to a URL copied from a different account's profile (a real, previously-uploaded URL, but owned by another user) → `400 Upload not found or not owned by you`.
+3. Replace the avatar with a newly-uploaded image → the old file is deleted from local storage (or Cloudinary, depending on `STORAGE_DRIVER`) and its `Upload` row is gone; the new one is trackable.
+4. Set the same uploaded URL as both avatar and banner, then change only the avatar to a different upload → the shared file is **not** deleted (banner still references it); changing the banner too → now it is deleted.
+5. Delete the account (through the existing deletion flow) with a trackable avatar set → after the grace-period sweep runs, the avatar file is gone from storage and the `Upload` row is deleted.
+6. A pre-existing account with an `avatarUrl` set before this change (no `Upload` row) clears its avatar → no error, no deletion attempted, `avatarUrl` becomes `null` as it does today.
+7. Set a per-server avatar (`PATCH /servers/:serverId/members/me`) to the same uploaded URL the account avatar already uses, then clear the account avatar → the file is not deleted (the per-server override still references it); clearing the per-server override afterward deletes it.
+8. **Failure case**: set `avatarUrl` to a syntactically valid but never-uploaded URL (matches the regex, no `Upload` row for it at all) → `400 Upload not found or not owned by you`.
+
+## Deployment Notes
+
+- Run migration `20260918004000_add_upload_ownership` before deploying the API.
+- No new env vars.
+- No cache/queue to clear.
+- No breaking API change to existing endpoints besides the new `400` case on `PATCH /users/me`, which is additive validation (a request that already sent a real, owned upload URL keeps working identically).
+
+## Deviations
+
+- `apps/api/src/modules/users/dto/update-me.dto.ts`: `avatarUrl`/`bannerUrl` were typed `string | undefined`, even though `@IsOptional()` already let a client send `null` to clear either field at runtime (class-validator's `@IsOptional` skips validation for both `undefined` and `null`). Widened both to `string | null | undefined` so the type matches the runtime contract the doc's own edge cases rely on (`UpdateNicknameDto.avatarUrl` already used this shape) — no behavior changed, only the declared type.
+- `apps/api/src/modules/servers/servers.module.ts`: added to the doc's "Files touched" implicitly by `ServersService` needing `UploadsService` — imports `UploadsModule` alongside the existing `AuthModule`/`PermissionsModule`/`RealtimePublisherModule`. Infrastructure wiring, not called out as a separate file in the Technical Approach table.

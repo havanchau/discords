@@ -61,19 +61,21 @@ export class UpdateMeDto {
   @IsIn(locales)
   locale?: (typeof locales)[number];
 
+  /** `null` clears the avatar. A non-null value must be an `Upload` the caller owns (checked in the service). */
   @IsOptional()
   @IsString()
   @MaxLength(1000)
   @Matches(UPLOADED_IMAGE_PATTERN, {
     message: 'Avatar URL must reference an uploaded image',
   })
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 
+  /** `null` clears the banner. A non-null value must be an `Upload` the caller owns (checked in the service). */
   @IsOptional()
   @IsString()
   @MaxLength(1000)
   @Matches(UPLOADED_IMAGE_PATTERN, {
     message: 'Banner URL must reference an uploaded image',
   })
-  bannerUrl?: string;
+  bannerUrl?: string | null;
 }

@@ -109,7 +109,7 @@ Error envelope, from the new filter:
 ```json
 {
   "statusCode": 409,
-  "code": "EMAIL_OR_USERNAME_TAKEN",
+  "code": "EMAIL_OR_USERNAME_ALREADY_EXISTS",
   "message": "Email hoặc tên đăng nhập đã tồn tại"
 }
 ```

@@ -109,18 +109,22 @@ export function useDirectCall({
     // Join first: if media is denied nobody should be left ringing for an empty call.
     const started = await startCall(mode, { callId: directCallId(conversationId), label });
     if (!started) return;
-    const rang = await new Promise<boolean>((resolve) => {
+    const ringResult = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
       socket
         .timeout(5000)
         .emit(
           RealtimeEvents.DmCallRing,
           { conversationId, mode },
-          (err: Error | null, result?: { ok: boolean }) => resolve(!err && Boolean(result?.ok)),
+          (err: Error | null, result?: { ok?: boolean; error?: string }) => {
+            if (err) return resolve({ ok: false });
+            if (result?.error) return resolve({ ok: false, error: result.error });
+            return resolve({ ok: Boolean(result?.ok) });
+          },
         );
     });
-    if (!rang) {
+    if (!ringResult.ok) {
       endCall();
-      setWorkspaceError(t('call.cannotStart'));
+      setWorkspaceError(ringResult.error ?? t('call.cannotStart'));
       return;
     }
     setOutgoingCall({ conversationId, mode });
@@ -139,7 +143,15 @@ export function useDirectCall({
 
   function declineIncomingCall() {
     if (!incomingCall) return;
-    socket?.emit(RealtimeEvents.DmCallDecline, { conversationId: incomingCall.conversationId });
+    socket
+      ?.timeout(5000)
+      .emit(
+        RealtimeEvents.DmCallDecline,
+        { conversationId: incomingCall.conversationId },
+        (err: Error | null, result?: { error?: string }) => {
+          if (!err && result?.error) setWorkspaceError(result.error);
+        },
+      );
     setIncomingCall(null);
   }
 
@@ -147,7 +159,15 @@ export function useDirectCall({
   function endDirectCall() {
     const outgoing = outgoingCallRef.current;
     if (outgoing) {
-      socket?.emit(RealtimeEvents.DmCallCancel, { conversationId: outgoing.conversationId });
+      socket
+        ?.timeout(5000)
+        .emit(
+          RealtimeEvents.DmCallCancel,
+          { conversationId: outgoing.conversationId },
+          (err: Error | null, result?: { error?: string }) => {
+            if (!err && result?.error) setWorkspaceError(result.error);
+          },
+        );
       setOutgoingCall(null);
     }
     endCall();

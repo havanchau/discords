@@ -200,6 +200,14 @@
   gap: 12px;
 }
 
+/* A row with a single control (e.g. the banner button) — no fixed 64px avatar column to squeeze it into. */
+.settingsButtonRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
 .modalAvatar {
   width: 64px;
   height: 64px;

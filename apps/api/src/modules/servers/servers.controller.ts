@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RateLimit } from '@/common/rate-limit.decorator';
 import { RequestUser } from '@/common/request-user';
@@ -66,6 +79,7 @@ export class ServersController {
   }
 
   @RateLimit({ keyPrefix: 'server-onboarding-accept', limit: 10, windowMs: 60_000 })
+  @HttpCode(200)
   @Post('servers/:serverId/onboarding/accept')
   acceptOnboarding(
     @CurrentUser() user: RequestUser,
@@ -117,12 +131,16 @@ export class ServersController {
 
   @RateLimit({ keyPrefix: 'member-ban', limit: 20, windowMs: 60_000 })
   @Post('servers/:serverId/bans')
-  ban(
+  async ban(
     @CurrentUser() user: RequestUser,
     @Param('serverId') serverId: string,
     @Body() dto: CreateBanDto,
+    @Res({ passthrough: true }) response: Response,
   ) {
-    return this.moderation.ban(user.id, serverId, dto);
+    const result = await this.moderation.ban(user.id, serverId, dto);
+    // 201 for a new ban, 200 when the user was already banned, like reports.controller.ts:46-48.
+    response.status(result.created ? 201 : 200);
+    return result;
   }
 
   @RateLimit({ keyPrefix: 'member-unban', limit: 20, windowMs: 60_000 })

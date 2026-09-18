@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { NotificationPreference, User, UserProfile } from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { UploadsService } from '@/modules/uploads/uploads.service';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { PROFILE_USER_SELECT, toProfileView, type CustomStatusView } from './user-profile';
@@ -11,12 +12,13 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
+    private readonly uploads: UploadsService,
   ) {}
 
   async getMe(userId: string): Promise<{ user: User }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { ...PROFILE_USER_SELECT, email: true, locale: true },
+      select: { ...PROFILE_USER_SELECT, email: true, locale: true, platformRole: true },
     });
     return { user: toProfileView(user) };
   }
@@ -26,15 +28,33 @@ export class UsersService {
       dto.customStatusText !== undefined ||
       dto.customStatusEmoji !== undefined ||
       dto.customStatusExpiresAt !== undefined;
+    const setsExpiresAt = dto.customStatusExpiresAt !== undefined;
 
     // No scheduled job clears an expired status, so a profile write is where the stale row is
     // dropped. Conditional on the stored expiry, so it never overwrites a status set concurrently.
-    if (!setsStatus) {
+    // Runs whenever the write does not itself set an expiry — including a write that sets only the
+    // text or emoji, which used to skip this and leave the new text hidden behind an old past
+    // expiry (docs/features/qa-follow-ups-2026-09-18.md, "Custom status").
+    if (!setsExpiresAt) {
       await this.prisma.user.updateMany({
         where: { id: userId, customStatusExpiresAt: { lte: new Date() } },
         data: { customStatusText: null, customStatusEmoji: null, customStatusExpiresAt: null },
       });
     }
+
+    // The regex on the DTO only checks the URL's shape; this is the real authorization check
+    // (upload-ownership.md) — a URL not owned by this caller, including one nobody ever uploaded,
+    // is refused before it can be written onto the account.
+    if (dto.avatarUrl) await this.requireOwnedUpload(userId, dto.avatarUrl);
+    if (dto.bannerUrl) await this.requireOwnedUpload(userId, dto.bannerUrl);
+
+    const previous =
+      dto.avatarUrl !== undefined || dto.bannerUrl !== undefined
+        ? await this.prisma.user.findUniqueOrThrow({
+            where: { id: userId },
+            select: { avatarUrl: true, bannerUrl: true },
+          })
+        : null;
 
     const user = await this.prisma.user.update({
       where: { id: userId },
@@ -50,7 +70,38 @@ export class UsersService {
       await this.broadcastCustomStatus(userId, customStatus);
     }
 
+    await this.deleteReplacedUploads(previous, dto);
+
     return { user: view };
+  }
+
+  private async requireOwnedUpload(userId: string, url: string) {
+    const owned = await this.uploads.findOwnedUpload(userId, url);
+    if (!owned) throw new BadRequestException('Upload not found or not owned by you');
+  }
+
+  /**
+   * Runs after the update commits: an old avatar/banner is deleted only once it is no longer the
+   * live value, and only if nothing else still references it (upload-ownership.md rule 5). A
+   * legacy URL with no `Upload` row is left alone — `deleteUploadIfUnreferenced` no-ops for it.
+   */
+  private async deleteReplacedUploads(
+    previous: { avatarUrl: string | null; bannerUrl: string | null } | null,
+    dto: UpdateMeDto,
+  ) {
+    if (!previous) return;
+    const changedUrls = [
+      dto.avatarUrl !== undefined && previous.avatarUrl && previous.avatarUrl !== dto.avatarUrl
+        ? previous.avatarUrl
+        : null,
+      dto.bannerUrl !== undefined && previous.bannerUrl && previous.bannerUrl !== dto.bannerUrl
+        ? previous.bannerUrl
+        : null,
+    ].filter((url): url is string => url !== null);
+    // De-duplicated: the same URL set as both fields is checked once, not attempted twice.
+    for (const url of new Set(changedUrls)) {
+      await this.uploads.deleteUploadIfUnreferenced(url);
+    }
   }
 
   private async broadcastCustomStatus(userId: string, customStatus: CustomStatusView | null) {

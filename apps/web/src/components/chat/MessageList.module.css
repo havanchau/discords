@@ -162,7 +162,7 @@
   display: flex;
   align-items: center;
   margin: var(--space-3) var(--space-4);
-  color: var(--status-danger, #f23f43);
+  color: var(--state-danger);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.05em;
@@ -175,11 +175,11 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--status-danger, #f23f43);
+  background: var(--state-danger);
   opacity: 0.6;
 }
 
 .unreadDivider span {
   padding: 0 var(--space-3);
-  background: var(--surface-bg, transparent);
+  background: var(--surface-base);
 }

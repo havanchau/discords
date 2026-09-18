@@ -35,6 +35,7 @@ const LANGUAGE_OPTIONS: SettingsSelectOption<Locale>[] = [
 ];
 
 const EXPIRY_OPTIONS: { value: string; labelKey: MessageKey }[] = [
+  { value: 'keep', labelKey: 'profile.expiry.keep' },
   { value: 'never', labelKey: 'profile.expiry.never' },
   { value: '30m', labelKey: 'profile.expiry.30m' },
   { value: '1h', labelKey: 'profile.expiry.1h' },
@@ -135,7 +136,7 @@ export function ProfileSettings({
           aria-label={t('profile.changeBanner')}
           onChange={(event) => void updateProfileBanner(event)}
         />
-        <div className={styles.settingsAvatarRow}>
+        <div className={styles.settingsButtonRow}>
           <Button
             type="button"
             variant="secondary"
@@ -171,7 +172,9 @@ export function ProfileSettings({
         <SettingsSelect
           name="customStatusExpiry"
           label={t('profile.field.customStatusExpiry')}
-          defaultValue="never"
+          defaultValue={
+            auth.user.customStatus?.text || auth.user.customStatus?.emoji ? 'keep' : 'never'
+          }
           options={EXPIRY_OPTIONS.map((option) => ({
             value: option.value,
             label: t(option.labelKey),

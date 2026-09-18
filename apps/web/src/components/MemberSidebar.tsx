@@ -126,6 +126,10 @@ export function MemberSidebar({
               // server. Presence is conveyed by the status dot, never repeated as text here.
               const subtitle = member.kind === 'OWNER' ? t('roles.owner') : namedRoles[0];
               const identity = memberIdentityOf(member);
+              const customStatus = member.user.customStatus;
+              const customStatusLine = customStatus?.text
+                ? [customStatus.emoji, customStatus.text].filter(Boolean).join(' ')
+                : null;
 
               return (
                 <ContextMenuRoot key={member.id}>
@@ -174,6 +178,11 @@ export function MemberSidebar({
                               </span>
                             ) : subtitle ? (
                               <span>{subtitle}</span>
+                            ) : null}
+                            {customStatusLine ? (
+                              <span className={styles.customStatus} title={customStatusLine}>
+                                {customStatusLine}
+                              </span>
                             ) : null}
                           </div>
                         </Button>

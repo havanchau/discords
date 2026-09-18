@@ -120,6 +120,7 @@ export const channels = {
   'sidebar.menu.invitePeople': 'Mời thành viên',
   'sidebar.menu.inviteReady': 'Lời mời đã sẵn sàng để dán',
   'sidebar.menu.serverSettings': 'Cài đặt server',
+  'sidebar.menu.title': 'Menu',
   'sidebar.noTextChannelsMatch': 'Không có kênh văn bản nào khớp.',
   'sidebar.noUncategorizedText': 'Không có kênh văn bản nào chưa phân loại.',
   'sidebar.noVoiceChannels': 'Chưa có kênh thoại nào.',

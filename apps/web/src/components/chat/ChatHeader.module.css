@@ -18,6 +18,18 @@
   gap: var(--space-2);
 }
 
+/* Opens the mobile navigation drawer; the sidebar column is reachable directly above this width. */
+.mobileMenuButton {
+  display: none;
+  flex: none;
+}
+
+@media (max-width: 720px) {
+  .mobileMenuButton {
+    display: grid;
+  }
+}
+
 .channelAvatarButton {
   width: var(--control-min-size);
   height: var(--control-min-size);

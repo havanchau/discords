@@ -91,6 +91,7 @@ export function ChatPanel({
   return (
     <section className={cn(styles.chatPanel, 'chat-panel')}>
       <ChatHeader
+        auth={session.auth}
         channel={session.channel}
         notificationUnreadCount={messages.notificationUnreadCount}
         pendingAction={composer.pendingAction}
@@ -162,6 +163,7 @@ export function ChatPanel({
             firstUnreadMessageId={messages.firstUnreadMessageId}
             searchQuery={messages.searchQuery}
             loadMoreMessages={messages.loadMore}
+            onMarkRead={messages.markRead}
             renderMessage={(message, index) => (
               <MessageRow
                 message={message}
@@ -176,6 +178,7 @@ export function ChatPanel({
                 actions={messageActions}
                 onPreviewAttachment={setPreviewAttachment}
                 onJumpToMessage={jumpToMessage}
+                isFirstUnread={message.id === messages.firstUnreadMessageId}
               />
             )}
           />

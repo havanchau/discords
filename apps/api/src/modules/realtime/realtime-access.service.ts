@@ -68,6 +68,24 @@ export class RealtimeAccessService {
   }
 
   /**
+   * Every channel, across every server the user is a member of, that `Permission.ViewChannel`
+   * allows — the same viewability query `ServersService.listForUser` already runs per server,
+   * reused here for a bot socket's room computation
+   * (`bot-gateway-and-slash-commands.md` → Changes → Gateway → Room membership).
+   */
+  async listViewableChannelIds(userId: string) {
+    const serverIds = await this.listServerIds(userId);
+    if (!serverIds.length) return [];
+
+    const channels = await this.prisma.channel.findMany({
+      where: { serverId: { in: serverIds } },
+      select: { id: true, serverId: true, isPrivate: true },
+    });
+    const viewable = await this.permissions.filterViewableChannels(userId, channels);
+    return viewable.map((channel) => channel.id);
+  }
+
+  /**
    * Authorizes a call id (channel id or `dm:<conversationId>`) and returns the joiner's names. A server
    * voice join is refused while rules screening blocks the member; DM calls are not screened.
    */

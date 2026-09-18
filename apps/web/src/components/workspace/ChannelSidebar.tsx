@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   Search,
   Settings,
+  ShieldCheck,
   UserPlus,
   Volume2,
 } from 'lucide-react';
@@ -18,6 +19,8 @@ import { assetUrl, type Channel, type ChannelCategory } from '@/api';
 import { accentClass, initials } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
+import { PlatformReportsPage } from '@/components/platform/PlatformReportsPage';
+import { usePlatformAdminAccess } from '@/hooks/usePlatformReports';
 import {
   Badge,
   Button,
@@ -77,6 +80,8 @@ export function ChannelSidebar({
     setActiveDialog,
   } = actions;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isPlatformReportsOpen, setIsPlatformReportsOpen] = useState(false);
+  const isPlatformAdmin = usePlatformAdminAccess();
   const { collapsedIds, toggleCategory } = useCollapsedCategories();
   const isSearching = Boolean(channelQuery.trim());
   const canManageChannels = memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS');
@@ -338,6 +343,11 @@ export function ChannelSidebar({
           <strong>{auth.user.displayName}</strong>
           <span>@{auth.user.username}</span>
         </div>
+        {isPlatformAdmin ? (
+          <IconButton label={t('platform.navLabel')} onClick={() => setIsPlatformReportsOpen(true)}>
+            <ShieldCheck size={16} aria-hidden="true" />
+          </IconButton>
+        ) : null}
         <IconButton label={t('sidebar.editProfile')} onClick={() => setActiveDialog('profile')}>
           <Edit3 size={16} aria-hidden="true" />
         </IconButton>
@@ -345,6 +355,7 @@ export function ChannelSidebar({
           <LogOut size={16} aria-hidden="true" />
         </IconButton>
       </div>
+      <PlatformReportsPage open={isPlatformReportsOpen} onOpenChange={setIsPlatformReportsOpen} />
     </aside>
   );
 }

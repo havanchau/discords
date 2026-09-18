@@ -11,10 +11,13 @@ import { BotAuthorizationService } from './bot-authorization.service';
 import { BotMessagesService } from './bot-messages.service';
 import { BotsController } from './bots.controller';
 import { BotsService } from './bots.service';
+import { InteractionsController } from './interactions.controller';
+import { InteractionsService } from './interactions.service';
+import { SlashCommandsService } from './slash-commands.service';
 
 @Module({
   imports: [AuthModule, MessagesModule, PermissionsModule, RealtimePublisherModule, ServersModule],
-  controllers: [BotsController, BotApiController],
+  controllers: [BotsController, BotApiController, InteractionsController],
   // RealtimeUnreadService is stateless (Prisma + permissions), as in ForwardingModule.
   providers: [
     BotsService,
@@ -22,6 +25,8 @@ import { BotsService } from './bots.service';
     BotMessagesService,
     BotAuthGuard,
     RealtimeUnreadService,
+    SlashCommandsService,
+    InteractionsService,
   ],
 })
 export class BotsModule {}

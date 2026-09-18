@@ -9,6 +9,7 @@ export const ERROR_MESSAGE_CODES = {
   'AutoMod rule not found': 'AUTOMOD_RULE_NOT_FOUND',
   'Ban not found': 'BAN_NOT_FOUND',
   'Bot already in this server': 'BOT_ALREADY_IN_THIS_SERVER',
+  'Bot is not a member of this server': 'BOT_IS_NOT_A_MEMBER_OF_THIS_SERVER',
   'Bot limit reached': 'BOT_LIMIT_REACHED',
   'Bot name is too short': 'BOT_NAME_IS_TOO_SHORT',
   'Bot not found': 'BOT_NOT_FOUND',
@@ -39,6 +40,9 @@ export const ERROR_MESSAGE_CODES = {
   'Choose exactly one option': 'CHOOSE_EXACTLY_ONE_OPTION',
   'Choose one role for each single-choice question':
     'CHOOSE_ONE_ROLE_FOR_EACH_SINGLE_CHOICE_QUESTION',
+  'Command name already used in this server': 'COMMAND_NAME_ALREADY_USED_IN_THIS_SERVER',
+  'Command name is reserved': 'COMMAND_NAME_IS_RESERVED',
+  'Command not found': 'COMMAND_NOT_FOUND',
   'Conversation not found': 'CONVERSATION_NOT_FOUND',
   'Deletion already completed': 'DELETION_ALREADY_COMPLETED',
   'Do not include yourself in userIds': 'DO_NOT_INCLUDE_YOURSELF_IN_USERIDS',
@@ -49,8 +53,12 @@ export const ERROR_MESSAGE_CODES = {
   'Emoji not found': 'EMOJI_NOT_FOUND',
   'Encrypted messages are blocked while AutoMod is enabled':
     'ENCRYPTED_MESSAGES_ARE_BLOCKED_WHILE_AUTOMOD_IS_ENABLED',
+  'Event end time must be after the start time': 'EVENT_END_TIME_MUST_BE_AFTER_THE_START_TIME',
   'Event name cannot be empty': 'EVENT_NAME_CANNOT_BE_EMPTY',
   'Event not found': 'EVENT_NOT_FOUND',
+  'Event start time cannot be in the past': 'EVENT_START_TIME_CANNOT_BE_IN_THE_PAST',
+  'Event start time must be within one year': 'EVENT_START_TIME_MUST_BE_WITHIN_ONE_YEAR',
+  'Events can last at most 7 days': 'EVENTS_CAN_LAST_AT_MOST_7_DAYS',
   'Export not found': 'EXPORT_NOT_FOUND',
   'File is required': 'FILE_IS_REQUIRED',
   'File is too large': 'FILE_IS_TOO_LARGE',
@@ -59,6 +67,10 @@ export const ERROR_MESSAGE_CODES = {
   'Forum tag not found': 'FORUM_TAG_NOT_FOUND',
   'Friend request not found': 'FRIEND_REQUEST_NOT_FOUND',
   'Group is full': 'GROUP_IS_FULL',
+  'Interaction already responded to': 'INTERACTION_ALREADY_RESPONDED_TO',
+  'Interaction already timed out': 'INTERACTION_ALREADY_TIMED_OUT',
+  'Interaction belongs to a different bot': 'INTERACTION_BELONGS_TO_A_DIFFERENT_BOT',
+  'Interaction not found': 'INTERACTION_NOT_FOUND',
   'Invalid allowed domain': 'INVALID_ALLOWED_DOMAIN',
   'Invalid bearer token': 'INVALID_BEARER_TOKEN',
   'Invalid bot token': 'INVALID_BOT_TOKEN',
@@ -101,6 +113,9 @@ export const ERROR_MESSAGE_CODES = {
   'Not found': 'NOT_FOUND',
   'Not in this call': 'NOT_IN_THIS_CALL',
   'Notification not found': 'NOTIFICATION_NOT_FOUND',
+  'Only group conversations can add members': 'ONLY_GROUP_CONVERSATIONS_CAN_ADD_MEMBERS',
+  'Only group conversations can be renamed': 'ONLY_GROUP_CONVERSATIONS_CAN_BE_RENAMED',
+  'Only group conversations can remove members': 'ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS',
   'Only the author can delete this message': 'ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE',
   'Only the author can edit this message': 'ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE',
   'Only the author or message manager can delete this message':
@@ -115,6 +130,7 @@ export const ERROR_MESSAGE_CODES = {
     'ONLY_THE_RECEIVER_CAN_ACCEPT_OR_REJECT_THIS_REQUEST',
   'Pattern is not supported': 'PATTERN_IS_NOT_SUPPORTED',
   'Pin limit reached': 'PIN_LIMIT_REACHED',
+  'Platform admin access required': 'PLATFORM_ADMIN_ACCESS_REQUIRED',
   'Poll expiry must be between 5 minutes and 7 days from now':
     'POLL_EXPIRY_MUST_BE_BETWEEN_5_MINUTES_AND_7_DAYS_FROM_NOW',
   'Poll messages cannot be edited': 'POLL_MESSAGES_CANNOT_BE_EDITED',
@@ -145,6 +161,7 @@ export const ERROR_MESSAGE_CODES = {
   'Server needs at least 2 members to be listed': 'SERVER_NEEDS_AT_LEAST_2_MEMBERS_TO_BE_LISTED',
   'Server not found': 'SERVER_NOT_FOUND',
   'Session not found': 'SESSION_NOT_FOUND',
+  'Slash command limit reached for this server': 'SLASH_COMMAND_LIMIT_REACHED_FOR_THIS_SERVER',
   'Socket rate limit exceeded': 'SOCKET_RATE_LIMIT_EXCEEDED',
   'Soundboard clip file is too large': 'SOUNDBOARD_CLIP_FILE_IS_TOO_LARGE',
   'Soundboard clip must be an MP3, OGG, WAV, WEBM or M4A file':
@@ -182,6 +199,7 @@ export const ERROR_MESSAGE_CODES = {
   'Upload chunk is missing': 'UPLOAD_CHUNK_IS_MISSING',
   'Upload chunk is required': 'UPLOAD_CHUNK_IS_REQUIRED',
   'Upload chunk is too large': 'UPLOAD_CHUNK_IS_TOO_LARGE',
+  'Upload not found or not owned by you': 'UPLOAD_NOT_FOUND_OR_NOT_OWNED_BY_YOU',
   'Use forum posts on a FORUM channel': 'USE_FORUM_POSTS_ON_A_FORUM_CHANNEL',
   'User not found': 'USER_NOT_FOUND',
   'Voice message is too large': 'VOICE_MESSAGE_IS_TOO_LARGE',
@@ -208,6 +226,8 @@ export const ERROR_MESSAGE_PREFIX_CODES = [
   { prefix: 'You are timed out until ', code: 'MEMBER_TIMED_OUT' },
   { prefix: 'Rate limit exceeded. Retry after ', code: 'RATE_LIMIT_EXCEEDED' },
   { prefix: 'Message blocked by AutoMod: ', code: 'AUTOMOD_MESSAGE_BLOCKED' },
+  { prefix: 'Missing required option: ', code: 'MISSING_REQUIRED_SLASH_COMMAND_OPTION' },
+  { prefix: 'Invalid option: ', code: 'INVALID_SLASH_COMMAND_OPTION' },
 ] as const;
 
 export type ErrorCode =

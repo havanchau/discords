@@ -28,19 +28,32 @@ model ServerTemplate {
   @@index([sourceServerId])
 }
 
+/// What a platform admin did with a `ServerReport` (docs/features/platform-report-review.md).
+enum PlatformReportResolution {
+  DISMISSED
+  SERVER_DELISTED
+}
+
 // A report against a listed server as a whole, filed from discovery by any signed-in user. Kept
 // separate from MessageReport (open question 15): it has no server-side moderator queue, because the
-// people who would triage it are the server's own managers.
+// people who would triage it are the server's own managers — this one is reviewed by platform admins
+// instead (`resolvedAt IS NULL` means the computed status is OPEN).
 model ServerReport {
-  id         String              @id @default(cuid())
-  serverId   String
-  reporterId String
-  reason     MessageReportReason
-  details    String?
-  createdAt  DateTime            @default(now())
-  server     Server              @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  reporter   User                @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  id             String                     @id @default(cuid())
+  serverId       String
+  reporterId     String
+  reason         MessageReportReason
+  details        String?
+  createdAt      DateTime                   @default(now())
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolution     PlatformReportResolution?
+  resolutionNote String?
+  server         Server                     @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  reporter       User                       @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedBy     User?                      @relation("ServerReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@index([serverId, createdAt])
   @@index([reporterId, serverId, createdAt])
+  @@index([resolvedAt, createdAt])
 }

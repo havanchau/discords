@@ -176,9 +176,17 @@ export function useChannelCall({
           isCameraOff: nextState.isCameraOff,
           isSharingScreen: nextState.isSharingScreen,
         },
-        async (err: Error | null, result?: { participants: CallParticipant[] }) => {
+        async (
+          err: Error | null,
+          result?: { participants?: CallParticipant[]; error?: string },
+        ) => {
           if (err) {
             setWorkspaceError(t('call.cannotJoin'));
+            endCall();
+            return;
+          }
+          if (result?.error) {
+            setWorkspaceError(result.error);
             endCall();
             return;
           }

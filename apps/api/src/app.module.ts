@@ -20,6 +20,7 @@ import { LinkPreviewsModule } from './modules/link-previews/link-previews.module
 import { MessagesModule } from './modules/messages/messages.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
+import { PlatformModule } from './modules/platform/platform.module';
 import { PollsModule } from './modules/polls/polls.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { PushModule } from './modules/push/push.module';
@@ -58,6 +59,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     LinkPreviewsModule,
     NotificationsModule,
     PermissionsModule,
+    PlatformModule,
     PollsModule,
     ReportsModule,
     RolesModule,

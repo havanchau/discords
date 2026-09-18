@@ -1,7 +1,7 @@
 model EmailVerificationToken {
   id        String    @id @default(cuid())
   userId    String
-  tokenHash String
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
@@ -65,7 +65,7 @@ model TwoFactorRecoveryCode {
 model Session {
   id           String    @id @default(cuid())
   userId       String
-  refreshHash  String
+  refreshHash  String    @unique
   userAgent    String?
   revokedAt    DateTime?
   expiresAt    DateTime

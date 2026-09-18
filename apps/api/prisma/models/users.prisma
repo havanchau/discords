@@ -21,6 +21,13 @@ enum FriendStatus {
   BLOCKED
 }
 
+/// Cross-server platform staff, not a server-scoped role. Never set by any API endpoint — only a DB
+/// write, the seed script, or a one-off maintenance script (docs/features/platform-report-review.md).
+enum PlatformRole {
+  USER
+  ADMIN
+}
+
 model User {
   id                        String                     @id @default(cuid())
   email                     String                     @unique
@@ -46,6 +53,8 @@ model User {
   deletionRequestedAt       DateTime?
   deletionScheduledAt       DateTime?
   deletionCompletedAt       DateTime?
+  /// Never set by a client request; see the `PlatformRole` enum comment.
+  platformRole              PlatformRole               @default(USER)
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
   sessions                  Session[]
@@ -94,12 +103,16 @@ model User {
   exportJobs                ExportJob[]
   serverTemplates           ServerTemplate[]
   filedServerReports        ServerReport[]
+  resolvedServerReports     ServerReport[]             @relation("ServerReportResolver")
   createdWebhooks           ServerWebhook[]            @relation("WebhookCreator")
   webhook                   ServerWebhook?             @relation("WebhookUser")
   ownedBots                 Bot[]                      @relation("BotOwner")
   bot                       Bot?                       @relation("BotUser")
+  uploads                   Upload[]
 
   @@index([deletionScheduledAt])
+  @@index([avatarUrl])
+  @@index([bannerUrl])
 }
 
 model FriendRequest {

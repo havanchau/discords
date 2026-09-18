@@ -6,13 +6,14 @@ import { PermissionsModule } from '@/modules/permissions/permissions.module';
 import { SoundboardModule } from '@/modules/soundboard/soundboard.module';
 import { CallRegistryService } from './call-registry.service';
 import { DmCallsService } from './dm-calls.service';
+import { InteractionTimeoutService } from './interaction-timeout.service';
 import { MessagesGateway } from './messages.gateway';
 import { PresenceService } from './presence.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimeGateway } from './realtime.gateway';
 import { RealtimeHeartbeatService } from './realtime-heartbeat.service';
 import { RealtimePublisherModule } from './realtime-publisher.module';
-import { RealtimeUnreadService } from './realtime-unread.service';
+import { RealtimeUnreadModule } from './realtime-unread.module';
 import { SocketAuthService } from './socket-auth.service';
 import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
@@ -25,6 +26,7 @@ import { VoiceGateway } from './voice.gateway';
     NotificationsModule,
     PermissionsModule,
     RealtimePublisherModule,
+    RealtimeUnreadModule,
     SoundboardModule,
   ],
   providers: [
@@ -36,7 +38,7 @@ import { VoiceGateway } from './voice.gateway';
     PresenceService,
     RealtimeAccessService,
     RealtimeHeartbeatService,
-    RealtimeUnreadService,
+    InteractionTimeoutService,
     SocketAuthService,
     SocketErrorTranslator,
     SocketRateLimitService,

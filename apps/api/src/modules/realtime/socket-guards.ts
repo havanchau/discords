@@ -13,10 +13,15 @@ export interface SocketGuardOptions {
   maxConnectionsPerIp: number;
 }
 
-/** Stable limit key for a socket: the user once authenticated, so reconnecting does not reset limits. */
+/**
+ * Stable limit key for a socket: the user once authenticated, so reconnecting does not reset limits.
+ * A bot socket keys on its bot id (`bot:<botId>`) instead of `user:<id>`, so its inbound event volume
+ * (heartbeats only — bot sockets are receive-only) is capped independently of a human sharing the box.
+ */
 export function socketLimitSubject(client: Socket) {
-  const userId = readSocketUser(client)?.id;
-  return userId ? `user:${userId}` : `socket:${client.id}`;
+  const user = readSocketUser(client);
+  if (!user) return `socket:${client.id}`;
+  return user.kind === 'bot' ? `bot:${user.botId}` : `user:${user.id}`;
 }
 
 /**

@@ -9,6 +9,7 @@ import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { copyFile, mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from 'fs/promises';
 import { basename, extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 /** The last path segment of every stored file: `buildStorageKey` names it `<uuid><extension>`. */
 const STORED_FILE_NAME_PATTERN =
@@ -105,7 +106,10 @@ async function moveFile(sourcePath: string, targetPath: string) {
 export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     if (this.storageDriver === 'cloudinary') {
       cloudinary.config({
         cloud_name: this.requiredConfig('CLOUDINARY_CLOUD_NAME'),
@@ -218,6 +222,53 @@ export class UploadsService {
     }
   }
 
+  /** Records who a generic `POST /uploads` file belongs to, so a later avatar/banner set can prove ownership. */
+  async recordUpload(
+    ownerId: string,
+    attachment: { url: string; storageKey: string; mimeType: string; byteSize: number },
+  ) {
+    await this.prisma.upload.create({
+      data: {
+        ownerId,
+        url: attachment.url,
+        storageKey: attachment.storageKey,
+        mimeType: attachment.mimeType,
+        byteSize: attachment.byteSize,
+      },
+    });
+  }
+
+  /** `null` when the URL was never uploaded, or was uploaded by someone else. */
+  findOwnedUpload(ownerId: string, url: string) {
+    return this.prisma.upload.findFirst({ where: { url, ownerId } });
+  }
+
+  /**
+   * Deletes the stored file and its `Upload` row once no live `User.avatarUrl`, `User.bannerUrl`,
+   * `Server.avatarUrl` or `ServerMember.avatarUrl` still equals this URL. A legacy URL with no
+   * `Upload` row is left alone: there is nothing here to prove this service ever stored it.
+   */
+  async deleteUploadIfUnreferenced(url: string) {
+    const upload = await this.prisma.upload.findUnique({ where: { url } });
+    if (!upload) return;
+
+    const [userAvatarCount, userBannerCount, serverAvatarCount, memberAvatarCount] =
+      await Promise.all([
+        this.prisma.user.count({ where: { avatarUrl: url } }),
+        this.prisma.user.count({ where: { bannerUrl: url } }),
+        this.prisma.server.count({ where: { avatarUrl: url } }),
+        this.prisma.serverMember.count({ where: { avatarUrl: url } }),
+      ]);
+    if (userAvatarCount + userBannerCount + serverAvatarCount + memberAvatarCount > 0) return;
+
+    // The DB row goes first: a failed file delete below leaves an orphaned file, never a dangling
+    // `Upload` row pointing at a URL no row references. `deleteMany` (not `delete`) so a concurrent
+    // caller racing this same check never throws "record not found".
+    const { count } = await this.prisma.upload.deleteMany({ where: { url } });
+    if (count === 0) return;
+    await this.removeStoredFileQuietly(url, upload.mimeType);
+  }
+
   async uploadChunk(
     userId: string,
     file: IncomingUploadChunk,
@@ -296,7 +347,9 @@ export class UploadsService {
         throw new BadRequestException('File is too large');
       }
 
-      const attachment = await this.uploadFromPath({
+      // Chunked assembly does not record an `Upload` row (out of scope, see upload-ownership.md);
+      // `storageKey` is dropped so the response shape matches the single-request endpoint's.
+      const { storageKey: _storageKey, ...attachment } = await this.uploadFromPath({
         path: assembledPath,
         originalname: fileName,
         mimetype: normalizedMimeType,
@@ -362,6 +415,7 @@ export class UploadsService {
       mimeType,
       byteSize: file.size,
       url,
+      storageKey: key,
     };
   }
 

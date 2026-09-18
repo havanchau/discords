@@ -1,4 +1,13 @@
-import { ReactNode, Ref, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import {
+  ReactNode,
+  Ref,
+  useEffect,
+  useEffectEvent,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Hash, Loader2, MessageSquare, Search } from 'lucide-react';
 import { Channel, Message } from '@/api';
@@ -11,6 +20,9 @@ const ESTIMATED_ROW_HEIGHT = 56;
 const OVERSCAN_ROWS = 8;
 const JUMP_HIGHLIGHT_MS = 1400;
 const JUMP_RENDER_ATTEMPTS = 10;
+// How close to the bottom counts as "read the latest message", for both the auto-scroll-on-new-message
+// check and the mark-as-read check.
+const NEAR_BOTTOM_THRESHOLD_PX = 250;
 
 export interface MessageListHandle {
   /** Scrolls a message of the visible list into view, then focuses and highlights it. */
@@ -28,6 +40,8 @@ interface MessageListProps {
   searchQuery: string;
   loadMoreMessages: () => Promise<void>;
   renderMessage: (message: Message, index: number) => ReactNode;
+  /** Marks the channel read up to the newest loaded message; called once the user is at (or reaches) the bottom. */
+  onMarkRead: (lastMessageId?: string) => void;
   ref?: Ref<MessageListHandle>;
 }
 
@@ -59,6 +73,7 @@ export function MessageList({
   searchQuery,
   loadMoreMessages,
   renderMessage,
+  onMarkRead,
   ref,
 }: MessageListProps) {
   const t = useTranslation();
@@ -67,6 +82,8 @@ export function MessageList({
   const [rowsOffset, setRowsOffset] = useState(0);
   const hasSearch = Boolean(searchQuery.trim());
   const hasInitialScrolledRef = useRef(false);
+  // Avoids re-marking read for the same message every time this runs (scroll, resize, new message).
+  const lastMarkedReadIdRef = useRef<string | null>(null);
 
   const virtualizer = useVirtualizer({
     count: visibleMessages.length,
@@ -77,11 +94,46 @@ export function MessageList({
     scrollMargin: rowsOffset,
     // Keeps the row being read in place when older messages are prepended.
     anchorTo: 'end',
+    // Avoids the "flushSync was called from inside a lifecycle method" warning: scrollToIndex runs
+    // from a useLayoutEffect above, and this render doesn't need the flush to be synchronous.
+    useFlushSync: false,
   });
 
   // Reset initial scroll tracking on channel change
   useLayoutEffect(() => {
     hasInitialScrolledRef.current = false;
+    lastMarkedReadIdRef.current = null;
+  }, [channel?.id]);
+
+  // Marks the channel read once the user is at (or reaches) the bottom, or the page fits without
+  // scrolling — never on channel open itself, so switching away while scrolled up leaves it unread.
+  const markReadIfAtBottom = useEffectEvent(() => {
+    if (!channel || messages.length === 0) return;
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
+    const contentFits = scrollElement.scrollHeight <= scrollElement.clientHeight;
+    if (!contentFits && distanceFromBottom > NEAR_BOTTOM_THRESHOLD_PX) return;
+    const lastMessage = messages[messages.length - 1];
+    if (lastMarkedReadIdRef.current === lastMessage.id) return;
+    lastMarkedReadIdRef.current = lastMessage.id;
+    onMarkRead(lastMessage.id);
+  });
+
+  // Covers the "content fits without scrolling" case and new messages arriving while at the bottom.
+  useLayoutEffect(() => {
+    if (isLoadingMessages) return;
+    markReadIfAtBottom();
+  }, [isLoadingMessages, visibleMessages.length, channel?.id]);
+
+  // Covers the user scrolling down to the bottom themselves.
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+    const handleScroll = () => markReadIfAtBottom();
+    scrollElement.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollElement.removeEventListener('scroll', handleScroll);
   }, [channel?.id]);
 
   // Scroll to oldest unread message or default to bottom (newest message) on initial load
@@ -134,7 +186,7 @@ export function MessageList({
       if (scrollElement) {
         const distanceFromBottom =
           scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
-        if (distanceFromBottom < 250) {
+        if (distanceFromBottom < NEAR_BOTTOM_THRESHOLD_PX) {
           scrollElement.scrollTop = scrollElement.scrollHeight;
           window.requestAnimationFrame(() => {
             if (scrollRef.current) {
@@ -210,10 +262,9 @@ export function MessageList({
               <div className={styles.channelIntroIcon}>
                 <Hash size={46} aria-hidden="true" />
               </div>
-              <strong>Welcome to #{channel.name}!</strong>
+              <strong>{t('messages.channelIntro.title', { channel: channel.name })}</strong>
               <span>
-                {channel.topic ||
-                  `This is the start of the #${channel.name} channel. Use this space for updates, ideas, and conversation.`}
+                {channel.topic || t('messages.channelIntro.description', { channel: channel.name })}
               </span>
             </section>
           ) : null}

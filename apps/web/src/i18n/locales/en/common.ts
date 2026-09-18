@@ -34,6 +34,7 @@ export const common = {
   'error.fallback.cannot-delete-role': 'Cannot delete role',
   'error.fallback.cannot-download-export': 'Cannot download the export',
   'error.fallback.cannot-forward-message': 'Cannot forward message',
+  'error.fallback.cannot-load-audit-logs': 'Cannot load audit logs',
   'error.fallback.cannot-load-automod-rules': 'Cannot load AutoMod rules',
   'error.fallback.cannot-load-bans': 'Cannot load bans',
   'error.fallback.cannot-load-channel-permissions': 'Cannot load channel permissions',

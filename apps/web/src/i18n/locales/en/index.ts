@@ -14,6 +14,7 @@ import { shortcuts } from './shortcuts';
 import { webhooks } from './webhooks';
 import { bots } from './bots';
 import { stickersSoundboard } from './stickers-soundboard';
+import { platform } from './platform';
 
 export const en = {
   ...common,
@@ -30,4 +31,5 @@ export const en = {
   ...webhooks,
   ...bots,
   ...stickersSoundboard,
+  ...platform,
 } as const;

@@ -220,7 +220,7 @@ Each has `en` and `vi` entries:
 ## Risks & Rollback
 
 - **Role checks**: a server whose non-owner admins relied on granting permissions they do not hold now gets `403`. The owner can still do it.
-- **Socket validation**: `forbidNonWhitelisted` now rejects unknown fields on socket sends. The web client sends only DTO fields (`api.ts` `uploadMessageAttachments`). Other socket clients sending extra fields will be refused.
+- **Socket validation**: `validateSocketMessageBody` (`socket-validation.ts`) only forwards the known top-level fields into the DTO, so an unknown top-level field on a socket send is silently dropped, not refused; `forbidNonWhitelisted` only rejects unknown fields nested inside an attachment object. The web client sends only DTO fields (`api.ts` `uploadMessageAttachments`).
 - **`byteSize`** is still client-reported on both REST and socket. Only its range is validated.
 - **AutoMod**: servers with enabled rules and members using E2EE will see encrypted sends refused. Exempting a role or channel restores them.
 - **Rollback**: revert the code. Nothing is stored in a new shape.

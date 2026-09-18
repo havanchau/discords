@@ -50,4 +50,11 @@ export const queryKeys = {
   forumPostsOf: (channelId: string) => ['forum-posts', channelId] as const,
   forumTags: (channelId: string) => ['forum-tags', channelId] as const,
   notificationPreferences: (userId: string) => ['notification-preferences', userId] as const,
+  platformReports: (status: string, serverId: string) =>
+    ['platform-reports', status, serverId || 'all'] as const,
+  /** Prefix for every filter combination of the queue, for invalidating them together. */
+  platformReportsOf: () => ['platform-reports'] as const,
+  platformReportDetail: (reportId: string) => ['platform-report-detail', reportId] as const,
+  /** `GET /users/me`, read once per session to check `platformRole` (narrower on `auth.user`). */
+  meProfile: (userId: string) => ['me-profile', userId] as const,
 } as const;

@@ -3,6 +3,7 @@ import { Button, IconButton, TextField } from '@/components/ui';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
+import { auditActionLabel } from '@/utils/auditLogLabels';
 import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
@@ -30,6 +31,7 @@ type ServerSettingsProps = Pick<
   | 'createEmoji'
   | 'deleteEmoji'
   | 'auditLogs'
+  | 'auditLogsError'
   | 'createInviteFromSettings'
   | 'invites'
   | 'pendingAction'
@@ -52,6 +54,7 @@ export function ServerSettings({
   createEmoji,
   deleteEmoji,
   auditLogs,
+  auditLogsError,
   createInviteFromSettings,
   invites,
   pendingAction,
@@ -65,20 +68,25 @@ export function ServerSettings({
 
   if (!server) return null;
 
+  const canManageServer = memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER');
+  const canManageRoles = memberHasServerPermission(server, auth.user.id, 'MANAGE_ROLES');
+
   return (
     <div className={styles.settingsForm}>
       <form
         className={styles.settingsSection}
         onSubmit={(event) => void updateServerSettings(event)}
       >
-        <Button
-          type="button"
-          variant="secondary"
-          fullWidth
-          onClick={() => setActiveDialog('roles')}
-        >
-          {t('serverSettings.manageRoles')}
-        </Button>
+        {canManageRoles ? (
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            onClick={() => setActiveDialog('roles')}
+          >
+            {t('serverSettings.manageRoles')}
+          </Button>
+        ) : null}
         <TextField
           label={t('serverSettings.field.name')}
           name="name"
@@ -86,20 +94,24 @@ export function ServerSettings({
           minLength={2}
           maxLength={80}
           required
+          readOnly={!canManageServer}
         />
         <TextField
           label={t('serverSettings.field.description')}
           name="description"
           defaultValue={server.description ?? ''}
           maxLength={200}
+          readOnly={!canManageServer}
         />
         <footer className={styles.settingsModalFooter}>
           <Button type="button" variant="ghost" onClick={() => setActiveDialog(null)}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={pendingAction === 'server-update'}>
-            {t('common.saveChanges')}
-          </Button>
+          {canManageServer ? (
+            <Button type="submit" disabled={pendingAction === 'server-update'}>
+              {t('common.saveChanges')}
+            </Button>
+          ) : null}
         </footer>
       </form>
 
@@ -230,11 +242,15 @@ export function ServerSettings({
           <span>{t('audit.section.hint')}</span>
         </div>
         <div className={styles.auditLogList}>
-          {auditLogs.length ? (
+          {auditLogsError ? (
+            <p className="empty-note" role="alert">
+              {t('audit.error')}
+            </p>
+          ) : auditLogs.length ? (
             auditLogs.slice(0, 12).map((log) => (
               <details className={styles.auditLogRow} key={log.id}>
                 <summary>
-                  <span>{log.action.replaceAll('_', ' ').toLowerCase()}</span>
+                  <span>{auditActionLabel(log.action, t)}</span>
                   <small>
                     {log.actor?.displayName ?? t('audit.system')} - {dates.absolute(log.createdAt)}
                   </small>

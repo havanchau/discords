@@ -4,6 +4,7 @@ import {
   FolderOpen,
   Hash,
   Lock,
+  Menu,
   MonitorUp,
   MoreVertical,
   Phone,
@@ -11,9 +12,12 @@ import {
   Unlock,
   Video,
 } from 'lucide-react';
-import { assetUrl, Channel } from '@/api';
+import { AuthState, assetUrl, Channel } from '@/api';
+import { Permissions } from '@discord-clone/shared';
 import { CallMode, CallState } from '@/helpers';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { memberHasServerPermission } from '@/utils/serverPermissions';
 import {
   Avatar,
   Button,
@@ -29,6 +33,7 @@ import { useTranslation } from '@/i18n/LocaleProvider';
 import styles from './ChatHeader.module.css';
 
 interface ChatHeaderProps {
+  auth: AuthState;
   channel: Channel | null;
   notificationUnreadCount: number;
   pendingAction: string | null;
@@ -47,6 +52,7 @@ const NARROW_HEADER = '(max-width: 560px)';
  * live behind an overflow menu so the row stays readable.
  */
 export function ChatHeader({
+  auth,
   channel,
   notificationUnreadCount,
   pendingAction,
@@ -57,6 +63,12 @@ export function ChatHeader({
   startCall,
 }: ChatHeaderProps) {
   const t = useTranslation();
+  const { server } = useWorkspace();
+  const canManageChannel = memberHasServerPermission(
+    server,
+    auth.user.id,
+    Permissions.ManageChannels,
+  );
   const callActions = [
     {
       mode: 'voice' as const,
@@ -93,6 +105,14 @@ export function ChatHeader({
 
   return (
     <header className={styles.chatHeader}>
+      <IconButton
+        label={t('chatHeader.openMenu')}
+        className={styles.mobileMenuButton}
+        onClick={panels.openMobileNav}
+        data-testid="mobile-nav-button"
+      >
+        <Menu size={18} aria-hidden="true" />
+      </IconButton>
       <div className={styles.chatTitle}>
         <input
           ref={channelAvatar.inputRef}
@@ -182,13 +202,15 @@ export function ChatHeader({
                 {label}
               </DropdownMenuItem>
             ))}
-            <DropdownMenuItem
-              disabled={!channel}
-              onSelect={() => setTimeout(() => panels.setActiveDialog('channel-settings'), 0)}
-            >
-              <Edit3 size={16} aria-hidden="true" />
-              {t('chatHeader.channelSettings')}
-            </DropdownMenuItem>
+            {canManageChannel ? (
+              <DropdownMenuItem
+                disabled={!channel}
+                onSelect={() => setTimeout(() => panels.setActiveDialog('channel-settings'), 0)}
+              >
+                <Edit3 size={16} aria-hidden="true" />
+                {t('chatHeader.channelSettings')}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem disabled={!channel} onSelect={() => togglePanel('media')}>
               <FolderOpen size={16} aria-hidden="true" />
               {t('chatHeader.mediaFilesLinks')}

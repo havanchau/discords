@@ -93,6 +93,7 @@ export const moderation = {
   'reports.empty.RESOLVED': 'Không có báo cáo đã xử lý.',
   'reports.loading': 'Đang tải báo cáo',
   'reports.messageEncrypted': 'Tin nhắn được mã hoá',
+  'reports.messageHidden': 'Bạn không thể xem kênh này',
   'reports.messageUnavailable': 'Tin nhắn không còn tồn tại',
   'reports.reportedBy': 'Báo cáo lúc {date} bởi {actor}',
   'reports.resolvedBy': 'Xử lý lúc {date} bởi {actor}',

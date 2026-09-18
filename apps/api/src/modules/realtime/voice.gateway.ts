@@ -24,7 +24,7 @@ import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
-import { getSocketUser } from './socket-user';
+import { requireHumanSocketUser } from './socket-user';
 
 /** Voice and video: call membership, DM ringing, and WebRTC signaling relay. */
 @WebSocketGateway()
@@ -55,29 +55,34 @@ export class VoiceGateway {
     },
   ) {
     await this.rateLimit.assert(client, 'voice:join', 10, 60_000);
-    const user = getSocketUser(client);
-    const profile = await this.access.authorizeCallJoin(user.id, body.channelId);
+    const user = requireHumanSocketUser(client);
+    try {
+      const profile = await this.access.authorizeCallJoin(user.id, body.channelId);
 
-    const participant: CallParticipant = {
-      socketId: client.id,
-      userId: user.id,
-      username: profile.username,
-      displayName: profile.displayName,
-      mode: body.mode,
-      isMuted: Boolean(body.isMuted),
-      isCameraOff: Boolean(body.isCameraOff),
-      isSharingScreen: Boolean(body.isSharingScreen),
-    };
-    const existingParticipants = await this.calls.join(body.channelId, participant);
+      const participant: CallParticipant = {
+        socketId: client.id,
+        userId: user.id,
+        username: profile.username,
+        displayName: profile.displayName,
+        mode: body.mode,
+        isMuted: Boolean(body.isMuted),
+        isCameraOff: Boolean(body.isCameraOff),
+        isSharingScreen: Boolean(body.isSharingScreen),
+      };
+      const existingParticipants = await this.calls.join(body.channelId, participant);
 
-    const room = this.calls.callRoom(body.channelId);
-    await client.join(room);
-    client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
-    await this.calls.emitActiveCall(body.channelId);
+      const room = this.calls.callRoom(body.channelId);
+      await client.join(room);
+      client.to(room).emit('voice:user-joined', { channelId: body.channelId, participant });
+      await this.calls.emitActiveCall(body.channelId);
 
-    const dmConversationId = parseDmCallKey(body.channelId);
-    if (dmConversationId) await this.dmCalls.participantJoined(dmConversationId, user.id);
-    return { participants: existingParticipants };
+      const dmConversationId = parseDmCallKey(body.channelId);
+      if (dmConversationId) await this.dmCalls.participantJoined(dmConversationId, user.id);
+      return { participants: existingParticipants };
+    } catch (error) {
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
+      throw error;
+    }
   }
 
   @SubscribeMessage('dm:call:ring')
@@ -86,11 +91,16 @@ export class VoiceGateway {
     @MessageBody() body: { conversationId: string; mode: DmCallMode },
   ) {
     await this.rateLimit.assert(client, 'dm:call:ring', 10, 60_000);
-    const user = getSocketUser(client);
-    if (body.mode !== 'voice' && body.mode !== 'video') {
-      throw new UnauthorizedException('Invalid call mode');
+    const user = requireHumanSocketUser(client);
+    try {
+      if (body.mode !== 'voice' && body.mode !== 'video') {
+        throw new UnauthorizedException('Invalid call mode');
+      }
+      return await this.dmCalls.ring(user.id, body.conversationId, body.mode);
+    } catch (error) {
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
+      throw error;
     }
-    return this.dmCalls.ring(user.id, body.conversationId, body.mode);
   }
 
   @SubscribeMessage('dm:call:decline')
@@ -99,7 +109,12 @@ export class VoiceGateway {
     @MessageBody() body: { conversationId: string },
   ) {
     await this.rateLimit.assert(client, 'dm:call:decline', 20, 60_000);
-    return this.dmCalls.decline(getSocketUser(client).id, body.conversationId);
+    try {
+      return await this.dmCalls.decline(requireHumanSocketUser(client).id, body.conversationId);
+    } catch (error) {
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
+      throw error;
+    }
   }
 
   @SubscribeMessage('dm:call:cancel')
@@ -108,7 +123,12 @@ export class VoiceGateway {
     @MessageBody() body: { conversationId: string },
   ) {
     await this.rateLimit.assert(client, 'dm:call:cancel', 20, 60_000);
-    return this.dmCalls.cancel(getSocketUser(client).id, body.conversationId);
+    try {
+      return await this.dmCalls.cancel(requireHumanSocketUser(client).id, body.conversationId);
+    } catch (error) {
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
+      throw error;
+    }
   }
 
   @SubscribeMessage('voice:state')
@@ -124,6 +144,7 @@ export class VoiceGateway {
     },
   ) {
     await this.rateLimit.assert(client, 'voice:state', 30, 60_000);
+    requireHumanSocketUser(client);
     const nextParticipant = await this.calls.updateState(body.channelId, client.id, {
       mode: body.mode,
       isMuted: body.isMuted,
@@ -142,6 +163,7 @@ export class VoiceGateway {
 
   @SubscribeMessage('voice:leave')
   async leaveVoice(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
+    requireHumanSocketUser(client);
     await this.calls.leave(client, body.channelId);
     return { ok: true };
   }
@@ -160,7 +182,7 @@ export class VoiceGateway {
         SOUNDBOARD_PLAY_LIMIT,
         SOUNDBOARD_PLAY_WINDOW_MS,
       );
-      const user = getSocketUser(client);
+      const user = requireHumanSocketUser(client);
       const command = parseSoundboardPlay(body);
       if (parseDmCallKey(command.channelId)) {
         throw new ForbiddenException('Soundboard is only available in server voice calls');
@@ -189,6 +211,7 @@ export class VoiceGateway {
     @MessageBody() body: { channelId: string; targetSocketId: string; offer: unknown },
   ) {
     await this.rateLimit.assert(client, 'webrtc:offer', 30, 60_000);
+    requireHumanSocketUser(client);
     await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:offer', {
       channelId: body.channelId,
@@ -203,6 +226,7 @@ export class VoiceGateway {
     @MessageBody() body: { channelId: string; targetSocketId: string; answer: unknown },
   ) {
     await this.rateLimit.assert(client, 'webrtc:answer', 30, 60_000);
+    requireHumanSocketUser(client);
     await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:answer', {
       channelId: body.channelId,
@@ -217,6 +241,7 @@ export class VoiceGateway {
     @MessageBody() body: { channelId: string; targetSocketId: string; candidate: unknown },
   ) {
     await this.rateLimit.assert(client, 'webrtc:ice-candidate', 120, 60_000);
+    requireHumanSocketUser(client);
     await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:ice-candidate', {
       channelId: body.channelId,

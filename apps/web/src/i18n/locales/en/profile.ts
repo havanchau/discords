@@ -15,6 +15,7 @@ export const profile = {
   'profile.expiry.1h': '1 hour',
   'profile.expiry.30m': '30 minutes',
   'profile.expiry.4h': '4 hours',
+  'profile.expiry.keep': 'Keep current',
   'profile.expiry.never': 'Never',
   'profile.expiry.today': 'Today',
   'profile.field.bio': 'Bio',

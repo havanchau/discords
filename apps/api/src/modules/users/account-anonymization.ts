@@ -8,7 +8,10 @@ export interface AnonymizedAccount {
   /** Private export files to remove once the transaction has committed. */
   exportFileKeys: string[];
   /** Bots the account owned, deleted with it, and the servers each one left. */
-  removedBots: Array<{ botUserId: string; serverIds: string[] }>;
+  removedBots: Array<{ botId: string; botUserId: string; serverIds: string[] }>;
+  /** The account's avatar/banner just before they were nulled, for post-commit orphan cleanup. */
+  avatarUrl: string | null;
+  bannerUrl: string | null;
 }
 
 export type AnonymizationOutcome =
@@ -35,6 +38,13 @@ export async function anonymizeAccount(
   // request's sessions were revoked would otherwise be left with an anonymous owner.
   const ownedServers = await tx.server.count({ where: { ownerId: userId, deletedAt: null } });
   if (ownedServers > 0) return { status: 'OWNS_SERVERS' };
+
+  // Read before the `updateMany` below nulls them, so the caller can clean up the files once this
+  // transaction has committed (upload-ownership.md rule 6) — mirroring `exportFileKeys` below.
+  const before = await tx.user.findUnique({
+    where: { id: userId },
+    select: { avatarUrl: true, bannerUrl: true },
+  });
 
   const { count } = await tx.user.updateMany({
     where: { id: userId, deletionScheduledAt: { lte: now }, deletionCompletedAt: null },
@@ -82,6 +92,8 @@ export async function anonymizeAccount(
       serverIds: memberships.map((membership) => membership.serverId),
       exportFileKeys: exportJobs.flatMap((job) => (job.fileKey ? [job.fileKey] : [])),
       removedBots,
+      avatarUrl: before?.avatarUrl ?? null,
+      bannerUrl: before?.bannerUrl ?? null,
     },
   };
 }
@@ -99,6 +111,7 @@ async function deleteOwnedBots(tx: Prisma.TransactionClient, userId: string) {
   const removed: AnonymizedAccount['removedBots'] = [];
   for (const bot of bots) {
     removed.push({
+      botId: bot.id,
       botUserId: bot.botUserId,
       serverIds: await deleteBotWithMemberships(tx, bot, userId),
     });

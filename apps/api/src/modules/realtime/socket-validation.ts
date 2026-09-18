@@ -1,5 +1,6 @@
 import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common';
 import { CreateMessageDto } from '@/modules/messages/dto/create-message.dto';
+import { ReactionDto } from '@/modules/messages/dto/reaction.dto';
 
 /** The first constraint message, depth-first, so a nested attachment error names the field. */
 function firstConstraintMessage(errors: ValidationError[]): string {
@@ -41,4 +42,13 @@ export async function validateSocketMessageBody(body: {
     { type: 'body', metatype: CreateMessageDto },
   );
   return dto as CreateMessageDto;
+}
+
+/** `reaction:toggle` runs the REST `ReactionDto` rules (non-empty, at most 64 characters). */
+export async function validateSocketReactionBody(body: { emoji?: unknown }): Promise<ReactionDto> {
+  const dto: unknown = await messageBodyPipe.transform(
+    { emoji: body.emoji },
+    { type: 'body', metatype: ReactionDto },
+  );
+  return dto as ReactionDto;
 }

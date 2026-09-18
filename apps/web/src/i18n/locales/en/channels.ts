@@ -120,6 +120,7 @@ export const channels = {
   'sidebar.menu.invitePeople': 'Invite people',
   'sidebar.menu.inviteReady': 'Invite is ready to paste',
   'sidebar.menu.serverSettings': 'Server settings',
+  'sidebar.menu.title': 'Menu',
   'sidebar.noTextChannelsMatch': 'No text channels match.',
   'sidebar.noUncategorizedText': 'No uncategorized text channels.',
   'sidebar.noVoiceChannels': 'No voice channels yet.',

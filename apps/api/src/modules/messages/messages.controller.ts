@@ -13,6 +13,8 @@ import { CurrentUser } from '@/common/current-user.decorator';
 import { RateLimit } from '@/common/rate-limit.decorator';
 import { RequestUser } from '@/common/request-user';
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { RealtimeUnreadService } from '@/modules/realtime/realtime-unread.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -21,7 +23,11 @@ import { MessagesService } from './messages.service';
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class MessagesController {
-  constructor(private readonly messages: MessagesService) {}
+  constructor(
+    private readonly messages: MessagesService,
+    private readonly publisher: RealtimePublisher,
+    private readonly unread: RealtimeUnreadService,
+  ) {}
 
   @Get('channels/:channelId/messages')
   list(
@@ -63,12 +69,21 @@ export class MessagesController {
 
   @RateLimit({ keyPrefix: 'message-create', limit: 30, windowMs: 60_000 })
   @Post('channels/:channelId/messages')
-  create(
+  async create(
     @CurrentUser() user: RequestUser,
     @Param('channelId') channelId: string,
     @Body() dto: CreateMessageDto,
   ) {
-    return this.messages.createMessage(user.id, channelId, dto);
+    const result = await this.messages.createMessage(user.id, channelId, dto);
+    // The web falls back to REST when the socket is down; without this, other members never saw
+    // the message live (docs/features/qa-follow-ups-2026-09-18.md, "REST send").
+    this.publisher.emitToRoom(
+      this.publisher.channelRoom(channelId),
+      'message:created',
+      result.message,
+    );
+    await this.unread.emitUpdated(result.message);
+    return result;
   }
 
   @Get('messages/:messageId/thread')

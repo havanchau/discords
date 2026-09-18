@@ -79,12 +79,11 @@ Migration `20260915002000_add_group_dms` (additive; existing rows become 1-1 con
 ## Trade-offs
 
 - **Reuse `DirectConversation` vs. a new `GroupConversation` model**: reuse keeps messages, unread state, notifications, and DM actions working for groups with no duplication. Cost: every 1-1 lookup must filter `isGroup: false`.
-- **Server-side room moves vs. client `conversation:join`**: moving sockets from the server is authoritative and works for users who are online but not looking at Home. Cost: relies on the single-instance Socket.IO adapter already assumed by call state.
+- **Server-side room moves vs. client `conversation:join`**: moving sockets from the server is authoritative and works for users who are online but not looking at Home. The gateway already uses the Socket.IO Redis adapter (`apps/api/src/modules/realtime/realtime.gateway.ts:39`), so `socketsJoin` works across instances.
 - **Deleting empty groups**: avoids orphaned rows that no one can reach; messages are lost, which matches Discord.
 
 ## Risks & Rollback
 
-- **Risk**: horizontal scaling would need the Socket.IO Redis adapter for `socketsJoin` across instances (same constraint as existing realtime rooms).
 - **Rollback**: revert code; groups created in the meantime would render as conversations with several members.
 
 ## Test Plan

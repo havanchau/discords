@@ -166,6 +166,8 @@ interface MessageRowProps {
   actions: ChatPanelMessageActions;
   onPreviewAttachment: (attachment: PreviewAttachment) => void;
   onJumpToMessage: (messageId: string) => void;
+  /** The unread divider's message always shows its author line, even if it would otherwise be grouped. */
+  isFirstUnread?: boolean;
 }
 
 // Memoized: the list re-renders on typing and other workspace events that do not touch a row.
@@ -179,6 +181,7 @@ export const MessageRow = memo(function MessageRow({
   actions,
   onPreviewAttachment,
   onJumpToMessage,
+  isFirstUnread,
 }: MessageRowProps) {
   const t = useTranslation();
   const { isChannelEncrypted } = useWorkspace();
@@ -197,7 +200,9 @@ export const MessageRow = memo(function MessageRow({
     // One webhook can post under a different name each time.
     previousMessage.author.displayName !== message.author.displayName ||
     new Date(message.createdAt).getTime() - new Date(previousMessage.createdAt).getTime() >
-      7 * 60 * 1000;
+      7 * 60 * 1000 ||
+    // The message right after the unread divider always shows its author line.
+    isFirstUnread;
 
   const canManage = message.authorId === auth.user.id && !message.deletedAt;
   // Poll questions are immutable, so a poll message offers delete but not edit.
@@ -354,10 +359,7 @@ export const MessageRow = memo(function MessageRow({
               {!message.deletedAt && (
                 <div className={styles.reactionRow} data-testid="reaction-row">
                   {message.reactions.map((reaction) => (
-                    <Tooltip
-                      key={reaction.emoji}
-                      content={getReactionTooltipText(reaction, t)}
-                    >
+                    <Tooltip key={reaction.emoji} content={getReactionTooltipText(reaction, t)}>
                       <button
                         type="button"
                         className={reaction.me ? styles.active : ''}

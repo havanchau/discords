@@ -43,8 +43,10 @@ model Server {
   templates               ServerTemplate[]
   serverReports           ServerReport[]
   webhooks                ServerWebhook[]
+  slashCommands           SlashCommand[]
 
   @@index([listed, deletedAt])
+  @@index([avatarUrl])
 }
 
 model ServerEmoji {
@@ -130,6 +132,7 @@ model ServerMember {
   permissionOverrides  ChannelPermissionOverride[]
 
   @@unique([userId, serverId])
+  @@index([avatarUrl])
 }
 
 model Role {

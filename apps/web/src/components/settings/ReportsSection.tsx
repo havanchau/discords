@@ -99,9 +99,11 @@ function ReportRow({
     ? report.targetType === 'MESSAGE'
       ? t('reports.messageUnavailable')
       : null
-    : isEncryptedMessage(report.message.content)
-      ? t('reports.messageEncrypted')
-      : report.message.content;
+    : report.message.contentHidden
+      ? t('reports.messageHidden')
+      : isEncryptedMessage(report.message.content)
+        ? t('reports.messageEncrypted')
+        : report.message.content;
 
   return (
     <div className={settingsStyles.inviteRow}>

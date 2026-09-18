@@ -15,6 +15,7 @@ import {
   loadRoleGrantContext,
 } from '@/modules/permissions/role-grant';
 import { AuthorizeBotDto } from './dto/authorize-bot.dto';
+import { syncBotGatewayOnRemoval } from './bot-gateway-sync';
 
 const EVERYONE_ROLE_NAME = '@everyone';
 
@@ -170,7 +171,10 @@ export class BotAuthorizationService {
     return { ok: true };
   }
 
-  /** Persist first, emit second: open member lists drop the bot. A bot holds no sockets to evict. */
+  /**
+   * Persist first, emit second: open member lists drop the bot. Also keeps its gateway socket, if
+   * any, in sync live (`syncBotGatewayOnRemoval`).
+   */
   announceRemoval(botUserId: string, serverIds: string[]) {
     for (const serverId of serverIds) {
       this.realtime.emitToRoom(this.realtime.serverRoom(serverId), 'server:member-removed', {
@@ -178,6 +182,7 @@ export class BotAuthorizationService {
         userId: botUserId,
         reason: 'KICK',
       });
+      void syncBotGatewayOnRemoval(this.prisma, this.realtime, botUserId, serverId);
     }
   }
 

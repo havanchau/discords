@@ -93,6 +93,15 @@ export class DmCallsService {
         reason: 'declined',
         userId,
       });
+      // Remove the decliner from the ring so a later expiry or cancel does not treat them as
+      // having missed the call (docs/features/qa-follow-ups-2026-09-18.md, "Group call decline").
+      const updated = await this.rings.removeMember(conversationId, userId);
+      const stillRinging = updated?.memberUserIds.filter(
+        (memberId) => memberId !== ring.callerUserId,
+      );
+      if (updated && stillRinging?.length === 0) {
+        this.emitRingStopped(updated, 'declined');
+      }
       return { ok: true };
     }
 

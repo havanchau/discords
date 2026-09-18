@@ -44,9 +44,30 @@ export class RealtimePublisher {
     sockets
       .filter((socket) => {
         const socketUser = readSocketUser(socket);
-        return Boolean(socketUser?.sessionId && sessionIds.includes(socketUser.sessionId));
+        return Boolean(socketUser?.kind === 'human' && sessionIds.includes(socketUser.sessionId));
       })
       .forEach((socket) => socket.disconnect(true));
+  }
+
+  /**
+   * A bot's live socket(s), if any (every bot socket joins `botRoom(botId)` on connect, mirroring
+   * `userRoom`). Multi-instance safe: the Redis adapter's remote-socket selectors reach a socket
+   * held by any instance, not just this one.
+   */
+  fetchBotSockets(botId: string) {
+    if (!this.server) return Promise.resolve([]);
+    return this.server.in(this.botRoom(botId)).fetchSockets();
+  }
+
+  /** Full disconnect — token regeneration, bot/owner deletion: the identity itself changed. */
+  disconnectBotSocket(botId: string) {
+    this.server?.in(this.botRoom(botId)).disconnectSockets(true);
+  }
+
+  /** Removes a bot's live socket(s) from specific rooms without disconnecting — removal from one server only. */
+  removeBotFromRooms(botId: string, rooms: string[]) {
+    if (!this.server || !rooms.length) return;
+    this.server.in(this.botRoom(botId)).socketsLeave(rooms);
   }
 
   serverRoom(serverId: string) {
@@ -63,5 +84,10 @@ export class RealtimePublisher {
 
   userRoom(userId: string) {
     return `user:${userId}`;
+  }
+
+  /** Every socket of one bot, across every instance — connection cap, disconnect, targeted emit. */
+  botRoom(botId: string) {
+    return `bot:${botId}`;
   }
 }

@@ -126,8 +126,14 @@ export class PresenceService {
   private async setStatus(userId: string, status: 'ONLINE' | 'OFFLINE') {
     await this.prisma.user.update({ where: { id: userId }, data: { status } });
     const serverIds = await this.access.listServerIds(userId);
+    // Also to the user's own room: `handleConnection` fires before the socket joins any server
+    // room, so without this a client never sees its own flip to ONLINE
+    // (docs/features/qa-follow-ups-2026-09-18.md, "Own presence").
     this.publisher.emitToRooms(
-      serverIds.map((serverId) => this.publisher.serverRoom(serverId)),
+      [
+        ...serverIds.map((serverId) => this.publisher.serverRoom(serverId)),
+        this.publisher.userRoom(userId),
+      ],
       'presence:update',
       { userId, status },
     );

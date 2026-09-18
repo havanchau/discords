@@ -1,4 +1,5 @@
 import type { ServerDetail } from '@/api';
+import type { Permission } from '@discord-clone/shared';
 
 /*
  * Mirrors the API's server-level check (owner, or any role granting the permission). It only gates
@@ -7,7 +8,7 @@ import type { ServerDetail } from '@/api';
 export function memberHasServerPermission(
   server: Pick<ServerDetail, 'members'> | null,
   userId: string,
-  permission: string,
+  permission: Permission,
 ) {
   const member = server?.members.find((item) => item.user.id === userId);
   if (!member) return false;

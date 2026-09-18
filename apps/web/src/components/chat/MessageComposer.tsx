@@ -4,6 +4,7 @@ import {
   FileText,
   Image,
   Loader2,
+  MoreVertical,
   Mic,
   Paperclip,
   Reply,
@@ -17,6 +18,7 @@ import {
 import { Channel } from '@/api';
 import { formatBytes } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   Button,
   IconButton,
@@ -34,6 +36,9 @@ import { cn } from '@/utils/cn';
 import { getSlashCommandSuggestions, parseSlashCommand } from '@/utils/slashCommands';
 import type { ChatPanelComposer, ChatPanelMessageActions } from './types';
 
+// Below this width, the secondary buttons collapse into a "More" popover (MessageComposer.module.css).
+const NARROW_COMPOSER = '(max-width: 720px)';
+
 interface MessageComposerProps {
   channel: Channel | null;
   composer: ChatPanelComposer;
@@ -49,8 +54,10 @@ export function MessageComposer({
   isChannelEncrypted,
 }: MessageComposerProps) {
   const t = useTranslation();
+  const isNarrow = useMediaQuery(NARROW_COMPOSER);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isStickerOpen, setIsStickerOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const isMessageSending = composer.pendingAction === 'send-message';
   const { disabledReason, slowmodeSeconds, retryAfterSeconds } = composer.restriction;
   const isComposerDisabled = !channel || isMessageSending || Boolean(disabledReason);
@@ -65,6 +72,85 @@ export function MessageComposer({
           : t('composer.placeholder.default', { channel: channel.name });
   const commandSuggestions = getSlashCommandSuggestions(composer.draft).slice(0, 4);
   const parsedCommand = parseSlashCommand(composer.draft);
+
+  // Voice, emoji, sticker and schedule: inline on desktop, collapsed into one "More" popover on
+  // mobile (MessageComposer.module.css) so the input keeps the remaining width.
+  const secondaryControls = (
+    <>
+      <IconButton
+        label={composer.isRecordingVoice ? t('composer.stopVoice') : t('composer.recordVoice')}
+        className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
+        onClick={
+          composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording
+        }
+        disabled={
+          !channel || Boolean(disabledReason) || (isMessageSending && !composer.isRecordingVoice)
+        }
+      >
+        {composer.isRecordingVoice ? (
+          <Square size={15} aria-hidden="true" />
+        ) : (
+          <Mic size={18} aria-hidden="true" />
+        )}
+      </IconButton>
+
+      <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
+        <PopoverTrigger asChild>
+          <IconButton
+            label={t('composer.insertEmoji')}
+            className={styles.attachButton}
+            disabled={isComposerDisabled}
+          >
+            <SmilePlus size={18} aria-hidden="true" />
+          </IconButton>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start">
+          <EmojiPicker
+            onSelect={(emoji) => {
+              const separator = composer.draft && !composer.draft.endsWith(' ') ? ' ' : '';
+              composer.setDraft(`${composer.draft}${separator}${emoji} `);
+              setIsEmojiOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </PopoverRoot>
+
+      <PopoverRoot open={isStickerOpen} onOpenChange={setIsStickerOpen}>
+        <PopoverTrigger asChild>
+          <IconButton
+            label={t('sticker.picker.open')}
+            className={styles.attachButton}
+            disabled={isComposerDisabled || retryAfterSeconds > 0}
+          >
+            <Sticker size={18} aria-hidden="true" />
+          </IconButton>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start">
+          {channel ? (
+            <StickerPicker
+              serverId={channel.serverId}
+              onSelect={(stickerId) => {
+                setIsStickerOpen(false);
+                void composer.sendSticker(stickerId);
+              }}
+            />
+          ) : null}
+        </PopoverContent>
+      </PopoverRoot>
+
+      {channel && !isChannelEncrypted ? (
+        <ScheduleSendButton
+          destination={{ type: 'channel', id: channel.id }}
+          draft={composer.draft}
+          files={composer.selectedFiles}
+          replyToMessageId={composer.replyingToMessage?.id}
+          className={styles.scheduleButton}
+          disabled={isComposerDisabled}
+          onScheduled={composer.clearAfterSchedule}
+        />
+      ) : null}
+    </>
+  );
 
   return (
     <form onSubmit={(event) => void composer.sendMessage(event)} className={styles.composer}>
@@ -168,66 +254,25 @@ export function MessageComposer({
         <Paperclip size={18} aria-hidden="true" />
       </IconButton>
 
-      <IconButton
-        label={composer.isRecordingVoice ? t('composer.stopVoice') : t('composer.recordVoice')}
-        className={cn(styles.voiceRecordButton, composer.isRecordingVoice && styles.recording)}
-        onClick={
-          composer.isRecordingVoice ? composer.stopVoiceRecording : composer.startVoiceRecording
-        }
-        disabled={
-          !channel || Boolean(disabledReason) || (isMessageSending && !composer.isRecordingVoice)
-        }
-      >
-        {composer.isRecordingVoice ? (
-          <Square size={15} aria-hidden="true" />
-        ) : (
-          <Mic size={18} aria-hidden="true" />
-        )}
-      </IconButton>
-
-      <PopoverRoot open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
-        <PopoverTrigger asChild>
-          <IconButton
-            label={t('composer.insertEmoji')}
-            className={styles.attachButton}
-            disabled={isComposerDisabled}
-          >
-            <SmilePlus size={18} aria-hidden="true" />
-          </IconButton>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="start">
-          <EmojiPicker
-            onSelect={(emoji) => {
-              const separator = composer.draft && !composer.draft.endsWith(' ') ? ' ' : '';
-              composer.setDraft(`${composer.draft}${separator}${emoji} `);
-              setIsEmojiOpen(false);
-            }}
-          />
-        </PopoverContent>
-      </PopoverRoot>
-
-      <PopoverRoot open={isStickerOpen} onOpenChange={setIsStickerOpen}>
-        <PopoverTrigger asChild>
-          <IconButton
-            label={t('sticker.picker.open')}
-            className={styles.attachButton}
-            disabled={isComposerDisabled || retryAfterSeconds > 0}
-          >
-            <Sticker size={18} aria-hidden="true" />
-          </IconButton>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="start">
-          {channel ? (
-            <StickerPicker
-              serverId={channel.serverId}
-              onSelect={(stickerId) => {
-                setIsStickerOpen(false);
-                void composer.sendSticker(stickerId);
-              }}
-            />
-          ) : null}
-        </PopoverContent>
-      </PopoverRoot>
+      {isNarrow ? (
+        <PopoverRoot open={isMoreOpen} onOpenChange={setIsMoreOpen}>
+          <PopoverTrigger asChild>
+            <IconButton
+              label={t('composer.moreActions')}
+              className={styles.attachButton}
+              disabled={isComposerDisabled}
+              data-testid="composer-more-button"
+            >
+              <MoreVertical size={18} aria-hidden="true" />
+            </IconButton>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" className={styles.moreActionsPopover}>
+            {secondaryControls}
+          </PopoverContent>
+        </PopoverRoot>
+      ) : (
+        secondaryControls
+      )}
 
       <TextField
         name="content"
@@ -242,18 +287,6 @@ export function MessageComposer({
         }}
         autoComplete="off"
       />
-
-      {channel && !isChannelEncrypted ? (
-        <ScheduleSendButton
-          destination={{ type: 'channel', id: channel.id }}
-          draft={composer.draft}
-          files={composer.selectedFiles}
-          replyToMessageId={composer.replyingToMessage?.id}
-          className={styles.scheduleButton}
-          disabled={isComposerDisabled}
-          onScheduled={composer.clearAfterSchedule}
-        />
-      ) : null}
 
       <IconButton
         type="submit"

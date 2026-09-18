@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -19,6 +21,10 @@ import { BotAuthGuard } from './bot-auth.guard';
 import { BotMessagesService } from './bot-messages.service';
 import { CurrentBot, type RequestBot } from './bot-request';
 import { BotCreateMessageDto } from './dto/bot-create-message.dto';
+import { CreateSlashCommandDto } from './dto/create-slash-command.dto';
+import { UpdateSlashCommandDto } from './dto/update-slash-command.dto';
+import { InteractionsService } from './interactions.service';
+import { SlashCommandsService } from './slash-commands.service';
 
 const BOT_MESSAGE_WINDOW_MS = 60_000;
 
@@ -37,6 +43,8 @@ export class BotApiController {
     private readonly botMessages: BotMessagesService,
     private readonly servers: ServersService,
     private readonly limiter: RedisFixedWindowLimiter,
+    private readonly slashCommands: SlashCommandsService,
+    private readonly interactions: InteractionsService,
   ) {}
 
   @Get('users/@me')
@@ -79,5 +87,51 @@ export class BotApiController {
       );
     }
     return this.botMessages.createMessage(bot, channelId, dto);
+  }
+
+  @Get('servers/:serverId/commands')
+  listCommands(@CurrentBot() bot: RequestBot, @Param('serverId') serverId: string) {
+    return this.slashCommands.list(bot, serverId);
+  }
+
+  @Post('servers/:serverId/commands')
+  createCommand(
+    @CurrentBot() bot: RequestBot,
+    @Param('serverId') serverId: string,
+    @Body() dto: CreateSlashCommandDto,
+  ) {
+    return this.slashCommands.create(bot, serverId, dto);
+  }
+
+  @Patch('servers/:serverId/commands/:commandId')
+  updateCommand(
+    @CurrentBot() bot: RequestBot,
+    @Param('serverId') serverId: string,
+    @Param('commandId') commandId: string,
+    @Body() dto: UpdateSlashCommandDto,
+  ) {
+    return this.slashCommands.update(bot, serverId, commandId, dto);
+  }
+
+  @Delete('servers/:serverId/commands/:commandId')
+  removeCommand(
+    @CurrentBot() bot: RequestBot,
+    @Param('serverId') serverId: string,
+    @Param('commandId') commandId: string,
+  ) {
+    return this.slashCommands.remove(bot, serverId, commandId);
+  }
+
+  /**
+   * The bot's answer to an invoked slash command — same body shape as a bot's channel message
+   * (`BotCreateMessageDto`), reused rather than duplicated (Changes → Invocation flow, step 6).
+   */
+  @Post('interactions/:interactionToken/callback')
+  respondToInteraction(
+    @CurrentBot() bot: RequestBot,
+    @Param('interactionToken') interactionToken: string,
+    @Body() dto: BotCreateMessageDto,
+  ) {
+    return this.interactions.respondToCallback(bot, interactionToken, dto);
   }
 }

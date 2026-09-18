@@ -120,6 +120,11 @@
   line-height: var(--line-height-tight);
 }
 
+/* A custom status is set by the member, not derived from their role, so it reads as its own line. */
+.memberInfo .customStatus {
+  font-style: italic;
+}
+
 /* A bot's badge leads its subtitle line. */
 .memberInfo .botLine {
   display: flex;

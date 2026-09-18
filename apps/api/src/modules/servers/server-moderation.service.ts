@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { syncBotGatewayOnRemoval } from '@/modules/bots/bot-gateway-sync';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { ServerBanEntry } from '@discord-clone/shared';
@@ -118,9 +119,13 @@ export class ServerModerationService {
     if (server.ownerId === target.id) throw new ForbiddenException('Cannot ban the server owner');
 
     const reason = dto.reason?.trim() || null;
-    const ban = await this.prisma.$transaction(async (tx) => {
+    const { ban, created } = await this.prisma.$transaction(async (tx) => {
       await tx.serverMember.deleteMany({ where: { serverId, userId: target.id } });
-      return tx.serverBan.upsert({
+      const existing = await tx.serverBan.findUnique({
+        where: { serverId_userId: { serverId, userId: target.id } },
+        select: { id: true },
+      });
+      const upserted = await tx.serverBan.upsert({
         where: { serverId_userId: { serverId, userId: target.id } },
         create: { serverId, userId: target.id, bannedById: userId, reason },
         update: { reason },
@@ -132,6 +137,7 @@ export class ServerModerationService {
           bannedBy: { select: moderationUserSelect },
         },
       });
+      return { ban: upserted, created: !existing };
     });
 
     await this.writeAuditLog(serverId, userId, 'MEMBER_BAN', target.id, {
@@ -140,7 +146,8 @@ export class ServerModerationService {
       reason,
     });
     await this.announceRemoval(serverId, target.id, 'BAN');
-    return { ban };
+    // 201 for a new ban, 200 when the user was already banned (member-bans.md).
+    return { ban, created };
   }
 
   async unban(userId: string, serverId: string, targetUserId: string) {
@@ -178,6 +185,9 @@ export class ServerModerationService {
         ...channels.map((channel) => this.realtime.channelRoom(channel.id)),
       ],
     );
+    // `removeUsersFromRooms` above targets `userRoom(removedUserId)`, which a bot socket never
+    // joins — a bot's own gateway socket (if any) is kept in sync separately.
+    void syncBotGatewayOnRemoval(this.prisma, this.realtime, removedUserId, serverId);
   }
 
   private async writeAuditLog(

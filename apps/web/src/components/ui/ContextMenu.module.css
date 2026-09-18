@@ -1,5 +1,5 @@
 .content {
-  z-index: var(--z-context-menu);
+  z-index: var(--z-overlay);
   min-width: var(--width-context-menu);
   border-radius: var(--radius-sm);
   background: var(--surface-overlay);

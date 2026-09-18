@@ -1,5 +1,5 @@
 .content {
-  z-index: var(--z-tooltip);
+  z-index: var(--z-overlay);
   border-radius: var(--radius-sm);
   background: var(--surface-overlay);
   color: var(--text-primary);

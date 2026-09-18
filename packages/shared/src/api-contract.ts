@@ -8,6 +8,7 @@
 import { ChannelType, UserStatus } from './types.js';
 import type { MessageStickerRef } from './stickers-soundboard.js';
 import type { UserKind } from './webhooks.js';
+import type { SlashCommandView } from './bots.js';
 
 export interface CustomStatus {
   text: string | null;
@@ -15,6 +16,8 @@ export interface CustomStatus {
   /** Already formatted as an ISO timestamp by the server; null means no expiry. */
   expiresAt: string | null;
 }
+
+export type PlatformRole = 'USER' | 'ADMIN';
 
 export interface User {
   id: string;
@@ -30,6 +33,8 @@ export interface User {
   status?: UserStatus;
   createdAt?: Date;
   emailVerifiedAt?: Date | null;
+  /** Only present on the caller's own "me" response; never shown on another user's profile. */
+  platformRole?: PlatformRole;
 }
 
 /** A member's identity inside one server, plus the roles that decorate it on the profile card. */
@@ -47,7 +52,7 @@ export interface UserProfile extends PublicUser {
 }
 
 /** Another user's profile as returned by friends and DM endpoints; email is private to its owner. */
-export type PublicUser = Omit<User, 'email' | 'emailVerifiedAt'>;
+export type PublicUser = Omit<User, 'email' | 'emailVerifiedAt' | 'platformRole'>;
 
 export interface ServerSummary {
   id: string;
@@ -80,6 +85,8 @@ export interface ServerDetail extends ServerSummary {
   categories?: ChannelCategory[];
   /** True while rules screening blocks the viewer: screening is on and they have not accepted. */
   needsOnboarding: boolean;
+  /** Slash commands registered by bots that are still members, for the composer's suggestions. */
+  slashCommands: SlashCommandView[];
 }
 
 export interface AuthSessionEntry {
@@ -572,7 +579,14 @@ export interface MessageReportView {
   createdAt: Date;
   reporter: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
   /** Null once the message is deleted, so the queue shows it as no longer available. */
-  message: { id: string; content: string; channelId: string; authorId: string } | null;
+  message: {
+    id: string;
+    content: string;
+    channelId: string;
+    authorId: string;
+    /** True when the moderator cannot view the message's channel: `content` is redacted to `''`. */
+    contentHidden: boolean;
+  } | null;
   targetUser: Pick<User, 'id' | 'displayName'> | null;
   resolvedBy: Pick<User, 'id' | 'displayName'> | null;
   resolvedAt: Date | null;
@@ -734,4 +748,55 @@ export interface AcceptServerOnboardingInput {
 export interface AcceptServerOnboardingResult {
   ok: true;
   grantedRoleIds: string[];
+}
+
+/** Hard max for `GET /platform/reports`, matching the discovery search cap's keyset-cursor pattern. */
+export const PLATFORM_REPORTS_PAGE_SIZE = 50;
+
+export const platformReportResolutions = ['DISMISSED', 'SERVER_DELISTED'] as const;
+export type PlatformReportResolution = (typeof platformReportResolutions)[number];
+
+export const platformReportStatuses = ['OPEN', 'DISMISSED', 'SERVER_DELISTED'] as const;
+export type PlatformReportStatus = (typeof platformReportStatuses)[number];
+
+/** A server as a platform admin needs to see it while reviewing a `ServerReport` against it. */
+export interface PlatformServerSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  tags: string[];
+  memberCount: number;
+  listed: boolean;
+  ownerId: string;
+  ownerDisplayName: string;
+  createdAt: Date;
+}
+
+/** One row in `GET /platform/reports`, or the detail response paired with `PlatformServerSummary`. */
+export interface PlatformServerReportView {
+  id: string;
+  serverId: string;
+  reason: MessageReportReason;
+  details: string | null;
+  createdAt: Date;
+  reporter: Pick<User, 'id' | 'displayName'>;
+  status: PlatformReportStatus;
+  resolvedAt: Date | null;
+  resolvedBy: Pick<User, 'id' | 'displayName'> | null;
+  resolutionNote: string | null;
+}
+
+export interface PlatformReportPage {
+  reports: PlatformServerReportView[];
+  nextCursor: string | null;
+}
+
+export interface PlatformReportDetail {
+  report: PlatformServerReportView;
+  server: PlatformServerSummary;
+}
+
+/** `POST /platform/reports/:reportId/dismiss` and `.../delist`. */
+export interface ResolvePlatformReportInput {
+  note?: string;
 }

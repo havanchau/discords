@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import type { Locale } from '@/common/i18n/locale';
 import { I18nService } from '@/common/i18n/i18n.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
@@ -19,6 +19,16 @@ import {
   TWO_FACTOR_CHALLENGE_TTL_SECONDS,
   TwoFactorChallengeService,
 } from './two-factor-challenge.service';
+
+/*
+ * Refresh tokens and email verification tokens are random (randomUUID / randomBytes), so a salted
+ * slow hash adds nothing; a SHA-256 hex digest with a unique index gives one indexed lookup instead
+ * of a bcrypt.compare over every row (docs/features/qa-follow-ups-2026-09-18.md). Same pattern as
+ * `hashResetToken` in password-reset.service.ts.
+ */
+export function sha256Hex(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 @Injectable()
 export class AuthService {
@@ -125,35 +135,26 @@ export class AuthService {
   }
 
   async verifyEmail(token: string, userAgent?: string) {
-    const candidates = await this.prisma.emailVerificationToken.findMany({
-      where: {
-        usedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      include: { user: true },
-      orderBy: { createdAt: 'desc' },
+    const candidate = await this.prisma.emailVerificationToken.findUnique({
+      where: { tokenHash: sha256Hex(token) },
     });
 
-    for (const candidate of candidates) {
-      if (!(await bcrypt.compare(token, candidate.tokenHash))) {
-        continue;
-      }
-
-      await this.prisma.$transaction([
-        this.prisma.emailVerificationToken.update({
-          where: { id: candidate.id },
-          data: { usedAt: new Date() },
-        }),
-        this.prisma.user.update({
-          where: { id: candidate.userId },
-          data: { emailVerifiedAt: new Date() },
-        }),
-      ]);
-
-      return this.createSession(candidate.userId, userAgent);
+    if (!candidate || candidate.usedAt || candidate.expiresAt <= new Date()) {
+      throw new UnauthorizedException('Invalid or expired verification token');
     }
 
-    throw new UnauthorizedException('Invalid or expired verification token');
+    await this.prisma.$transaction([
+      this.prisma.emailVerificationToken.update({
+        where: { id: candidate.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: candidate.userId },
+        data: { emailVerifiedAt: new Date() },
+      }),
+    ]);
+
+    return this.createSession(candidate.userId, userAgent);
   }
 
   async logoutUser(userId: string) {
@@ -184,62 +185,54 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string, userAgent?: string) {
-    const sessions = await this.prisma.session.findMany({
-      where: {
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
+    const session = await this.prisma.session.findUnique({
+      where: { refreshHash: sha256Hex(refreshToken) },
       include: { user: true },
-      orderBy: { createdAt: 'desc' },
     });
 
-    for (const session of sessions) {
-      if (!(await bcrypt.compare(refreshToken, session.refreshHash))) {
-        continue;
-      }
-
-      const nextRefreshToken = randomUUID();
-      const refreshHash = await bcrypt.hash(nextRefreshToken, 12);
-      const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-
-      await this.prisma.session.update({
-        where: { id: session.id },
-        data: {
-          refreshHash,
-          userAgent,
-          expiresAt,
-          lastActiveAt: new Date(),
-        },
-      });
-
-      return {
-        accessToken: await this.signAccessToken(session.userId, session.id),
-        refreshToken: nextRefreshToken,
-        tokenType: 'Bearer',
-        expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
-        user: {
-          id: session.user.id,
-          email: session.user.email,
-          username: session.user.username,
-          displayName: session.user.displayName,
-          avatarUrl: session.user.avatarUrl,
-          bio: session.user.bio,
-          locale: session.user.locale,
-          status: session.user.status,
-          emailVerifiedAt: session.user.emailVerifiedAt,
-          createdAt: session.user.createdAt,
-        },
-      };
+    if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    throw new UnauthorizedException('Invalid refresh token');
+    const nextRefreshToken = randomUUID();
+    const refreshHash = sha256Hex(nextRefreshToken);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: {
+        refreshHash,
+        userAgent,
+        expiresAt,
+        lastActiveAt: new Date(),
+      },
+    });
+
+    return {
+      accessToken: await this.signAccessToken(session.userId, session.id),
+      refreshToken: nextRefreshToken,
+      tokenType: 'Bearer',
+      expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        username: session.user.username,
+        displayName: session.user.displayName,
+        avatarUrl: session.user.avatarUrl,
+        bio: session.user.bio,
+        locale: session.user.locale,
+        status: session.user.status,
+        emailVerifiedAt: session.user.emailVerifiedAt,
+        createdAt: session.user.createdAt,
+      },
+    };
   }
 
   async createSession(userId: string, userAgent?: string) {
     // Every sign-in path (password, 2FA, email verification, provider) ends here.
     await this.assertNotPendingDeletion(userId);
     const refreshToken = randomUUID();
-    const refreshHash = await bcrypt.hash(refreshToken, 12);
+    const refreshHash = sha256Hex(refreshToken);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
 
     const session = await this.prisma.session.create({
@@ -314,7 +307,7 @@ export class AuthService {
     await this.prisma.emailVerificationToken.create({
       data: {
         userId,
-        tokenHash: await bcrypt.hash(token, 12),
+        tokenHash: sha256Hex(token),
         expiresAt: new Date(Date.now() + 1000 * 60 * 60),
       },
     });

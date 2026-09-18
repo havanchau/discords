@@ -1,0 +1,16 @@
+// Ownership record for a file stored through the generic `POST /uploads` endpoint. `url` is
+// `@unique` because `buildStorageKey` always mints a fresh `randomUUID()`-based key, so two uploads
+// never produce the same URL. Lets `avatarUrl`/`bannerUrl` set-time validation prove the caller owns
+// the URL, and lets replace/anonymize flows delete the old file once nothing else references it.
+model Upload {
+  id         String   @id @default(cuid())
+  ownerId    String
+  url        String   @unique
+  storageKey String
+  mimeType   String
+  byteSize   Int
+  createdAt  DateTime @default(now())
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+}

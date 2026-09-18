@@ -1,13 +1,21 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { slugifyChannelName } from '@/common/slugify';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { toSlashCommandView } from '@/modules/bots/slash-commands.service';
 import type { AuditLogEntry, Invite, ServerDetail, ServerSummary } from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { countChannelUnread } from '@/modules/messages/unread-counts';
 import { memberNeedsOnboarding } from '@/modules/permissions/onboarding-gate';
+import { toCustomStatus } from '@/modules/users/user-profile';
+import { UploadsService } from '@/modules/uploads/uploads.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
@@ -24,6 +32,7 @@ export class ServersService {
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimePublisher,
+    private readonly uploads: UploadsService,
   ) {}
 
   async createServer(userId: string, dto: CreateServerDto) {
@@ -91,6 +100,9 @@ export class ServersService {
                 displayName: true,
                 avatarUrl: true,
                 status: true,
+                customStatusText: true,
+                customStatusEmoji: true,
+                customStatusExpiresAt: true,
               },
             },
             roles: { include: { role: true } },
@@ -100,6 +112,22 @@ export class ServersService {
         roles: { orderBy: { position: 'asc' } },
         channelCategories: { orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] },
       },
+    });
+    // Resolve an expired custom status to null with the same helper the users module uses
+    // (docs/features/qa-follow-ups-2026-09-18.md, "Custom status").
+    const members = server.members.map((member) => {
+      const { customStatusText, customStatusEmoji, customStatusExpiresAt, ...user } = member.user;
+      return {
+        ...member,
+        user: {
+          ...user,
+          customStatus: toCustomStatus({
+            customStatusText,
+            customStatusEmoji,
+            customStatusExpiresAt,
+          }),
+        },
+      };
     });
     const viewableChannels = await this.permissions.filterViewableChannels(userId, server.channels);
     const categories = await this.filterVisibleCategories(
@@ -122,9 +150,25 @@ export class ServersService {
     const {
       channelCategories: _allCategories,
       onboardingEnabled: _enabled,
+      members: _rawMembers,
       ...serverFields
     } = server;
-    return { server: { ...serverFields, channels, categories, needsOnboarding } };
+    // Commands stay registered when their bot is removed from the server, so only list the ones
+    // whose bot is still a member (bot-gateway-and-slash-commands.md, composer suggestions).
+    const slashCommands = await this.prisma.slashCommand.findMany({
+      where: { serverId, bot: { botUser: { memberships: { some: { serverId } } } } },
+      orderBy: { name: 'asc' },
+    });
+    return {
+      server: {
+        ...serverFields,
+        channels,
+        categories,
+        members,
+        needsOnboarding,
+        slashCommands: slashCommands.map(toSlashCommandView),
+      },
+    };
   }
 
   /* Category names can reveal private areas, so members only see categories holding a channel they can view. */
@@ -186,6 +230,14 @@ export class ServersService {
     if (dto.nickname !== undefined) data.nickname = dto.nickname?.trim() || null;
     if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl?.trim() || null;
 
+    // Same real authorization check as `UsersService.updateMe` (upload-ownership.md): the regex on
+    // the DTO only checks shape, this proves the caller owns the URL.
+    if (data.avatarUrl) {
+      const owned = await this.uploads.findOwnedUpload(userId, data.avatarUrl);
+      if (!owned) throw new BadRequestException('Upload not found or not owned by you');
+    }
+    const previousAvatarUrl = member.avatarUrl;
+
     const updated = await this.prisma.serverMember.update({
       where: { id: member.id },
       data,
@@ -218,6 +270,10 @@ export class ServersService {
       ...(data.nickname !== undefined ? { nickname: updated.nickname } : {}),
       ...(data.avatarUrl !== undefined ? { avatarUrl: updated.avatarUrl } : {}),
     });
+
+    if (data.avatarUrl !== undefined && previousAvatarUrl && previousAvatarUrl !== data.avatarUrl) {
+      await this.uploads.deleteUploadIfUnreferenced(previousAvatarUrl);
+    }
 
     return { member: updated };
   }

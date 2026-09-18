@@ -15,6 +15,7 @@ export const profile = {
   'profile.expiry.1h': '1 giờ',
   'profile.expiry.30m': '30 phút',
   'profile.expiry.4h': '4 giờ',
+  'profile.expiry.keep': 'Giữ nguyên',
   'profile.expiry.never': 'Không bao giờ',
   'profile.expiry.today': 'Hôm nay',
   'profile.field.bio': 'Giới thiệu',

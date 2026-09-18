@@ -63,6 +63,14 @@ export const RealtimeEvents = {
   WebRtcOffer: 'webrtc:offer',
   WebRtcAnswer: 'webrtc:answer',
   WebRtcIceCandidate: 'webrtc:ice-candidate',
+  /** Delivered only to the owning bot's gateway socket; see `bot-gateway-and-slash-commands.md`. */
+  InteractionCreate: 'interaction:create',
+  /** Delivered to the invoker when their slash command interaction times out unanswered. */
+  InteractionTimeout: 'interaction:timeout',
+  /** `{ channelId, userId, role }` broadcast to `call:<channelId>` when a stage speaker set changes. */
+  StageRoleChanged: 'stage:role-changed',
+  /** `{ channelId, userId, requested }` broadcast to `call:<channelId>` for the moderator's speak queue. */
+  StageSpeakRequestUpdated: 'stage:speak-request-updated',
 } as const;
 
 export type RealtimeEvent = (typeof RealtimeEvents)[keyof typeof RealtimeEvents];
@@ -79,4 +87,20 @@ export interface PresenceUpdatePayload {
 /** Sent to every server the account belonged to once it is anonymized, so rosters drop the member. */
 export interface AccountDeletedPayload {
   userId: string;
+}
+
+export type StageRole = 'audience' | 'speaker';
+
+/** `stage:role-changed` — a `STAGE` channel's speaker set changed. */
+export interface StageRoleChangedPayload {
+  channelId: string;
+  userId: string;
+  role: StageRole;
+}
+
+/** `stage:speak-request-updated` — an audience member requested (or withdrew a request) to speak. */
+export interface StageSpeakRequestUpdatedPayload {
+  channelId: string;
+  userId: string;
+  requested: boolean;
 }

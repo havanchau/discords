@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { PermissionsModule } from '@/modules/permissions/permissions.module';
 import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
+import { UploadsModule } from '@/modules/uploads/uploads.module';
 import { ServerDiscoveryController } from './server-discovery.controller';
 import { ServerDiscoveryService } from './server-discovery.service';
 import { ServerModerationService } from './server-moderation.service';
@@ -12,7 +13,7 @@ import { ServersController } from './servers.controller';
 import { ServersService } from './servers.service';
 
 @Module({
-  imports: [AuthModule, PermissionsModule, RealtimePublisherModule],
+  imports: [AuthModule, PermissionsModule, RealtimePublisherModule, UploadsModule],
   controllers: [ServersController, ServerTemplatesController, ServerDiscoveryController],
   providers: [
     ServersService,

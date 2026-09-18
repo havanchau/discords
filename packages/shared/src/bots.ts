@@ -59,3 +59,86 @@ export interface AuthorizeBotInput {
   serverId: string;
   roleId: string;
 }
+
+/**
+ * Bot gateway and slash commands, phase 2/3 (`bot-gateway-and-slash-commands.md`). Shared constants
+ * rather than env vars, per Open Question 34 — the same choice already made for the phase-1 bot rate
+ * limits above.
+ */
+/** A bot may hold at most this many live gateway sockets; a newer connection replaces the oldest. */
+export const BOT_GATEWAY_MAX_CONNECTIONS = 1;
+/** Deadline for a bot to answer an interaction before it times out (Discord's own initial-response deadline). */
+export const INTERACTION_TIMEOUT_MS = 15_000;
+/** Per bot, per server. */
+export const SLASH_COMMANDS_MAX_PER_BOT_PER_SERVER = 25;
+export const SLASH_COMMAND_OPTIONS_MAX = 25;
+/** Lowercase slug, distinct from `BOT_NAME_PATTERN` (a display name, which allows spaces). */
+export const SLASH_COMMAND_NAME_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
+/** The four client-side built-ins (`apps/web/src/utils/slashCommands.ts`); a bot can never claim one. */
+export const RESERVED_SLASH_COMMAND_NAMES = ['me', 'nick', 'poll', 'invite'] as const;
+
+export type SlashCommandOptionType = 'STRING' | 'INTEGER' | 'BOOLEAN' | 'USER' | 'CHANNEL';
+
+export interface SlashCommandOption {
+  name: string;
+  description: string;
+  type: SlashCommandOptionType;
+  required?: boolean;
+}
+
+export type InteractionStatus = 'PENDING' | 'RESPONDED' | 'TIMED_OUT';
+
+/** A server-registered command, as returned to its owning bot. */
+export interface SlashCommandView {
+  id: string;
+  botId: string;
+  serverId: string;
+  name: string;
+  description: string;
+  options: SlashCommandOption[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateSlashCommandInput {
+  name: string;
+  description: string;
+  options?: SlashCommandOption[];
+}
+
+export interface UpdateSlashCommandInput {
+  description?: string;
+  options?: SlashCommandOption[];
+}
+
+/** `POST /channels/:channelId/interactions` body (session auth — the invoker is a human member). */
+export interface InvokeInteractionInput {
+  commandId: string;
+  /** Raw text after the command name, parsed against the command's declared options server-side. */
+  args: string;
+}
+
+export interface InvokeInteractionResult {
+  interactionToken: string;
+}
+
+/** `POST /bot-api/interactions/:interactionToken/callback` body — identical shape to a bot's message send. */
+export interface InteractionCallbackInput {
+  content: string;
+  replyToMessageId?: string;
+}
+
+/** Delivered only to the owning bot's gateway socket (targeted emit, not a room broadcast). */
+export interface InteractionCreatePayload {
+  interactionToken: string;
+  commandName: string;
+  args: string;
+  channelId: string;
+  serverId: string;
+  invoker: { id: string; username: string; displayName: string };
+}
+
+/** Delivered to the invoker's own room once their interaction times out with no answer. */
+export interface InteractionTimeoutPayload {
+  interactionToken: string;
+}

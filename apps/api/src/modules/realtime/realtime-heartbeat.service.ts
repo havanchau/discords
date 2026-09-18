@@ -54,7 +54,9 @@ export class RealtimeHeartbeatService implements OnModuleDestroy {
       const socketsByUserId = new Map<string, string[]>();
       localSockets.forEach((socket) => {
         const user = readSocketUser(socket);
-        if (!user) return;
+        // A bot never joins presence tracking (`realtime.gateway.ts` → connectBot); heartbeating it
+        // here would flip it ONLINE, which `bot-gateway-and-slash-commands.md` explicitly refuses.
+        if (!user || user.kind !== 'human') return;
         socketsByUserId.set(user.id, [...(socketsByUserId.get(user.id) ?? []), socket.id]);
       });
 

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { accentClass, initials, RemoteMedia } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
 import styles from './RemoteVideoTile.module.css';
 
 export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
+  const t = useTranslation();
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -25,10 +27,10 @@ export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
         <strong>{participant.displayName}</strong>
         <span>
           {participant.isSharingScreen
-            ? 'Sharing screen'
+            ? t('call.sharingScreen')
             : participant.isMuted
-              ? 'Muted'
-              : 'In call'}
+              ? t('call.muted')
+              : t('call.inCall')}
         </span>
       </div>
     </div>

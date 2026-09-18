@@ -91,6 +91,7 @@ export const moderation = {
   'reports.empty.RESOLVED': 'No resolved reports.',
   'reports.loading': 'Loading reports',
   'reports.messageEncrypted': 'Encrypted message',
+  'reports.messageHidden': "You can't view this channel",
   'reports.messageUnavailable': 'Message no longer available',
   'reports.reportedBy': 'Reported {date} by {actor}',
   'reports.resolvedBy': 'Resolved {date} by {actor}',

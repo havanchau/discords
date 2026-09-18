@@ -83,6 +83,8 @@ function jsxTextLiterals(line) {
     const text = match[1].trim();
     // `{a ? <X/> : <Y/>}` leaves fragments like ': hint ?' between tags; those are code, not copy.
     if (/^[:?]/.test(text) || / \? /.test(text) || /\?$/.test(text)) continue;
+    // `a >= b && c < d` looks like text between tags; a '>=' opener or a boolean operator is code.
+    if (/^=/.test(text) || /&&|\|\|/.test(text)) continue;
     // A single word between '>' and '<' is only copy when a tag actually closes on this line;
     // otherwise it is a type argument such as `=> Promise<void>`.
     if (!/\s/.test(text) && !line.includes('</')) continue;

@@ -408,3 +408,58 @@ Fixed on 2026-09-17 per [wave-3-2-follow-ups.md](features/wave-3-2-follow-ups.md
 - [ ] Install token-authenticated bots in servers.
 - [ ] Use server stickers and soundboard clips.
 - [ ] Host stage channels with speakers and audience.
+
+## Wave 4 Backlog — 2026-09-18
+
+Fifth roadmap wave: the first full manual QA pass over Waves 2–3.2, the fixes it produced, and the remaining gaps. Specs were reviewed and approved on 2026-09-18: [qa-follow-ups-2026-09-18.md](features/qa-follow-ups-2026-09-18.md), [appshell-split.md](features/appshell-split.md), [upload-ownership.md](features/upload-ownership.md), [platform-report-review.md](features/platform-report-review.md), [bot-gateway-and-slash-commands.md](features/bot-gateway-and-slash-commands.md), [voice-sfu.md](features/voice-sfu.md), [stage-channels.md](features/stage-channels.md). Open decisions are rows 30–38 in [open-questions.md](features/open-questions.md); until answered, the "Assumption used" column is the decision.
+
+### Status — 2026-09-18 (paused)
+
+Work is paused in the middle of the voice SFU. Nothing from this wave is committed.
+
+- **QA pass (done):** the Wave 2, 3.1 and 3.2 test plans were run against a local stack over REST, Socket.IO and headless Chrome at 1440x900 and 390x844. Every server-side acceptance criterion held. The defects found are the contents of [qa-follow-ups-2026-09-18.md](features/qa-follow-ups-2026-09-18.md). The Wave 2 and 3.2 checklist items above stay unchecked: their UI flows were only partly clicked through, and the browser pass found the issues fixed below.
+- **Local database:** the 15 `20260917*` migrations were marked applied with `prisma migrate resolve --applied`, because the database had been created with `db push` and `prisma migrate diff` showed no drift. `20260918002000`, `20260918004000`, `20260918005000` and `20260918006000` are applied locally. `20260918000000_add_stage_channels` does not exist yet.
+- **QA follow-ups (done, verified):** API and web, including the two security fixes. The first is socket `reaction:toggle`, which now broadcasts to the message's own channel and validates the emoji. The second is refresh-token and email-verification lookup: an indexed SHA-256 lookup replaces a bcrypt scan over every row, and it signs every user out once at deploy. Scenarios 1–15 of its test plan were run; see its Deviations section.
+- **AppShell split (done, verified):** `AppShell.tsx` went from 901 to 620 lines with no behavior change; `ui:smoke` passes.
+- **Upload ownership (done, verified on the API):** it needs no web change.
+- **Platform report review:** the API, shared types and seed admin (`admin@example.com`) are done and verified. The web page (`components/platform/`, `hooks/usePlatformReports.ts`, shield button in `ChannelSidebar`) is implemented, but its browser verification was stopped halfway.
+- **Bot gateway and slash commands:** the API, shared types and realtime parts are done and verified (20/20 scenarios). `GET /servers/:serverId` returns `slashCommands` for the composer. **Not started:** the web composer integration, listed at the end of the doc's Deviations section. There is also no UI for a bot owner to register commands (only the bot REST API).
+- **Voice SFU and stage channels — in progress, API only:**
+  - Done:
+    - `livekit-server-sdk@2.19.0` and `livekit-client@2.22.3` are installed and pinned.
+    - `ChannelType` in `packages/shared/src/types.ts` includes `STAGE`.
+    - `MuteMembers` is added to the API `Permission` const.
+    - `apps/api/src/common/livekit-config.ts` reads `VOICE_TRANSPORT` and the `LIVEKIT_*` variables, but nothing uses it yet.
+  - Not done:
+    - the `livekit` service in `docker-compose.yml` (use UDP range 50200–50300: 50001 is taken on the dev machine);
+    - `voice:join` transport and token minting;
+    - the stage migration, API and socket events;
+    - every web part;
+    - the doc updates to `voice-webrtc.md`, `dm-calls.md` and `stickers-and-soundboard.md`.
+  - Until the rest lands, the running API behaves exactly as before (mesh).
+- **Verification of the paused tree:** `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check`, `ui:scan` and `docs:check` all pass.
+
+### Resume Order
+
+1. Voice SFU and stage channels, API and infra: finish the list above, start the container with `docker compose up -d livekit`, and restart the API with the LiveKit variables to verify.
+2. Web: finish the platform page's browser verification, then build the slash command composer integration, then the LiveKit call path and the stage UI.
+3. The manual scenarios of each doc, then commit per feature.
+
+### Env Lines To Add By Hand
+
+Agents cannot edit `.env*` files.
+
+- `.env` (local): `REDIS_URL=redis://127.0.0.1:56379` (the API does not start without it). If the API stays on port 3001, the Vite proxy needs `VITE_BACKEND_TARGET=http://localhost:3001`; otherwise put both on the same port.
+- `.env.example`: `VOICE_MAX_BYTES=26214400`, `PRIVATE_STORAGE_LOCAL_DIR=` and the LiveKit lines in [voice-sfu.md](features/voice-sfu.md) Deployment Notes.
+
+### Checklist
+
+- [x] Run the Wave 2–3.2 test plans against a local stack and record the defects.
+- [x] Fix the QA defects (API and web).
+- [x] Split `AppShell.tsx` below the file-size cap with no behavior change.
+- [x] Track upload ownership and delete orphaned avatar and banner files.
+- [ ] Review discovery reports as a platform admin (web page not verified).
+- [ ] Connect bots over the gateway and invoke their slash commands from the composer (composer not built).
+- [ ] Carry voice and video channels over a LiveKit SFU with a mesh rollback flag.
+- [ ] Host stage channels with speakers and audience.
+- [ ] Decide open questions 30–38, including account deletion for server owners (row 38).

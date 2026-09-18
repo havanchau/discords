@@ -44,6 +44,8 @@ export interface ChatPanelMessages {
   searchQuery: string;
   parsedSearch: ParsedMessageSearch;
   loadMore: () => Promise<void>;
+  /** Marks the channel read up to (or the end, if omitted) this message, once the user reaches the bottom. */
+  markRead: (lastMessageId?: string) => void;
 }
 
 export interface ChatPanelAlerts {
@@ -62,6 +64,8 @@ export interface ChatPanelPanels {
   loadNotifications: () => Promise<void>;
   markNotificationRead: (notificationId: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
+  /** Opens the mobile navigation drawer (server rail + channel sidebar); desktop never calls this. */
+  openMobileNav: () => void;
 }
 
 export interface ChatPanelEncryption {

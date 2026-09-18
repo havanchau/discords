@@ -83,7 +83,8 @@ export class ReportsService {
       },
       select: reportSelect,
     });
-    if (existing) return { created: false, report: toView(existing) };
+    // The reporter could already view the message (requireReadableMessage checked it above).
+    if (existing) return { created: false, report: toView(existing, true) };
 
     const details = dto.details?.trim() || null;
     const report = await this.prisma.$transaction(async (tx) => {
@@ -114,7 +115,8 @@ export class ReportsService {
       });
       return created;
     });
-    return { created: true, report: toView(report) };
+    // The reporter could already view the message (requireReadableMessage checked it above).
+    return { created: true, report: toView(report, true) };
   }
 
   async list(
@@ -129,7 +131,35 @@ export class ReportsService {
       orderBy: { createdAt: 'desc' },
       take: LIST_LIMIT,
     });
-    return { reports: reports.map(toView) };
+    const viewableByChannel = await this.viewableChannelMap(userId, reports);
+    return {
+      reports: reports.map((report) =>
+        toView(
+          report,
+          report.message ? (viewableByChannel.get(report.message.channelId) ?? false) : true,
+        ),
+      ),
+    };
+  }
+
+  /**
+   * One permission check per distinct channel referenced by the page of reports, not one per report
+   * — a moderator's queue commonly has several reports on the same channel.
+   */
+  private async viewableChannelMap(userId: string, reports: ReportRow[]) {
+    const channelIds = [
+      ...new Set(reports.map((r) => r.message?.channelId).filter((id): id is string => !!id)),
+    ];
+    const entries = await Promise.all(
+      channelIds.map(
+        async (channelId) =>
+          [
+            channelId,
+            await this.permissions.hasChannelPermission(userId, channelId, Permission.ViewChannel),
+          ] as const,
+      ),
+    );
+    return new Map(entries);
   }
 
   async updateStatus(userId: string, serverId: string, reportId: string, dto: UpdateReportDto) {
@@ -167,7 +197,14 @@ export class ReportsService {
       });
       return tx.messageReport.findUniqueOrThrow({ where: { id: reportId }, select: reportSelect });
     });
-    return { report: toView(report) };
+    const canView = report.message
+      ? await this.permissions.hasChannelPermission(
+          userId,
+          report.message.channelId,
+          Permission.ViewChannel,
+        )
+      : true;
+    return { report: toView(report, canView) };
   }
 
   /**
@@ -192,7 +229,12 @@ export class ReportsService {
   }
 }
 
-function toView(report: ReportRow): MessageReportView {
+/**
+ * `canViewChannel` is the moderator's `VIEW_CHANNEL` permission on the message's channel — false
+ * redacts `content` to `''` and sets `contentHidden: true`, so a moderator without channel access
+ * cannot read the reported text (docs/features/qa-follow-ups-2026-09-18.md, "Report queue").
+ */
+function toView(report: ReportRow, canViewChannel: boolean): MessageReportView {
   const { message } = report;
   return {
     id: report.id,
@@ -206,9 +248,10 @@ function toView(report: ReportRow): MessageReportView {
       message && !message.deletedAt
         ? {
             id: message.id,
-            content: message.content,
+            content: canViewChannel ? message.content : '',
             channelId: message.channelId,
             authorId: message.authorId,
+            contentHidden: !canViewChannel,
           }
         : null,
     targetUser: report.targetUser,

@@ -30,6 +30,7 @@ export interface SettingsModalFields {
   selectedMember: ServerDetail['members'][number] | null;
   channelOverrides: ChannelPermissionOverride[];
   auditLogs: AuditLogEntry[];
+  auditLogsError: string | null;
   invites: Invite[];
   notificationPreferences: NotificationPreference[];
   pendingAction: string | null;
@@ -98,6 +99,7 @@ export interface SettingsModalProps {
     | 'selectedMember'
     | 'channelOverrides'
     | 'auditLogs'
+    | 'auditLogsError'
     | 'invites'
     | 'notificationPreferences'
     | 'pendingAction'

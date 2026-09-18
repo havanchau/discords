@@ -19,7 +19,7 @@ export function useLazyResource<T>({ buildKey, fetch, enabled = true }: LazyReso
   const [requestedId, setRequestedId] = useState<string | null>(null);
   const queryKey = buildKey(requestedId ?? 'none');
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, error } = useQuery({
     queryKey,
     enabled: enabled && requestedId !== null,
     queryFn: () => fetch(requestedId as string),
@@ -40,5 +40,5 @@ export function useLazyResource<T>({ buildKey, fetch, enabled = true }: LazyReso
     [queryClient, queryKey],
   );
 
-  return { data, isFetching, load, write };
+  return { data, isFetching, error, load, write };
 }

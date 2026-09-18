@@ -30,6 +30,21 @@ async function main() {
     },
   });
 
+  // Local dev platform admin (docs/features/platform-report-review.md): `platformRole` is never
+  // set by any API endpoint, only by a DB write, this seed, or a one-off maintenance script.
+  await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: { platformRole: 'ADMIN', emailVerifiedAt: new Date() },
+    create: {
+      email: 'admin@example.com',
+      username: 'platform-admin',
+      displayName: 'Platform Admin',
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      platformRole: 'ADMIN',
+    },
+  });
+
   let existingServer = await prisma.server.findFirst({
     where: { name: 'Demo Workspace', ownerId: demo.id },
   });

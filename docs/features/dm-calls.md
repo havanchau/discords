@@ -48,10 +48,10 @@ A DM call uses the key `dm:<conversationId>` wherever the gateway and client cur
 
 Rules:
 
-- `dm:call:ring` requires membership; rate limited to 10 per minute per socket. A ring already pending for the conversation is replaced.
-- The server keeps pending rings in memory with a 30 second timer.
+- `dm:call:ring` requires membership; rate limited to 10 per minute per user (`socket-guards.ts:17-20`). A ring already pending for the conversation is replaced.
+- The server keeps pending rings in Redis, one per conversation, with a deadline in a sorted set swept every 2 s (`apps/api/src/modules/realtime/dm-call-rings.ts:14-21`), so any instance can read, stop or expire a ring the caller started somewhere else.
 - A recipient joining the call (`voice:join` with the key) clears the ring and emits `ring-stopped` with `reason: 'answered'` and that user's id, so their other devices stop ringing.
-- 1-1 decline clears the ring (`reason: 'declined'`); group decline emits `dm:call:declined` to the caller and `ring-stopped` only to the decliner's user room.
+- 1-1 decline clears the ring (`reason: 'declined'`); group decline emits `dm:call:declined` to the caller and `ring-stopped` only to the decliner's user room, and removes the decliner from the ring's member list so a later expiry or cancel does not send them a missed-call notification. The ring itself ends as `declined` once no member besides the caller is left.
 - Cancel is accepted only from the caller; it clears the ring (`reason: 'cancelled'`) and creates `DM_MISSED_CALL` notifications.
 - Timer expiry with nobody joined emits `reason: 'missed'` and creates `DM_MISSED_CALL` notifications for recipients.
 

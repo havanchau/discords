@@ -11,6 +11,7 @@ export const Permission = {
   ConnectVoice: 'CONNECT_VOICE',
   SpeakVoice: 'SPEAK_VOICE',
   UploadFiles: 'UPLOAD_FILES',
+  MuteMembers: 'MUTE_MEMBERS',
 } as const;
 
 export type PermissionValue = (typeof Permission)[keyof typeof Permission];

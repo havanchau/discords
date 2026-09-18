@@ -1,0 +1,46 @@
+/*
+ * A left-anchored, full-height drawer built on the shared Dialog primitive (Dialog.module.css owns
+ * the centered-modal look; this overrides position/size only, so focus trapping, Esc and the
+ * overlay stay shared behavior).
+ */
+.drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  top: 0;
+  left: 0;
+  transform: none;
+  width: max-content;
+  max-width: 85vw;
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  animation: slideIn var(--motion-slow) ease;
+}
+
+.drawerBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/*
+ * ChannelSidebar hides itself under 720px for the normal layout (ChannelSidebar.module.css); inside
+ * the drawer it is the point, so it is forced back to its regular flex layout.
+ */
+.drawerBody :global(.channel-sidebar) {
+  display: flex !important;
+  width: 240px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

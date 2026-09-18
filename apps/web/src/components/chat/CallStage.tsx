@@ -43,14 +43,20 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
           <div className={styles.activeCallCopy}>
             <strong>
               {active.mode === 'screen'
-                ? `${active.screenSharer?.displayName ?? 'Someone'} is sharing screen`
+                ? t('call.userSharingScreen', {
+                    user: active.screenSharer?.displayName ?? t('call.someone'),
+                  })
                 : active.mode === 'video'
-                  ? 'Video call is active'
-                  : 'Voice call is active'}
+                  ? t('call.videoCallActive')
+                  : t('call.voiceCallActive')}
             </strong>
             <span>
-              {bannerLabel} - {active.participants.length} participant
-              {active.participants.length === 1 ? '' : 's'}
+              {bannerLabel} - {active.participants.length}{' '}
+              {t(
+                active.participants.length === 1
+                  ? 'call.participantSingular'
+                  : 'call.participantPlural',
+              )}
             </span>
           </div>
           <Button
@@ -58,7 +64,7 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
             className={styles.activeCallJoin}
             onClick={() => void call.start('voice', { receiveOnly: true })}
           >
-            {active.mode === 'screen' ? 'Join stream' : 'Join call'}
+            {active.mode === 'screen' ? t('call.joinStream') : t('call.joinCall')}
           </Button>
         </section>
       ) : null}
@@ -69,14 +75,14 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
             <div>
               <strong>
                 {state.isSharingScreen
-                  ? 'Screen share'
+                  ? t('call.screenShare')
                   : state.mode === 'video'
-                    ? 'Video call'
-                    : 'Voice call'}
+                    ? t('call.videoCall')
+                    : t('call.voiceCall')}
               </strong>
               <span>
-                {state.label} - {remoteMedia.length + 1} participant
-                {remoteMedia.length ? 's' : ''}
+                {state.label} - {remoteMedia.length + 1}{' '}
+                {t(remoteMedia.length ? 'call.participantPlural' : 'call.participantSingular')}
               </span>
               {lastPlayed ? (
                 <span className={styles.soundboardPlayed} role="status">
@@ -138,7 +144,11 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
               <div className={styles.callLabel}>
                 <strong>{auth.user.displayName}</strong>
                 <span>
-                  {state.isSharingScreen ? 'Sharing screen' : state.isMuted ? 'Muted' : 'You'}
+                  {state.isSharingScreen
+                    ? t('call.sharingScreen')
+                    : state.isMuted
+                      ? t('call.muted')
+                      : t('call.you')}
                 </span>
               </div>
             </div>

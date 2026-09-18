@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Server, Socket } from 'socket.io';
+import { BOT_GATEWAY_MAX_CONNECTIONS } from '@discord-clone/shared';
 import { defaultWebOrigin, parseWebOrigins } from '@/common/web-origins';
 import { RedisFixedWindowLimiter } from '@/common/redis-fixed-window-limiter';
 import { readLimitsConfig } from '@/common/limits-config';
@@ -19,7 +20,7 @@ import { RealtimeHeartbeatService } from './realtime-heartbeat.service';
 import { RealtimeAccessService } from './realtime-access.service';
 import { RealtimePublisher } from './realtime-publisher.service';
 import { SocketAuthService } from './socket-auth.service';
-import { readSocketUser, setSocketUser } from './socket-user';
+import { readSocketUser, setSocketUser, SocketUser } from './socket-user';
 import { SOCKET_MAX_PAYLOAD_BYTES, attachSocketGuards } from './socket-guards';
 
 /**
@@ -87,6 +88,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
 
     try {
+      if (user.kind === 'bot') {
+        await this.connectBot(client, user);
+        return;
+      }
       await client.join(this.publisher.userRoom(user.id));
       await this.joinDirectConversationRooms(client, user.id);
       await this.presence.socketConnected(user.id, client.id);
@@ -101,10 +106,37 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     try {
       await this.calls.leaveAll(client);
-      if (user) await this.presence.socketDisconnected(user.id, client.id);
+      // A bot never joins presence tracking (Gateway → Room membership), so there is nothing to flip.
+      if (user?.kind === 'human') await this.presence.socketDisconnected(user.id, client.id);
     } catch (error) {
       this.logger.error(`Could not clean up socket ${client.id}`, error);
     }
+  }
+
+  /**
+   * A bot socket joins its own room (`botRoom`, for the connection cap and targeted
+   * `interaction:create` emits), every server it is a member of, and every channel its role can
+   * view — computed once, at connect. It never joins `userRoom`/DM rooms and is never added to
+   * presence tracking (`bot-gateway-and-slash-commands.md` → Changes → Gateway → Room membership).
+   */
+  private async connectBot(client: Socket, user: Extract<SocketUser, { kind: 'bot' }>) {
+    // Connection cap: a bot may hold at most BOT_GATEWAY_MAX_CONNECTIONS live sockets; a newer
+    // connection (e.g. a redeployed process) disconnects the older one(s) rather than being refused.
+    const existing = await this.publisher.fetchBotSockets(user.botId);
+    if (existing.length >= BOT_GATEWAY_MAX_CONNECTIONS) {
+      existing.forEach((socket) => socket.disconnect(true));
+    }
+
+    const [serverIds, channelIds] = await Promise.all([
+      this.access.listServerIds(user.id),
+      this.access.listViewableChannelIds(user.id),
+    ]);
+
+    await client.join(this.publisher.botRoom(user.botId));
+    await Promise.all([
+      ...serverIds.map((serverId) => client.join(this.publisher.serverRoom(serverId))),
+      ...channelIds.map((channelId) => client.join(this.publisher.channelRoom(channelId))),
+    ]);
   }
 
   /** DM rooms are joined up front so a conversation delivers without an explicit join event. */

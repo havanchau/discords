@@ -75,13 +75,17 @@ export class UploadsController {
       },
     }),
   )
-  async upload(@UploadedFile() file?: Express.Multer.File) {
+  async upload(@CurrentUser() user: RequestUser, @UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
     // Size and MIME checks run in the service so the temp file is removed when they fail.
-    return { attachment: await this.uploads.upload(file) };
+    const { storageKey, ...attachment } = await this.uploads.upload(file);
+    // Recorded before the response goes out, so a caller can immediately set it as their avatar/
+    // banner (upload-ownership.md) — `storageKey` stays internal, not part of the response shape.
+    await this.uploads.recordUpload(user.id, { ...attachment, storageKey });
+    return { attachment };
   }
 
   @RateLimit({ keyPrefix: 'upload-chunk', limit: 180, windowMs: 60_000 })

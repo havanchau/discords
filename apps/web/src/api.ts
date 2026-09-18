@@ -133,6 +133,14 @@ import type {
   PollOptionView as ServerPollOptionView,
   PollUpdatedPayload as ServerPollUpdatedPayload,
   PollView as ServerPollView,
+  PlatformReportDetail as ServerPlatformReportDetail,
+  PlatformReportPage as ServerPlatformReportPage,
+  PlatformReportResolution,
+  PlatformReportStatus,
+  PlatformRole,
+  PlatformServerReportView as ServerPlatformServerReportView,
+  PlatformServerSummary as ServerPlatformServerSummary,
+  ResolvePlatformReportInput,
   PublicUser as ServerPublicUser,
   Role as ServerRole,
   SavedMessageView as ServerSavedMessageView,
@@ -222,6 +230,16 @@ export type NotificationPreference = Json<ServerNotificationPreference>;
 export type Poll = Json<ServerPollView>;
 export type PollOption = Json<ServerPollOptionView>;
 export type PollUpdatedPayload = Json<ServerPollUpdatedPayload>;
+export type PlatformReportDetail = Json<ServerPlatformReportDetail>;
+export type PlatformReportPage = Json<ServerPlatformReportPage>;
+export type PlatformServerReportView = Json<ServerPlatformServerReportView>;
+export type PlatformServerSummary = Json<ServerPlatformServerSummary>;
+export type {
+  PlatformReportResolution,
+  PlatformReportStatus,
+  PlatformRole,
+  ResolvePlatformReportInput,
+};
 export type PublicUser = Json<ServerPublicUser>;
 export type Role = Json<ServerRole>;
 export type SavedMessage = Json<ServerSavedMessageView>;

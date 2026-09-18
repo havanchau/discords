@@ -156,7 +156,7 @@ Written back after implementation, so the doc matches the code:
 
 Not covered by automated tests per `RULE.md:77`. Verify with `npm run typecheck`, `npm run lint`, `npm run build`, `npm run docs:check`.
 
-- **Manual — stickers**: upload `wave.png` as sticker `wave` → open the sticker picker in the composer → send it → message renders the sticker at the larger fixed size for another open client live; delete the sticker → it disappears from the picker for new messages but the already-sent message still renders the image.
+- **Manual — stickers**: upload `wave.png` as sticker `wave` → open the sticker picker in the composer → send it → message renders the sticker at the larger fixed size for another open client live; delete the sticker → it disappears from the picker for new messages, and the already-sent message shows the "Sticker deleted" placeholder instead of the image (see Deviations).
 - **Manual — soundboard**: upload a 2-second `.mp3` clip named `airhorn` → join a voice call with two clients → trigger `airhorn` from client A → client B's browser plays the clip and shows the "A played airhorn" indicator; client A's own client also plays it locally.
 - **Manual — limits**: create 30 stickers, then attempt a 31st → `400 Sticker limit reached`.
 - **Failure case**: a member without `MANAGE_SERVER` calls `POST /servers/:id/stickers` → `403`; a member not currently in the voice call for a channel sends `soundboard:play` for that channel → rejected the same way an unauthorized `voice:state` call already is.

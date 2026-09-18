@@ -118,6 +118,11 @@ export function useSettingsActions({
 
   const channelOverrides = overridesResource.data ?? noOverrides;
   const auditLogs = auditLogsResource.data ?? noAuditLogs;
+  const auditLogsError = auditLogsResource.error
+    ? auditLogsResource.error instanceof Error
+      ? auditLogsResource.error.message
+      : t('error.fallback.cannot-load-audit-logs')
+    : null;
   const invites = invitesResource.data ?? noInvites;
   const notificationPreferences = notificationPreferencesResource.data ?? noPreferences;
   const profileAvatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -391,6 +396,18 @@ export function useSettingsActions({
     setPendingAction('profile-update');
     setWorkspaceError(null);
     try {
+      // "Keep current" means the expiry field was not touched; the other two fields are compared
+      // against the loaded status so an untouched status is never re-sent (and so never resets a
+      // still-valid expiry the user did not mean to change).
+      const currentStatus = auth.user.customStatus ?? null;
+      const nextCustomStatusText = formText(form, 'customStatusText').trim() || null;
+      const nextCustomStatusEmoji = formText(form, 'customStatusEmoji').trim() || null;
+      const customStatusExpiryPreset = formText(form, 'customStatusExpiry');
+      const customStatusTextChanged = nextCustomStatusText !== (currentStatus?.text ?? null);
+      const customStatusEmojiChanged = nextCustomStatusEmoji !== (currentStatus?.emoji ?? null);
+      const customStatusExpiryChanged = customStatusExpiryPreset !== 'keep';
+      const customStatusChanged =
+        customStatusTextChanged || customStatusEmojiChanged || customStatusExpiryChanged;
       const result = await apiRequest<{ user: AuthState['user'] }>(
         '/users/me',
         {
@@ -400,9 +417,15 @@ export function useSettingsActions({
             bio: formText(form, 'bio').trim(),
             // An emptied field is sent as null so the column is cleared, not set to ''.
             pronouns: formText(form, 'pronouns').trim() || null,
-            customStatusText: formText(form, 'customStatusText').trim() || null,
-            customStatusEmoji: formText(form, 'customStatusEmoji').trim() || null,
-            customStatusExpiresAt: customStatusExpiry(formText(form, 'customStatusExpiry')),
+            ...(customStatusChanged
+              ? {
+                  customStatusText: nextCustomStatusText,
+                  customStatusEmoji: nextCustomStatusEmoji,
+                  ...(customStatusExpiryChanged
+                    ? { customStatusExpiresAt: customStatusExpiry(customStatusExpiryPreset) }
+                    : {}),
+                }
+              : {}),
             status: formText(form, 'status') || auth.user.status || 'ONLINE',
             locale: nextLocale,
           }),
@@ -758,6 +781,7 @@ export function useSettingsActions({
     auditLogs,
     notificationPreferences,
     invites,
+    auditLogsError,
     profileAvatarInputRef,
     profileBannerInputRef,
     channelAvatarInputRef,
@@ -792,10 +816,15 @@ const CUSTOM_STATUS_PRESET_MINUTES: Record<string, number> = {
   '30m': 30,
   '1h': 60,
   '4h': 240,
-  today: 24 * 60,
 };
 
 function customStatusExpiry(preset: string): string | null {
+  if (preset === 'today') {
+    // Ends at local midnight, not 24 hours from now.
+    const endOfToday = new Date();
+    endOfToday.setHours(24, 0, 0, 0);
+    return endOfToday.toISOString();
+  }
   const minutes = CUSTOM_STATUS_PRESET_MINUTES[preset];
   // 'never' and an unknown preset both mean "no expiry", which clears any stored one.
   if (!minutes) return null;

@@ -45,6 +45,24 @@ export class DmCallRings {
     return this.parse(raw);
   }
 
+  /**
+   * Removes a member (typically a group decliner) from the ring's member list, without resetting
+   * its deadline — the ring keeps ringing for whoever is left. Clears the ring instead when nobody
+   * is left, so a later sweep/cancel finds nothing to report.
+   */
+  async removeMember(conversationId: string, userId: string): Promise<DmCallRing | undefined> {
+    const ring = await this.get(conversationId);
+    if (!ring) return undefined;
+    const memberUserIds = ring.memberUserIds.filter((id) => id !== userId);
+    const updated: DmCallRing = { ...ring, memberUserIds };
+    if (memberUserIds.length === 0) {
+      await this.clear(conversationId);
+      return updated;
+    }
+    await this.redis.client.set(this.ringKey(conversationId), JSON.stringify(updated), 'KEEPTTL');
+    return updated;
+  }
+
   async clear(conversationId: string): Promise<DmCallRing | undefined> {
     const raw = await this.redis.client.get(this.ringKey(conversationId));
     await this.redis.client

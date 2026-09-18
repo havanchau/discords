@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { countChannelUnread } from '@/modules/messages/unread-counts';
+import { RealtimePublisher } from './realtime-publisher.service';
 
 export interface UnreadRecipient {
   userId: string;
@@ -19,7 +20,29 @@ export class RealtimeUnreadService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
+    private readonly publisher: RealtimePublisher,
   ) {}
+
+  /**
+   * Emits `unread:updated` to every recipient's user room for one new message — the socket and REST
+   * send paths share this so a REST send updates unread badges the same way (docs/features/qa-follow-ups-2026-09-18.md,
+   * "REST send").
+   */
+  async emitUpdated(message: {
+    authorId: string;
+    channelId: string;
+    serverId: string;
+    content: string;
+  }) {
+    const recipients = await this.listUnreadRecipients(message);
+    recipients.forEach((recipient) => {
+      this.publisher.emitToRoom(this.publisher.userRoom(recipient.userId), 'unread:updated', {
+        channelId: message.channelId,
+        count: 1,
+        mentions: recipient.mentions,
+      });
+    });
+  }
 
   /** Who should see this new message count against their unread badge, and with how many mentions. */
   async listUnreadRecipients(message: {
