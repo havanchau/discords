@@ -1,7 +1,7 @@
 import { apiRequest, type AuthState, type Channel, type Message, type ServerDetail } from '@/api';
 import type { Translate } from '@/i18n/LocaleProvider';
 import { parsePollCommand } from './polls';
-import { parseSlashCommand } from './slashCommands';
+import { parseSlashCommand, toBotSlashCommandDefinition } from './slashCommands';
 
 interface ExecuteSlashCommandOptions {
   content: string;
@@ -20,6 +20,16 @@ interface ExecuteSlashCommandOptions {
   addMessage: (message: Message) => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
+  /**
+   * Invokes a server-registered bot command (`owner: 'bot'`); owns the wait/timeout UI itself and
+   * resolves false when the invoke was refused, so the draft is kept for a retry.
+   */
+  invokeBotCommand: (params: {
+    channelId: string;
+    commandId: string;
+    commandName: string;
+    args: string;
+  }) => Promise<boolean>;
   t: Translate;
 }
 
@@ -36,13 +46,29 @@ export async function executeSlashCommand({
   addMessage,
   setWorkspaceError,
   setWorkspaceNotice,
+  invokeBotCommand,
   t,
 }: ExecuteSlashCommandOptions): Promise<SlashCommandExecutionResult> {
-  const command = parseSlashCommand(content);
+  const command = parseSlashCommand(
+    content,
+    server?.slashCommands.map(toBotSlashCommandDefinition),
+  );
   if (!command.isCommand) return { handled: false, content };
 
   if (command.errorKey) {
     setWorkspaceError(t(command.errorKey, command.errorVars));
+    return { handled: true };
+  }
+
+  if (command.definition?.owner === 'bot') {
+    if (!channel || !command.definition.commandId) return { handled: true };
+    const invoked = await invokeBotCommand({
+      channelId: channel.id,
+      commandId: command.definition.commandId,
+      commandName: command.name,
+      args: command.args,
+    });
+    if (invoked) clearDraft();
     return { handled: true };
   }
 

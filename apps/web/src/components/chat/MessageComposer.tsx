@@ -70,8 +70,11 @@ export function MessageComposer({
         : slowmodeSeconds > 0
           ? t('composer.placeholder.slowmode', { channel: channel.name, seconds: slowmodeSeconds })
           : t('composer.placeholder.default', { channel: channel.name });
-  const commandSuggestions = getSlashCommandSuggestions(composer.draft).slice(0, 4);
-  const parsedCommand = parseSlashCommand(composer.draft);
+  const commandSuggestions = getSlashCommandSuggestions(composer.draft, composer.botCommands).slice(
+    0,
+    4,
+  );
+  const parsedCommand = parseSlashCommand(composer.draft, composer.botCommands);
 
   // Voice, emoji, sticker and schedule: inline on desktop, collapsed into one "More" popover on
   // mobile (MessageComposer.module.css) so the input keeps the remaining width.
@@ -194,7 +197,9 @@ export function MessageComposer({
               <Slash size={14} aria-hidden="true" />
               <span>
                 <strong>/{command.name}</strong>
-                <small>{t(command.descriptionKey)}</small>
+                <small>
+                  {command.descriptionKey ? t(command.descriptionKey) : command.description}
+                </small>
               </span>
               <code>{command.usage}</code>
             </button>
@@ -204,6 +209,13 @@ export function MessageComposer({
               {t(parsedCommand.errorKey, parsedCommand.errorVars)}
             </div>
           ) : null}
+        </div>
+      )}
+
+      {composer.pendingInteractionLabel && (
+        <div className={styles.interactionStatus} role="status">
+          <Loader2 className="spin" size={14} aria-hidden="true" />
+          <span>{composer.pendingInteractionLabel}</span>
         </div>
       )}
 

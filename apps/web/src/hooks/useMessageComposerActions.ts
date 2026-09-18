@@ -1,4 +1,4 @@
-import { Dispatch, FormEvent, MutableRefObject, SetStateAction } from 'react';
+import { Dispatch, FormEvent, MutableRefObject, SetStateAction, useMemo } from 'react';
 import type { Socket } from 'socket.io-client';
 import {
   apiRequest,
@@ -13,8 +13,10 @@ import { encryptChannelMessage } from '@/e2ee';
 import type { Translate } from '@/i18n/LocaleProvider';
 import { executeSlashCommand } from '@/utils/executeSlashCommand';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
+import { toBotSlashCommandDefinition } from '@/utils/slashCommands';
 import { useChannelMessageActions } from './useChannelMessageActions';
 import type { usePersistentDraft } from './usePersistentDrafts';
+import { useSlashCommandInvocation } from './useSlashCommandInvocation';
 
 interface UseMessageComposerActionsOptions {
   auth: AuthState | null;
@@ -78,6 +80,26 @@ export function useMessageComposerActions({
   togglePinnedMessage,
   t,
 }: UseMessageComposerActionsOptions) {
+  const { invokeBotCommand, waitingLabel } = useSlashCommandInvocation({
+    auth,
+    socket,
+    setWorkspaceError,
+    t,
+  });
+
+  // Server-level approximation for the suggestion list; the API applies channel overrides and is the
+  // authoritative gate (same pattern as `canManageMessages` below).
+  const botCommands = useMemo(() => {
+    if (!auth || !server) return [];
+    const canUseCommands =
+      memberHasServerPermission(server, auth.user.id, 'VIEW_CHANNEL') &&
+      memberHasServerPermission(server, auth.user.id, 'SEND_MESSAGES');
+    if (!canUseCommands) return [];
+    return server.slashCommands.map(toBotSlashCommandDefinition);
+  }, [auth, server]);
+
+  const pendingInteractionLabel = waitingLabel(channel?.id ?? null);
+
   async function sendChatMessage(
     content: string,
     files: File[],
@@ -174,6 +196,7 @@ export function useMessageComposerActions({
         ),
       setWorkspaceError,
       setWorkspaceNotice,
+      invokeBotCommand,
       t,
     });
     if (commandResult.handled) return;
@@ -205,5 +228,5 @@ export function useMessageComposerActions({
     ),
   });
 
-  return { sendChatMessage, sendMessage, messageActions };
+  return { sendChatMessage, sendMessage, messageActions, botCommands, pendingInteractionLabel };
 }

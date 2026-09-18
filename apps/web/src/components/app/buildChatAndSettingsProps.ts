@@ -86,6 +86,8 @@ interface BuildChatAndSettingsPropsOptions {
   clearChannelDraft: () => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
   sendMessage: ChatPanelComposer['sendMessage'];
+  botCommands: ChatPanelComposer['botCommands'];
+  pendingInteractionLabel: ChatPanelComposer['pendingInteractionLabel'];
   sendChatMessage: (
     content: string,
     files: File[],
@@ -175,6 +177,8 @@ export function buildChatAndSettingsProps({
   clearChannelDraft,
   fileInputRef,
   sendMessage,
+  botCommands,
+  pendingInteractionLabel,
   sendChatMessage,
   startVoiceRecording,
   stopVoiceRecording,
@@ -267,6 +271,8 @@ export function buildChatAndSettingsProps({
         draft: channelDraftValue,
         fileInputRef,
         sendMessage,
+        botCommands,
+        pendingInteractionLabel,
         sendSticker: async (stickerId: string) => {
           if (await sendChatMessage('', [], null, stickerId)) setReplyingToMessage(null);
         },

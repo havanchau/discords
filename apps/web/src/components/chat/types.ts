@@ -5,6 +5,7 @@ import type { ComposerRestriction } from '@/hooks/useComposerRestrictions';
 import type { SoundboardPlayback } from '@/hooks/useSoundboardPlayback';
 import type { MemberIdentity } from '@/utils/memberIdentity';
 import type { ParsedMessageSearch } from '@/utils/messageSearch';
+import type { SlashCommandDefinition } from '@/utils/slashCommands';
 
 export type ActivePanel = 'notifications' | 'search' | 'encryption' | 'media' | null;
 export type ActiveDialog =
@@ -119,6 +120,10 @@ export interface ChatPanelComposer {
   pendingAction: string | null;
   draft: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  /** Server-registered bot commands the viewer can currently see, merged into suggestions. */
+  botCommands: SlashCommandDefinition[];
+  /** "Waiting for {bot}…" copy while an invoked bot command has not yet answered; null otherwise. */
+  pendingInteractionLabel: string | null;
   sendMessage: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   /** Sends a server sticker as its own message, keeping the draft and any reply target. */
   sendSticker: (stickerId: string) => Promise<void>;

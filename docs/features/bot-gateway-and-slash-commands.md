@@ -30,15 +30,16 @@ connects out to the gateway, mirroring how a human client already works.
       with, so there is no room to receive from).
 - [x] A bot registers one or more slash commands scoped to a server it is installed in, without
       colliding with the four built-ins or with another bot's command of the same name in that
-      server — verified API-side. **Not done**: the composer suggestion-list merge (web work, out of
-      scope for this pass — see Deviations' last bullet and the handoff note).
+      server — verified API-side. The composer suggestion-list merge is implemented (see Deviations'
+      last bullet); not re-verified in a browser (no browser available in the implementing session,
+      see that bullet).
 - [x] Invoking a bot's slash command sends an `interaction:create` event to that bot's gateway
       socket and creates a short-lived `Interaction` row; the bot answers with
       `POST /bot-api/interactions/:token/callback` and the response appears in the channel. Verified
       API-side.
 - [x] If the bot is offline or does not answer before the deadline, the interaction is marked
-      `TIMED_OUT` and `interaction:timeout` is emitted to the invoker. **Not done**: the composer's
-      "The application did not respond" UI itself (web work, out of scope for this pass).
+      `TIMED_OUT` and `interaction:timeout` is emitted to the invoker. The composer's "The application
+      did not respond" UI is implemented (see Deviations' last bullet); not re-verified in a browser.
 - [x] Removing a bot from a server, or regenerating its token, disconnects its gateway socket (or
       the room it can no longer see) live, without requiring the bot to reconnect on its own.
       Verified API-side.
@@ -612,12 +613,71 @@ follow-up, tracked at the end of this section), so the doc matches the code:
   a command is channel-level (`ViewChannel`+`SendMessages`) only, and the gateway/interaction limits
   are shared constants in `packages/shared` (`BOT_GATEWAY_MAX_CONNECTIONS`, `INTERACTION_TIMEOUT_MS`,
   `SLASH_COMMANDS_MAX_PER_BOT_PER_SERVER`, `SLASH_COMMAND_OPTIONS_MAX`) — no new env vars.
-- **Web/composer integration is out of scope for this implementation pass** (API/shared/realtime
-  only, per the task brief) — `SLASH_COMMANDS`, `parseSlashCommand`, `getSlashCommandSuggestions`,
-  `executeSlashCommand`, and the `interaction:timeout` listener wiring described in Changes →
-  Invocation flow and the Technical Approach files table are **not yet implemented**. They are the
-  explicit follow-up work this doc's API surface was built to support; see the handoff note at the
-  end of the implementing session for the exact file-by-file list.
+- **Web/composer integration is now implemented**, as a follow-up pass to the API/shared/realtime
+  work above. Built as designed in Changes → Invocation flow, with these deviations:
+  - `apps/web/src/utils/slashCommands.ts`: `SlashCommandDefinition.owner` gained `'bot'` and
+    `descriptionKey` became optional — a bot's `description` is operator-supplied plain text (not
+    localized, same as its display name), so the type carries both `descriptionKey` (built-ins) and
+    `description` (bot commands) rather than forcing a bot's text through a `MessageKey`.
+    `parseSlashCommand`/`getSlashCommandSuggestions` both gained an optional `serverCommands`
+    parameter, merged **after** `SLASH_COMMANDS` so a built-in name always wins a lookup collision.
+    A new `toBotSlashCommandDefinition` maps a `SlashCommandView` (from `ServerDetail.slashCommands`)
+    to a `SlashCommandDefinition`, building its `usage` string from the command's declared options
+    (`<name>` for required, `[name]` for optional) since a bot command has no author-supplied usage
+    example the way the four built-ins do.
+  - `apps/web/src/hooks/useSlashCommandInvocation.ts` (new): owns the invoke → wait → timeout
+    lifecycle. `invokeBotCommand` calls `POST /channels/:channelId/interactions` and stores the
+    returned `interactionToken` keyed to `{ channelId, commandName }`. **Deviation from the
+    Invocation-flow's implied "answered" signal**: there is no dedicated interaction-answered
+    realtime event (only `interaction:create`, to the bot, and `interaction:timeout`, to the
+    invoker) — the callback's result reaches the invoker as an ordinary `message:created` broadcast
+    in the channel, per Changes → Invocation flow step 6. The hook therefore clears its own waiting
+    placeholder for a channel on the next `message:created` it observes for that channel (registered
+    the same way `useServerEmojis`/`useServerEvents` register their own socket listener off the
+    shared `socket` instance, rather than adding a new callback prop to `useRealtimeSocket`'s already
+    long central listener list), or on `interaction:timeout` matched by token, whichever comes
+    first. This is a best-effort heuristic (it does not verify the new message actually came from
+    the invoked bot), accepted because the alternative (a new dedicated event) is a shared-package
+    change outside this pass's owned files; flagged here rather than silently relied upon.
+  - `apps/web/src/utils/executeSlashCommand.ts` gained an `owner === 'bot'` branch and a new
+    `invokeBotCommand` parameter (dependency-injected from the hook above, following this file's
+    existing pattern of receiving every side effect as a parameter rather than importing hooks
+    directly, since it is a plain function, not a hook).
+  - `apps/web/src/hooks/useMessageComposerActions.ts` computes `botCommands` (the server's
+    `slashCommands` mapped to suggestions) gated by `memberHasServerPermission(server, userId,
+'VIEW_CHANNEL' | 'SEND_MESSAGES')` — a **server-level approximation**, not the channel-level
+    `ViewChannel`+`SendMessages` (with per-channel role overrides) the design called for, because no
+    client-side channel-permission evaluator exists anywhere in this repo to reuse (grepped: none),
+    and building one would duplicate `PermissionsService`'s override logic outside this pass's scope
+    and risk drifting from it. This mirrors the exact same accepted gap already called out in this
+    file for `ChannelMessageActions.canManageMessages` ("Server-level approximation… the API applies
+    channel overrides"). The invoke endpoint's own `ViewChannel`/`SendMessages` check
+    (`InteractionsService.invoke`) remains the authoritative gate — a command that slips into
+    suggestions despite a channel-specific override still gets a `403` from the server, never a
+    silent success. Tracked as an open item, not a regression: the same gap already exists for the
+    four built-ins today (none of them are hidden per-channel either).
+  - `apps/web/src/components/chat/MessageComposer.tsx`/`.module.css`: renders the merged suggestion
+    list (bot commands show their plain `description`, built-ins keep `descriptionKey`) and a new
+    "waiting for /{command}…" status row (`.interactionStatus`) below the suggestions/attachments,
+    shown while `composer.pendingInteractionLabel` is set; `interaction:timeout` surfaces
+    `slash.interaction.timeout` ("The application did not respond.") through the existing
+    `setWorkspaceError` banner, not a new UI surface, matching how every other slash-command error
+    is already shown.
+  - New i18n keys `slash.interaction.waiting`, `slash.interaction.timeout`, `slash.interaction.error`
+    added to `apps/web/src/i18n/locales/{en,vi}/chat.ts` under the existing `slash.*` convention.
+  - `ChatPanelComposer` (`apps/web/src/components/chat/types.ts`) gained `botCommands` and
+    `pendingInteractionLabel`, threaded through `buildChatAndSettingsProps.ts` and `AppShell.tsx`
+    (a few passthrough lines only, per this repo's rule against growing that file) rather than adding
+    a second, parallel state owner.
+  - **Deferred, not built**: a UI for a bot owner to register/list/edit/delete their own slash
+    commands (`POST/GET/PATCH/DELETE /bot-api/servers/:serverId/commands`) — the bot developer is
+    expected to call those endpoints from their own bot process, matching how bot-api.md's phase-1
+    REST surface has no registration UI either. Not requested by this pass's brief; flagged here as
+    an explicit gap, not an oversight.
+  - **Not verified in a browser**: this pass's environment has no browser available. Typecheck, lint,
+    build, `i18n:check`, `ui:scan`, and `check:file-size` all pass for the web workspace; the manual
+    scenarios in Test Plan step 6 ("composer suggestions… invoke it… composer's waiting state
+    clears") were not re-run end-to-end with a real browser session.
 
 ## Risks & Rollback
 
