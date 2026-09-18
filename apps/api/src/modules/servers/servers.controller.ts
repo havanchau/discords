@@ -24,8 +24,10 @@ import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
+import { DeleteServerDto, TransferServerDto } from './dto/server-ownership.dto';
 import { ServerModerationService } from './server-moderation.service';
 import { ServerOnboardingService } from './server-onboarding.service';
+import { ServerOwnershipService } from './server-ownership.service';
 import { ServersService } from './servers.service';
 
 @UseGuards(JwtAuthGuard)
@@ -35,6 +37,7 @@ export class ServersController {
     private readonly servers: ServersService,
     private readonly moderation: ServerModerationService,
     private readonly onboarding: ServerOnboardingService,
+    private readonly ownership: ServerOwnershipService,
   ) {}
 
   @RateLimit({ keyPrefix: 'server-create', limit: 5, windowMs: 60_000 })
@@ -61,6 +64,27 @@ export class ServersController {
     @Body() dto: UpdateServerDto,
   ) {
     return this.servers.updateServer(user.id, serverId, dto);
+  }
+
+  @RateLimit({ keyPrefix: 'server-delete', limit: 5, windowMs: 60_000 })
+  @Delete('servers/:serverId')
+  deleteServer(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Body() dto: DeleteServerDto,
+  ) {
+    return this.ownership.deleteServer(user.id, serverId, dto);
+  }
+
+  @RateLimit({ keyPrefix: 'server-transfer', limit: 5, windowMs: 60_000 })
+  @HttpCode(200)
+  @Post('servers/:serverId/transfer')
+  transferOwnership(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Body() dto: TransferServerDto,
+  ) {
+    return this.ownership.transferOwnership(user.id, serverId, dto);
   }
 
   @Get('servers/:serverId/onboarding')
@@ -101,6 +125,13 @@ export class ServersController {
     @Body() dto: UpdateNicknameDto,
   ) {
     return this.servers.updateMyMembership(user.id, serverId, dto);
+  }
+
+  // Declared before the kick route, which would otherwise take `me` as a member id.
+  @RateLimit({ keyPrefix: 'member-leave', limit: 10, windowMs: 60_000 })
+  @Delete('servers/:serverId/members/me')
+  leave(@CurrentUser() user: RequestUser, @Param('serverId') serverId: string) {
+    return this.moderation.leave(user.id, serverId);
   }
 
   @RateLimit({ keyPrefix: 'member-kick', limit: 20, windowMs: 60_000 })

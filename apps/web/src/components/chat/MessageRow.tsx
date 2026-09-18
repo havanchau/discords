@@ -168,6 +168,8 @@ interface MessageRowProps {
   onJumpToMessage: (messageId: string) => void;
   /** The unread divider's message always shows its author line, even if it would otherwise be grouped. */
   isFirstUnread?: boolean;
+  /** Set while the author may not edit, e.g. during a timeout; the API still refuses on its own. */
+  editDisabledReason?: string | null;
 }
 
 // Memoized: the list re-renders on typing and other workspace events that do not touch a row.
@@ -182,6 +184,7 @@ export const MessageRow = memo(function MessageRow({
   onPreviewAttachment,
   onJumpToMessage,
   isFirstUnread,
+  editDisabledReason,
 }: MessageRowProps) {
   const t = useTranslation();
   const { isChannelEncrypted } = useWorkspace();
@@ -325,7 +328,14 @@ export const MessageRow = memo(function MessageRow({
                     aria-label={t('message.edit.ariaLabel')}
                     autoComplete="off"
                   />
-                  <Button size="sm" onClick={() => void actions.saveEdit(message.id)}>
+                  {editDisabledReason ? (
+                    <span className={styles.editDisabledReason}>{editDisabledReason}</span>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    disabled={Boolean(editDisabledReason)}
+                    onClick={() => void actions.saveEdit(message.id)}
+                  >
                     {t('common.save')}
                   </Button>
                   <Button

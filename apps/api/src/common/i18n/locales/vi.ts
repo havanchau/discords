@@ -33,6 +33,8 @@ export const viApiMessages = {
   CANNOT_REPORT_YOURSELF: 'Không thể báo cáo chính bạn',
   CANNOT_TIME_OUT_THE_SERVER_OWNER: 'Không thể phạt im lặng chủ server',
   CANNOT_TIME_OUT_YOURSELF: 'Không thể tự phạt im lặng chính bạn',
+  CANNOT_TRANSFER_OWNERSHIP_TO_A_BOT_OR_WEBHOOK:
+    'Không thể chuyển quyền sở hữu cho bot hoặc webhook',
   CANNOT_UPDATE_THIS_REQUEST: 'Không thể cập nhật yêu cầu này',
   CATEGORY_NAME_CANNOT_BE_EMPTY: 'Tên danh mục không được để trống',
   CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục',
@@ -126,6 +128,8 @@ export const viApiMessages = {
   ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE:
     'Chỉ tác giả hoặc người quản lý tin nhắn mới ghim được tin nhắn này',
   ONLY_THE_GROUP_OWNER_CAN_REMOVE_MEMBERS: 'Chỉ chủ nhóm mới xoá được thành viên',
+  ONLY_THE_OWNER_CAN_DELETE_THIS_SERVER: 'Chỉ chủ sở hữu mới có thể xóa máy chủ này',
+  ONLY_THE_OWNER_CAN_TRANSFER_THIS_SERVER: 'Chỉ chủ sở hữu mới có thể chuyển nhượng máy chủ này',
   ONLY_THE_POLL_CREATOR_CAN_CLOSE_THIS_POLL:
     'Chỉ người tạo cuộc bình chọn mới đóng được cuộc bình chọn này',
   ONLY_THE_POLL_CREATOR_OR_MESSAGE_MANAGERS_CAN_CLOSE_THIS_POLL:
@@ -196,8 +200,10 @@ export const viApiMessages = {
   TIMEOUT_RULES_NEED_A_TIMEOUT_DURATION: 'Quy tắc phạt im lặng cần thời lượng',
   TOO_MANY_SCHEDULED_MESSAGES: 'Có quá nhiều tin nhắn đã lên lịch',
   TOO_MANY_UPLOAD_CHUNKS: 'Quá nhiều phần tải lên',
-  TRANSFER_OR_DELETE_YOUR_OWNED_SERVERS_FIRST:
-    'Hãy chuyển quyền sở hữu hoặc xóa các máy chủ bạn sở hữu trước',
+  TRANSFER_OWNERSHIP_OR_DELETE_EACH_SERVER_YOU_OWN_BEFORE_DELETING_YOUR_ACCOUNT:
+    'Hãy chuyển quyền sở hữu hoặc xóa từng máy chủ bạn sở hữu trước khi xóa tài khoản',
+  TRANSFER_OWNERSHIP_OR_DELETE_THE_SERVER_BEFORE_LEAVING:
+    'Hãy chuyển quyền sở hữu hoặc xóa máy chủ trước khi rời đi',
   TWO_FACTOR_AUTHENTICATION_IS_ALREADY_ENABLED: 'Xác thực hai lớp đã được bật',
   TWO_FACTOR_AUTHENTICATION_IS_NOT_ENABLED: 'Xác thực hai lớp chưa được bật',
   UNAUTHENTICATED_SOCKET: 'Socket chưa xác thực',
@@ -219,6 +225,7 @@ export const viApiMessages = {
   WEBHOOK_NAME_CANNOT_BE_EMPTY: 'Tên webhook không được để trống',
   WEBHOOK_NOT_FOUND: 'Không tìm thấy webhook',
   WEBRTC_RELAY_IS_DISABLED: 'Chuyển tiếp WebRTC đang bị tắt',
+  YOU_ALREADY_OWN_THIS_SERVER: 'Bạn đã là chủ sở hữu máy chủ này',
   YOU_ARE_BANNED_FROM_THIS_SERVER: 'Bạn đã bị cấm khỏi server này',
   YOU_ARE_NOT_A_MEMBER_OF_THIS_SERVER: 'Bạn không phải thành viên của server này',
   YOU_CAN_ONLY_DM_ACCEPTED_FRIENDS: 'Bạn chỉ có thể nhắn tin riêng với bạn bè đã kết bạn',
@@ -269,6 +276,11 @@ export const viApiMessages = {
   'scheduledMessage.failure.RULES_NOT_ACCEPTED':
     'Bạn chưa đồng ý với nội quy server vào thời điểm đã lên lịch.',
   'scheduledMessage.failure.UNKNOWN': 'Đã xảy ra lỗi khi gửi.',
+  'notification.serverDelisted.title': '{serverName} đã bị gỡ khỏi Khám phá máy chủ',
+  'notification.serverDelisted.body':
+    'Quản trị viên nền tảng đã gỡ máy chủ của bạn sau một báo cáo.',
+  'notification.serverDelisted.bodyWithNote':
+    'Quản trị viên nền tảng đã gỡ máy chủ của bạn sau một báo cáo. Ghi chú: {note}',
   'auth.register.checkInbox': 'Hãy kiểm tra hộp thư để lấy liên kết xác minh.',
   'auth.resendVerification.ok':
     'Nếu tài khoản đó đang chờ xác minh, một liên kết mới đã được gửi đi.',

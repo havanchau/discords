@@ -8,6 +8,8 @@ import {
   type PlatformServerReportView,
   type PlatformServerSummary,
 } from '@discord-clone/shared';
+import { I18nService } from '@/common/i18n/i18n.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import {
   PLATFORM_REPORTS_CURSOR_PATTERN,
@@ -32,7 +34,11 @@ type ReportRow = Prisma.ServerReportGetPayload<{ select: typeof reportSelect }>;
 
 @Injectable()
 export class PlatformReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly i18n: I18nService,
+  ) {}
 
   async list(query: ListPlatformReportsQueryDto): Promise<PlatformReportPage> {
     const cursor = query.cursor ? PLATFORM_REPORTS_CURSOR_PATTERN.exec(query.cursor) : null;
@@ -119,7 +125,7 @@ export class PlatformReportsService {
     dto: ResolvePlatformReportDto,
   ): Promise<{ report: PlatformServerReportView }> {
     const resolutionNote = dto.note?.trim() || null;
-    const report = await this.prisma.$transaction(async (tx) => {
+    const { report, delistedServer } = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.serverReport.findUnique({
         where: { id: reportId },
         select: { id: true, serverId: true },
@@ -139,10 +145,15 @@ export class PlatformReportsService {
       });
       if (count === 0) throw new ConflictException('Report is already resolved');
 
-      if (resolution === 'SERVER_DELISTED') {
-        // Idempotent on the `Server` side: an already-unlisted server stays unlisted.
-        await tx.server.update({ where: { id: existing.serverId }, data: { listed: false } });
-      }
+      // Idempotent on the `Server` side: an already-unlisted server stays unlisted.
+      const delistedServer =
+        resolution === 'SERVER_DELISTED'
+          ? await tx.server.update({
+              where: { id: existing.serverId },
+              data: { listed: false },
+              select: { name: true, owner: { select: { id: true, locale: true } } },
+            })
+          : null;
 
       await tx.auditLog.create({
         data: {
@@ -154,9 +165,33 @@ export class PlatformReportsService {
         },
       });
 
-      return tx.serverReport.findUniqueOrThrow({ where: { id: reportId }, select: reportSelect });
+      const report = await tx.serverReport.findUniqueOrThrow({
+        where: { id: reportId },
+        select: reportSelect,
+      });
+      return { report, delistedServer };
     });
+    // After commit, so a rolled-back resolve never tells the owner their server was delisted.
+    if (delistedServer) {
+      await this.notifyOwnerOfDelist(delistedServer, resolutionNote);
+    }
     return { report: toView(report) };
+  }
+
+  /** Tells the owner what happened and the admin's note, never who filed the report. */
+  private async notifyOwnerOfDelist(
+    server: { name: string; owner: { id: string; locale: string | null } },
+    resolutionNote: string | null,
+  ) {
+    const locale = this.i18n.resolveUserLocale(server.owner.locale);
+    await this.notifications.create({
+      userId: server.owner.id,
+      type: 'SERVER_DELISTED',
+      title: this.i18n.t(locale, 'notification.serverDelisted.title', { serverName: server.name }),
+      body: resolutionNote
+        ? this.i18n.t(locale, 'notification.serverDelisted.bodyWithNote', { note: resolutionNote })
+        : this.i18n.t(locale, 'notification.serverDelisted.body'),
+    });
   }
 }
 

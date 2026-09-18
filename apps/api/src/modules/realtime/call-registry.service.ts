@@ -139,6 +139,22 @@ export class CallRegistryService {
     return leftCallIds;
   }
 
+  /** Ends every call among `callIds` for everyone in it (server delete), as `removeUser` does. */
+  async endCalls(callIds: string[]) {
+    for (const callId of callIds) {
+      const entries = await this.redis.client.hgetall(this.participantsKey(callId));
+      const userIds = new Set(
+        Object.values(entries).flatMap((raw) => {
+          const participant = this.parse(raw);
+          return participant ? [participant.userId] : [];
+        }),
+      );
+      for (const userId of userIds) {
+        await this.removeUser(userId, [callId]);
+      }
+    }
+  }
+
   async leaveAll(client: Socket) {
     const channelIds = await this.redis.client.smembers(this.socketCallsKey(client.id));
     for (const channelId of channelIds) {

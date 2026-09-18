@@ -20,7 +20,7 @@ const moderationUserSelect = {
   avatarUrl: true,
 } as const;
 
-type RemovalReason = 'KICK' | 'BAN';
+type RemovalReason = 'KICK' | 'BAN' | 'LEAVE';
 
 @Injectable()
 export class ServerModerationService {
@@ -60,6 +60,32 @@ export class ServerModerationService {
     });
     await this.announceRemoval(serverId, target.userId, 'KICK');
     this.stage.afterMemberRemoved(target.userId, removedStageRows);
+
+    return { ok: true };
+  }
+
+  /** A member leaving on their own; the owner must transfer or delete the server first. */
+  async leave(userId: string, serverId: string) {
+    const member = await this.permissions.requireMembership(userId, serverId);
+    if (member.kind === 'OWNER') {
+      throw new ForbiddenException('Transfer ownership or delete the server before leaving');
+    }
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { username: true, displayName: true },
+    });
+
+    const removedStageRows = await this.prisma.$transaction(async (tx) => {
+      await tx.serverMember.delete({ where: { id: member.id } });
+      return deleteMemberStageRows(tx, serverId, userId);
+    });
+    await this.writeAuditLog(serverId, userId, 'MEMBER_LEAVE', member.id, {
+      userId,
+      username: user.username,
+      displayName: user.displayName,
+    });
+    await this.announceRemoval(serverId, userId, 'LEAVE');
+    this.stage.afterMemberRemoved(userId, removedStageRows);
 
     return { ok: true };
   }

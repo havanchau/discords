@@ -6,6 +6,7 @@ import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { auditActionLabel } from '@/utils/auditLogLabels';
 import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
+import { ServerDangerZoneSection } from './ServerDangerZoneSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
 import { ServerSoundboardSection } from './ServerSoundboardSection';
 import { ServerStickersSection } from './ServerStickersSection';
@@ -39,6 +40,9 @@ type ServerSettingsProps = Pick<
   | 'server'
   | 'setActiveDialog'
   | 'updateServerSettings'
+  | 'leaveServer'
+  | 'transferOwnership'
+  | 'deleteServer'
 >;
 
 export function ServerSettings({
@@ -62,6 +66,9 @@ export function ServerSettings({
   server,
   setActiveDialog,
   updateServerSettings,
+  leaveServer,
+  transferOwnership,
+  deleteServer,
 }: ServerSettingsProps) {
   const t = useTranslation();
   const dates = useDateFormat();
@@ -263,6 +270,16 @@ export function ServerSettings({
           )}
         </div>
       </section>
+
+      <ServerDangerZoneSection
+        server={server}
+        viewerId={auth.user.id}
+        pendingAction={pendingAction}
+        setActiveDialog={setActiveDialog}
+        leaveServer={leaveServer}
+        transferOwnership={transferOwnership}
+        deleteServer={deleteServer}
+      />
     </div>
   );
 }

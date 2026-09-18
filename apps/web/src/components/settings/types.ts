@@ -82,6 +82,10 @@ export interface SettingsModalFields {
   banMember: (userId: string, reason: string) => Promise<boolean>;
   unbanUser: (userId: string) => Promise<void>;
   timeoutMember: (memberId: string, durationMinutes: number) => Promise<void>;
+  /** The three resolve to `null` on success, or the error message to show. */
+  leaveServer: () => Promise<string | null>;
+  transferOwnership: (userId: string, password: string, code: string) => Promise<string | null>;
+  deleteServer: (password: string, code: string) => Promise<string | null>;
   createEmoji: (file: File, name: string) => Promise<boolean>;
   deleteEmoji: (emojiId: string) => Promise<void>;
   openMemberRoleEditor: (memberId: string) => void;
@@ -139,6 +143,9 @@ export interface SettingsModalProps {
     | 'banMember'
     | 'unbanUser'
     | 'timeoutMember'
+    | 'leaveServer'
+    | 'transferOwnership'
+    | 'deleteServer'
     | 'createEmoji'
     | 'deleteEmoji'
     | 'openMemberRoleEditor'

@@ -22,7 +22,7 @@ interface UseServerModerationOptions {
 interface MemberRemovedPayload {
   serverId: string;
   userId: string;
-  reason: 'KICK' | 'BAN';
+  reason: 'KICK' | 'BAN' | 'LEAVE';
 }
 
 const noBans: ServerBanEntry[] = [];
@@ -76,12 +76,14 @@ export function useServerModeration({
   const viewerIdRef = useRef<string | null>(null);
   const serverRef = useRef<ServerDetail | null>(null);
   const noticeRef = useRef(setWorkspaceNotice);
+  const tRef = useRef(t);
 
   useEffect(() => {
     viewerIdRef.current = auth?.user.id ?? null;
     serverRef.current = server;
     noticeRef.current = setWorkspaceNotice;
-  }, [auth?.user.id, server, setWorkspaceNotice]);
+    tRef.current = t;
+  }, [auth?.user.id, server, setWorkspaceNotice, t]);
 
   useEffect(() => {
     if (!socket) return;
@@ -95,7 +97,9 @@ export function useServerModeration({
           noticeRef.current(
             payload.reason === 'BAN'
               ? `You were banned from ${removedFrom.name}.`
-              : `You were removed from ${removedFrom.name}.`,
+              : payload.reason === 'LEAVE'
+                ? tRef.current('serverSettings.danger.leftNotice', { server: removedFrom.name })
+                : `You were removed from ${removedFrom.name}.`,
           );
         }
         return;
@@ -154,12 +158,32 @@ export function useServerModeration({
       });
     };
 
+    // Member kinds changed on both sides; the detail refetch moves owner-only UI to the new owner.
+    const handleOwnershipTransferred = (payload: { serverId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+    };
+
+    const handleServerDeleted = (payload: { serverId: string }) => {
+      const deleted = serverRef.current?.id === payload.serverId ? serverRef.current : null;
+      patchServers((current) => current.filter((item) => item.id !== payload.serverId));
+      if (deleted) {
+        openHome();
+        noticeRef.current(
+          tRef.current('serverSettings.danger.deletedNotice', { server: deleted.name }),
+        );
+      }
+    };
+
     socket.on(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
+    socket.on(RealtimeEvents.ServerOwnershipTransferred, handleOwnershipTransferred);
+    socket.on(RealtimeEvents.ServerDeleted, handleServerDeleted);
     socket.on(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
     socket.on(RealtimeEvents.AccountDeleted, handleAccountDeleted);
     socket.on(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
+      socket.off(RealtimeEvents.ServerOwnershipTransferred, handleOwnershipTransferred);
+      socket.off(RealtimeEvents.ServerDeleted, handleServerDeleted);
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
       socket.off(RealtimeEvents.AccountDeleted, handleAccountDeleted);
       socket.off(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
@@ -253,5 +277,71 @@ export function useServerModeration({
     }
   }
 
-  return { bans, isLoadingBans, bansError, loadBans, banMember, unbanUser, timeoutMember };
+  /** Drops a server this viewer is no longer in; the realtime event may arrive before or after. */
+  function dropServer(serverId: string, notice: string) {
+    patchServers((current) => current.filter((item) => item.id !== serverId));
+    openHome();
+    setWorkspaceNotice(notice);
+  }
+
+  /** Resolves to `null` on success, or the message to show next to the form. */
+  async function runOwnershipAction(action: string, request: () => Promise<void>) {
+    setPendingAction(action);
+    try {
+      await request();
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : t('serverSettings.danger.error');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  function leaveServer() {
+    if (!auth || !server) return Promise.resolve(null);
+    const { id, name } = server;
+    return runOwnershipAction('server-leave', async () => {
+      await apiRequest(`/servers/${id}/members/me`, { method: 'DELETE' }, auth.accessToken);
+      dropServer(id, t('serverSettings.danger.leftNotice', { server: name }));
+    });
+  }
+
+  function transferOwnership(userId: string, password: string, code: string) {
+    if (!auth || !server) return Promise.resolve(null);
+    const serverId = server.id;
+    return runOwnershipAction('server-transfer', async () => {
+      const result = await apiRequest<{ server: ServerDetail }>(
+        `/servers/${serverId}/transfer`,
+        { method: 'POST', body: JSON.stringify({ userId, password, code: code || undefined }) },
+        auth.accessToken,
+      );
+      patchServer((current) => (current.id === serverId ? result.server : current));
+    });
+  }
+
+  function deleteServer(password: string, code: string) {
+    if (!auth || !server) return Promise.resolve(null);
+    const { id, name } = server;
+    return runOwnershipAction('server-delete', async () => {
+      await apiRequest(
+        `/servers/${id}`,
+        { method: 'DELETE', body: JSON.stringify({ password, code: code || undefined }) },
+        auth.accessToken,
+      );
+      dropServer(id, t('serverSettings.danger.deletedNotice', { server: name }));
+    });
+  }
+
+  return {
+    bans,
+    isLoadingBans,
+    bansError,
+    loadBans,
+    banMember,
+    unbanUser,
+    timeoutMember,
+    leaveServer,
+    transferOwnership,
+    deleteServer,
+  };
 }

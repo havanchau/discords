@@ -33,6 +33,7 @@ export const ERROR_MESSAGE_CODES = {
   'Cannot report yourself': 'CANNOT_REPORT_YOURSELF',
   'Cannot time out the server owner': 'CANNOT_TIME_OUT_THE_SERVER_OWNER',
   'Cannot time out yourself': 'CANNOT_TIME_OUT_YOURSELF',
+  'Cannot transfer ownership to a bot or webhook': 'CANNOT_TRANSFER_OWNERSHIP_TO_A_BOT_OR_WEBHOOK',
   'Cannot update this request': 'CANNOT_UPDATE_THIS_REQUEST',
   'Category name cannot be empty': 'CATEGORY_NAME_CANNOT_BE_EMPTY',
   'Category not found': 'CATEGORY_NOT_FOUND',
@@ -126,6 +127,8 @@ export const ERROR_MESSAGE_CODES = {
   'Only the author or message managers can pin this message':
     'ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE',
   'Only the group owner can remove members': 'ONLY_THE_GROUP_OWNER_CAN_REMOVE_MEMBERS',
+  'Only the owner can delete this server': 'ONLY_THE_OWNER_CAN_DELETE_THIS_SERVER',
+  'Only the owner can transfer this server': 'ONLY_THE_OWNER_CAN_TRANSFER_THIS_SERVER',
   'Only the poll creator can close this poll': 'ONLY_THE_POLL_CREATOR_CAN_CLOSE_THIS_POLL',
   'Only the poll creator or message managers can close this poll':
     'ONLY_THE_POLL_CREATOR_OR_MESSAGE_MANAGERS_CAN_CLOSE_THIS_POLL',
@@ -195,7 +198,10 @@ export const ERROR_MESSAGE_CODES = {
   'Timeout rules need a timeout duration': 'TIMEOUT_RULES_NEED_A_TIMEOUT_DURATION',
   'Too many scheduled messages': 'TOO_MANY_SCHEDULED_MESSAGES',
   'Too many upload chunks': 'TOO_MANY_UPLOAD_CHUNKS',
-  'Transfer or delete your owned servers first': 'TRANSFER_OR_DELETE_YOUR_OWNED_SERVERS_FIRST',
+  'Transfer ownership or delete each server you own before deleting your account':
+    'TRANSFER_OWNERSHIP_OR_DELETE_EACH_SERVER_YOU_OWN_BEFORE_DELETING_YOUR_ACCOUNT',
+  'Transfer ownership or delete the server before leaving':
+    'TRANSFER_OWNERSHIP_OR_DELETE_THE_SERVER_BEFORE_LEAVING',
   'Two-factor authentication is already enabled': 'TWO_FACTOR_AUTHENTICATION_IS_ALREADY_ENABLED',
   'Two-factor authentication is not enabled': 'TWO_FACTOR_AUTHENTICATION_IS_NOT_ENABLED',
   'Unauthenticated socket': 'UNAUTHENTICATED_SOCKET',
@@ -217,6 +223,7 @@ export const ERROR_MESSAGE_CODES = {
   'Webhook name cannot be empty': 'WEBHOOK_NAME_CANNOT_BE_EMPTY',
   'Webhook not found': 'WEBHOOK_NOT_FOUND',
   'Webhooks can only post in text channels': 'WEBHOOKS_CAN_ONLY_POST_IN_TEXT_CHANNELS',
+  'You already own this server': 'YOU_ALREADY_OWN_THIS_SERVER',
   'You are banned from this server': 'YOU_ARE_BANNED_FROM_THIS_SERVER',
   'You are not a member of this server': 'YOU_ARE_NOT_A_MEMBER_OF_THIS_SERVER',
   'You can only DM accepted friends': 'YOU_CAN_ONLY_DM_ACCEPTED_FRIENDS',

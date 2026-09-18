@@ -173,6 +173,10 @@ export class AccountDeletionService {
 
   private async assertNoOwnedServers(userId: string) {
     const owned = await this.prisma.server.count({ where: { ownerId: userId, deletedAt: null } });
-    if (owned > 0) throw new ConflictException('Transfer or delete your owned servers first');
+    if (owned > 0) {
+      throw new ConflictException(
+        'Transfer ownership or delete each server you own before deleting your account',
+      );
+    }
   }
 }

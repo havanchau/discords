@@ -31,6 +31,10 @@ export const RealtimeEvents = {
   FriendRequest: 'friend:request',
   FriendUpdated: 'friend:updated',
   ServerMemberRemoved: 'server:member-removed',
+  /** `{ serverId, fromUserId, toUserId }` after the owner hands the server to another member. */
+  ServerOwnershipTransferred: 'server:ownership-transferred',
+  /** `{ serverId }` to the server room and every former member; clients drop the server. */
+  ServerDeleted: 'server:deleted',
   AccountDeleted: 'user:account-deleted',
   ServerMemberUpdated: 'server:member-updated',
   ServerEmojisUpdated: 'server:emojis-updated',

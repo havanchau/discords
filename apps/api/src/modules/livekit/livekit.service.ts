@@ -120,6 +120,16 @@ export class LivekitService {
     }
   }
 
+  /** Closes these rooms outright, disconnecting everyone in them (server delete). */
+  async deleteRooms(roomNames: string[]) {
+    const rooms = this.rooms;
+    if (!rooms || !roomNames.length) return;
+    const liveRooms = await rooms.listRooms(roomNames);
+    for (const room of liveRooms) {
+      await rooms.deleteRoom(room.name);
+    }
+  }
+
   private async userIdentities(rooms: RoomServiceClient, roomName: string, userId: string) {
     // LiveKit answers "not found" for the participants of a room nobody has joined yet.
     const [room] = await rooms.listRooms([roomName]);

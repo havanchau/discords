@@ -10,6 +10,7 @@ import { ServerDiscoveryController } from './server-discovery.controller';
 import { ServerDiscoveryService } from './server-discovery.service';
 import { ServerModerationService } from './server-moderation.service';
 import { ServerOnboardingService } from './server-onboarding.service';
+import { ServerOwnershipService } from './server-ownership.service';
 import { ServerTemplatesController } from './server-templates.controller';
 import { ServerTemplatesService } from './server-templates.service';
 import { ServersController } from './servers.controller';
@@ -30,6 +31,7 @@ import { ServersService } from './servers.service';
     ServersService,
     ServerModerationService,
     ServerOnboardingService,
+    ServerOwnershipService,
     ServerTemplatesService,
     ServerDiscoveryService,
   ],

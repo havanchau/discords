@@ -405,6 +405,7 @@ export class MessagesService {
     if (message.authorId !== userId) {
       throw new ForbiddenException('Only the author can edit this message');
     }
+    await this.permissions.requireNotTimedOut(userId, message.serverId);
     await this.permissions.requireOnboardingAccepted(userId, message.serverId);
     // The text of a poll message is its question, which is immutable.
     if (message.poll) {

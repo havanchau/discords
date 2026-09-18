@@ -9,7 +9,7 @@ Moderators can temporarily stop a member from sending messages and reactions, an
 Acceptance criteria:
 
 - `PUT /servers/:serverId/members/:memberId/timeout` with `durationMinutes > 0` sets `timeoutUntil`; `0` clears it. Requires `KICK_MEMBERS`.
-- A timed-out member gets `403 You are timed out until <ISO date>` when sending channel messages, thread replies, or reactions; the owner can never be timed out.
+- A timed-out member gets `403 You are timed out until <ISO date>` when sending channel messages, thread replies, reactions, or editing one of their own messages; the owner can never be timed out.
 - A channel's `slowmodeSeconds` (0–21600, from a fixed list) makes a member wait that long between their own messages in the channel, returning `429 Slowmode is enabled. Try again in <n>s.`
 - Members with `MANAGE_MESSAGES` or `MANAGE_CHANNELS`, and the owner, bypass slowmode.
 - The composer shows the timeout or slowmode state before the user sends.
@@ -33,7 +33,7 @@ Acceptance criteria:
 - Allowed `durationMinutes`: `0, 1, 5, 10, 60, 1440, 10080` (clear, 60s, 5m, 10m, 1h, 1d, 1w).
 - Target must be a member of the server (`404`); cannot be the owner or the actor (`403`).
 - Stored as an absolute UTC `timeoutUntil`; a past value means not timed out, so expiry needs no job.
-- Enforced by `PermissionsService.requireNotTimedOut(userId, serverId)` in `createMessage`, `createThreadMessage`, and `toggleReaction`.
+- Enforced by `PermissionsService.requireNotTimedOut(userId, serverId)` in `createMessage`, `createThreadMessage`, `toggleReaction`, and (decided 2026-09-18, closing open question 39 — see `open-question-decisions-2026-09-18.md`) `updateMessage`, which also covers thread and forum message edits since they share the same service method.
 - Audit: `MEMBER_TIMEOUT` `{ userId, durationMinutes, timeoutUntil }`, `MEMBER_TIMEOUT_CLEAR` `{ userId }`.
 - Realtime: `server:member-updated` `{ serverId, memberId, userId, timeoutUntil }` to `server:<id>`.
 
@@ -89,7 +89,7 @@ Migration `20260915004000_add_timeout_and_slowmode`. Adding a column with a defa
 
 ## Test Plan
 
-- **Manual**: owner times out B for 60s → B's composer is disabled and a forced send fails; after expiry B can send. Set slowmode 10s → B sends twice → second is refused with a countdown; owner can send freely.
+- **Manual**: owner times out B for 60s → B's composer is disabled and a forced send fails; B's Save button on an in-progress edit of their own message is disabled with the same "You are timed out until…" text, and a forced `PATCH /messages/:id` answers `403`; after expiry B can send and edit again. Set slowmode 10s → B sends twice → second is refused with a countdown; owner can send freely.
 
 ## Deployment Notes
 

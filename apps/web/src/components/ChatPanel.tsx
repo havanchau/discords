@@ -191,6 +191,7 @@ export function ChatPanel({
                 onPreviewAttachment={setPreviewAttachment}
                 onJumpToMessage={jumpToMessage}
                 isFirstUnread={message.id === messages.firstUnreadMessageId}
+                editDisabledReason={composer.restriction.disabledReason}
               />
             )}
           />

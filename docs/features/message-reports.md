@@ -41,6 +41,7 @@ Acceptance criteria:
 - Any miss on the message — unknown id, another server's message, a deleted message, or a channel the reporter cannot view — answers `404 Message not found`, so the endpoint does not reveal messages in channels the reporter cannot see. A non-member gets `403` from the membership check, as elsewhere. A `USER` target that is not a current member answers `404 Member not found`. A missing `messageId` / `targetUserId` for the chosen `targetType` is a `400` validation error.
 - Rate limit: 10 reports per reporter per 10 minutes per server, enforced through `RedisFixedWindowLimiter`, returning `429` with the standard retry-after shape used elsewhere. The `@RateLimit` decorator keys by client IP, so the create handler calls the limiter itself with the key `message-report:<serverId>:<userId>`, sets `Retry-After`, and throws the same `Rate limit exceeded. Retry after Ns.` literal as `RateLimitGuard`. That literal gains the `RATE_LIMIT_EXCEEDED` prefix code in `common/i18n/error-codes.ts`, which also translates the guard's existing `429` message.
 - Listing and resolving require `MANAGE_MESSAGES` on that server (same permission `deleteMessage` already uses); an actor cannot resolve a report they filed themselves without also holding the permission — no exception for the reporter.
+- A moderator who lacks `VIEW_CHANNEL` on the reported message's channel still sees the report row, but `message.content` is redacted to `''` and `message.contentHidden` is `true` (`apps/api/src/modules/reports/reports.service.ts:122-163,237-261`); this closes open question 37, decided 2026-09-18 — see `open-question-decisions-2026-09-18.md`.
 - Status transitions: `OPEN → RESOLVED` or `OPEN → DISMISSED` only; transitioning an already-closed report returns `409 Report is already resolved` / `409 Report is already dismissed`.
 - Audit: `MESSAGE_REPORT_CREATE` `{ reportId, targetType, reason }` (actor is the reporter), `MESSAGE_REPORT_RESOLVE` / `MESSAGE_REPORT_DISMISS` `{ reportId }` (actor is the moderator).
 
@@ -109,7 +110,7 @@ Migration `20260917005000_add_message_reports` (the `20260917002000` slot this s
 | `GET`   | `/servers/:serverId/reports`           | query `?status=OPEN\|RESOLVED\|DISMISSED` (omitted: all)      | `{ reports: MessageReportView[] }` (max 100)                                          | default    |
 | `PATCH` | `/servers/:serverId/reports/:reportId` | `{ status: 'RESOLVED' \| 'DISMISSED' }`                       | `{ report }`                                                                          | 20/min     |
 
-`MessageReportView`: `{ id, targetType, reason, details, status, createdAt, reporter: { id, displayName, avatarUrl }, message: { id, content, channelId, authorId } | null, targetUser: { id, displayName } | null, resolvedBy: { id, displayName } | null, resolvedAt }`.
+`MessageReportView`: `{ id, targetType, reason, details, status, createdAt, reporter: { id, displayName, avatarUrl }, message: { id, content, channelId, authorId, contentHidden } | null, targetUser: { id, displayName } | null, resolvedBy: { id, displayName } | null, resolvedAt }`.
 
 ### Realtime
 

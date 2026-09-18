@@ -348,6 +348,9 @@ export function buildChatAndSettingsProps({
         banMember: moderation.banMember,
         unbanUser: moderation.unbanUser,
         timeoutMember: moderation.timeoutMember,
+        leaveServer: moderation.leaveServer,
+        transferOwnership: moderation.transferOwnership,
+        deleteServer: moderation.deleteServer,
         createEmoji: serverEmojis.createEmoji,
         deleteEmoji: serverEmojis.deleteEmoji,
         openMemberRoleEditor: (memberId: string) => {

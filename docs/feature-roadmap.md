@@ -448,4 +448,4 @@ Agents cannot edit `.env*` files.
 - [x] Connect bots over the gateway and invoke their slash commands from the composer.
 - [ ] Carry voice and video channels over a LiveKit SFU with a mesh rollback flag (implemented and verified locally; 8+ participants, TURN and production hosting not verified).
 - [x] Host stage channels with speakers and audience.
-- [ ] Decide open questions 30–38, including account deletion for server owners (row 38).
+- [x] Decide open questions 30–39, including account deletion for server owners (row 38). Decided 2026-09-18; the code changes are in [server-ownership-lifecycle.md](features/server-ownership-lifecycle.md) and [open-question-decisions-2026-09-18.md](features/open-question-decisions-2026-09-18.md). Row 40 (an audit trail that survives server delete) is open.

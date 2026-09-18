@@ -33,6 +33,7 @@ export const enApiMessages = {
   CANNOT_REPORT_YOURSELF: 'Cannot report yourself',
   CANNOT_TIME_OUT_THE_SERVER_OWNER: 'Cannot time out the server owner',
   CANNOT_TIME_OUT_YOURSELF: 'Cannot time out yourself',
+  CANNOT_TRANSFER_OWNERSHIP_TO_A_BOT_OR_WEBHOOK: 'Cannot transfer ownership to a bot or webhook',
   CANNOT_UPDATE_THIS_REQUEST: 'Cannot update this request',
   CATEGORY_NAME_CANNOT_BE_EMPTY: 'Category name cannot be empty',
   CATEGORY_NOT_FOUND: 'Category not found',
@@ -126,6 +127,8 @@ export const enApiMessages = {
   ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE:
     'Only the author or message managers can pin this message',
   ONLY_THE_GROUP_OWNER_CAN_REMOVE_MEMBERS: 'Only the group owner can remove members',
+  ONLY_THE_OWNER_CAN_DELETE_THIS_SERVER: 'Only the owner can delete this server',
+  ONLY_THE_OWNER_CAN_TRANSFER_THIS_SERVER: 'Only the owner can transfer this server',
   ONLY_THE_POLL_CREATOR_CAN_CLOSE_THIS_POLL: 'Only the poll creator can close this poll',
   ONLY_THE_POLL_CREATOR_OR_MESSAGE_MANAGERS_CAN_CLOSE_THIS_POLL:
     'Only the poll creator or message managers can close this poll',
@@ -195,7 +198,10 @@ export const enApiMessages = {
   TIMEOUT_RULES_NEED_A_TIMEOUT_DURATION: 'Timeout rules need a timeout duration',
   TOO_MANY_SCHEDULED_MESSAGES: 'Too many scheduled messages',
   TOO_MANY_UPLOAD_CHUNKS: 'Too many upload chunks',
-  TRANSFER_OR_DELETE_YOUR_OWNED_SERVERS_FIRST: 'Transfer or delete your owned servers first',
+  TRANSFER_OWNERSHIP_OR_DELETE_EACH_SERVER_YOU_OWN_BEFORE_DELETING_YOUR_ACCOUNT:
+    'Transfer ownership or delete each server you own before deleting your account',
+  TRANSFER_OWNERSHIP_OR_DELETE_THE_SERVER_BEFORE_LEAVING:
+    'Transfer ownership or delete the server before leaving',
   TWO_FACTOR_AUTHENTICATION_IS_ALREADY_ENABLED: 'Two-factor authentication is already enabled',
   TWO_FACTOR_AUTHENTICATION_IS_NOT_ENABLED: 'Two-factor authentication is not enabled',
   UNAUTHENTICATED_SOCKET: 'Unauthenticated socket',
@@ -217,6 +223,7 @@ export const enApiMessages = {
   WEBHOOK_NAME_CANNOT_BE_EMPTY: 'Webhook name cannot be empty',
   WEBHOOK_NOT_FOUND: 'Webhook not found',
   WEBRTC_RELAY_IS_DISABLED: 'WebRTC relay is disabled',
+  YOU_ALREADY_OWN_THIS_SERVER: 'You already own this server',
   YOU_ARE_BANNED_FROM_THIS_SERVER: 'You are banned from this server',
   YOU_ARE_NOT_A_MEMBER_OF_THIS_SERVER: 'You are not a member of this server',
   YOU_CAN_ONLY_DM_ACCEPTED_FRIENDS: 'You can only DM accepted friends',
@@ -266,6 +273,10 @@ export const enApiMessages = {
   'scheduledMessage.failure.RULES_NOT_ACCEPTED':
     'You had not accepted the server rules at the scheduled time.',
   'scheduledMessage.failure.UNKNOWN': 'Something went wrong while sending.',
+  'notification.serverDelisted.title': '{serverName} was removed from Server Discovery',
+  'notification.serverDelisted.body': 'A platform moderator delisted your server after a report.',
+  'notification.serverDelisted.bodyWithNote':
+    'A platform moderator delisted your server after a report. Note: {note}',
   'auth.register.checkInbox': 'Check your inbox for a verification link.',
   'auth.resendVerification.ok':
     'If that account is waiting for verification, a new link has been sent.',

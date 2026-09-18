@@ -335,6 +335,12 @@
   padding: 0 var(--space-3);
 }
 
+.editDisabledReason {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
 @keyframes messageIn {
   from {
     opacity: 0;
