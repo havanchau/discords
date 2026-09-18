@@ -10,6 +10,7 @@ import { ChannelsModule } from './modules/channels/channels.module';
 import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
 import { EmojisModule } from './modules/emojis/emojis.module';
 import { SoundboardModule } from './modules/soundboard/soundboard.module';
+import { StageModule } from './modules/stage/stage.module';
 import { StickersModule } from './modules/stickers/stickers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ForumModule } from './modules/forum/forum.module';
@@ -70,6 +71,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     BotsModule,
     PushModule,
     RealtimeModule,
+    StageModule,
   ],
   providers: [
     {

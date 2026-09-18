@@ -42,6 +42,9 @@ export class ScheduledMessagesService {
     if (channel.type === 'FORUM') {
       throw new BadRequestException('Use forum posts on a FORUM channel');
     }
+    if (channel.type === 'STAGE') {
+      throw new BadRequestException('Stage channels have no text chat');
+    }
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
     return this.create(userId, { channelId, conversationId: null }, dto);
   }

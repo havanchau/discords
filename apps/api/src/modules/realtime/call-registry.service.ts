@@ -44,7 +44,7 @@ export class CallRegistryService {
   ) {}
 
   callRoom(channelId: string) {
-    return `call:${channelId}`;
+    return this.publisher.callRoom(channelId);
   }
 
   /** Adds the participant and returns everyone who was already in the call. */

@@ -3,6 +3,7 @@ export const ERROR_MESSAGE_CODES = {
   'Account deletion is already scheduled': 'ACCOUNT_DELETION_IS_ALREADY_SCHEDULED',
   'Account is not scheduled for deletion': 'ACCOUNT_IS_NOT_SCHEDULED_FOR_DELETION',
   'Account is scheduled for deletion': 'ACCOUNT_IS_SCHEDULED_FOR_DELETION',
+  'Already a stage speaker': 'ALREADY_A_STAGE_SPEAKER',
   'An export is already in progress': 'AN_EXPORT_IS_ALREADY_IN_PROGRESS',
   'AutoMod rule limit reached': 'AUTOMOD_RULE_LIMIT_REACHED',
   'AutoMod rule name cannot be empty': 'AUTOMOD_RULE_NAME_CANNOT_BE_EMPTY',
@@ -36,6 +37,7 @@ export const ERROR_MESSAGE_CODES = {
   'Category name cannot be empty': 'CATEGORY_NAME_CANNOT_BE_EMPTY',
   'Category not found': 'CATEGORY_NOT_FOUND',
   'Channel is not a forum channel': 'CHANNEL_IS_NOT_A_FORUM_CHANNEL',
+  'Channel is not a stage channel': 'CHANNEL_IS_NOT_A_STAGE_CHANNEL',
   'Channel not found': 'CHANNEL_NOT_FOUND',
   'Choose exactly one option': 'CHOOSE_EXACTLY_ONE_OPTION',
   'Choose one role for each single-choice question':
@@ -98,6 +100,7 @@ export const ERROR_MESSAGE_CODES = {
   'Invite revoked': 'INVITE_REVOKED',
   'Invite usage limit reached': 'INVITE_USAGE_LIMIT_REACHED',
   'Keyword rules need at least one term': 'KEYWORD_RULES_NEED_AT_LEAST_ONE_TERM',
+  'Member cannot speak in this channel': 'MEMBER_CANNOT_SPEAK_IN_THIS_CHANNEL',
   'Member not found': 'MEMBER_NOT_FOUND',
   'Member or role not found': 'MEMBER_OR_ROLE_NOT_FOUND',
   'Mention spam rules need a mention limit': 'MENTION_SPAM_RULES_NEED_A_MENTION_LIMIT',
@@ -171,6 +174,9 @@ export const ERROR_MESSAGE_CODES = {
   'Soundboard is only available in server voice calls':
     'SOUNDBOARD_IS_ONLY_AVAILABLE_IN_SERVER_VOICE_CALLS',
   'Soundboard limit reached': 'SOUNDBOARD_LIMIT_REACHED',
+  'Stage channels have no text chat': 'STAGE_CHANNELS_HAVE_NO_TEXT_CHAT',
+  'Stage channels need the LiveKit voice transport':
+    'STAGE_CHANNELS_NEED_THE_LIVEKIT_VOICE_TRANSPORT',
   'Start two-factor setup first': 'START_TWO_FACTOR_SETUP_FIRST',
   'Sticker file is too large': 'STICKER_FILE_IS_TOO_LARGE',
   'Sticker limit reached': 'STICKER_LIMIT_REACHED',
@@ -204,6 +210,8 @@ export const ERROR_MESSAGE_CODES = {
   'User not found': 'USER_NOT_FOUND',
   'Voice message is too large': 'VOICE_MESSAGE_IS_TOO_LARGE',
   'Voice message is too long': 'VOICE_MESSAGE_IS_TOO_LONG',
+  'Voice service is unavailable': 'VOICE_SERVICE_IS_UNAVAILABLE',
+  'WebRTC relay is disabled': 'WEBRTC_RELAY_IS_DISABLED',
   'Webhook limit reached': 'WEBHOOK_LIMIT_REACHED',
   'Webhook message content cannot be empty': 'WEBHOOK_MESSAGE_CONTENT_CANNOT_BE_EMPTY',
   'Webhook name cannot be empty': 'WEBHOOK_NAME_CANNOT_BE_EMPTY',

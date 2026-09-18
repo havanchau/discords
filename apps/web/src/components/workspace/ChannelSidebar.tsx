@@ -8,6 +8,7 @@ import {
   LogOut,
   MessageSquare,
   MessagesSquare,
+  Radio,
   Search,
   Settings,
   ShieldCheck,
@@ -123,6 +124,8 @@ export function ChannelSidebar({
         icon={
           item.type === 'FORUM' ? (
             <MessagesSquare size={16} aria-hidden="true" />
+          ) : item.type === 'STAGE' ? (
+            <Radio size={16} aria-hidden="true" />
           ) : (
             <Hash size={16} aria-hidden="true" />
           )
@@ -168,6 +171,12 @@ export function ChannelSidebar({
                 <DropdownMenuItem onSelect={() => setTimeout(() => onCreateChannel('FORUM'), 0)}>
                   <MessagesSquare size={16} aria-hidden="true" />
                   {t('channel.dialog.createForum')}
+                </DropdownMenuItem>
+              ) : null}
+              {canManageChannels ? (
+                <DropdownMenuItem onSelect={() => setTimeout(() => onCreateChannel('STAGE'), 0)}>
+                  <Radio size={16} aria-hidden="true" />
+                  {t('channel.dialog.createStage')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem onSelect={() => setTimeout(onOpenEvents, 0)}>

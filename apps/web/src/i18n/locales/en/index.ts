@@ -15,6 +15,7 @@ import { webhooks } from './webhooks';
 import { bots } from './bots';
 import { stickersSoundboard } from './stickers-soundboard';
 import { platform } from './platform';
+import { stage } from './stage';
 
 export const en = {
   ...common,
@@ -32,4 +33,5 @@ export const en = {
   ...bots,
   ...stickersSoundboard,
   ...platform,
+  ...stage,
 } as const;

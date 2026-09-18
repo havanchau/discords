@@ -8,6 +8,7 @@ import {
   MonitorUp,
   MoreVertical,
   Phone,
+  Radio,
   Search,
   Unlock,
   Video,
@@ -94,10 +95,12 @@ export function ChatHeader({
   ];
 
   const isNarrow = useMediaQuery(NARROW_HEADER);
+  // A stage is joined from its own view, as audience; it has no ad-hoc call buttons.
+  const channelCallActions = channel?.type === 'STAGE' ? [] : callActions;
   const inlineCallActions = isNarrow
-    ? callActions.filter((action) => !action.secondary)
-    : callActions;
-  const menuCallActions = isNarrow ? callActions.filter((action) => action.secondary) : [];
+    ? channelCallActions.filter((action) => !action.secondary)
+    : channelCallActions;
+  const menuCallActions = isNarrow ? channelCallActions.filter((action) => action.secondary) : [];
 
   function togglePanel(panel: 'notifications' | 'media' | 'encryption' | 'search') {
     panels.setActivePanel((current) => (current === panel ? null : panel));
@@ -136,6 +139,8 @@ export function ChatHeader({
               fallback={channel.name.slice(0, 1)}
               size="sm"
             />
+          ) : channel?.type === 'STAGE' ? (
+            <Radio size={18} aria-hidden="true" />
           ) : (
             <Hash size={18} aria-hidden="true" />
           )}

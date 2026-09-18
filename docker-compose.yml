@@ -36,6 +36,26 @@ services:
     depends_on:
       - api
 
+  # SFU for voice/video when VOICE_TRANSPORT=livekit (docs/features/voice-sfu.md). `--dev` enables
+  # the embedded TURN and requires LIVEKIT_API_KEY/LIVEKIT_API_SECRET in .env. The UDP range avoids
+  # 50001, which is taken on the dev machine; production needs a public IP and a wider range.
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    container_name: discord-clone-livekit
+    restart: unless-stopped
+    command: ['--dev', '--bind', '0.0.0.0']
+    environment:
+      LIVEKIT_KEYS: '${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}'
+      LIVEKIT_CONFIG: |
+        rtc:
+          port_range_start: 50200
+          port_range_end: 50300
+          use_external_ip: false
+    ports:
+      - '7880:7880'
+      - '7881:7881'
+      - '50200-50300:50200-50300/udp'
+
   redis:
     image: redis:7.4-alpine
     container_name: discord-clone-redis

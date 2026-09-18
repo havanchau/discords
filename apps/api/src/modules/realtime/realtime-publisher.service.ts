@@ -82,6 +82,11 @@ export class RealtimePublisher {
     return `conversation:${conversationId}`;
   }
 
+  /** Socket.IO room of one call's participants; a call id is a channel id or `dm:<conversationId>`. */
+  callRoom(callId: string) {
+    return `call:${callId}`;
+  }
+
   userRoom(userId: string) {
     return `user:${userId}`;
   }

@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { LivekitModule } from '@/modules/livekit/livekit.module';
 import { MessagesModule } from '@/modules/messages/messages.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { PermissionsModule } from '@/modules/permissions/permissions.module';
 import { SoundboardModule } from '@/modules/soundboard/soundboard.module';
+import { StageModule } from '@/modules/stage/stage.module';
 import { CallRegistryService } from './call-registry.service';
 import { DmCallsService } from './dm-calls.service';
 import { InteractionTimeoutService } from './interaction-timeout.service';
@@ -22,12 +24,14 @@ import { VoiceGateway } from './voice.gateway';
 @Module({
   imports: [
     JwtModule,
+    LivekitModule,
     MessagesModule,
     NotificationsModule,
     PermissionsModule,
     RealtimePublisherModule,
     RealtimeUnreadModule,
     SoundboardModule,
+    StageModule,
   ],
   providers: [
     RealtimeGateway,

@@ -9,5 +9,6 @@ export * from './server-discovery.js';
 export * from './server-templates.js';
 export * from './stickers-soundboard.js';
 export * from './types.js';
+export * from './voice.js';
 export * from './voice-messages.js';
 export * from './webhooks.js';

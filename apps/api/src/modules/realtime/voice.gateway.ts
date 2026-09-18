@@ -1,4 +1,9 @@
-import { ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -12,11 +17,14 @@ import {
   SOUNDBOARD_PLAY_LIMIT,
   SOUNDBOARD_PLAY_WINDOW_MS,
   type SoundboardPlayedPayload,
+  type VoiceJoinTransportInfo,
 } from '@discord-clone/shared';
+import { LivekitService } from '@/modules/livekit/livekit.service';
 import {
   parseSoundboardPlay,
   SoundboardPlaybackService,
 } from '@/modules/soundboard/soundboard-playback.service';
+import { StageService } from '@/modules/stage/stage.service';
 import { CallParticipant, CallRegistryService } from './call-registry.service';
 import { DmCallMode } from './dm-call-rings';
 import { DmCallsService, parseDmCallKey } from './dm-calls.service';
@@ -26,7 +34,10 @@ import { SocketErrorTranslator } from './socket-error-translator.service';
 import { SocketRateLimitService } from './socket-rate-limit.service';
 import { requireHumanSocketUser } from './socket-user';
 
-/** Voice and video: call membership, DM ringing, and WebRTC signaling relay. */
+/**
+ * Voice and video: call membership, DM ringing, and — per `VOICE_TRANSPORT` — either LiveKit join
+ * tokens or the mesh's WebRTC signaling relay.
+ */
 @WebSocketGateway()
 export class VoiceGateway {
   @WebSocketServer()
@@ -40,6 +51,8 @@ export class VoiceGateway {
     private readonly rateLimit: SocketRateLimitService,
     private readonly soundboard: SoundboardPlaybackService,
     private readonly socketErrors: SocketErrorTranslator,
+    private readonly livekit: LivekitService,
+    private readonly stage: StageService,
   ) {}
 
   @SubscribeMessage('voice:join')
@@ -58,6 +71,26 @@ export class VoiceGateway {
     const user = requireHumanSocketUser(client);
     try {
       const profile = await this.access.authorizeCallJoin(user.id, body.channelId);
+      const stageRole = await this.stage.resolveJoinRole(user.id, body.channelId);
+      if (stageRole && this.livekit.transport !== 'livekit') {
+        // The mesh has no way to keep an audience from publishing (`stage-channels.md`).
+        throw new ServiceUnavailableException('Stage channels need the LiveKit voice transport');
+      }
+      // Minted before the join is recorded, so a LiveKit outage leaves no participant behind.
+      const transport: VoiceJoinTransportInfo =
+        this.livekit.transport === 'livekit'
+          ? {
+              transport: 'livekit',
+              livekit: await this.livekit.mintJoinAccess({
+                roomName: body.channelId,
+                userId: user.id,
+                socketId: client.id,
+                displayName: profile.displayName,
+                canPublish: stageRole !== 'audience',
+              }),
+            }
+          : { transport: 'mesh' };
+      if (stageRole) transport.stageRole = stageRole;
 
       const participant: CallParticipant = {
         socketId: client.id,
@@ -78,7 +111,7 @@ export class VoiceGateway {
 
       const dmConversationId = parseDmCallKey(body.channelId);
       if (dmConversationId) await this.dmCalls.participantJoined(dmConversationId, user.id);
-      return { participants: existingParticipants };
+      return { participants: existingParticipants, ...transport };
     } catch (error) {
       if (error instanceof HttpException) return this.socketErrors.ack(client, error);
       throw error;
@@ -169,8 +202,8 @@ export class VoiceGateway {
   }
 
   /**
-   * Plays a server soundboard clip for everyone in the caller's call. There is no SFU, so nothing is
-   * mixed into the media: each client plays the broadcast url locally. Refusals are acknowledged with
+   * Plays a server soundboard clip for everyone in the caller's call. Nothing is mixed into the media,
+   * on either transport: each client plays the broadcast url locally. Refusals are acknowledged with
    * `{ error }` so the client can show them, like `message:create`.
    */
   @SubscribeMessage('soundboard:play')
@@ -212,6 +245,7 @@ export class VoiceGateway {
   ) {
     await this.rateLimit.assert(client, 'webrtc:offer', 30, 60_000);
     requireHumanSocketUser(client);
+    this.requireMeshTransport();
     await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:offer', {
       channelId: body.channelId,
@@ -227,6 +261,7 @@ export class VoiceGateway {
   ) {
     await this.rateLimit.assert(client, 'webrtc:answer', 30, 60_000);
     requireHumanSocketUser(client);
+    this.requireMeshTransport();
     await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:answer', {
       channelId: body.channelId,
@@ -242,11 +277,22 @@ export class VoiceGateway {
   ) {
     await this.rateLimit.assert(client, 'webrtc:ice-candidate', 120, 60_000);
     requireHumanSocketUser(client);
+    this.requireMeshTransport();
     await this.calls.assertPeer(client, body.channelId, body.targetSocketId);
     this.publisher.emitToRoom(body.targetSocketId, 'webrtc:ice-candidate', {
       channelId: body.channelId,
       fromSocketId: client.id,
       candidate: body.candidate,
     });
+  }
+
+  /**
+   * Peer-to-peer relay exists only for the mesh rollback path (`voice-sfu.md` → Changes §7); under
+   * LiveKit clients never negotiate with each other. Delete with the flag once mesh is retired.
+   */
+  private requireMeshTransport() {
+    if (this.livekit.transport !== 'mesh') {
+      throw new ForbiddenException('WebRTC relay is disabled');
+    }
   }
 }

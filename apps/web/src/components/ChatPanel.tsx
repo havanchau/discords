@@ -7,6 +7,7 @@ import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
 import { ForumChannelView } from './forum/ForumChannelView';
+import { StageChannelView } from './stage/StageChannelView';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { resolveMemberIdentity } from '@/utils/memberIdentity';
@@ -141,9 +142,19 @@ export function ChatPanel({
         </div>
       )}
 
-      <CallStage session={session} call={call} />
+      {/* The stage view carries its own controls for a call in this stage. */}
+      {session.channel?.type === 'STAGE' && call.state?.channelId === session.channel.id ? null : (
+        <CallStage session={session} call={call} />
+      )}
 
-      {session.channel?.type === 'FORUM' ? (
+      {session.channel?.type === 'STAGE' ? (
+        <StageChannelView
+          key={session.channel.id}
+          auth={session.auth}
+          channel={session.channel}
+          call={call}
+        />
+      ) : session.channel?.type === 'FORUM' ? (
         <ForumChannelView
           key={session.channel.id}
           channel={session.channel}

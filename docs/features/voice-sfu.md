@@ -4,7 +4,7 @@ This specification covers replacing the full-mesh WebRTC signaling used by voice
 
 **Depends on**: [`realtime-scale-out.md`](./realtime-scale-out.md) — an SFU issues per-participant join tokens and relies on call authorization (`assertPeer`-equivalent) working correctly when the API runs more than one instance; deploying an SFU before that doc ships means the API must still stay single-instance, which defeats part of the reason to add an SFU (supporting more concurrent load).
 
-**Status**: approved — vendor and hosting model decided 2026-09-18 (self-hosted LiveKit). Implementation-ready; not yet implemented (no LiveKit code exists in the repo as of this writing).
+**Status**: implemented 2026-09-18 (uncommitted), verified locally against a LiveKit container — see Deviations From The Original Design. `VOICE_TRANSPORT` still defaults to `mesh`; no environment has been flipped to `livekit`.
 
 ## Goal
 
@@ -13,9 +13,9 @@ Remove the client-bandwidth/CPU ceiling of full-mesh P2P so a voice or video cha
 **Acceptance criteria**:
 
 - [ ] A voice/video channel with more than 6 simultaneous participants remains usable (audio/video keeps flowing) instead of degrading as today's mesh does.
-- [ ] Each client uploads its own media stream once, regardless of participant count (no more N-1 uploads of the same stream).
-- [ ] Existing `voice:join` / `voice:state` / `voice:leave` / `voice:active` / `dm:call:*` client-facing socket contracts continue to work unchanged from the web client's perspective (join still returns participant info; state updates still broadcast the same shape). `voice:join`'s response gains an additive `livekit: { url, token }` field; nothing existing is removed from the response shape.
-- [ ] Call join is still authorized through the existing membership/permission check (`RealtimeAccessService.authorizeCallJoin`) before a client can obtain an SFU access token.
+- [x] Each client uploads its own media stream once, regardless of participant count (no more N-1 uploads of the same stream). Verified with 3 clients; see Deviations.
+- [x] Existing `voice:join` / `voice:state` / `voice:leave` / `voice:active` / `dm:call:*` client-facing socket contracts continue to work unchanged from the web client's perspective (join still returns participant info; state updates still broadcast the same shape). `voice:join`'s response gains an additive `livekit: { url, token }` field; nothing existing is removed from the response shape.
+- [x] Call join is still authorized through the existing membership/permission check (`RealtimeAccessService.authorizeCallJoin`) before a client can obtain an SFU access token.
 - [ ] TURN is configured and used as a fallback; the hardcoded `stun:stun.l.google.com:19302` in `useChannelCall.ts:257` is replaced by LiveKit's own embedded TURN/ICE handling (no client-supplied `iceServers` literal remains).
 - [ ] `docs/features/voice-webrtc.md` and `docs/features/dm-calls.md` are updated in place to describe the LiveKit architecture once implemented (not forked into new files).
 
@@ -141,6 +141,46 @@ This is an arithmetic estimate from stream count, **not a measurement taken in t
 | Keep full mesh, just fix STUN/TURN | Zero new infrastructure; smallest possible change | Does not address the actual goal (participant ceiling); TURN alone does not fix the N-1 upload bandwidth problem that motivates this doc | Ruled out: fixes a real bug (no TURN) but not the stated goal |
 
 **What the chosen option costs**: this is the largest change to the repo's realtime surface to date — it touches the client media pipeline (`useChannelCall.ts`), the server signaling contract (`voice.gateway.ts`), and requires new infrastructure (LiveKit, reachable over UDP, with embedded TURN). It also carries a real deployment-model consequence: self-hosted LiveKit does not fit the current one-container-per-service `docker-compose.yml` model or a typical PaaS web dyno (Vercel/Render-style platforms do not expose arbitrary UDP port ranges), so production hosting needs a UDP-reachable target (a VM/container platform, or a future switch to LiveKit Cloud) — this is a hard prerequisite, not a solved problem (see Deployment Notes).
+
+## Deviations From The Original Design
+
+Written back after implementing, so the doc matches the code:
+
+- **Token service lives in its own module.** `apps/api/src/modules/livekit/livekit.service.ts` and
+  `livekit.module.ts` instead of `realtime/livekit-token.service.ts`, because the kick/ban path in
+  `ServersModule` also needs it (`stage-channels.md`) and importing `RealtimeModule` there would make
+  a module cycle. The typed config reader is `apps/api/src/common/livekit-config.ts`, next to
+  `redis-config.ts` and `limits-config.ts` (the repo has no `src/config/` folder).
+- **Join-time health check.** `mintJoinAccess` calls `RoomServiceClient.listRooms([room])` with a
+  3-second timeout before minting (`livekit.service.ts`), because minting a JWT is local and would
+  succeed while the SFU is down. Failure → `503 Voice service is unavailable` in the ack.
+- **Token details.** TTL 10 minutes (it only has to outlive the `Room.connect()` after the ack);
+  `canPublishData: false`; metadata `{ userId, displayName }`.
+- **Media is still captured before `voice:join`.** Edge case "LiveKit unreachable" asked for no
+  capture before a failed join. The client learns the transport only from the ack, and the mesh path
+  needs the local stream before other participants' offers arrive, so the order is unchanged; on a
+  failed ack the stream is stopped at once. Stage audience joins capture nothing (receive-only).
+- **`livekit-client` is loaded lazily.** `useChannelCall.ts` imports `hooks/livekitCall.ts` with a
+  dynamic `import()` only when the ack says `transport: 'livekit'`, so mesh deployments do not ship
+  the SDK in the main bundle.
+- **`webrtc:*` handlers under LiveKit** throw `ForbiddenException('WebRTC relay is disabled')`
+  (`voice.gateway.ts`, `requireMeshTransport`); nothing is relayed.
+- **`RemoteVideoTile`** shows the participant's avatar for an audio-only stream and keeps a hidden
+  `<video>` element playing the audio; before, an audio-only stream rendered an empty video box.
+- **Local LiveKit** uses UDP 50200–50300 (`docker-compose.yml`), not 50000–50100: 50001 is taken on
+  the dev machine.
+- **Verification (2026-09-18, local LiveKit `v1.13.7`, headless Chrome with fake media):** 3-client
+  video call in a text channel — every client published audio and video once (LiveKit reports 2
+  tracks per participant) and rendered 2 remote tiles; LiveKit stopped mid-call → each client showed
+  "Disconnected from the call." and left; join while LiveKit was down → "Voice service is
+  unavailable", no call left running; rejoin after restart worked; `VOICE_TRANSPORT=mesh` → a
+  2-client video call still connected over `RTCPeerConnection` and a stage join was refused. Not
+  verified: 8+ participants (acceptance criterion 1), a symmetric-NAT client using TURN (criterion
+  5), and a production deployment.
+- **Pre-existing mesh issue seen during the rollback check, not changed here:** when someone joins,
+  both the newcomer and existing participants send an offer, and the browser logs
+  `InvalidStateError ... setRemoteDescription ... wrong state: stable` (offer glare); media still
+  connects.
 
 ## Risks & Rollback
 

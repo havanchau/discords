@@ -5,6 +5,8 @@ import { Permission, PermissionsService } from '@/modules/permissions/permission
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { ServerBanEntry } from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { deleteMemberStageRows } from '@/modules/stage/stage-member-cleanup';
+import { StageService } from '@/modules/stage/stage.service';
 import { CreateBanDto } from './dto/create-ban.dto';
 import { TimeoutMemberDto } from './dto/timeout-member.dto';
 import { setMemberTimeout } from './member-timeout';
@@ -24,6 +26,7 @@ export class ServerModerationService {
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimePublisher,
+    private readonly stage: StageService,
   ) {}
 
   async kick(userId: string, serverId: string, memberId: string) {
@@ -40,13 +43,17 @@ export class ServerModerationService {
     if (target.kind === 'OWNER') throw new ForbiddenException('Cannot kick the server owner');
     if (target.id === actor.id) throw new ForbiddenException('Cannot kick yourself');
 
-    await this.prisma.serverMember.delete({ where: { id: target.id } });
+    const removedStageRows = await this.prisma.$transaction(async (tx) => {
+      await tx.serverMember.delete({ where: { id: target.id } });
+      return deleteMemberStageRows(tx, serverId, target.userId);
+    });
     await this.writeAuditLog(serverId, userId, 'MEMBER_KICK', target.id, {
       userId: target.userId,
       username: target.user.username,
       displayName: target.user.displayName,
     });
     await this.announceRemoval(serverId, target.userId, 'KICK');
+    await this.stage.afterMemberRemoved(serverId, target.userId, removedStageRows);
 
     return { ok: true };
   }
@@ -119,8 +126,9 @@ export class ServerModerationService {
     if (server.ownerId === target.id) throw new ForbiddenException('Cannot ban the server owner');
 
     const reason = dto.reason?.trim() || null;
-    const { ban, created } = await this.prisma.$transaction(async (tx) => {
+    const { ban, created, removedStageRows } = await this.prisma.$transaction(async (tx) => {
       await tx.serverMember.deleteMany({ where: { serverId, userId: target.id } });
+      const stageRows = await deleteMemberStageRows(tx, serverId, target.id);
       const existing = await tx.serverBan.findUnique({
         where: { serverId_userId: { serverId, userId: target.id } },
         select: { id: true },
@@ -137,7 +145,7 @@ export class ServerModerationService {
           bannedBy: { select: moderationUserSelect },
         },
       });
-      return { ban: upserted, created: !existing };
+      return { ban: upserted, created: !existing, removedStageRows: stageRows };
     });
 
     await this.writeAuditLog(serverId, userId, 'MEMBER_BAN', target.id, {
@@ -146,6 +154,7 @@ export class ServerModerationService {
       reason,
     });
     await this.announceRemoval(serverId, target.id, 'BAN');
+    await this.stage.afterMemberRemoved(serverId, target.id, removedStageRows);
     // 201 for a new ban, 200 when the user was already banned (member-bans.md).
     return { ban, created };
   }

@@ -152,7 +152,9 @@ export function WorkspaceDialogs({
               ? t('channel.dialog.createVoice')
               : channelCreateType === 'FORUM'
                 ? t('channel.dialog.createForum')
-                : t('channel.dialog.createText')
+                : channelCreateType === 'STAGE'
+                  ? t('channel.dialog.createStage')
+                  : t('channel.dialog.createText')
           }
         >
           <form onSubmit={(event) => void submitCreateChannel(event)} className={styles.form}>

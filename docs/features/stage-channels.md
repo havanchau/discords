@@ -4,7 +4,7 @@ A `STAGE` channel type for one-to-many audio: a small set of speakers publish au
 
 **Depends on**: [`voice-sfu.md`](./voice-sfu.md) — stage channels need per-participant publish/subscribe control (an audience member must be able to join a call without ever uploading media, and a speaker's publish rights must be revocable mid-call), which the current full-mesh `RTCPeerConnection`-per-peer model (`apps/web/src/hooks/useChannelCall.ts`) has no mechanism for: every mesh participant is already a full publisher/subscriber to every other participant by construction. `voice-sfu.md` is now implementation-ready (self-hosted LiveKit, 2026-09-18) but still unimplemented as of this writing (no LiveKit code exists in the repo) — this doc cannot ship before that one does, and this doc's design assumes `voice-sfu.md`'s LiveKit token-issuance point (`voice:join` returning `{ livekit: { url, token } }`) exists.
 
-**Status**: implementation-ready — permission model, LiveKit publish-grant mechanism, and stale-request cleanup decided 2026-09-18. Blocked on `voice-sfu.md` shipping first.
+**Status**: implemented 2026-09-18 (uncommitted) together with `voice-sfu.md`, and verified locally against a LiveKit container — see Deviations From The Original Design. A stage works only where `VOICE_TRANSPORT=livekit`.
 
 ## Goal
 
@@ -12,13 +12,13 @@ A `STAGE` channel holds a large audience that joins muted-by-default with no pub
 
 **Acceptance criteria**:
 
-- [ ] `voice:join` on a `STAGE` channel returns the caller's role in the stage (`audience` or `speaker`) alongside the existing `{ participants }` shape; the LiveKit access token minted for the caller (per `voice-sfu.md`'s Changes §2-4) grants `canPublish: false` for `audience` and `canPublish: true` for `speaker` (both get `canSubscribe: true`).
+- [x] `voice:join` on a `STAGE` channel returns the caller's role in the stage (`audience` or `speaker`) alongside the existing `{ participants }` shape; the LiveKit access token minted for the caller (per `voice-sfu.md`'s Changes §2-4) grants `canPublish: false` for `audience` and `canPublish: true` for `speaker` (both get `canSubscribe: true`).
 - [ ] Any member with `CONNECT_VOICE` can join a stage as audience; only moderator-added speakers, and the server owner, join as speakers directly.
-- [ ] An audience member can send a "request to speak"; a stage moderator can approve (promoting to speaker) or the member can be invited directly without requesting.
-- [ ] A stage moderator can move a speaker back to audience ("remove from stage"), which revokes their LiveKit publish grant **without disconnecting their call** — done via `RoomServiceClient.updateParticipant` (server-side permission update), not by reissuing or invalidating the participant's access token.
+- [x] An audience member can send a "request to speak"; a stage moderator can approve (promoting to speaker) or the member can be invited directly without requesting.
+- [x] A stage moderator can move a speaker back to audience ("remove from stage"), which revokes their LiveKit publish grant **without disconnecting their call** — done via `RoomServiceClient.updateParticipant` (server-side permission update), not by reissuing or invalidating the participant's access token.
 - [ ] Existing `voice:state`, `voice:active`, `voice:leave` contracts continue to work unchanged for stage participants (per `voice-sfu.md`'s stability goal).
-- [ ] A non-moderator cannot self-promote to speaker by any client-side action — the LiveKit token/permission is only ever granted publish rights after the server-side role check passes.
-- [ ] A departed member's stale `StageSpeakRequest`/`StageSpeaker` row is removed when they leave the server (kick, ban, or voluntary leave), so a moderator's queue never shows a request from someone no longer in the server (see Changes §7).
+- [x] A non-moderator cannot self-promote to speaker by any client-side action — the LiveKit token/permission is only ever granted publish rights after the server-side role check passes.
+- [x] A departed member's stale `StageSpeakRequest`/`StageSpeaker` row is removed when they leave the server (kick, ban, or voluntary leave), so a moderator's queue never shows a request from someone no longer in the server (see Changes §7).
 
 ## Scope
 
@@ -142,6 +142,74 @@ Both tables are keyed by `(channelId, userId)`, not by a call session, so they r
 | Reuse `SPEAK_VOICE` + `MUTE_MEMBERS` vs. a brand-new `STAGE_MODERATE`/`STAGE_SPEAK` permission pair | Avoids adding permissions that existing roles would silently lack (same reasoning `server-events.md` used for `MANAGE_SERVER`); both permissions already exist, so this is their first real enforcement | `SPEAK_VOICE` was originally scoped as "can speak in this voice channel," a slightly different meaning than "eligible to be granted a stage speaker slot" — conflating the two could surprise an admin who granted `SPEAK_VOICE` broadly expecting only ordinary voice-channel behavior; `MUTE_MEMBERS` is not currently enforced anywhere at runtime (Current Behavior), so this doc is also its first real use | **Chosen** (confirmed 2026-09-18, closing open question #23), with the caveat flagged in Risks — the alternative (new permissions) is cleaner semantically but adds permission-catalog churn for a first version |
 | LiveKit `RoomServiceClient.updateParticipant` vs. reissuing a new access token on promote/demote | Matches the acceptance criterion directly ("without disconnecting their call... without reconnecting"); a token reissue would require the client to reconnect (a new JWT only takes effect at `Room.connect()` time), which is a visible, disruptive UX for something that should feel instant | Requires the API to hold a `RoomServiceClient` (server-to-server LiveKit admin call) in addition to the token-minting `AccessToken` usage, and to know the LiveKit identity/room-name scheme (`voice-sfu.md`'s `${userId}:${socketId}` / call-id-as-room-name) precisely enough to target the right session(s) | **Chosen**: this is the only mechanism that satisfies the "no reconnect" requirement; a token-reissue approach was not seriously considered as an alternative because it does not meet the stated acceptance criterion |
 | REST endpoints for stage moderation vs. socket events | Matches the existing split: moderation actions with audit trails go through REST controllers (bans, kicks, timeouts), while `voice.gateway.ts` handles only high-frequency call signaling | A REST-only path means moderator UI needs a manual refetch or the new `stage:*` broadcast events to stay live, adding two new socket events anyway | **Chosen** REST for the mutating actions plus broadcast events for live sync, mirroring `member-bans.md`'s pattern (`POST /servers/:serverId/bans` + `server:member-removed` broadcast) |
+
+## Deviations From The Original Design
+
+Written back after implementing, so the doc matches the code:
+
+- **Module layout.** `StageService`, `StageController` and the DTO live in
+  `apps/api/src/modules/stage/` (`stage.service.ts`, `stage.controller.ts`,
+  `dto/stage-speaker.dto.ts`), not in `realtime/` and `channels/dto/`: the kick/ban path in
+  `ServersModule` and the voice gateway in `RealtimeModule` both need the service, and `ChannelsModule`
+  already imports `ServersModule`, so either original home would create a module cycle. The removal
+  cleanup is `stage/stage-member-cleanup.ts` (`deleteMemberStageRows`), called inside the kick and ban
+  transactions in `server-moderation.service.ts`.
+- **LiveKit calls go through `LivekitService`** (`apps/api/src/modules/livekit/livekit.service.ts`).
+  It finds a user's connections by listing the room's participants and matching the
+  `${userId}:` identity prefix, instead of asking `CallRegistryService`, so the stage module does not
+  depend on the realtime module. A user with no connection is skipped; their next join token carries
+  the new right.
+- **Order of writes.** Promote: roster row first, then `updateParticipant(canPublish: true)`.
+  Demote: `updateParticipant(canPublish: false)` first, then the row delete — a failed revoke must
+  not leave someone listed as audience while still publishing. A LiveKit failure answers `503 Voice
+service is unavailable`.
+- **Migration** is `20260918007000_add_stage_channels`, not `20260918000000`: later `20260918*`
+  migrations were already applied locally. Both tables also got a `userId` index for the per-user
+  cleanup.
+- **Server owner** is written into `StageSpeaker` when they join, so every client's roster shows
+  them as a speaker; if they step down and rejoin, they are a speaker again.
+- **Stage events reach two rooms.** `stage:role-changed` and `stage:speak-request-updated` go to
+  `call:<channelId>` **and** `channel:<channelId>`. With the call room only, a member who opened the
+  stage before someone was promoted joined with a stale roster (found in the browser pass). The
+  channel room is joined only after the `ViewChannel` check, and `GET .../stage` already shows the
+  same data to any viewer.
+- **Status codes.** Promoting a user who lacks `SPEAK_VOICE` → `400 Member cannot speak in this
+channel` (the API table's `400`, not the `403` in the Rules prose); promoting a non-member → `404
+Member not found`; requesting while already a speaker → `400 Already a stage speaker`. `GET
+.../stage` also returns `canModerate` so the client knows whether to show moderator controls.
+- **`CONNECT_VOICE` is not checked on join.** A stage join is authorized exactly like every other
+  call (`RealtimeAccessService.authorizeCallJoin`: server membership plus rules screening), which has
+  never read `CONNECT_VOICE`. Enforcing it only for stages would make stages stricter than voice
+  calls; enforcing it for all calls is a behavior change outside this doc. Acceptance criterion 2 is
+  left unchecked for that reason.
+- **Mesh refusal.** `voice:join` on a stage while `VOICE_TRANSPORT=mesh` answers `503 Stage channels
+need the LiveKit voice transport`.
+- **No text chat.** Sending or scheduling a message in a `STAGE` channel is refused with `400 Stage
+channels have no text chat` (`messages.service.ts` `requireCanPostInChannel`,
+  `scheduled-messages.service.ts`), matching Out of scope.
+- **Other touch points not listed in Files:** `CreateChannelDto` accepts `STAGE`; server templates
+  keep `STAGE` channels (`server-template.rules.ts`); account anonymization deletes the user's stage
+  rows (`account-anonymization.ts`), because the anonymized `User` row is kept and the cascade does
+  not fire; the web role editor lists `MUTE_MEMBERS` (`helpers.ts` `PERMISSION_VALUES`), without which
+  no role could be given the moderator permission from the UI.
+- **Web.** `components/stage/StageChannelView.tsx` replaces the message list and composer (like the
+  forum view), with `StageModeratorQueue.tsx` for holders of `MUTE_MEMBERS`; roster data comes from
+  `hooks/useStageRoster.ts`. Speakers publish their microphone only (no camera in this version). The
+  client follows LiveKit's own `ParticipantPermissionsChanged` event to start or stop publishing,
+  not the socket event, so it never tries to publish before the grant arrives. The stage is created
+  from the server menu ("Create stage channel"), and header call buttons are hidden on a stage.
+- **Voluntary leave** (open question 30): confirmed there is no leave-server endpoint in
+  `apps/api/src` — `serverMember` rows are deleted only by kick, ban, bot removal and account
+  anonymization — so kick, ban and anonymization are the complete cleanup set today.
+- **Verification (2026-09-18, local LiveKit, headless Chrome with fake media):** API — 30/30
+  scenarios (roles on join and token grants, request/withdraw, 403 for a non-moderator, 400 without
+  `SPEAK_VOICE`, 404 for a non-member, promote/demote/step-down with live events, audit rows, 400
+  for text messages, no `webrtc:*` relay, kick and ban cleanup with broadcasts). Browser — 12/12:
+  owner joins and publishes, audience connects with no tracks and `canPublish: false` and hears the
+  owner, request → moderator approves → the same LiveKit session starts publishing (same participant
+  sid, no reconnect), moderator removes → tracks unpublished and `canPublish: false` in the same
+  session, UI switches back, no horizontal overflow at 390x844. Not verified: a kicked speaker's
+  client in the browser (the API side is covered), and more than 3 clients.
 
 ## Risks & Rollback
 

@@ -1,8 +1,17 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import type { Room } from 'livekit-client';
 import { Socket } from 'socket.io-client';
+import type { VoiceJoinTransportInfo } from '@discord-clone/shared';
 import { AuthState, Channel } from '@/api';
 import { CallMode, CallParticipant, CallState, RemoteMedia } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import type * as LivekitCall from './livekitCall';
+
+/** `livekit-client` is loaded only when the server picks the LiveKit transport. */
+interface LivekitSession {
+  room: Room;
+  api: typeof LivekitCall;
+}
 
 interface UseChannelCallOptions {
   auth: AuthState | null;
@@ -30,6 +39,8 @@ export function useChannelCall({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  /** Set while the call runs over LiveKit; the mesh path leaves it null (`voice-sfu.md`). */
+  const roomRef = useRef<LivekitSession | null>(null);
   const callStateRef = useRef<CallState | null>(null);
 
   useEffect(() => {
@@ -50,7 +61,10 @@ export function useChannelCall({
       if (payload.channelId !== callStateRef.current?.channelId) return;
       if (isLocalParticipant(payload.participant)) return;
       setRemoteMedia((current) => upsertRemote(current, payload.participant));
-      void createOffer(payload.participant.socketId, payload.channelId);
+      // Under LiveKit the newcomer's media arrives through the room, not a peer connection.
+      if (callStateRef.current.transport !== 'livekit') {
+        void createOffer(payload.participant.socketId, payload.channelId);
+      }
     };
 
     const handleUserUpdated = (payload: { channelId: string; participant: CallParticipant }) => {
@@ -178,7 +192,10 @@ export function useChannelCall({
         },
         async (
           err: Error | null,
-          result?: { participants?: CallParticipant[]; error?: string },
+          result?: Partial<VoiceJoinTransportInfo> & {
+            participants?: CallParticipant[];
+            error?: string;
+          },
         ) => {
           if (err) {
             setWorkspaceError(t('call.cannotJoin'));
@@ -195,6 +212,13 @@ export function useChannelCall({
             (participant) => !isLocalParticipant(participant),
           );
           setRemoteMedia(participants);
+          const transport = result?.transport ?? 'mesh';
+          mergeCallState({ transport, stageRole: result?.stageRole });
+
+          if (transport === 'livekit' && result?.livekit) {
+            await joinLivekitRoom(result.livekit, mode);
+            return;
+          }
           await Promise.all(
             participants.map((participant) => createOffer(participant.socketId, callId)),
           );
@@ -215,6 +239,9 @@ export function useChannelCall({
     }
     peersRef.current.forEach((peer) => peer.close());
     peersRef.current.clear();
+    const session = roomRef.current;
+    roomRef.current = null;
+    void session?.room.disconnect();
     stopLocalStream();
     setRemoteMedia([]);
     callStateRef.current = null;
@@ -227,6 +254,8 @@ export function useChannelCall({
     localStreamRef.current?.getAudioTracks().forEach((track) => {
       track.enabled = !isMuted;
     });
+    const session = roomRef.current;
+    if (session) void session.api.setLocalMuted(session.room, 'audio', isMuted);
     updateCallState({ isMuted });
   }
 
@@ -236,6 +265,8 @@ export function useChannelCall({
     localStreamRef.current?.getVideoTracks().forEach((track) => {
       track.enabled = !isCameraOff;
     });
+    const session = roomRef.current;
+    if (session) void session.api.setLocalMuted(session.room, 'video', isCameraOff);
     updateCallState({ isCameraOff });
   }
 
@@ -247,6 +278,86 @@ export function useChannelCall({
       socket?.emit('voice:state', next);
       return next;
     });
+  }
+
+  /** Local-only fields (transport, stage role) that the server already knows; no `voice:state`. */
+  function mergeCallState(patch: Pick<CallState, 'transport' | 'stageRole'>) {
+    const current = callStateRef.current;
+    if (!current) return;
+    const next = { ...current, ...patch };
+    callStateRef.current = next;
+    setCallState(next);
+  }
+
+  async function joinLivekitRoom(
+    access: NonNullable<VoiceJoinTransportInfo['livekit']>,
+    mode: CallMode,
+  ) {
+    try {
+      const api = await import('./livekitCall');
+      const room = await api.connectLivekitCall(access, {
+        onRemoteStream: (socketId, stream) =>
+          setRemoteMedia((current) =>
+            current.map((item) => (item.socketId === socketId ? { ...item, stream } : item)),
+          ),
+        onDisconnected: (disconnected) => {
+          // `endCall` disconnects on purpose and clears the ref first; anything else is a drop.
+          if (roomRef.current?.room !== disconnected) return;
+          setWorkspaceError(t('call.disconnected'));
+          endCall();
+        },
+        onCanPublishChanged: (allowed) => void applyStagePublishRight(allowed),
+      });
+      if (!callStateRef.current) {
+        // The call was left while the room was connecting.
+        void room.disconnect();
+        return;
+      }
+      roomRef.current = { room, api };
+      const stream = localStreamRef.current;
+      if (stream && api.canPublish(room)) {
+        await api.publishStream(room, stream, mode);
+      } else if (callStateRef.current.stageRole === 'speaker') {
+        await applyStagePublishRight(true);
+      }
+    } catch {
+      setWorkspaceError(t('call.cannotJoin'));
+      endCall();
+    }
+  }
+
+  /**
+   * A stage speaker publishes their microphone; an audience member publishes nothing. The server
+   * flips the right through LiveKit, so this follows LiveKit's permission event, not a socket event.
+   */
+  async function applyStagePublishRight(allowed: boolean) {
+    const session = roomRef.current;
+    const state = callStateRef.current;
+    if (!session || !state?.stageRole) return;
+
+    if (!allowed) {
+      await session.api.unpublishAll(session.room);
+      stopLocalStream();
+      updateCallState({ stageRole: 'audience', isMuted: true });
+      return;
+    }
+    if (!localStreamRef.current) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        if (roomRef.current !== session) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        localStreamRef.current = stream;
+        await session.api.publishStream(session.room, stream, 'voice');
+      } catch (err) {
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-start-call'),
+        );
+        return;
+      }
+    }
+    updateCallState({ stageRole: 'speaker', isMuted: false });
   }
 
   async function createOffer(targetSocketId: string, channelId: string) {

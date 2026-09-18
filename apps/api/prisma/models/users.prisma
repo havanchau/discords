@@ -109,6 +109,8 @@ model User {
   ownedBots                 Bot[]                      @relation("BotOwner")
   bot                       Bot?                       @relation("BotUser")
   uploads                   Upload[]
+  stageSpeakers             StageSpeaker[]
+  stageSpeakRequests        StageSpeakRequest[]
 
   @@index([deletionScheduledAt])
   @@index([avatarUrl])

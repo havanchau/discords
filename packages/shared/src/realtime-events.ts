@@ -67,9 +67,9 @@ export const RealtimeEvents = {
   InteractionCreate: 'interaction:create',
   /** Delivered to the invoker when their slash command interaction times out unanswered. */
   InteractionTimeout: 'interaction:timeout',
-  /** `{ channelId, userId, role }` broadcast to `call:<channelId>` when a stage speaker set changes. */
+  /** `{ channelId, userId, role }` to the stage's call and channel rooms when its speakers change. */
   StageRoleChanged: 'stage:role-changed',
-  /** `{ channelId, userId, requested }` broadcast to `call:<channelId>` for the moderator's speak queue. */
+  /** `{ channelId, userId, requested }` to the same two rooms, for the moderator's speak queue. */
   StageSpeakRequestUpdated: 'stage:speak-request-updated',
 } as const;
 

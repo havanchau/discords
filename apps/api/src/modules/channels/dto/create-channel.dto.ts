@@ -8,8 +8,8 @@ export class CreateChannelDto {
   name!: string;
 
   @IsOptional()
-  @IsIn(['TEXT', 'VOICE', 'FORUM'])
-  type?: 'TEXT' | 'VOICE' | 'FORUM';
+  @IsIn(['TEXT', 'VOICE', 'FORUM', 'STAGE'])
+  type?: 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE';
 
   @IsOptional()
   @IsString()

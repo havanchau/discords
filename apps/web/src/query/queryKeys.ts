@@ -49,6 +49,7 @@ export const queryKeys = {
   /** Prefix for every tag filter of one forum channel, for invalidating them together. */
   forumPostsOf: (channelId: string) => ['forum-posts', channelId] as const,
   forumTags: (channelId: string) => ['forum-tags', channelId] as const,
+  stageRoster: (channelId: string) => ['stage-roster', channelId] as const,
   notificationPreferences: (userId: string) => ['notification-preferences', userId] as const,
   platformReports: (status: string, serverId: string) =>
     ['platform-reports', status, serverId || 'all'] as const,

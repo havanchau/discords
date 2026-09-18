@@ -8,6 +8,8 @@ export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
   const t = useTranslation();
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  const hasVideo = Boolean(participant.stream?.getVideoTracks().length);
+
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.srcObject = participant.stream ?? null;
@@ -16,9 +18,16 @@ export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
 
   return (
     <div className={cn(styles.tile, 'call-tile')}>
+      {/* An audio-only stream still plays through the (hidden) element; the avatar stands in. */}
       {participant.stream ? (
-        <video ref={videoRef} autoPlay playsInline />
-      ) : (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className={hasVideo ? undefined : styles.audioOnly}
+        />
+      ) : null}
+      {hasVideo ? null : (
         <div className={cn('avatar', styles.callAvatar, accentClass(participant.userId))}>
           {initials(participant.displayName)}
         </div>

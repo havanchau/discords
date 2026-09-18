@@ -15,6 +15,10 @@
   object-fit: cover;
 }
 
+.tile video.audioOnly {
+  display: none;
+}
+
 /* A self-view reads as a mirror, so the local stream is flipped. */
 .local video {
   transform: scaleX(-1);

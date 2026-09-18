@@ -2,6 +2,7 @@ enum ChannelType {
   TEXT
   VOICE
   FORUM
+  STAGE
 }
 
 model ChannelCategory {
@@ -46,6 +47,8 @@ model Channel {
   autoModAlertRules         AutoModRule[]
   forumTags                 ForumTag[]
   webhooks                  ServerWebhook[]
+  stageSpeakers             StageSpeaker[]
+  stageSpeakRequests        StageSpeakRequest[]
 
   @@unique([serverId, name])
   @@index([categoryId])
@@ -80,4 +83,29 @@ model ReadState {
 
   @@unique([userId, channelId])
   @@index([channelId, lastReadAt])
+}
+
+/// A STAGE channel's current speaker roster (not call history). Removed by the kick/ban path, since
+/// the user cascade only fires on account deletion.
+model StageSpeaker {
+  channelId String
+  userId    String
+  addedAt   DateTime @default(now())
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@index([userId])
+}
+
+/// Pending "request to speak" entries of a STAGE channel's audience.
+model StageSpeakRequest {
+  channelId   String
+  userId      String
+  requestedAt DateTime @default(now())
+  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@index([userId])
 }

@@ -144,6 +144,9 @@ async function deletePrivateAccountRows(tx: Prisma.TransactionClient, userId: st
   // Also the rows failed at request time; none can send, since the author has no claimable rows.
   await tx.scheduledMessage.deleteMany({ where: { authorId: userId } });
   await tx.exportJob.deleteMany({ where: { userId } });
+  // Stage rows cascade only on a User delete, and an anonymized user row is kept.
+  await tx.stageSpeaker.deleteMany({ where: { userId } });
+  await tx.stageSpeakRequest.deleteMany({ where: { userId } });
   // Leaves every server; MemberRole and member-scoped ChannelPermissionOverride rows cascade.
   await tx.serverMember.deleteMany({ where: { userId } });
 }

@@ -9,7 +9,7 @@ A member of a 1-1 or group DM can start a voice or video call; other members see
 Acceptance criteria:
 
 - Starting a call rings every other member on all of their connected devices.
-- Accepting joins the call through the existing WebRTC mesh; answering on one device stops ringing on the user's other devices.
+- Accepting joins the call over whichever media transport the API is configured for (`VOICE_TRANSPORT`: LiveKit SFU or the mesh rollback — see [`voice-webrtc.md`](./voice-webrtc.md)); answering on one device stops ringing on the user's other devices.
 - Declining a 1-1 call ends the ring for everyone; declining a group call only dismisses it for that user.
 - The caller can cancel; after 30 seconds without anyone joining the ring stops and recipients get a "Missed call" notification.
 - A 1-1 call cannot ring while a block exists in either direction.
@@ -18,7 +18,7 @@ Acceptance criteria:
 ## Scope
 
 - **In scope**: ring/decline/cancel socket events, DM call keys in the voice gateway, incoming call dialog, call buttons and call stage in the DM view.
-- **Out of scope**: ringtones, call history, calls on multiple API instances, TURN configuration.
+- **Out of scope**: ringtones, call history, calls on multiple API instances, TURN configuration (owned by [`voice-webrtc.md`](./voice-webrtc.md) / [`voice-sfu.md`](./voice-sfu.md), not by this doc).
 
 ## Current Behavior
 
@@ -30,7 +30,7 @@ Acceptance criteria:
 
 ### Call key
 
-A DM call uses the key `dm:<conversationId>` wherever the gateway and client currently use `channelId`. The payload field name stays `channelId` so the WebRTC relay handlers and `useChannelCall` keep one code path.
+A DM call uses the key `dm:<conversationId>` wherever the gateway and client currently use `channelId`. The payload field name stays `channelId` so the mesh's WebRTC relay handlers and `useChannelCall` keep one code path — the LiveKit path reuses this same call id as its room name (`voice.gateway.ts:85`, `livekit.service.ts:13`).
 
 - `voice:join` with a `dm:` key authorizes conversation membership (and no block for 1-1) instead of server membership.
 - `voice:active` / `voice:ended` for a `dm:` key go to `conversation:<id>`.
@@ -73,13 +73,13 @@ Rules:
 
 ## Trade-offs
 
-- **Reusing channel call plumbing with a key prefix vs. a separate DM call gateway**: the WebRTC relay, participant tracking, and client peer logic are identical, so one path avoids duplicating about 300 lines of signaling. Cost: `channelId` in payloads now means "call id"; the prefix is validated server-side so a client cannot address a channel as a DM or the reverse.
+- **Reusing channel call plumbing with a key prefix vs. a separate DM call gateway**: the call-membership tracking, media transport (LiveKit or mesh), and client call hook are identical, so one path avoids duplicating about 300 lines of signaling. Cost: `channelId` in payloads now means "call id"; the prefix is validated server-side so a client cannot address a channel as a DM or the reverse.
 - **In-memory rings**: consistent with existing in-memory call participants; a restart drops rings, which the client treats as a missed call.
-- **One active call per client**: `useChannelCall` holds one call; starting a DM call while in a channel call is disabled rather than juggling two peer meshes.
+- **One active call per client**: `useChannelCall` holds one call; starting a DM call while in a channel call is disabled rather than juggling two calls on one client.
 
 ## Risks & Rollback
 
-- **Risk**: mesh WebRTC degrades above 4–6 video participants (unchanged from channel calls).
+- **Risk**: on the mesh transport, full-mesh WebRTC still degrades above 4-6 video participants (unchanged from channel calls); on the LiveKit transport this is no longer a mesh limit but is untested here past small participant counts — see `voice-webrtc.md`'s Test Plan.
 - **Rollback**: revert code; no schema change.
 
 ## Test Plan

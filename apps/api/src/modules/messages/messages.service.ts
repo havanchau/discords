@@ -175,6 +175,10 @@ export class MessagesService {
     if (channel.type === 'FORUM') {
       throw new BadRequestException('Use forum posts on a FORUM channel');
     }
+    // A STAGE channel is audio/video only (`stage-channels.md` → Out of scope).
+    if (channel.type === 'STAGE') {
+      throw new BadRequestException('Stage channels have no text chat');
+    }
     return this.passSendGates(userId, channel);
   }
 

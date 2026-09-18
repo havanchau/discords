@@ -1,3 +1,4 @@
+import type { StageRole, VoiceTransport } from '@discord-clone/shared';
 import { Message, MessageAttachment } from './api';
 import type { Translate } from './i18n/LocaleProvider';
 
@@ -17,6 +18,7 @@ export const PERMISSION_VALUES = [
   'CREATE_INVITE',
   'CONNECT_VOICE',
   'SPEAK_VOICE',
+  'MUTE_MEMBERS',
   'UPLOAD_FILES',
 ] as const;
 
@@ -54,6 +56,10 @@ export interface CallState {
   isMuted: boolean;
   isCameraOff: boolean;
   isSharingScreen: boolean;
+  /** Known once `voice:join` is acknowledged. */
+  transport?: VoiceTransport;
+  /** Set only in a STAGE channel call. */
+  stageRole?: StageRole;
 }
 
 export function initials(value: string) {
