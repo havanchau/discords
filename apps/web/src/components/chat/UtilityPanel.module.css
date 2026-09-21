@@ -25,7 +25,7 @@
 
 .utilityPanelOpen {
   display: block;
-  animation: panelDropIn var(--motion-fast) ease-out both;
+  animation: panelDropIn var(--motion-fast) both;
 }
 
 .utilityPanel label {

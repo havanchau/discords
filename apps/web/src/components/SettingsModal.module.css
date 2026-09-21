@@ -109,8 +109,8 @@
   font-size: var(--font-size-base);
   text-align: left;
   transition:
-    background-color var(--motion-fast) ease,
-    color var(--motion-fast) ease;
+    background-color var(--motion-fast),
+    color var(--motion-fast);
 }
 
 .settingsSelectTrigger:hover {

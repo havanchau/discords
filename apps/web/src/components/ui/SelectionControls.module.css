@@ -4,9 +4,9 @@
   border: 0;
   color: var(--text-primary);
   transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    opacity var(--motion-fast) ease;
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    opacity var(--motion-fast);
 }
 
 .checkbox:focus-visible,

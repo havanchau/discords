@@ -7,7 +7,7 @@
   line-height: var(--line-height-base);
   padding: var(--space-2) var(--space-3);
   box-shadow: var(--shadow-raised);
-  animation: tooltipIn var(--motion-fast) ease;
+  animation: tooltipIn var(--motion-fast);
 }
 
 .arrow {

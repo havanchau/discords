@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   background: var(--surface-scrim);
-  animation: fadeIn var(--motion-slow) ease;
+  animation: fadeIn var(--motion-slow);
 }
 
 .content {
@@ -23,7 +23,7 @@
   background: var(--surface-base);
   box-shadow: var(--shadow-overlay);
   color: var(--text-primary);
-  animation: contentIn var(--motion-slow) ease;
+  animation: contentIn var(--motion-slow);
 }
 
 .content:focus-visible {

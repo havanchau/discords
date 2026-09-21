@@ -14,7 +14,7 @@
   height: 100vh;
   max-height: 100vh;
   border-radius: 0;
-  animation: slideIn var(--motion-slow) ease;
+  animation: slideIn var(--motion-slow);
 }
 
 .drawerBody {

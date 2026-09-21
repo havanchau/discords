@@ -33,11 +33,11 @@
 }
 
 .root[data-state='open'] {
-  animation: toastIn var(--motion-base) ease;
+  animation: toastIn var(--motion-base);
 }
 
 .root[data-state='closed'] {
-  animation: toastOut var(--motion-fast) ease;
+  animation: toastOut var(--motion-fast);
 }
 
 .copy {

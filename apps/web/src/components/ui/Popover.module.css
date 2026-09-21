@@ -6,7 +6,7 @@
   padding: var(--space-2);
   box-shadow: var(--shadow-overlay);
   border: 1px solid var(--border-default);
-  animation: popoverIn var(--motion-fast) ease;
+  animation: popoverIn var(--motion-fast);
 }
 
 .content:focus {
