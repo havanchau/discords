@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Phone, Users, Video } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Phone, Users, Video } from 'lucide-react';
 import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
 import { directCallId } from '@/hooks/useDirectCall';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -50,6 +50,7 @@ type HomeDirectMessageViewProps = {
     | 'renameGroupConversation'
     | 'addGroupMember'
     | 'removeGroupMember'
+    | 'closeDirectConversation'
   >;
   call: HomeDirectCall;
   onSendDirectMessage: HomePanelActions['sendDirectMessage'];
@@ -116,6 +117,16 @@ export function HomeDirectMessageView({
       {activeConversation && (isGroup || dmPartner) ? (
         <>
           <header className={styles.chatHeader}>
+            <Tooltip content={t('home.backToList')}>
+              <IconButton
+                label={t('home.backToList')}
+                className={styles.backButton}
+                onClick={actions.closeDirectConversation}
+                data-testid="dm-back-button"
+              >
+                <ArrowLeft size={18} aria-hidden="true" />
+              </IconButton>
+            </Tooltip>
             {isGroup || !dmPartner ? (
               <span className={styles.groupAvatar} aria-hidden="true">
                 <Users size={16} />

@@ -11,6 +11,7 @@ import {
   Radio,
   Search,
   Unlock,
+  Users,
   Video,
 } from 'lucide-react';
 import { AuthState, assetUrl, Channel } from '@/api';
@@ -64,7 +65,7 @@ export function ChatHeader({
   startCall,
 }: ChatHeaderProps) {
   const t = useTranslation();
-  const { server } = useWorkspace();
+  const { server, openMemberList } = useWorkspace();
   const canManageChannel = memberHasServerPermission(
     server,
     auth.user.id,
@@ -187,6 +188,17 @@ export function ChatHeader({
                 </span>
               ) : null}
             </span>
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip content={t('chatHeader.showMembers')}>
+          <IconButton
+            label={t('chatHeader.showMembers')}
+            className={styles.membersButton}
+            onClick={openMemberList}
+            data-testid="members-button"
+          >
+            <Users size={18} aria-hidden="true" />
           </IconButton>
         </Tooltip>
 

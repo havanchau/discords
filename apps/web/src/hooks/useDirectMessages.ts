@@ -247,6 +247,14 @@ export function useDirectMessages({
     }
   }
 
+  /** Back to the friends/DM list; only the single-pane Home layout (below desktop width) offers it. */
+  function closeDirectConversation() {
+    activeConversationIdRef.current = null;
+    setActiveConversation(null);
+    setDirectMessages([]);
+    setReplyingToDirectMessage(null);
+  }
+
   async function openDirectConversation(conversation: DirectConversation) {
     if (!auth) return;
     if (activeConversation?.id !== conversation.id) setReplyingToDirectMessage(null);
@@ -410,6 +418,7 @@ export function useDirectMessages({
     blockUser,
     unblockUser,
     openDirectConversation,
+    closeDirectConversation,
     markDirectConversationRead,
     startDirectConversation,
     sendDirectMessage,

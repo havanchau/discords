@@ -47,4 +47,5 @@ export const home = {
   'home.requests.pendingSent': 'Đã gửi, đang chờ',
   'home.requests.title': 'Lời mời',
   'home.title': 'Tin nhắn riêng',
+  'home.backToList': 'Quay lại tin nhắn riêng',
 } as const;

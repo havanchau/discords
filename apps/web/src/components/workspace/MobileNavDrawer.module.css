@@ -25,6 +25,11 @@
   overflow: hidden;
 }
 
+/* ServerRail hides itself under 720px for the normal layout (ServerRail.module.css). */
+.drawerBody :global(.server-rail) {
+  display: flex !important;
+}
+
 /*
  * ChannelSidebar hides itself under 720px for the normal layout (ChannelSidebar.module.css); inside
  * the drawer it is the point, so it is forced back to its regular flex layout.

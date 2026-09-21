@@ -1,23 +1,35 @@
+/*
+ * A wrapping flex row, not a grid: the controls are conditional (schedule is hidden in encrypted
+ * channels, the secondary buttons collapse on mobile), and a fixed column template put the input in
+ * the wrong column whenever the count changed. Banner rows take a full line.
+ */
 .composer {
   flex: none;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  display: grid;
-  grid-template-columns: auto auto auto auto minmax(0, 1fr) auto auto;
-  grid-template-rows: auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0;
   padding: 0 var(--space-4) var(--space-6);
   background: transparent;
 }
 
-.scheduledBar {
-  grid-column: 1 / -1;
+.composer > * {
+  flex: none;
+}
+
+.scheduledBar,
+.pendingAttachments,
+.composerReply,
+.commandPopover,
+.interactionStatus {
+  flex: 0 0 100%;
+  min-width: 0;
 }
 
 .pendingAttachments {
-  grid-column: 1 / -1;
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
@@ -30,7 +42,6 @@
 }
 
 .composerReply {
-  grid-column: 1 / -1;
   min-height: 32px;
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) 24px;
@@ -98,6 +109,12 @@
   display: none;
 }
 
+/* TextField wraps the input in its field shell; that shell is the flex item that takes the slack. */
+.composer > .composerField {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .composerInput {
   min-width: 0;
   height: var(--control-height-lg);
@@ -139,6 +156,7 @@
 }
 
 .voiceRecordButton,
+.segmentButton,
 .scheduleButton {
   position: relative;
   width: var(--control-height-lg);
@@ -161,6 +179,7 @@
 }
 
 .voiceRecordButton:hover,
+.segmentButton:hover,
 .scheduleButton:hover {
   color: var(--text-primary);
   background: var(--surface-hover);
@@ -238,9 +257,8 @@
 
 @media (max-width: 720px) {
   .composer {
-    /* Secondary buttons (voice, emoji, sticker, schedule) collapse into one "More" popover, so
-       the input keeps the remaining width instead of being squeezed to a handful of pixels. */
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    /* Secondary buttons (voice, emoji, sticker, schedule) collapse into one "More" popover
+       (MessageComposer.tsx), so the input keeps the remaining width. */
     padding: 0 var(--space-2) var(--space-4);
   }
 
@@ -250,7 +268,6 @@
 }
 
 .commandPopover {
-  grid-column: 1 / -1;
   max-height: 220px;
   display: grid;
   gap: var(--space-1);
@@ -325,7 +342,6 @@
 }
 
 .interactionStatus {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: var(--space-2);

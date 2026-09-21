@@ -24,6 +24,9 @@ export interface WorkspaceContextValue {
   isChannelEncrypted: (channelId: string) => boolean;
   /** Saved Messages is reachable from the server rail and from a reminder notification. */
   openSavedMessages: () => void;
+  /** Below desktop width these surfaces live in drawers (MobileNavDrawer, MemberListDrawer). */
+  openMobileNav: () => void;
+  openMemberList: () => void;
   clearWorkspaceError: () => void;
   clearWorkspaceNotice: () => void;
 }

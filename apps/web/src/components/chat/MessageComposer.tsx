@@ -101,7 +101,7 @@ export function MessageComposer({
         <PopoverTrigger asChild>
           <IconButton
             label={t('composer.insertEmoji')}
-            className={styles.attachButton}
+            className={styles.segmentButton}
             disabled={isComposerDisabled}
           >
             <SmilePlus size={18} aria-hidden="true" />
@@ -122,7 +122,7 @@ export function MessageComposer({
         <PopoverTrigger asChild>
           <IconButton
             label={t('sticker.picker.open')}
-            className={styles.attachButton}
+            className={styles.segmentButton}
             disabled={isComposerDisabled || retryAfterSeconds > 0}
           >
             <Sticker size={18} aria-hidden="true" />
@@ -271,7 +271,7 @@ export function MessageComposer({
           <PopoverTrigger asChild>
             <IconButton
               label={t('composer.moreActions')}
-              className={styles.attachButton}
+              className={styles.segmentButton}
               disabled={isComposerDisabled}
               data-testid="composer-more-button"
             >
@@ -288,6 +288,7 @@ export function MessageComposer({
 
       <TextField
         name="content"
+        fieldClassName={styles.composerField}
         className={styles.composerInput}
         data-testid="composer-input"
         value={composer.draft}

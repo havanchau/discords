@@ -24,6 +24,13 @@
   display: none;
 }
 
+/* On phones the rail lives in MobileNavDrawer, which forces it back on; the shell drops it. */
+@media (max-width: 720px) {
+  .rail {
+    display: none;
+  }
+}
+
 /* Scoped under .rail so the Button variant's hover rules cannot outrank the rail states. */
 .rail .serverButton {
   position: relative;

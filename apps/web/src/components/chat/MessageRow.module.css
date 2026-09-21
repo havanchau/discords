@@ -277,8 +277,12 @@
   cursor: pointer;
 }
 
-/* Below this width the toolbar wraps inside the message instead of overflowing off-screen. */
-@media (max-width: 720px) {
+/*
+ * When the chat column (MessageList's container) is too narrow for the full toolbar, it wraps
+ * inside the message instead of being clipped. Keyed on the column, not the viewport: the sidebars
+ * make the column narrow on tablet widths too.
+ */
+@container message-list (max-width: 560px) {
   .actions {
     top: -8px;
     right: var(--space-2);

@@ -20,11 +20,17 @@
   .shell {
     grid-template-columns: auto 240px minmax(0, 1fr);
   }
+
+  /* The Home-mode channel column hides itself (ChannelSidebar.module.css). */
+  .homeShell {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
 }
 
+/* The server rail hides itself too; the main surface takes the whole width. */
 @media (max-width: 720px) {
   .shell,
   .homeShell {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 }

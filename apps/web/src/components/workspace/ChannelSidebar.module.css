@@ -266,6 +266,16 @@
   }
 }
 
+/*
+ * On Home this column only holds the header and user panel; below desktop width HomePanel needs the
+ * space, and the user panel is reached through MobileNavDrawer (HomeSidebar's menu button).
+ */
+@media (max-width: 1100px) {
+  .homeSidebar {
+    display: none;
+  }
+}
+
 .categoryToggle {
   min-width: 0;
   display: inline-flex;

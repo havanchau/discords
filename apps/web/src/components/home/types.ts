@@ -37,6 +37,7 @@ export interface HomePanelActions {
   removeFriend: (friend: FriendEntry) => Promise<void>;
   removeFriendRequest: (request: FriendRequestEntry) => Promise<void>;
   openDirectConversation: (conversation: DirectConversation) => Promise<void>;
+  closeDirectConversation: () => void;
   startDirectConversation: (userId: string) => Promise<void>;
   sendDirectMessage: (event: FormEvent<HTMLFormElement>, files: File[]) => Promise<boolean>;
   /** `voice` is null when the browser could not decode the recording (sent as a plain audio file). */

@@ -140,7 +140,7 @@ export function ChannelSidebar({
 
   return (
     <aside
-      className={cn(styles.sidebar, 'channel-sidebar')}
+      className={cn(styles.sidebar, !server && styles.homeSidebar, 'channel-sidebar')}
       aria-label={
         server ? t('sidebar.serverChannels', { server: server.name }) : t('sidebar.directMessages')
       }

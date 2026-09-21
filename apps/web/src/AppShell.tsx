@@ -37,7 +37,6 @@ import { buildChatAndSettingsProps } from './components/app/buildChatAndSettings
 import { buildWorkspaceShellProps } from './components/app/buildWorkspaceShellProps';
 import { conversationDisplayName } from './components/home/conversationDisplay';
 import { KeyboardShortcuts } from './components/shortcuts/KeyboardShortcuts';
-import { MobileNavDrawer } from './components/workspace/MobileNavDrawer';
 
 export function AppShell() {
   const t = useTranslation();
@@ -47,6 +46,7 @@ export function AppShell() {
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [isSavedMessagesOpen, setIsSavedMessagesOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isMemberListOpen, setIsMemberListOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [activeCalls, setActiveCalls] = useState<Record<string, ActiveCallSummary>>({});
   const [channelBadges, setChannelBadges] = useState<Record<string, ChannelBadgeState>>({});
@@ -449,6 +449,8 @@ export function AppShell() {
     setActiveDialog,
     isChannelEncrypted: (channelId: string) => Boolean(channelKeys[channelId]),
     openSavedMessages: () => setIsSavedMessagesOpen(true),
+    openMobileNav: () => setIsMobileNavOpen(true),
+    openMemberList: () => setIsMemberListOpen(true),
     clearWorkspaceError: () => setWorkspaceError(null),
     clearWorkspaceNotice: () => setWorkspaceNotice(null),
   };
@@ -612,11 +614,8 @@ export function AppShell() {
         savedMessages={savedMessages}
         incomingCall={incomingCallProps}
         settings={settings}
-      />
-      <MobileNavDrawer
-        open={isMobileNavOpen}
-        onOpenChange={setIsMobileNavOpen}
-        workspace={workspace}
+        mobileNav={{ open: isMobileNavOpen, onOpenChange: setIsMobileNavOpen }}
+        memberList={{ open: isMemberListOpen, onOpenChange: setIsMemberListOpen }}
       />
     </WorkspaceProvider>
   );

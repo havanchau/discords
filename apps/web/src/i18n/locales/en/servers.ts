@@ -90,6 +90,7 @@ export const servers = {
   'members.groupCount': '{label} - {count}',
   'members.groupOffline': 'Offline',
   'members.groupOnline': 'Online',
+  'members.drawerTitle': 'Members',
   'members.manageRoles': 'Manage Roles',
   'members.message': 'Message',
   'members.noServer': 'No server selected.',

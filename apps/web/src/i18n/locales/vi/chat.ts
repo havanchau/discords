@@ -32,6 +32,7 @@ export const chat = {
   'chatHeader.mediaFilesLinks': 'Ảnh, tệp và liên kết',
   'chatHeader.moreActions': 'Thêm hành động cho kênh',
   'chatHeader.openMenu': 'Mở menu điều hướng',
+  'chatHeader.showMembers': 'Hiện danh sách thành viên',
   'chatHeader.notifications': 'Thông báo',
   'chatHeader.notificationsUnread': 'Thông báo, {count} chưa đọc',
   'chatHeader.search': 'Tìm kiếm',

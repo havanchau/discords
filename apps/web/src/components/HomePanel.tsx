@@ -2,10 +2,16 @@ import { HomeDirectMessageView } from './home/HomeDirectMessageView';
 import { HomeSidebar } from './home/HomeSidebar';
 import type { HomePanelProps } from './home/types';
 import styles from './home/HomePanel.module.css';
+import { cn } from '@/utils/cn';
 
 export function HomePanel({ home, actions, call }: HomePanelProps) {
   return (
-    <section className={styles.panel}>
+    <section
+      className={cn(
+        styles.panel,
+        home.activeConversation ? styles.showConversation : styles.showList,
+      )}
+    >
       <HomeSidebar
         viewerId={home.auth.user.id}
         friendsSummary={home.friendsSummary}

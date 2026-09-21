@@ -1,4 +1,4 @@
-import { DialogContent, DialogRoot, TooltipProvider } from '@/components/ui';
+import { DialogContent, DialogRoot } from '@/components/ui';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { WorkspaceSidebar } from '@/components/WorkspaceSidebar';
 import type { WorkspaceSidebarProps } from './types';
@@ -46,11 +46,7 @@ export function MobileNavDrawer({ open, onOpenChange, workspace }: MobileNavDraw
         className={styles.drawer}
         bodyClassName={styles.drawerBody}
       >
-        {/* ServerRail's icon buttons render a Tooltip; this drawer is portalled outside the main
-            <TooltipProvider> in AuthenticatedWorkspace, so it needs its own. */}
-        <TooltipProvider>
-          <WorkspaceSidebar {...workspace} actions={actions} />
-        </TooltipProvider>
+        <WorkspaceSidebar {...workspace} actions={actions} />
       </DialogContent>
     </DialogRoot>
   );

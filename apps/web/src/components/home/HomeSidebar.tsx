@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { UserPlus } from 'lucide-react';
+import { Menu, UserPlus } from 'lucide-react';
 import type { DirectConversation, FriendEntry, FriendRequestEntry, FriendsSummary } from '@/api';
 import { useTranslation } from '@/i18n/LocaleProvider';
-import { Button, TextField } from '@/components/ui';
+import { Button, IconButton, TextField, Tooltip } from '@/components/ui';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { BlockedUsersList } from './BlockedUsersList';
 import { CreateGroupDialog } from './CreateGroupDialog';
 import { ConversationList } from './ConversationList';
@@ -48,10 +49,21 @@ export function HomeSidebar({
 }: HomeSidebarProps) {
   const t = useTranslation();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const { openMobileNav } = useWorkspace();
 
   return (
     <aside className={styles.sidebar} aria-label={t('home.nav.label')}>
       <header className={styles.sidebarHeader}>
+        <Tooltip content={t('chatHeader.openMenu')}>
+          <IconButton
+            label={t('chatHeader.openMenu')}
+            className={styles.menuButton}
+            onClick={openMobileNav}
+            data-testid="home-nav-button"
+          >
+            <Menu size={18} aria-hidden="true" />
+          </IconButton>
+        </Tooltip>
         <strong className={styles.sidebarTitle}>{t('home.title')}</strong>
         <span className={styles.sidebarKicker}>{t('home.kicker')}</span>
       </header>

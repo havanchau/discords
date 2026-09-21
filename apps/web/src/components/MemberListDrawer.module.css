@@ -1,0 +1,43 @@
+/*
+ * A right-anchored, full-height drawer on the shared Dialog primitive; like MobileNavDrawer it
+ * overrides position/size only, so focus trapping, Esc and the overlay stay shared behavior.
+ */
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  top: 0;
+  left: auto;
+  right: 0;
+  transform: none;
+  width: min(280px, 85vw);
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  animation: slideIn var(--motion-slow) ease;
+}
+
+.drawerBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* MemberSidebar hides itself under 1100px in the shell (MemberSidebar.module.css); here it is the point. */
+.drawerBody :global(.member-sidebar) {
+  display: block !important;
+  flex: 1;
+  border-left: 0;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

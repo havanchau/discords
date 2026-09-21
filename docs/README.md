@@ -27,6 +27,7 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/voice-webrtc.md`                   | Voice channel occupancy and WebRTC peer-to-peer signaling.                                       |
 | `features/media-uploads.md`                  | Attachment uploads, chunked media assembly, and storage drivers.                                 |
 | `features/ui-identity-redesign.md`           | Neutral visual identity and the global-CSS to CSS Modules migration.                             |
+| `features/responsive-layout-pass.md`         | Tablet and phone layout fixes: mobile drawer, composer, message toolbar, Home master/detail.     |
 | `features/ui-consistency-pass.md`            | Token-only colours, uniform control heights, and the type scale across the web UI.               |
 | `features/performance-optimization.md`       | Batched permission/unread queries, web bundle size, and message list re-renders.                 |
 | `features/ddos-protection.md`                | Application-layer protection against request, connection, and slow-client floods.                |

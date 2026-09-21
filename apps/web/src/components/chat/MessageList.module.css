@@ -10,6 +10,8 @@
   overflow-x: hidden;
   padding: 0;
   background: transparent;
+  /* MessageRow's action toolbar adapts to this column's width (MessageRow.module.css). */
+  container: message-list / inline-size;
 }
 
 .channelIntro {

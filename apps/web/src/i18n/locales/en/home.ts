@@ -47,4 +47,5 @@ export const home = {
   'home.requests.pendingSent': 'Pending sent',
   'home.requests.title': 'Requests',
   'home.title': 'Direct Messages',
+  'home.backToList': 'Back to direct messages',
 } as const;

@@ -1,5 +1,6 @@
 .panel {
-  grid-column: 3 / -1;
+  /* Always the shell's last column, however many columns the breakpoint leaves. */
+  grid-column: -2 / -1;
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -338,15 +339,47 @@
   font-size: var(--font-size-base);
 }
 
-@media (max-width: 720px) {
+/* Menu (opens MobileNavDrawer) and back-to-list controls exist only in the single-pane layout. */
+.menuButton,
+.backButton {
+  display: none;
+  flex: none;
+}
+
+/*
+ * Below desktop width the list and the conversation do not fit side by side, so Home shows one
+ * pane: the list until a conversation is open, then the conversation with a back button.
+ */
+@media (max-width: 1100px) {
   .panel {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .sidebar {
+  .showConversation .sidebar,
+  .showList .chat {
     display: none;
   }
 
+  .sidebarHeader {
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-2);
+    align-items: center;
+  }
+
+  .menuButton {
+    display: inline-flex;
+  }
+
+  .sidebarKicker {
+    grid-column: 2;
+  }
+
+  .backButton {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
   .statePanel {
     min-height: 160px;
     font-size: var(--font-size-base);

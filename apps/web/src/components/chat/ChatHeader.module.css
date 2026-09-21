@@ -30,6 +30,17 @@
   }
 }
 
+/* Opens the member list drawer; above this width MemberSidebar is a column of the shell. */
+.membersButton {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .membersButton {
+    display: inline-flex;
+  }
+}
+
 .channelAvatarButton {
   width: var(--control-min-size);
   height: var(--control-min-size);

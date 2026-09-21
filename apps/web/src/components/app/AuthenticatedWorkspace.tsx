@@ -2,11 +2,13 @@ import { BotAuthorizeDialog } from '@/components/bots/BotAuthorizeDialog';
 import { ChatPanel, type ChatPanelProps } from '@/components/ChatPanel';
 import { HomePanel } from '@/components/HomePanel';
 import { IncomingCallDialog } from '@/components/home/IncomingCallDialog';
+import { MemberListDrawer } from '@/components/MemberListDrawer';
 import { MemberSidebar, type MemberSidebarProps } from '@/components/MemberSidebar';
 import { RulesGate } from '@/components/onboarding/RulesGate';
 import { SavedMessagesPanel } from '@/components/saved/SavedMessagesPanel';
 import { SettingsModal } from '@/components/SettingsModal';
 import { WorkspaceSidebar, type WorkspaceSidebarProps } from '@/components/WorkspaceSidebar';
+import { MobileNavDrawer } from '@/components/workspace/MobileNavDrawer';
 import { TooltipProvider } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import styles from './AppLayout.module.css';
@@ -32,6 +34,8 @@ interface AuthenticatedWorkspaceProps {
   incomingCall: ComponentProps<typeof IncomingCallDialog>;
   serverEmojis: ServerEmoji[];
   savedMessages: ComponentProps<typeof SavedMessagesPanel>;
+  mobileNav: Pick<ComponentProps<typeof MobileNavDrawer>, 'open' | 'onOpenChange'>;
+  memberList: Pick<ComponentProps<typeof MemberListDrawer>, 'open' | 'onOpenChange'>;
 }
 
 export function AuthenticatedWorkspace({
@@ -48,6 +52,8 @@ export function AuthenticatedWorkspace({
   incomingCall,
   serverEmojis,
   savedMessages,
+  mobileNav,
+  memberList,
 }: AuthenticatedWorkspaceProps) {
   return (
     <AuthProvider auth={auth}>
@@ -65,6 +71,7 @@ export function AuthenticatedWorkspace({
                       <ChatPanel {...chat} />
                     )}
                     <MemberSidebar {...members} />
+                    <MemberListDrawer {...memberList} members={members} />
                   </>
                 ) : (
                   <HomePanel {...home} />
@@ -73,6 +80,8 @@ export function AuthenticatedWorkspace({
                 <IncomingCallDialog {...incomingCall} />
                 <SavedMessagesPanel {...savedMessages} />
                 <BotAuthorizeDialog />
+                {/* Inside the providers: the channel sidebar it renders reads auth/socket context. */}
+                <MobileNavDrawer {...mobileNav} workspace={workspace} />
               </main>
             </TooltipProvider>
           </ServerEmojiProvider>

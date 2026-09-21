@@ -90,6 +90,7 @@ export const servers = {
   'members.groupCount': '{label} - {count}',
   'members.groupOffline': 'Ngoại tuyến',
   'members.groupOnline': 'Trực tuyến',
+  'members.drawerTitle': 'Thành viên',
   'members.manageRoles': 'Quản lý vai trò',
   'members.message': 'Nhắn tin',
   'members.noServer': 'Chưa chọn server nào.',

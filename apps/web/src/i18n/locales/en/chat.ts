@@ -32,6 +32,7 @@ export const chat = {
   'chatHeader.mediaFilesLinks': 'Media, files, and links',
   'chatHeader.moreActions': 'More channel actions',
   'chatHeader.openMenu': 'Open navigation menu',
+  'chatHeader.showMembers': 'Show member list',
   'chatHeader.notifications': 'Notifications',
   'chatHeader.notificationsUnread': 'Notifications, {count} unread',
   'chatHeader.search': 'Search',

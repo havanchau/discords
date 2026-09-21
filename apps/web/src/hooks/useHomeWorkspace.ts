@@ -68,6 +68,7 @@ export function useHomeWorkspace({
           removeFriend: directMessages.removeFriend,
           removeFriendRequest: directMessages.removeFriendRequest,
           openDirectConversation: directMessages.openDirectConversation,
+          closeDirectConversation: directMessages.closeDirectConversation,
           startDirectConversation: directMessages.startDirectConversation,
           sendDirectMessage: directMessages.sendDirectMessage,
           sendDirectVoiceMessage: directMessages.sendDirectVoiceMessage,
