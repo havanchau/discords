@@ -1,4 +1,4 @@
-import { Phone, PhoneOff, Video } from 'lucide-react';
+import { MonitorUp, Phone, PhoneOff, Video } from 'lucide-react';
 import { assetUrl } from '@/api';
 import { accentClass, initials } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -21,12 +21,19 @@ export function IncomingCallDialog({
 }: IncomingCallDialogProps) {
   const t = useTranslation();
   const caller = incomingCall?.caller;
-  const isVideo = incomingCall?.mode === 'video';
+  const mode = incomingCall?.mode;
+  const title =
+    mode === 'screen'
+      ? t('call.incomingScreenShare')
+      : mode === 'video'
+        ? t('call.incomingVideo')
+        : t('call.incomingVoice');
+  const AcceptIcon = mode === 'screen' ? MonitorUp : mode === 'video' ? Video : Phone;
 
   return (
     <DialogRoot open={Boolean(incomingCall)} onOpenChange={(open) => !open && onDecline()}>
       <DialogContent
-        title={isVideo ? t('call.incomingVideo') : t('call.incomingVoice')}
+        title={title}
         description={
           caller && conversationLabel && conversationLabel !== caller.displayName
             ? t('call.callingConversation', {
@@ -55,11 +62,7 @@ export function IncomingCallDialog({
                 onClick={() => void onAccept()}
                 data-testid="accept-call-button"
               >
-                {isVideo ? (
-                  <Video size={16} aria-hidden="true" />
-                ) : (
-                  <Phone size={16} aria-hidden="true" />
-                )}
+                <AcceptIcon size={16} aria-hidden="true" />
                 {t('call.accept')}
               </Button>
             </div>

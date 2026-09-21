@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { PushSubscription } from '@prisma/client';
 import { I18nService } from '@/common/i18n/i18n.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { isMuteActive } from '@/modules/users/notification-mute';
 import { createVapidJwt, encryptWebPushPayload } from './web-push-crypto';
 
 const PUSH_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -174,10 +175,18 @@ export class PushService {
       (item) => item.serverId === serverId && !item.channelId,
     );
     const channelPreference = preferences.find((item) => item.channelId === channelId);
-    const effectivePreference = channelPreference ?? serverPreference ?? globalPreference;
 
     if (globalPreference && !globalPreference.desktopEnabled) return false;
-    if (effectivePreference?.muted) return false;
+    // Each level is checked on its own: an unmuted or expired channel row must not mask an active
+    // server or global mute (docs/features/timed-notification-mute.md, Rules item 6).
+    const now = new Date();
+    if (
+      isMuteActive(channelPreference, now) ||
+      isMuteActive(serverPreference, now) ||
+      isMuteActive(globalPreference, now)
+    ) {
+      return false;
+    }
     return true;
   }
 

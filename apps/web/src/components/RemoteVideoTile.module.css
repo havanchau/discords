@@ -15,6 +15,11 @@
   object-fit: cover;
 }
 
+/* A shared screen is scaled to fit so its text is not cropped; the tile background letterboxes it. */
+.screenShare video {
+  object-fit: contain;
+}
+
 .tile video.audioOnly {
   display: none;
 }

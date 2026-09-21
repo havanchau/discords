@@ -129,7 +129,7 @@ export function CallStage({ session, call, contextLabel }: CallStageProps) {
             <div
               className={cn(
                 styles.callTile,
-                !state.isSharingScreen && styles.callTileMirrorPreview,
+                state.isSharingScreen ? styles.callTileScreenShare : styles.callTileMirrorPreview,
               )}
             >
               {state.mode !== 'voice' && !state.isCameraOff ? (

@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MessageReportStatus, Prisma } from '@prisma/client';
-import type { MessageReportView } from '@discord-clone/shared';
+import { MessageReportStatus, MessageReportTargetType, Prisma } from '@prisma/client';
+import type { MessageHistoryResult, MessageReportView } from '@discord-clone/shared';
 import { RedisFixedWindowLimiter } from '@/common/redis-fixed-window-limiter';
+import { listMessageRevisions } from '@/modules/messages/message-revisions';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -205,6 +206,37 @@ export class ReportsService {
         )
       : true;
     return { report: toView(report, canView) };
+  }
+
+  /**
+   * Past versions of the reported message, so a moderator sees what it said before any edit made
+   * after the report. Tied to a filed report: a moderator cannot browse a member's history without
+   * one. Redacted like `list()` when the moderator cannot view the message's channel.
+   */
+  async getMessageHistory(
+    userId: string,
+    serverId: string,
+    reportId: string,
+  ): Promise<MessageHistoryResult> {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageMessages);
+    const report = await this.prisma.messageReport.findFirst({
+      where: { id: reportId, serverId },
+      select: {
+        targetType: true,
+        message: { select: { id: true, channelId: true, deletedAt: true } },
+      },
+    });
+    if (!report) throw new NotFoundException('Report not found');
+    const { message } = report;
+    if (report.targetType !== MessageReportTargetType.MESSAGE || !message || message.deletedAt) {
+      throw new NotFoundException('Message not found');
+    }
+    const canView = await this.permissions.hasChannelPermission(
+      userId,
+      message.channelId,
+      Permission.ViewChannel,
+    );
+    return { revisions: await listMessageRevisions(this.prisma, message.id, canView) };
   }
 
   /**

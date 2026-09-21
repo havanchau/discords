@@ -36,6 +36,7 @@ export const viApiMessages = {
   CANNOT_TRANSFER_OWNERSHIP_TO_A_BOT_OR_WEBHOOK:
     'Không thể chuyển quyền sở hữu cho bot hoặc webhook',
   CANNOT_UPDATE_THIS_REQUEST: 'Không thể cập nhật yêu cầu này',
+  CANNOT_WRITE_A_NOTE_ABOUT_YOURSELF: 'Không thể viết ghi chú về chính bạn',
   CATEGORY_NAME_CANNOT_BE_EMPTY: 'Tên danh mục không được để trống',
   CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục',
   CHANNEL_IS_NOT_A_FORUM_CHANNEL: 'Kênh này không phải kênh diễn đàn',
@@ -113,6 +114,7 @@ export const viApiMessages = {
   MISSING_BEARER_TOKEN: 'Thiếu bearer token',
   MISSING_BOT_TOKEN: 'Thiếu bot token',
   MISSING_TOKEN: 'Thiếu token',
+  MUTE_DURATION_REQUIRES_MUTED_TO_BE_TRUE: 'Chỉ có thể đặt thời lượng khi đang tắt thông báo',
   NOT_A_CHANNEL_MEMBER: 'Bạn không phải thành viên của kênh này',
   NOT_A_CONVERSATION_MEMBER: 'Bạn không phải thành viên của cuộc trò chuyện này',
   NOTIFICATION_NOT_FOUND: 'Không tìm thấy thông báo',
@@ -123,6 +125,8 @@ export const viApiMessages = {
   ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS: 'Chỉ cuộc trò chuyện nhóm mới có thể xoá thành viên',
   ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE: 'Chỉ tác giả mới xoá được tin nhắn này',
   ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE: 'Chỉ tác giả mới sửa được tin nhắn này',
+  ONLY_THE_AUTHOR_CAN_VIEW_THIS_MESSAGE_HISTORY:
+    'Chỉ tác giả mới xem được lịch sử chỉnh sửa của tin nhắn này',
   ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE:
     'Chỉ tác giả hoặc người quản lý tin nhắn mới xoá được tin nhắn này',
   ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE:

@@ -71,10 +71,25 @@ model Message {
   pin                          MessagePin?
   poll                         Poll?
   reports                      MessageReport[]
+  revisions                    MessageRevision[]
 
   @@index([channelId, createdAt])
   @@index([channelId, authorId, createdAt])
   @@index([threadId, createdAt])
+}
+
+// The content an edit replaced, one row per edit; the live text stays on Message.content. Capped per
+// message by the service (MESSAGE_REVISION_LIMIT) and removed when the message is deleted.
+model MessageRevision {
+  id        String   @id @default(cuid())
+  messageId String
+  content   String
+  /// The edit's timestamp, the same value written to Message.editedAt by that edit.
+  editedAt  DateTime
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, createdAt])
 }
 
 model Thread {

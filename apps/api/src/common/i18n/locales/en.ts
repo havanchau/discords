@@ -35,6 +35,7 @@ export const enApiMessages = {
   CANNOT_TIME_OUT_YOURSELF: 'Cannot time out yourself',
   CANNOT_TRANSFER_OWNERSHIP_TO_A_BOT_OR_WEBHOOK: 'Cannot transfer ownership to a bot or webhook',
   CANNOT_UPDATE_THIS_REQUEST: 'Cannot update this request',
+  CANNOT_WRITE_A_NOTE_ABOUT_YOURSELF: 'Cannot write a note about yourself',
   CATEGORY_NAME_CANNOT_BE_EMPTY: 'Category name cannot be empty',
   CATEGORY_NOT_FOUND: 'Category not found',
   CHANNEL_IS_NOT_A_FORUM_CHANNEL: 'Channel is not a forum channel',
@@ -112,6 +113,7 @@ export const enApiMessages = {
   MISSING_BEARER_TOKEN: 'Missing bearer token',
   MISSING_BOT_TOKEN: 'Missing bot token',
   MISSING_TOKEN: 'Missing token',
+  MUTE_DURATION_REQUIRES_MUTED_TO_BE_TRUE: 'A mute duration can only be set while muting',
   NOT_A_CHANNEL_MEMBER: 'Not a channel member',
   NOT_A_CONVERSATION_MEMBER: 'Not a conversation member',
   NOTIFICATION_NOT_FOUND: 'Notification not found',
@@ -122,6 +124,7 @@ export const enApiMessages = {
   ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS: 'Only group conversations can remove members',
   ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE: 'Only the author can delete this message',
   ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE: 'Only the author can edit this message',
+  ONLY_THE_AUTHOR_CAN_VIEW_THIS_MESSAGE_HISTORY: 'Only the author can view this message history',
   ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE:
     'Only the author or message manager can delete this message',
   ONLY_THE_AUTHOR_OR_MESSAGE_MANAGERS_CAN_PIN_THIS_MESSAGE:

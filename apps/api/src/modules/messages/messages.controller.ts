@@ -110,6 +110,11 @@ export class MessagesController {
     return this.messages.updateMessage(user.id, messageId, dto);
   }
 
+  @Get('messages/:messageId/history')
+  history(@CurrentUser() user: RequestUser, @Param('messageId') messageId: string) {
+    return this.messages.getMessageHistory(user.id, messageId);
+  }
+
   @Delete('messages/:messageId')
   remove(@CurrentUser() user: RequestUser, @Param('messageId') messageId: string) {
     return this.messages.deleteMessage(user.id, messageId);

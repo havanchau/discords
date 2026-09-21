@@ -17,7 +17,9 @@ export function RemoteVideoTile({ participant }: { participant: RemoteMedia }) {
   }, [participant.stream]);
 
   return (
-    <div className={cn(styles.tile, 'call-tile')}>
+    <div
+      className={cn(styles.tile, participant.isSharingScreen && styles.screenShare, 'call-tile')}
+    >
       {/* An audio-only stream still plays through the (hidden) element; the avatar stands in. */}
       {participant.stream ? (
         <video

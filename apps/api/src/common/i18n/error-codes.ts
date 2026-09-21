@@ -35,6 +35,7 @@ export const ERROR_MESSAGE_CODES = {
   'Cannot time out yourself': 'CANNOT_TIME_OUT_YOURSELF',
   'Cannot transfer ownership to a bot or webhook': 'CANNOT_TRANSFER_OWNERSHIP_TO_A_BOT_OR_WEBHOOK',
   'Cannot update this request': 'CANNOT_UPDATE_THIS_REQUEST',
+  'Cannot write a note about yourself': 'CANNOT_WRITE_A_NOTE_ABOUT_YOURSELF',
   'Category name cannot be empty': 'CATEGORY_NAME_CANNOT_BE_EMPTY',
   'Category not found': 'CATEGORY_NOT_FOUND',
   'Channel is not a forum channel': 'CHANNEL_IS_NOT_A_FORUM_CHANNEL',
@@ -112,6 +113,7 @@ export const ERROR_MESSAGE_CODES = {
   'Missing bearer token': 'MISSING_BEARER_TOKEN',
   'Missing bot token': 'MISSING_BOT_TOKEN',
   'Missing token': 'MISSING_TOKEN',
+  'Mute duration requires muted to be true': 'MUTE_DURATION_REQUIRES_MUTED_TO_BE_TRUE',
   'Not a channel member': 'NOT_A_CHANNEL_MEMBER',
   'Not a conversation member': 'NOT_A_CONVERSATION_MEMBER',
   'Not found': 'NOT_FOUND',
@@ -122,6 +124,7 @@ export const ERROR_MESSAGE_CODES = {
   'Only group conversations can remove members': 'ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS',
   'Only the author can delete this message': 'ONLY_THE_AUTHOR_CAN_DELETE_THIS_MESSAGE',
   'Only the author can edit this message': 'ONLY_THE_AUTHOR_CAN_EDIT_THIS_MESSAGE',
+  'Only the author can view this message history': 'ONLY_THE_AUTHOR_CAN_VIEW_THIS_MESSAGE_HISTORY',
   'Only the author or message manager can delete this message':
     'ONLY_THE_AUTHOR_OR_MESSAGE_MANAGER_CAN_DELETE_THIS_MESSAGE',
   'Only the author or message managers can pin this message':

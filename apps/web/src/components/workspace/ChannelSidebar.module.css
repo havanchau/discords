@@ -123,6 +123,11 @@
   background: var(--surface-hover);
 }
 
+/* Cosmetic only: push suppression is decided by the API, unread badges are unaffected. */
+.channelRowMuted {
+  color: var(--text-disabled);
+}
+
 .channelRowActive {
   color: var(--text-primary);
   background: var(--surface-selected);

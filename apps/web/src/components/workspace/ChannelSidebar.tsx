@@ -36,7 +36,9 @@ import {
 import { useCollapsedCategories } from '@/hooks/useCollapsedCategories';
 import { groupChannelsByCategory } from '@/utils/channelCategories';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
+import { findChannelPreference, isMuteActive } from '@/utils/notificationMute';
 import { CategorySection, ChannelGroup, ChannelRow } from './ChannelList';
+import { NotificationMuteMenu } from './NotificationMuteMenu';
 import styles from './ChannelSidebar.module.css';
 import type { ChannelCreateType, WorkspaceSidebarProps } from './types';
 
@@ -70,6 +72,7 @@ export function ChannelSidebar({
     pendingAction,
     activeCalls,
     channelBadges,
+    notificationPreferences,
   } = workspace;
   const {
     openHome,
@@ -79,6 +82,7 @@ export function ChannelSidebar({
     selectChannel,
     setChannelQuery,
     setActiveDialog,
+    updateNotificationPreference,
   } = actions;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPlatformReportsOpen, setIsPlatformReportsOpen] = useState(false);
@@ -96,6 +100,20 @@ export function ChannelSidebar({
   );
 
   function renderChannel(item: Channel) {
+    const mutePreference = findChannelPreference(notificationPreferences, item.id);
+    const muteProps = {
+      isMuted: isMuteActive(mutePreference),
+      contextMenu: (
+        <NotificationMuteMenu
+          preference={mutePreference}
+          disabled={pendingAction === 'notification-preference'}
+          onMute={(muteDuration) =>
+            void updateNotificationPreference({ channelId: item.id, muted: true, muteDuration })
+          }
+          onUnmute={() => void updateNotificationPreference({ channelId: item.id, muted: false })}
+        />
+      ),
+    };
     if (item.type === 'VOICE') {
       return (
         <div className={styles.voiceBlock} key={item.id}>
@@ -103,6 +121,7 @@ export function ChannelSidebar({
             channel={item}
             icon={<Volume2 size={16} aria-hidden="true" />}
             activeCall={activeCalls[item.id]}
+            {...muteProps}
           />
           {activeCalls[item.id]?.participants.length ? (
             <div className={styles.voiceOccupants}>
@@ -134,6 +153,7 @@ export function ChannelSidebar({
         badge={channelBadges[item.id]}
         activeCall={activeCalls[item.id]}
         onClick={() => selectChannel(item)}
+        {...muteProps}
       />
     );
   }

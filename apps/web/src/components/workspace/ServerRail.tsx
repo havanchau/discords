@@ -1,9 +1,22 @@
 import { Bookmark, Compass, MessageSquare, Plus } from 'lucide-react';
-import type { ServerDetail, ServerSummary } from '@/api';
+import type {
+  NotificationPreference,
+  ServerDetail,
+  ServerSummary,
+  UpdateNotificationPreferenceInput,
+} from '@/api';
 import { initials } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
-import { Button, Tooltip } from '@/components/ui';
+import {
+  Button,
+  ContextMenuContent,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  Tooltip,
+} from '@/components/ui';
+import { findServerPreference, isMuteActive } from '@/utils/notificationMute';
+import { NotificationMuteMenu } from './NotificationMuteMenu';
 import styles from './ServerRail.module.css';
 
 interface ServerRailProps {
@@ -14,6 +27,9 @@ interface ServerRailProps {
   onAddServer: () => void;
   onOpenDiscovery: () => void;
   onOpenSavedMessages: () => void;
+  notificationPreferences: NotificationPreference[];
+  isUpdatingNotifications: boolean;
+  updateNotificationPreference: (preference: UpdateNotificationPreferenceInput) => Promise<void>;
 }
 
 export function ServerRail({
@@ -24,6 +40,9 @@ export function ServerRail({
   onAddServer,
   onOpenDiscovery,
   onOpenSavedMessages,
+  notificationPreferences,
+  isUpdatingNotifications,
+  updateNotificationPreference,
 }: ServerRailProps) {
   const t = useTranslation();
 
@@ -56,20 +75,47 @@ export function ServerRail({
 
       <div className={styles.railDivider} />
 
-      {servers.map((item) => (
-        <Tooltip key={item.id} content={item.name} side="right">
-          <Button
-            type="button"
-            variant="ghost"
-            className={cn(styles.serverButton, server?.id === item.id && styles.serverButtonActive)}
-            aria-label={item.name}
-            aria-current={server?.id === item.id ? 'page' : undefined}
-            onClick={() => void openServer(item.id)}
-          >
-            {initials(item.name)}
-          </Button>
-        </Tooltip>
-      ))}
+      {servers.map((item) => {
+        const preference = findServerPreference(notificationPreferences, item.id);
+        return (
+          <ContextMenuRoot key={item.id}>
+            <Tooltip content={item.name} side="right">
+              <ContextMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    styles.serverButton,
+                    isMuteActive(preference) && styles.serverButtonMuted,
+                    server?.id === item.id && styles.serverButtonActive,
+                  )}
+                  aria-label={item.name}
+                  aria-current={server?.id === item.id ? 'page' : undefined}
+                  onClick={() => void openServer(item.id)}
+                >
+                  {initials(item.name)}
+                </Button>
+              </ContextMenuTrigger>
+            </Tooltip>
+            <ContextMenuContent>
+              <NotificationMuteMenu
+                preference={preference}
+                disabled={isUpdatingNotifications}
+                onMute={(muteDuration) =>
+                  void updateNotificationPreference({
+                    serverId: item.id,
+                    muted: true,
+                    muteDuration,
+                  })
+                }
+                onUnmute={() =>
+                  void updateNotificationPreference({ serverId: item.id, muted: false })
+                }
+              />
+            </ContextMenuContent>
+          </ContextMenuRoot>
+        );
+      })}
 
       <div className={styles.bottomActions}>
         <Tooltip content={t('serverRail.addServer')} side="right">

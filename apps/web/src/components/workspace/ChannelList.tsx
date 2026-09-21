@@ -3,7 +3,13 @@ import type { ReactNode } from 'react';
 import type { Channel } from '@/api';
 import type { ActiveCallSummary } from '@/helpers';
 import { cn } from '@/utils/cn';
-import { Button, IconButton } from '@/components/ui';
+import {
+  Button,
+  ContextMenuContent,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  IconButton,
+} from '@/components/ui';
 import styles from './ChannelSidebar.module.css';
 import type { ChannelBadgeState } from './types';
 
@@ -88,22 +94,36 @@ interface ChannelRowProps {
   active?: boolean;
   badge?: ChannelBadgeState;
   activeCall?: ActiveCallSummary;
+  /** Dims the row; cosmetic only, unread badges still show. */
+  isMuted?: boolean;
+  /** Right-click menu entries for this row, e.g. `NotificationMuteMenu`. */
+  contextMenu?: ReactNode;
   onClick?: () => void;
 }
 
-export function ChannelRow({ channel, icon, active, badge, activeCall, onClick }: ChannelRowProps) {
+export function ChannelRow({
+  channel,
+  icon,
+  active,
+  badge,
+  activeCall,
+  isMuted,
+  contextMenu,
+  onClick,
+}: ChannelRowProps) {
   const callLabel = activeCall
     ? activeCall.mode === 'screen'
       ? 'Live'
       : String(activeCall.participants.length || 'Call')
     : null;
 
-  return (
+  const row = (
     <Button
       type="button"
       variant="ghost"
       className={cn(
         styles.channelRow,
+        isMuted && styles.channelRowMuted,
         active && styles.channelRowActive,
         !onClick && styles.channelRowStatic,
       )}
@@ -119,5 +139,13 @@ export function ChannelRow({ channel, icon, active, badge, activeCall, onClick }
         <span className={styles.unreadDot} aria-label={`${badge.count} unread messages`} />
       ) : null}
     </Button>
+  );
+
+  if (!contextMenu) return row;
+  return (
+    <ContextMenuRoot>
+      <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+      <ContextMenuContent>{contextMenu}</ContextMenuContent>
+    </ContextMenuRoot>
   );
 }

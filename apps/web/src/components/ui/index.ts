@@ -12,8 +12,12 @@ export { TextArea, TextField, type TextAreaProps, type TextFieldProps } from './
 export {
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuLabel,
   ContextMenuRoot,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from './ContextMenu';
 export {

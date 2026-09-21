@@ -1,5 +1,12 @@
 import type { ChangeEvent, FormEvent, RefObject } from 'react';
-import type { AuthState, Channel, ServerDetail, ServerSummary } from '@/api';
+import type {
+  AuthState,
+  Channel,
+  NotificationPreference,
+  ServerDetail,
+  ServerSummary,
+  UpdateNotificationPreferenceInput,
+} from '@/api';
 import type { ActiveCallSummary } from '@/helpers';
 import type { ServerEventsState } from '@/hooks/useServerEvents';
 import type { ActiveDialog } from '@/components/ChatPanel';
@@ -22,6 +29,7 @@ export interface WorkspaceSidebarState {
   pendingAction: string | null;
   activeCalls: Record<string, ActiveCallSummary>;
   channelBadges: Record<string, ChannelBadgeState>;
+  notificationPreferences: NotificationPreference[];
 }
 
 export interface WorkspaceSidebarActions {
@@ -42,6 +50,7 @@ export interface WorkspaceSidebarActions {
   selectChannel: (channel: Channel) => void;
   setChannelQuery: (query: string) => void;
   setActiveDialog: (dialog: ActiveDialog) => void;
+  updateNotificationPreference: (preference: UpdateNotificationPreferenceInput) => Promise<void>;
 }
 
 export interface WorkspaceSidebarProps {

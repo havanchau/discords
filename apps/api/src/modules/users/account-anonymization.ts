@@ -140,6 +140,8 @@ async function deletePrivateAccountRows(tx: Prisma.TransactionClient, userId: st
     where: { OR: [{ requesterId: userId }, { receiverId: userId }] },
   });
   await tx.userBlock.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
+  // Notes about this account too: the identity they described no longer exists.
+  await tx.userNote.deleteMany({ where: { OR: [{ authorId: userId }, { targetId: userId }] } });
   await tx.savedMessage.deleteMany({ where: { ownerId: userId } });
   // Also the rows failed at request time; none can send, since the author has no claimable rows.
   await tx.scheduledMessage.deleteMany({ where: { authorId: userId } });
@@ -147,6 +149,9 @@ async function deletePrivateAccountRows(tx: Prisma.TransactionClient, userId: st
   // Stage rows cascade only on a User delete, and an anonymized user row is kept.
   await tx.stageSpeaker.deleteMany({ where: { userId } });
   await tx.stageSpeakRequest.deleteMany({ where: { userId } });
+  // Only the author or a moderator on a filed report ever reads a revision, so the edit history is
+  // private to the account; the live Message.content stays (docs/features/message-edit-history.md).
+  await tx.messageRevision.deleteMany({ where: { message: { authorId: userId } } });
   // Leaves every server; MemberRole and member-scoped ChannelPermissionOverride rows cascade.
   await tx.serverMember.deleteMany({ where: { userId } });
 }

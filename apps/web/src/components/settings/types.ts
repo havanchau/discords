@@ -10,6 +10,7 @@ import type {
   ServerBanEntry,
   ServerDetail,
   ServerEmoji,
+  UpdateNotificationPreferenceInput,
 } from '@/api';
 import type { ActiveDialog } from '@/components/ChatPanel';
 
@@ -54,12 +55,7 @@ export interface SettingsModalFields {
   updateServerProfileAvatar: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   createInviteFromSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   revokeInvite: (inviteId: string) => Promise<void>;
-  updateNotificationPreference: (
-    preference: Partial<NotificationPreference> & {
-      serverId?: string | null;
-      channelId?: string | null;
-    },
-  ) => Promise<void>;
+  updateNotificationPreference: (preference: UpdateNotificationPreferenceInput) => Promise<void>;
   updateServerSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   updateChannelSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   toggleChannelRoleOverride: (

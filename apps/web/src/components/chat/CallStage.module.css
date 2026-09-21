@@ -131,6 +131,11 @@
   object-fit: cover;
 }
 
+/* A shared screen is scaled to fit so its text is not cropped; the tile background letterboxes it. */
+.callTileScreenShare video {
+  object-fit: contain;
+}
+
 .callTileMirrorPreview video {
   transform: scaleX(-1);
 }

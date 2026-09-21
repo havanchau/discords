@@ -74,6 +74,11 @@
   height: 20px;
 }
 
+/* Cosmetic only: push suppression is decided by the API, unread badges are unaffected. */
+.rail .serverButtonMuted {
+  color: var(--text-disabled);
+}
+
 .rail .serverButtonActive,
 .rail .serverButtonActive:hover {
   border-color: transparent;

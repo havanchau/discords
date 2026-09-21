@@ -1,7 +1,9 @@
-import type { Locale } from '@discord-clone/shared';
-import { assetUrl } from '@/api';
+import { muteDurations, type Locale } from '@discord-clone/shared';
+import { assetUrl, type MuteDuration } from '@/api';
 import { accentClass, initials } from '@/helpers';
 import { useLocale, type MessageKey, type Translate } from '@/i18n/LocaleProvider';
+import { useDateFormat } from '@/i18n/useDateFormat';
+import { isMuteActive, MUTE_DURATION_LABEL_KEYS } from '@/utils/notificationMute';
 import { Button, TextArea, TextField } from '@/components/ui';
 import { SettingsSelect } from './SettingsSelect';
 import { SwitchRow } from './SettingsRows';
@@ -43,6 +45,25 @@ const EXPIRY_OPTIONS: { value: string; labelKey: MessageKey }[] = [
   { value: 'today', labelKey: 'profile.expiry.today' },
 ];
 
+/** `current` stands for the stored expiry, which matches no preset once time has passed. */
+type MuteDurationChoice = MuteDuration | 'current';
+
+function muteDurationOptions(
+  t: Translate,
+  mutedUntil: string | null,
+  formatDate: (value: string) => string,
+): SettingsSelectOption<MuteDurationChoice>[] {
+  const presets = muteDurations.map((duration) => ({
+    value: duration,
+    label: t(MUTE_DURATION_LABEL_KEYS[duration]),
+  }));
+  if (!mutedUntil) return presets;
+  return [
+    { value: 'current', label: t('mute.mutedUntil', { time: formatDate(mutedUntil) }) },
+    ...presets,
+  ];
+}
+
 type ProfileSettingsProps = Pick<
   SettingsModalFields,
   | 'auth'
@@ -72,9 +93,11 @@ export function ProfileSettings({
   updateProfileBanner,
 }: ProfileSettingsProps) {
   const { locale, t } = useLocale();
+  const { absolute } = useDateFormat();
   const globalNotificationPreference = notificationPreferences.find(
     (preference) => !preference.serverId && !preference.channelId,
   );
+  const isGlobalMuted = isMuteActive(globalNotificationPreference);
 
   return (
     <form className={styles.settingsForm} onSubmit={(event) => void updateProfile(event)}>
@@ -243,18 +266,40 @@ export function ProfileSettings({
         <SwitchRow
           title={t('profile.notifications.mute')}
           description={t('profile.notifications.muteHint')}
-          checked={Boolean(globalNotificationPreference?.muted)}
+          checked={isGlobalMuted}
           disabled={pendingAction === 'notification-preference'}
           onCheckedChange={(checked) =>
             void updateNotificationPreference({
               serverId: null,
               channelId: null,
               muted: checked,
-              mentionOnly: Boolean(globalNotificationPreference?.mentionOnly),
-              desktopEnabled: Boolean(globalNotificationPreference?.desktopEnabled),
             })
           }
         />
+        {isGlobalMuted ? (
+          <SettingsSelect<MuteDurationChoice>
+            // Remount on every stored change so the trigger shows the persisted expiry, not the
+            // last local pick.
+            key={globalNotificationPreference?.mutedUntil ?? 'forever'}
+            name="globalMuteDuration"
+            label={t('profile.notifications.muteDuration')}
+            defaultValue={globalNotificationPreference?.mutedUntil ? 'current' : 'forever'}
+            options={muteDurationOptions(
+              t,
+              globalNotificationPreference?.mutedUntil ?? null,
+              absolute,
+            )}
+            onValueChange={(value) => {
+              if (value === 'current') return;
+              void updateNotificationPreference({
+                serverId: null,
+                channelId: null,
+                muted: true,
+                muteDuration: value,
+              });
+            }}
+          />
+        ) : null}
         <SwitchRow
           title={t('profile.notifications.mentionsOnly')}
           description={t('profile.notifications.mentionsOnlyHint')}
@@ -264,9 +309,7 @@ export function ProfileSettings({
             void updateNotificationPreference({
               serverId: null,
               channelId: null,
-              muted: Boolean(globalNotificationPreference?.muted),
               mentionOnly: checked,
-              desktopEnabled: Boolean(globalNotificationPreference?.desktopEnabled),
             })
           }
         />
@@ -279,8 +322,6 @@ export function ProfileSettings({
             void updateNotificationPreference({
               serverId: null,
               channelId: null,
-              muted: Boolean(globalNotificationPreference?.muted),
-              mentionOnly: Boolean(globalNotificationPreference?.mentionOnly),
               desktopEnabled: checked,
             })
           }

@@ -93,6 +93,8 @@ model User {
   serverEventInterests      ServerEventInterest[]
   blocksCreated             UserBlock[]                 @relation("UserBlocker")
   blocksReceived            UserBlock[]                 @relation("UserBlocked")
+  notesWritten              UserNote[]                 @relation("UserNoteAuthor")
+  notesReceived             UserNote[]                 @relation("UserNoteTarget")
   createdPolls              Poll[]
   pollVotes                 PollVote[]
   savedMessages             SavedMessage[]
@@ -140,6 +142,21 @@ model UserBlock {
 
   @@id([blockerId, blockedId])
   @@index([blockedId])
+}
+
+/// A private note one user keeps about another, readable only by its author (docs/features/user-notes.md).
+model UserNote {
+  id        String   @id @default(cuid())
+  authorId  String
+  targetId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation("UserNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  target    User     @relation("UserNoteTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, targetId])
+  @@index([targetId])
 }
 
 enum ExportJobStatus {

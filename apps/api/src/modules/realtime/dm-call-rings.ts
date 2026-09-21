@@ -1,6 +1,6 @@
 import { RedisService } from '@/modules/redis/redis.service';
 
-export type DmCallMode = 'voice' | 'video';
+export type DmCallMode = 'voice' | 'video' | 'screen';
 
 export interface DmCallRing {
   conversationId: string;

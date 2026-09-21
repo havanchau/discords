@@ -84,6 +84,7 @@ export const moderation = {
   'report.submit': 'Send report',
   'report.title': 'Report message',
   'reports.action.dismiss': 'Dismiss',
+  'reports.action.editHistory': 'View edit history',
   'reports.action.resolve': 'Resolve',
   'reports.dismissedBy': 'Dismissed {date} by {actor}',
   'reports.empty.DISMISSED': 'No dismissed reports.',

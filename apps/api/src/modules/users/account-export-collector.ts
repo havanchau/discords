@@ -1,3 +1,4 @@
+import { MESSAGE_REVISION_LIMIT } from '@discord-clone/shared';
 import type { PrismaService } from '@/modules/prisma/prisma.service';
 import { ACCOUNT_EXPORT_LIST_LIMIT, ACCOUNT_EXPORT_MESSAGE_LIMIT } from './account-deletion.rules';
 
@@ -81,6 +82,12 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
         channel: { select: { name: true, server: { select: { name: true } } } },
         threadRoot: { select: { title: true } },
         attachments: { select: attachmentSelect },
+        // The owner's own earlier wording; already capped per message at MESSAGE_REVISION_LIMIT.
+        revisions: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: MESSAGE_REVISION_LIMIT,
+          select: { content: true, editedAt: true },
+        },
       },
     }),
     prisma.directMessage.findMany({
@@ -100,7 +107,7 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
     }),
   ]);
 
-  const [friendRequests, blocks, savedMessages, scheduledMessages] = await Promise.all([
+  const [friendRequests, blocks, userNotes, savedMessages, scheduledMessages] = await Promise.all([
     prisma.friendRequest.findMany({
       where: { OR: [{ requesterId: userId }, { receiverId: userId }] },
       take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
@@ -117,6 +124,17 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
       where: { blockerId: userId },
       take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
       select: { createdAt: true, blocked: { select: publicUserSelect } },
+    }),
+    // Notes the owner wrote; notes other people wrote about the owner are theirs, not the owner's.
+    prisma.userNote.findMany({
+      where: { authorId: userId },
+      take: ACCOUNT_EXPORT_LIST_LIMIT + 1,
+      select: {
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        target: { select: publicUserSelect },
+      },
     }),
     prisma.savedMessage.findMany({
       where: { ownerId: userId },
@@ -189,6 +207,7 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
         serverId: true,
         channelId: true,
         muted: true,
+        mutedUntil: true,
         mentionOnly: true,
         desktopEnabled: true,
       },
@@ -320,6 +339,10 @@ export async function collectAccountExport(prisma: PrismaService, userId: string
     ),
     blockedUsers: bounded(
       blocks.map((block) => ({ user: block.blocked, blockedAt: block.createdAt })),
+      ACCOUNT_EXPORT_LIST_LIMIT,
+    ),
+    userNotes: bounded(
+      userNotes.map(({ target, ...note }) => ({ user: target, ...note })),
       ACCOUNT_EXPORT_LIST_LIMIT,
     ),
     // The bookmark is the owner's; the snapshot text is included only when the owner wrote it.

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, MessageSquare, Phone, Users, Video } from 'lucide-react';
+import { ArrowLeft, MessageSquare, MonitorUp, Phone, Users, Video } from 'lucide-react';
 import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
-import { directCallId } from '@/hooks/useDirectCall';
+import { directCallId, type DirectCallMode } from '@/hooks/useDirectCall';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
+import { canShareScreen } from '@/utils/mediaCapabilities';
 import { CallStage } from '@/components/chat/CallStage';
 import {
   Button,
@@ -55,6 +56,11 @@ type HomeDirectMessageViewProps = {
   call: HomeDirectCall;
   onSendDirectMessage: HomePanelActions['sendDirectMessage'];
 };
+
+// Screen share is offered only where the browser can capture a screen; read once per session.
+const DM_CALL_MODES: readonly DirectCallMode[] = canShareScreen()
+  ? ['voice', 'video', 'screen']
+  : ['voice', 'video'];
 
 export function HomeDirectMessageView({
   auth,
@@ -161,12 +167,14 @@ export function HomeDirectMessageView({
               </span>
             </span>
             <span className={styles.headerActions}>
-              {(['voice', 'video'] as const).map((mode) => {
+              {DM_CALL_MODES.map((mode) => {
                 const label =
-                  mode === 'voice'
-                    ? t('chatHeader.startVoiceCall')
-                    : t('chatHeader.startVideoCall');
-                const Icon = mode === 'voice' ? Phone : Video;
+                  mode === 'screen'
+                    ? t('chatHeader.shareScreen')
+                    : mode === 'video'
+                      ? t('chatHeader.startVideoCall')
+                      : t('chatHeader.startVoiceCall');
+                const Icon = mode === 'screen' ? MonitorUp : mode === 'video' ? Video : Phone;
                 return (
                   <Tooltip key={mode} content={label}>
                     <IconButton

@@ -4,6 +4,8 @@ model NotificationPreference {
   serverId       String?
   channelId      String?
   muted          Boolean  @default(false)
+  // Null with `muted` set = muted indefinitely; a past value = expired, read as unmuted.
+  mutedUntil     DateTime?
   mentionOnly    Boolean  @default(false)
   desktopEnabled Boolean  @default(false)
   createdAt      DateTime @default(now())

@@ -16,11 +16,16 @@ export const queryKeys = {
     ['user-profile', userId, serverId] as const,
   /** Prefix for every server context of one user's profile, for invalidating them together. */
   userProfilesOf: (userId: string) => ['user-profile', userId] as const,
+  /** The viewer's own note; keyed by viewer too, so a different account never sees a cached one. */
+  userNote: (viewerId: string, userId: string) => ['user-note', viewerId, userId] as const,
   serverBans: (serverId: string) => ['server-bans', serverId] as const,
   messageReports: (serverId: string, status: string) =>
     ['message-reports', serverId, status] as const,
   /** Prefix for every status tab of one server's queue, for invalidating them together. */
   messageReportsOf: (serverId: string) => ['message-reports', serverId] as const,
+  messageHistory: (messageId: string) => ['message-history', messageId] as const,
+  reportMessageHistory: (serverId: string, reportId: string) =>
+    ['report-message-history', serverId, reportId] as const,
   auditLogs: (serverId: string) => ['audit-logs', serverId] as const,
   autoModRules: (serverId: string) => ['automod-rules', serverId] as const,
   serverOnboarding: (serverId: string) => ['server-onboarding', serverId] as const,

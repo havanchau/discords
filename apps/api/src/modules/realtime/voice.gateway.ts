@@ -126,7 +126,7 @@ export class VoiceGateway {
     await this.rateLimit.assert(client, 'dm:call:ring', 10, 60_000);
     const user = requireHumanSocketUser(client);
     try {
-      if (body.mode !== 'voice' && body.mode !== 'video') {
+      if (body.mode !== 'voice' && body.mode !== 'video' && body.mode !== 'screen') {
         throw new UnauthorizedException('Invalid call mode');
       }
       return await this.dmCalls.ring(user.id, body.conversationId, body.mode);

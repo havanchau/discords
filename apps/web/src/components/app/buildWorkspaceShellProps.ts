@@ -29,7 +29,11 @@ interface BuildWorkspaceShellPropsOptions {
   channelBadges: Record<string, ChannelBadgeState>;
   settingsActions: Pick<
     ReturnType<typeof useSettingsActions>,
-    'profileAvatarInputRef' | 'updateProfileAvatar' | 'createInviteFromSettings'
+    | 'profileAvatarInputRef'
+    | 'updateProfileAvatar'
+    | 'createInviteFromSettings'
+    | 'notificationPreferences'
+    | 'updateNotificationPreference'
   >;
   serverEvents: ServerEventsState;
   openHome: () => void;
@@ -138,6 +142,7 @@ export function buildWorkspaceShellProps({
         pendingAction,
         activeCalls,
         channelBadges,
+        notificationPreferences: settingsActions.notificationPreferences,
       },
       profileAvatarInputRef: settingsActions.profileAvatarInputRef,
       serverEvents,
@@ -158,6 +163,7 @@ export function buildWorkspaceShellProps({
         selectChannel,
         setChannelQuery,
         setActiveDialog,
+        updateNotificationPreference: settingsActions.updateNotificationPreference,
       },
     },
     members: {

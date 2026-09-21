@@ -2,7 +2,7 @@
 
 Lets a user write a private note about another user, visible only to its author, edited inline from that user's profile card.
 
-- **Status**: draft — awaiting review
+- **Status**: implemented 2026-09-21; see Deviations From The Original Design
 - **Date**: 2026-09-18
 - **Related**: `docs/features/user-profile.md`, `docs/features/ui-identity-redesign.md`, `docs/features/account-deletion-and-export.md`, `docs/features/user-blocking.md`
 
@@ -59,16 +59,16 @@ Today the profile card (`apps/web/src/components/profile/ProfileCard.tsx`) shows
 
 ### Edge cases
 
-| Case | Expected behavior |
-|---|---|
-| Empty / whitespace-only content on `PUT` | Deletes the row if one exists; `200 { note: null }`. |
-| `id === callerId` | `400` — cannot note yourself. |
-| Target the caller cannot view (blocked either direction, no shared server/DM) | `404` on both `GET` and `PUT`, matching `getProfile`. |
-| A note written before a block, then the two get blocked | Row is **not** deleted by blocking; `GET`/`PUT` return `404` while the block stands (hidden, not lost) because `canViewProfile` gates both — same as any other profile data during a block. If unblocked later, the note reappears unchanged. |
-| Duplicate `PUT` with the same content | Idempotent — `updatedAt` bumps, `content` unchanged. |
-| Content over 300 chars | `400` validation error. |
-| Unauthorized (no `Authorization` header) | `401`, the existing `JwtAuthGuard` on the controller. |
-| Target user is later anonymized (account deletion) | The note the caller wrote **about** that target is deleted along with every note **authored by** the deleted account, in the same anonymization transaction (Rules item 7 below) — a stale note about "Deleted User" would be confusing and the identity it referred to no longer exists. |
+| Case                                                                          | Expected behavior                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Empty / whitespace-only content on `PUT`                                      | Deletes the row if one exists; `200 { note: null }`.                                                                                                                                                                                                                                      |
+| `id === callerId`                                                             | `400` — cannot note yourself.                                                                                                                                                                                                                                                             |
+| Target the caller cannot view (blocked either direction, no shared server/DM) | `404` on both `GET` and `PUT`, matching `getProfile`.                                                                                                                                                                                                                                     |
+| A note written before a block, then the two get blocked                       | Row is **not** deleted by blocking; `GET`/`PUT` return `404` while the block stands (hidden, not lost) because `canViewProfile` gates both — same as any other profile data during a block. If unblocked later, the note reappears unchanged.                                             |
+| Duplicate `PUT` with the same content                                         | Idempotent — `updatedAt` bumps, `content` unchanged.                                                                                                                                                                                                                                      |
+| Content over 300 chars                                                        | `400` validation error.                                                                                                                                                                                                                                                                   |
+| Unauthorized (no `Authorization` header)                                      | `401`, the existing `JwtAuthGuard` on the controller.                                                                                                                                                                                                                                     |
+| Target user is later anonymized (account deletion)                            | The note the caller wrote **about** that target is deleted along with every note **authored by** the deleted account, in the same anonymization transaction (Rules item 7 below) — a stale note about "Deleted User" would be confusing and the identity it referred to no longer exists. |
 
 7. `deletePrivateAccountRows` (`account-anonymization.ts:123-152`) gains one more line, mirroring how it already deletes `UserBlock` in both directions (`:142`): `await tx.userNote.deleteMany({ where: { OR: [{ authorId: userId }, { targetId: userId }] } })`. This is a deliberate choice, not the only one — see Trade-offs.
 
@@ -76,22 +76,22 @@ Today the profile card (`apps/web/src/components/profile/ProfileCard.tsx`) shows
 
 **Files touched**
 
-| File | Change |
-|---|---|
-| `apps/api/prisma/models/users.prisma` | Add `UserNote` model + two relations on `User` (`notesWritten`, `notesReceived`). |
-| `apps/api/prisma/migrations/<timestamp>_add_user_notes/migration.sql` | New hand-written migration. |
-| `apps/api/src/modules/users/dto/upsert-user-note.dto.ts` (new) | `{ content: string }`, `@IsString() @MaxLength(300)`. |
-| `apps/api/src/modules/users/users.service.ts` | `getNote`, `upsertNote` methods, reusing `canViewProfile`. |
-| `apps/api/src/modules/users/users.controller.ts` | `GET`/`PUT /users/:userId/note`. |
-| `apps/api/src/modules/users/account-anonymization.ts` | One `userNote.deleteMany` line in `deletePrivateAccountRows` (Rules item 7). |
-| `apps/api/src/modules/users/account-export-collector.ts` | Include notes the owner authored (their own words), same pattern as `savedMessages`/`blockedUsers`; never notes about the owner. |
-| `packages/shared/src/api-contract.ts` | `UserNote { targetId: string; content: string; updatedAt: Date }`. |
-| `apps/web/src/api.ts` | `getUserNote`/`putUserNote` calls. |
-| `apps/web/src/query/queryKeys.ts` | `userNote(userId)` key. |
-| `apps/web/src/hooks/useUserNote.ts` (new) | React Query read + mutation, mirrors `useUserProfile.ts`'s shape. |
-| `apps/web/src/components/profile/ProfileCard.tsx` | Textarea + autosave-on-blur, shown when `!isSelf`. |
-| `apps/web/src/components/profile/ProfileCard.module.css` | Note field styling. |
-| `apps/web/src/i18n/locales/en/profile.ts`, `locales/vi/profile.ts` | `profileCard.note.*` keys (label, placeholder, saved indicator). |
+| File                                                                     | Change                                                                                                                           |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/models/users.prisma`                                    | Add `UserNote` model + two relations on `User` (`notesWritten`, `notesReceived`).                                                |
+| `apps/api/prisma/migrations/20260921003000_add_user_notes/migration.sql` | New hand-written migration.                                                                                                      |
+| `apps/api/src/modules/users/dto/upsert-user-note.dto.ts` (new)           | `{ content: string }`, `@IsString() @MaxLength(300)`.                                                                            |
+| `apps/api/src/modules/users/users.service.ts`                            | `getNote`, `upsertNote` methods, reusing `canViewProfile`.                                                                       |
+| `apps/api/src/modules/users/users.controller.ts`                         | `GET`/`PUT /users/:userId/note`.                                                                                                 |
+| `apps/api/src/modules/users/account-anonymization.ts`                    | One `userNote.deleteMany` line in `deletePrivateAccountRows` (Rules item 7).                                                     |
+| `apps/api/src/modules/users/account-export-collector.ts`                 | Include notes the owner authored (their own words), same pattern as `savedMessages`/`blockedUsers`; never notes about the owner. |
+| `packages/shared/src/api-contract.ts`                                    | `UserNote { targetId: string; content: string; updatedAt: Date }` and `UserNoteResult { note: UserNote \| null }`.               |
+| `apps/web/src/api.ts`                                                    | `UserNote` JSON type alias (the hook calls `apiRequest` directly — see Deviations).                                              |
+| `apps/web/src/query/queryKeys.ts`                                        | `userNote(viewerId, userId)` key.                                                                                                |
+| `apps/web/src/hooks/useUserNote.ts` (new)                                | React Query read + mutation, mirrors `useUserProfile.ts`'s shape.                                                                |
+| `apps/web/src/components/profile/ProfileCard.tsx`                        | Textarea + autosave-on-blur, shown when `!isSelf`.                                                                               |
+| `apps/web/src/components/profile/ProfileCard.module.css`                 | Note field styling.                                                                                                              |
+| `apps/web/src/i18n/locales/en/profile.ts`, `locales/vi/profile.ts`       | `profileCard.note.*` keys (label, placeholder, saved indicator).                                                                 |
 
 **API contract**
 
@@ -108,20 +108,20 @@ Today the profile card (`apps/web/src/components/profile/ProfileCard.tsx`) shows
 
 - New table `UserNote`: `id` (cuid PK), `authorId`, `targetId`, `content` (`TEXT`), `createdAt`, `updatedAt`. `@@unique([authorId, targetId])`, `@@index([targetId])` (for the anonymization cleanup's `targetId` half of the `OR`; `authorId` is already the unique index's leading column so it needs no separate index).
 - Both `authorId` and `targetId` are `User` FKs with `onDelete: Cascade` — for schema/seed consistency with every other per-user row in the repo (e.g. `SavedMessage.owner`, `apps/api/prisma/models/messages.prisma`-adjacent patterns), even though the anonymization flow never actually deletes a `User` row and relies on the explicit `deletePrivateAccountRows` line above instead (same "belt and suspenders" as `UserBlock`, which is Cascade on both sides and still explicitly deleted in `deletePrivateAccountRows:142`).
-- Migration file: `apps/api/prisma/migrations/<timestamp>_add_user_notes/migration.sql`, hand-written: `CREATE TABLE`, the unique/index, two `ADD CONSTRAINT ... FOREIGN KEY ... ON DELETE CASCADE ON UPDATE CASCADE`, following the exact shape of `20260918007000_add_stage_channels/migration.sql`. New table, no lock concern on existing tables.
+- Migration file: `apps/api/prisma/migrations/20260921003000_add_user_notes/migration.sql`, hand-written: `CREATE TABLE`, the unique/index, two `ADD CONSTRAINT ... FOREIGN KEY ... ON DELETE CASCADE ON UPDATE CASCADE`, following the exact shape of `20260918007000_add_stage_channels/migration.sql`. New table, no lock concern on existing tables.
 
 **Libraries** — none new; reuses `class-validator`'s `@MaxLength` (already used across the repo's DTOs) and the existing `ContextMenu`-free inline-field pattern already in `ProfileCard.tsx`.
 
 ## Trade-offs
 
-| Option | Pros | Cons | Verdict |
-|---|---|---|---|
-| **A (chosen): dedicated `GET`/`PUT /users/:id/note`, separate from `getProfile`** | Keeps `UserProfile`'s existing contract untouched (used by other callers, e.g. export, that must never see a note); a note is fetched only when the card actually needs it. | One extra request per profile-card open (when the caller is not viewing their own profile). | Chosen — `UserProfile` is a shared, viewer-agnostic type; folding a viewer-private field into it would make every consumer of `getProfile` reason about "whose eyes is this response for." |
-| B: embed `note` inside the `getProfile` response | One request instead of two. | `UserProfile` would need to become "sometimes has private data" depending on whether `viewerId === requester`, which nothing in the type system enforces today, and the client would fetch note content even for profiles it never edits (e.g. read-only contexts if any appear later). | Rejected — correctness risk not worth saving one request. |
-| **C (chosen): empty content deletes, no separate `DELETE`** | One less endpoint; "clear the note" and "never wrote one" collapse to the same state, matching the DB (no empty-string rows). | A client cannot distinguish "explicitly cleared" from "never written" after the fact — acceptable, since nothing needs that distinction. | Chosen — smallest surface. |
-| D: explicit `DELETE /users/:id/note` alongside `PUT` | Mirrors REST convention exactly. | Two ways to reach the same state (`PUT` with empty content, or `DELETE`) for no behavioral gain. | Rejected — redundant. |
-| **E (chosen): delete notes about a deleted user during anonymization (Rules item 7)** | Consistent with how the repo already treats a block row (`UserBlock` deleted in both directions on account deletion) — the identity a note refers to is gone, so keeping a note about "Deleted User" is dead weight, not a memory worth preserving. | The author loses a note they wrote, with no export of it first (their own account export at that time would have included it if taken earlier; there's no export-on-cascade-delete). | Chosen — matches the existing `UserBlock` precedent exactly; the alternative (F) was ruled out for the reason below. |
-| F: keep notes about a deleted user (re-target them at the anonymized placeholder identity) | Author keeps their note text. | The note would reference "Deleted User" going forward with no way to recall who it was about — actively worse than deleting it, and no other per-user-pair table in the repo does this. | Rejected. |
+| Option                                                                                     | Pros                                                                                                                                                                                                                                                | Cons                                                                                                                                                                                                                                                                                    | Verdict                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A (chosen): dedicated `GET`/`PUT /users/:id/note`, separate from `getProfile`**          | Keeps `UserProfile`'s existing contract untouched (used by other callers, e.g. export, that must never see a note); a note is fetched only when the card actually needs it.                                                                         | One extra request per profile-card open (when the caller is not viewing their own profile).                                                                                                                                                                                             | Chosen — `UserProfile` is a shared, viewer-agnostic type; folding a viewer-private field into it would make every consumer of `getProfile` reason about "whose eyes is this response for." |
+| B: embed `note` inside the `getProfile` response                                           | One request instead of two.                                                                                                                                                                                                                         | `UserProfile` would need to become "sometimes has private data" depending on whether `viewerId === requester`, which nothing in the type system enforces today, and the client would fetch note content even for profiles it never edits (e.g. read-only contexts if any appear later). | Rejected — correctness risk not worth saving one request.                                                                                                                                  |
+| **C (chosen): empty content deletes, no separate `DELETE`**                                | One less endpoint; "clear the note" and "never wrote one" collapse to the same state, matching the DB (no empty-string rows).                                                                                                                       | A client cannot distinguish "explicitly cleared" from "never written" after the fact — acceptable, since nothing needs that distinction.                                                                                                                                                | Chosen — smallest surface.                                                                                                                                                                 |
+| D: explicit `DELETE /users/:id/note` alongside `PUT`                                       | Mirrors REST convention exactly.                                                                                                                                                                                                                    | Two ways to reach the same state (`PUT` with empty content, or `DELETE`) for no behavioral gain.                                                                                                                                                                                        | Rejected — redundant.                                                                                                                                                                      |
+| **E (chosen): delete notes about a deleted user during anonymization (Rules item 7)**      | Consistent with how the repo already treats a block row (`UserBlock` deleted in both directions on account deletion) — the identity a note refers to is gone, so keeping a note about "Deleted User" is dead weight, not a memory worth preserving. | The author loses a note they wrote, with no export of it first (their own account export at that time would have included it if taken earlier; there's no export-on-cascade-delete).                                                                                                    | Chosen — matches the existing `UserBlock` precedent exactly; the alternative (F) was ruled out for the reason below.                                                                       |
+| F: keep notes about a deleted user (re-target them at the anonymized placeholder identity) | Author keeps their note text.                                                                                                                                                                                                                       | The note would reference "Deleted User" going forward with no way to recall who it was about — actively worse than deleting it, and no other per-user-pair table in the repo does this.                                                                                                 | Rejected.                                                                                                                                                                                  |
 
 What the chosen option costs: one extra network round trip when opening a profile card for someone other than the caller (Option A); a small, additive migration; two extra lines in the well-tested `deletePrivateAccountRows` sequence.
 
@@ -149,8 +149,39 @@ Not covered by automated tests (repo has no test suite by policy).
 ## Deployment notes
 
 - New env vars: none.
-- Migration `<timestamp>_add_user_notes` must run before deploying the API (new table only, no lock concern).
+- Migration `20260921003000_add_user_notes` must run before deploying the API (new table only, no lock concern).
 - Shared package (`packages/shared`) must be rebuilt before the API/web build, per the repo's monorepo build order.
 - No cache/queue to clear.
 - No breaking API change — both endpoints are new.
 - Add the new i18n strings to `en/profile.ts` and `vi/profile.ts` and run `npm run i18n:check` (`package.json:23`) before merging the web change.
+
+## Deviations From The Original Design
+
+Written back after implementing, so the doc matches the code:
+
+- **No `getUserNote`/`putUserNote` functions in `apps/web/src/api.ts`.** `api.ts` holds no
+  per-endpoint call functions; every hook calls `apiRequest` directly (e.g.
+  `apps/web/src/hooks/useUserProfile.ts:26`, `useSavedMessages.ts`). `useUserNote.ts` does the same,
+  and `api.ts` only gains the `UserNote` JSON type alias next to `UserProfile`.
+- **The query key includes the viewer: `userNote(viewerId, userId)`**, not `userNote(userId)`. A
+  note is private to its author, so a key without the viewer could serve one account's cached note
+  to another account signed in later in the same tab (`docs/code-style.md`, "Keys … include every
+  parameter that changes the result").
+- **Shared contract also exports `UserNoteResult { note: UserNote | null }`**, the response envelope
+  of both endpoints, so the API service and the web hook share one declaration.
+- **The self check applies to `GET` as well as `PUT`.** `requireNotableUser`
+  (`apps/api/src/modules/users/users.service.ts:214-221`) runs before both, so `GET /users/<self>/note`
+  is also a `400` — consistent with "no self-note UI or API path" in Scope. The message is
+  `Cannot write a note about yourself`, added to `apps/api/src/common/i18n/error-codes.ts:38` and both
+  API locale catalogs.
+- **The 300-character limit is checked on the raw body**, by `@MaxLength(300)` on the DTO, before the
+  service trims it. A body that is only over 300 characters because of surrounding whitespace is
+  therefore a `400`; the web textarea caps input at 300 characters, so the UI cannot send one.
+- **Export shape**: the export gains a `userNotes` list
+  (`apps/api/src/modules/users/account-export-collector.ts:336-339`) of
+  `{ user: { username, displayName }, content, createdAt, updatedAt }`, bounded like `blockedUsers`.
+- **i18n keys**: `profileCard.note.{label, placeholder, hint, loading, saving, saved, loadFailed,
+saveFailed}` in `en/profile.ts` and `vi/profile.ts`. The hint ("Only you can see this note.")
+  is shown under the field until a save succeeds, then replaced by the saved indicator.
+- **Save failure keeps the draft**: a failed `PUT` shows the error under the field and leaves the
+  typed text in place; the next blur retries (`apps/web/src/components/profile/ProfileCard.tsx:180-191`).

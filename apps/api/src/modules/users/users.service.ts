@@ -1,11 +1,25 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import type { NotificationPreference, User, UserProfile } from '@discord-clone/shared';
+import type {
+  NotificationPreference,
+  User,
+  UserNoteResult,
+  UserProfile,
+} from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { UploadsService } from '@/modules/uploads/uploads.service';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { UpsertUserNoteDto } from './dto/upsert-user-note.dto';
+import {
+  NOTIFICATION_PREFERENCE_SELECT,
+  resolveMutedUntil,
+  toNotificationPreferenceView,
+} from './notification-mute';
 import { PROFILE_USER_SELECT, toProfileView, type CustomStatusView } from './user-profile';
+
+const USER_NOTE_SELECT = { targetId: true, content: true, updatedAt: true } as const;
 
 @Injectable()
 export class UsersService {
@@ -13,6 +27,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
     private readonly uploads: UploadsService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   async getMe(userId: string): Promise<{ user: User }> {
@@ -166,6 +181,52 @@ export class UsersService {
     };
   }
 
+  /**
+   * The caller's own note about `targetId`. Looked up by `(authorId: callerId)`, so no path returns
+   * a note someone else wrote. Gated like `getProfile`, so a hidden user's note is a 404 as well.
+   */
+  async getNote(callerId: string, targetId: string): Promise<UserNoteResult> {
+    await this.requireNotableUser(callerId, targetId);
+    const note = await this.prisma.userNote.findUnique({
+      where: { authorId_targetId: { authorId: callerId, targetId } },
+      select: USER_NOTE_SELECT,
+    });
+    return { note };
+  }
+
+  /** Saves the caller's note about `targetId`; content that trims to empty deletes it instead. */
+  async upsertNote(
+    callerId: string,
+    targetId: string,
+    dto: UpsertUserNoteDto,
+  ): Promise<UserNoteResult> {
+    await this.requireNotableUser(callerId, targetId);
+    const content = dto.content.trim();
+
+    if (!content) {
+      // deleteMany so clearing a note that was never written is a no-op rather than a 404.
+      await this.prisma.userNote.deleteMany({ where: { authorId: callerId, targetId } });
+      return { note: null };
+    }
+
+    const note = await this.prisma.userNote.upsert({
+      where: { authorId_targetId: { authorId: callerId, targetId } },
+      create: { authorId: callerId, targetId, content },
+      update: { content },
+      select: USER_NOTE_SELECT,
+    });
+    return { note };
+  }
+
+  private async requireNotableUser(callerId: string, targetId: string) {
+    if (callerId === targetId) {
+      throw new BadRequestException('Cannot write a note about yourself');
+    }
+    if (!(await this.canViewProfile(callerId, targetId))) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
   private async canViewProfile(viewerId: string, targetId: string) {
     if (viewerId === targetId) return true;
 
@@ -202,35 +263,81 @@ export class UsersService {
     const preferences = await this.prisma.notificationPreference.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
+      select: NOTIFICATION_PREFERENCE_SELECT,
     });
-    return { preferences };
+    return { preferences: preferences.map(toNotificationPreferenceView) };
   }
 
-  async updateNotificationPreference(userId: string, dto: UpdateNotificationPreferenceDto) {
+  /**
+   * Partial merge: a field missing from the body keeps the stored value
+   * (docs/features/timed-notification-mute.md, Rules item 4). A scoped row needs the caller to be in
+   * that server / able to view that channel; otherwise 404, so existence is not leaked.
+   */
+  async updateNotificationPreference(
+    userId: string,
+    dto: UpdateNotificationPreferenceDto,
+  ): Promise<{ preference: NotificationPreference }> {
+    if (dto.muteDuration !== undefined && dto.muted !== true) {
+      throw new BadRequestException('Mute duration requires muted to be true');
+    }
+    await this.requireNotificationScope(userId, dto.serverId, dto.channelId);
+
     const existing = await this.prisma.notificationPreference.findFirst({
       where: {
         userId,
         serverId: dto.serverId ?? null,
         channelId: dto.channelId ?? null,
       },
+      select: NOTIFICATION_PREFERENCE_SELECT,
     });
 
+    const now = new Date();
+    const mutedUntil =
+      dto.muted === true
+        ? resolveMutedUntil(dto.muteDuration ?? 'forever', now)
+        : dto.muted === false
+          ? null
+          : (existing?.mutedUntil ?? null);
     const data = {
-      userId,
-      serverId: dto.serverId,
-      channelId: dto.channelId,
-      muted: dto.muted ?? false,
-      mentionOnly: dto.mentionOnly ?? false,
-      desktopEnabled: dto.desktopEnabled ?? false,
+      muted: dto.muted ?? existing?.muted ?? false,
+      mutedUntil,
+      mentionOnly: dto.mentionOnly ?? existing?.mentionOnly ?? false,
+      desktopEnabled: dto.desktopEnabled ?? existing?.desktopEnabled ?? false,
     };
 
     const preference = existing
       ? await this.prisma.notificationPreference.update({
           where: { id: existing.id },
           data,
+          select: NOTIFICATION_PREFERENCE_SELECT,
         })
-      : await this.prisma.notificationPreference.create({ data });
+      : await this.prisma.notificationPreference.create({
+          data: { ...data, userId, serverId: dto.serverId, channelId: dto.channelId },
+          select: NOTIFICATION_PREFERENCE_SELECT,
+        });
 
-    return { preference };
+    return { preference: toNotificationPreferenceView(preference) };
+  }
+
+  private async requireNotificationScope(userId: string, serverId?: string, channelId?: string) {
+    if (serverId) {
+      const member = await this.prisma.serverMember.findUnique({
+        where: { userId_serverId: { userId, serverId } },
+        select: { userId: true },
+      });
+      if (!member) throw new NotFoundException('Server not found');
+    }
+    if (channelId) {
+      const channel = await this.prisma.channel.findUnique({
+        where: { id: channelId },
+        select: { serverId: true },
+      });
+      // A channel row named under a different server would never be matched by push resolution.
+      const canView =
+        channel !== null &&
+        (!serverId || channel.serverId === serverId) &&
+        (await this.permissions.hasChannelPermission(userId, channelId, Permission.ViewChannel));
+      if (!canView) throw new NotFoundException('Channel not found');
+    }
   }
 }

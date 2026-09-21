@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { messageReportStatuses } from '@discord-clone/shared';
 import type { MessageReport, MessageReportStatus } from '@/api';
+import { ReportMessageHistoryDialog } from '@/components/chat/MessageHistoryDialog';
 import { Button } from '@/components/ui';
 import { isEncryptedMessage } from '@/e2ee';
 import { useMessageReportQueue } from '@/hooks/useMessageReports';
@@ -70,6 +71,7 @@ export function ReportsSection({ serverId }: ReportsSectionProps) {
           queue.reports.map((report) => (
             <ReportRow
               key={report.id}
+              serverId={serverId}
               report={report}
               isPending={queue.pendingReportId === report.id}
               onClose={(nextStatus) => void close(report.id, nextStatus)}
@@ -84,16 +86,19 @@ export function ReportsSection({ serverId }: ReportsSectionProps) {
 }
 
 function ReportRow({
+  serverId,
   report,
   isPending,
   onClose,
 }: {
+  serverId: string;
   report: MessageReport;
   isPending: boolean;
   onClose: (status: 'RESOLVED' | 'DISMISSED') => void;
 }) {
   const t = useTranslation();
   const dates = useDateFormat();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const target = report.targetUser?.displayName ?? t('reports.unknownUser');
   const preview = !report.message
     ? report.targetType === 'MESSAGE'
@@ -126,6 +131,25 @@ function ReportRow({
               date: dates.absolute(report.resolvedAt),
             })}
           </small>
+        ) : null}
+        {/* A deleted message takes its history with it, so only a live message offers it. */}
+        {report.targetType === 'MESSAGE' && report.message ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={styles.historyAction}
+            onClick={() => setIsHistoryOpen(true)}
+          >
+            {t('reports.action.editHistory')}
+          </Button>
+        ) : null}
+        {isHistoryOpen ? (
+          <ReportMessageHistoryDialog
+            serverId={serverId}
+            reportId={report.id}
+            onOpenChange={setIsHistoryOpen}
+          />
         ) : null}
       </div>
       {report.status === 'OPEN' ? (

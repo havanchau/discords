@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RequestUser } from '@/common/request-user';
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 import { RateLimit } from '@/common/rate-limit.decorator';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { UpsertUserNoteDto } from './dto/upsert-user-note.dto';
 import { UsersService } from './users.service';
 
 @UseGuards(JwtAuthGuard)
@@ -31,6 +32,21 @@ export class UsersController {
     @Query('serverId') serverId?: string,
   ) {
     return this.users.getProfile(user.id, userId, serverId);
+  }
+
+  @Get(':userId/note')
+  getNote(@CurrentUser() user: RequestUser, @Param('userId') userId: string) {
+    return this.users.getNote(user.id, userId);
+  }
+
+  @RateLimit({ keyPrefix: 'user-note-write', limit: 30, windowMs: 60_000 })
+  @Put(':userId/note')
+  upsertNote(
+    @CurrentUser() user: RequestUser,
+    @Param('userId') userId: string,
+    @Body() dto: UpsertUserNoteDto,
+  ) {
+    return this.users.upsertNote(user.id, userId, dto);
   }
 
   @Get('me/notification-preferences')

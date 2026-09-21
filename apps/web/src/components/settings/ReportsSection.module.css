@@ -26,3 +26,8 @@
   color: var(--text-primary);
   background: var(--surface-selected);
 }
+
+/* Sits under the report's text, so the row keeps its three grid columns. */
+.historyAction {
+  justify-self: start;
+}

@@ -38,6 +38,7 @@ export const profile = {
   'profile.notifications.mentionsOnlyHint':
     'Chỉ hiện thông báo khi có người nhắc trực tiếp đến bạn.',
   'profile.notifications.mute': 'Tắt tiếng thông báo',
+  'profile.notifications.muteDuration': 'Thời lượng tắt tiếng',
   'profile.notifications.muteHint':
     'Vẫn giữ huy hiệu chưa đọc, nhưng tắt các thông báo không quan trọng.',
   'profile.removeBanner': 'Xoá ảnh bìa',
@@ -61,6 +62,14 @@ export const profile = {
   'profileCard.loading': 'Đang tải hồ sơ',
   'profileCard.memberSince': 'Tham gia Discords {date}',
   'profileCard.message': 'Nhắn tin',
+  'profileCard.note.hint': 'Chỉ bạn xem được ghi chú này.',
+  'profileCard.note.label': 'Ghi chú',
+  'profileCard.note.loadFailed': 'Không tải được ghi chú của bạn',
+  'profileCard.note.loading': 'Đang tải ghi chú…',
+  'profileCard.note.placeholder': 'Nhấn để thêm ghi chú',
+  'profileCard.note.saveFailed': 'Không lưu được ghi chú của bạn',
+  'profileCard.note.saved': 'Đã lưu ghi chú.',
+  'profileCard.note.saving': 'Đang lưu…',
   'profileCard.roles': 'Vai trò',
   'profileCard.unavailable': 'Không xem được hồ sơ này.',
   'serverProfile.changeAvatar': 'Đổi ảnh trong server',

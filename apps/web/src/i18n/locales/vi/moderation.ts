@@ -86,6 +86,7 @@ export const moderation = {
   'report.submit': 'Gửi báo cáo',
   'report.title': 'Báo cáo tin nhắn',
   'reports.action.dismiss': 'Bỏ qua',
+  'reports.action.editHistory': 'Xem lịch sử chỉnh sửa',
   'reports.action.resolve': 'Đã xử lý',
   'reports.dismissedBy': 'Bỏ qua lúc {date} bởi {actor}',
   'reports.empty.DISMISSED': 'Không có báo cáo đã bỏ qua.',

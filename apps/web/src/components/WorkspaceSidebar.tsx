@@ -51,6 +51,9 @@ export function WorkspaceSidebar({
         onAddServer={() => setServerAction('create')}
         onOpenDiscovery={() => setIsDiscoveryOpen(true)}
         onOpenSavedMessages={openSavedMessages}
+        notificationPreferences={workspace.notificationPreferences}
+        isUpdatingNotifications={workspace.pendingAction === 'notification-preference'}
+        updateNotificationPreference={actions.updateNotificationPreference}
       />
 
       <ChannelSidebar

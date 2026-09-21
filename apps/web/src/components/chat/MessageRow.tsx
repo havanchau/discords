@@ -3,6 +3,7 @@ import {
   Edit3,
   Flag,
   Forward,
+  History,
   Lock,
   MessageSquareReply,
   Pin,
@@ -49,6 +50,7 @@ import { MarkdownContent } from './MarkdownContent';
 import type { PreviewAttachment } from './AttachmentPreviewDialog';
 import { ForwardedHeader } from './ForwardedHeader';
 import { ForwardMessageDialog } from './ForwardMessageDialog';
+import { AuthorMessageHistoryDialog } from './MessageHistoryDialog';
 import { MessageAttachments } from './MessageAttachments';
 import { PollCard } from './PollCard';
 import { ReportMessageDialog } from './ReportMessageDialog';
@@ -193,6 +195,7 @@ export const MessageRow = memo(function MessageRow({
   const [isSaveOpen, setIsSaveOpen] = useState(false);
   const [isForwardOpen, setIsForwardOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [areActionsVisible, setAreActionsVisible] = useState(false);
   const showDateDivider = !isSameMessageDay(previousMessage?.createdAt, message.createdAt);
@@ -218,6 +221,8 @@ export const MessageRow = memo(function MessageRow({
   const canForward = !message.isEncrypted && !isChannelEncrypted(message.channelId);
   // Reports go to this server's moderators; the API refuses reporting your own message.
   const canReport = Boolean(serverId) && message.authorId !== auth.user.id;
+  // Edit history is the author's own view; moderators reach it through a report instead.
+  const canViewHistory = canManage && Boolean(message.editedAt);
   const isPopoverOpen = isEmojiOpen || isSaveOpen;
   // A webhook author is not a member and has no profile to open.
   const isWebhookAuthor = message.author.kind === 'WEBHOOK';
@@ -312,7 +317,18 @@ export const MessageRow = memo(function MessageRow({
                     </Badge>
                   ) : null}
                   <span>{dates.dateTime(message.createdAt)}</span>
-                  {message.editedAt ? <span>{t('message.edited')}</span> : null}
+                  {canViewHistory ? (
+                    <button
+                      type="button"
+                      className={styles.editedButton}
+                      aria-label={t('message.editedViewHistory')}
+                      onClick={() => setIsHistoryOpen(true)}
+                    >
+                      {t('message.edited')}
+                    </button>
+                  ) : message.editedAt ? (
+                    <span>{t('message.edited')}</span>
+                  ) : null}
                 </div>
               )}
 
@@ -529,6 +545,11 @@ export const MessageRow = memo(function MessageRow({
                     <Edit3 size={14} aria-hidden="true" /> {t('message.menu.edit')}
                   </ContextMenuItem>
                 )}
+                {canViewHistory && (
+                  <ContextMenuItem onClick={() => setIsHistoryOpen(true)}>
+                    <History size={14} aria-hidden="true" /> {t('message.menu.editHistory')}
+                  </ContextMenuItem>
+                )}
                 <ContextMenuItem variant="danger" onClick={() => void actions.delete(message.id)}>
                   <Trash2 size={14} aria-hidden="true" /> {t('message.menu.delete')}
                 </ContextMenuItem>
@@ -543,6 +564,9 @@ export const MessageRow = memo(function MessageRow({
           messageId={message.id}
           onOpenChange={setIsForwardOpen}
         />
+      ) : null}
+      {isHistoryOpen ? (
+        <AuthorMessageHistoryDialog messageId={message.id} onOpenChange={setIsHistoryOpen} />
       ) : null}
       {isReportOpen && serverId ? (
         <ReportMessageDialog

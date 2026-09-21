@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Channel, Prisma } from '@prisma/client';
-import type { Message, ThreadSummary } from '@discord-clone/shared';
+import type { Message, MessageHistoryResult, ThreadSummary } from '@discord-clone/shared';
 import { ForwardSnapshot } from '@/common/forward-snapshot';
 import {
   AutoModAlert,
@@ -25,6 +25,7 @@ import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service
 import { CreateMessageDto } from './dto/create-message.dto';
 import { formatMessage, messageInclude, notificationAuthorName } from './message.format';
 import { readVoiceMaxBytes, toAttachmentCreateData } from './message-attachments';
+import { listMessageRevisions, recordMessageRevision } from './message-revisions';
 import { resolveStickerAttachment, StickerAttachmentData } from './message-stickers';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -420,13 +421,14 @@ export class MessagesService {
       texts: [content],
     });
 
-    const updated = await this.prisma.message.update({
-      where: { id: messageId },
-      data: {
-        content,
-        editedAt: new Date(),
-      },
-      include: messageInclude,
+    const editedAt = new Date();
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await recordMessageRevision(tx, messageId, message.content, editedAt);
+      return tx.message.update({
+        where: { id: messageId },
+        data: { content, editedAt },
+        include: messageInclude,
+      });
     });
     const formatted = formatMessage(updated, userId);
     this.realtime.emitToRoom(
@@ -453,12 +455,16 @@ export class MessagesService {
       throw new ForbiddenException('Only the author or message manager can delete this message');
     }
 
-    const deleted = await this.prisma.message.update({
-      where: { id: messageId },
-      data: {
-        content: '',
-        deletedAt: new Date(),
-      },
+    // Revisions go with the content, so the pre-delete text is not recoverable from the history.
+    const deleted = await this.prisma.$transaction(async (tx) => {
+      await tx.messageRevision.deleteMany({ where: { messageId } });
+      return tx.message.update({
+        where: { id: messageId },
+        data: {
+          content: '',
+          deletedAt: new Date(),
+        },
+      });
     });
     await this.writeAuditLog(message.serverId, userId, 'MESSAGE_DELETE', message.id, {
       authorId: message.authorId,
@@ -471,6 +477,22 @@ export class MessagesService {
       formatted,
     );
     return { message: formatted };
+  }
+
+  /** The author's own view of their message's past versions; moderators go through a report. */
+  async getMessageHistory(userId: string, messageId: string): Promise<MessageHistoryResult> {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      select: { channelId: true, authorId: true, deletedAt: true },
+    });
+    if (!message || message.deletedAt) {
+      throw new NotFoundException('Message not found');
+    }
+    await this.channels.requireReadableChannel(userId, message.channelId);
+    if (message.authorId !== userId) {
+      throw new ForbiddenException('Only the author can view this message history');
+    }
+    return { revisions: await listMessageRevisions(this.prisma, messageId, true) };
   }
 
   async toggleReaction(userId: string, messageId: string, dto: ReactionDto) {

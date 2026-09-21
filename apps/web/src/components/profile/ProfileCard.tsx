@@ -1,13 +1,17 @@
 import { Loader2, MessageSquare, UserPlus } from 'lucide-react';
+import { useState } from 'react';
 import { assetUrl } from '@/api';
 import { accentClass, initials } from '@/helpers';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
+import { useUserNote } from '@/hooks/useUserNote';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { profileIdentityOf } from '@/utils/memberIdentity';
 import { ReactionEmoji } from '@/components/chat/EmojiPicker';
-import { Avatar, Button } from '@/components/ui';
+import { Avatar, Button, TextArea } from '@/components/ui';
 import styles from './ProfileCard.module.css';
+
+const NOTE_MAX_LENGTH = 300;
 
 interface ProfileCardProps {
   accessToken: string;
@@ -121,6 +125,10 @@ export function ProfileCard({
           ) : null}
         </div>
 
+        {!isSelf ? (
+          <ProfileNoteField accessToken={accessToken} viewerId={viewerId} userId={profile.id} />
+        ) : null}
+
         {!isSelf && (onDirectMessage || onAddFriend) ? (
           <div className={styles.actions}>
             {onDirectMessage ? (
@@ -145,5 +153,65 @@ export function ProfileCard({
         ) : null}
       </div>
     </div>
+  );
+}
+
+interface ProfileNoteFieldProps {
+  accessToken: string;
+  viewerId: string;
+  userId: string;
+}
+
+/** The viewer's private note about this user, saved on blur (docs/features/user-notes.md). */
+function ProfileNoteField({ accessToken, viewerId, userId }: ProfileNoteFieldProps) {
+  const t = useTranslation();
+  const { note, isLoading, loadError, save, isSaving } = useUserNote({
+    accessToken,
+    viewerId,
+    userId,
+    enabled: true,
+  });
+  // `null` while untouched, so the field shows the stored note once it arrives.
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const savedContent = note?.content ?? '';
+
+  async function commit() {
+    if (draft === null || draft.trim() === savedContent) return;
+    setSaveError(null);
+    try {
+      await save(draft.trim());
+      setDraft(null);
+      setIsSaved(true);
+    } catch (error) {
+      // The draft is kept so the text is not lost; the next blur retries.
+      setSaveError(error instanceof Error ? error.message : t('profileCard.note.saveFailed'));
+    }
+  }
+
+  const status = isSaving
+    ? t('profileCard.note.saving')
+    : isSaved
+      ? t('profileCard.note.saved')
+      : t('profileCard.note.hint');
+
+  return (
+    <TextArea
+      label={t('profileCard.note.label')}
+      placeholder={isLoading ? t('profileCard.note.loading') : t('profileCard.note.placeholder')}
+      value={draft ?? savedContent}
+      maxLength={NOTE_MAX_LENGTH}
+      rows={2}
+      disabled={isLoading || Boolean(loadError)}
+      error={loadError ?? saveError}
+      hint={status}
+      fieldClassName={styles.note}
+      onChange={(event) => {
+        setDraft(event.target.value);
+        setIsSaved(false);
+      }}
+      onBlur={() => void commit()}
+    />
   );
 }

@@ -51,6 +51,18 @@ export interface UserProfile extends PublicUser {
   server: UserProfileServerContext | null;
 }
 
+/** The caller's own private note about another user; never readable by anyone but its author. */
+export interface UserNote {
+  targetId: string;
+  content: string;
+  updatedAt: Date;
+}
+
+/** `GET`/`PUT /users/:userId/note`; `null` when the caller has no note about that user. */
+export interface UserNoteResult {
+  note: UserNote | null;
+}
+
 /** Another user's profile as returned by friends and DM endpoints; email is private to its owner. */
 export type PublicUser = Omit<User, 'email' | 'emailVerifiedAt' | 'platformRole'>;
 
@@ -178,13 +190,32 @@ export interface ChannelPermissionOverride {
   deny: string[];
 }
 
+/** Fixed mute lengths; the server turns one into `mutedUntil` from its own clock. */
+export const muteDurations = ['15m', '1h', '8h', '24h', 'forever'] as const;
+export type MuteDuration = (typeof muteDurations)[number];
+
 export interface NotificationPreference {
   id: string;
   serverId?: string | null;
   channelId?: string | null;
   muted: boolean;
+  /** Null with `muted` set means muted indefinitely; a past value means the mute has expired. */
+  mutedUntil: string | null;
   mentionOnly: boolean;
   desktopEnabled: boolean;
+}
+
+/**
+ * Body of `PATCH /users/me/notification-preferences`. A missing field keeps its stored value;
+ * `muteDuration` is only accepted with `muted: true` (omitted there means `forever`).
+ */
+export interface UpdateNotificationPreferenceInput {
+  serverId?: string | null;
+  channelId?: string | null;
+  muted?: boolean;
+  muteDuration?: MuteDuration;
+  mentionOnly?: boolean;
+  desktopEnabled?: boolean;
 }
 
 export interface Invite {
@@ -610,6 +641,26 @@ export interface CreateMessageReportResult {
 
 export interface UpdateMessageReportInput {
   status: Exclude<MessageReportStatus, 'OPEN'>;
+}
+
+/** Past versions kept per channel message; the oldest is dropped when an edit goes past it. */
+export const MESSAGE_REVISION_LIMIT = 20;
+
+/** One past version of a channel message: the content an edit replaced, and when that edit ran. */
+export interface MessageRevisionView {
+  id: string;
+  content: string;
+  editedAt: Date;
+  /** True when the moderator cannot view the message's channel: `content` is redacted to `''`. */
+  contentHidden: boolean;
+}
+
+/**
+ * `GET /messages/:messageId/history` (author) and
+ * `GET /servers/:serverId/reports/:reportId/message-history` (moderator), oldest first.
+ */
+export interface MessageHistoryResult {
+  revisions: MessageRevisionView[];
 }
 
 export const autoModTriggerTypes = [

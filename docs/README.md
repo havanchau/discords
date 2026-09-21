@@ -73,6 +73,10 @@ This folder contains focused project documentation. Keep each file responsible f
 | `features/qa-follow-ups-2026-09-18.md`       | Fixes from the first full manual QA pass over Waves 2–3.2.                                       |
 | `features/keyboard-shortcuts.md`             | Global shortcut registry, quick switcher, and shortcut cheat sheet.                              |
 | `features/stickers-and-soundboard.md`        | Server stickers and soundboard clips played in voice channels.                                   |
+| `features/timed-notification-mute.md`        | Muting global, server, or channel notifications for a fixed duration or indefinitely.            |
+| `features/message-edit-history.md`           | Keeping the previous versions of edited messages for the author and report moderators.           |
+| `features/user-notes.md`                     | Private notes a user keeps about another user on the profile card.                               |
+| `features/sfu-screen-share.md`               | Screen share in DM calls and screen-share tile layout on the SFU and mesh transports.            |
 
 ## Root Documents
 

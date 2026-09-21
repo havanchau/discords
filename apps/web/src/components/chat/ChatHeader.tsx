@@ -19,6 +19,7 @@ import { Permissions } from '@discord-clone/shared';
 import { CallMode, CallState } from '@/helpers';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { canShareScreen } from '@/utils/mediaCapabilities';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
 import {
   Avatar,
@@ -48,6 +49,8 @@ interface ChatHeaderProps {
 
 // Below this width only the voice call stays inline; the other call actions move into the menu.
 const NARROW_HEADER = '(max-width: 560px)';
+// Capability does not change during a session, so it is read once.
+const SCREEN_SHARE_SUPPORTED = canShareScreen();
 
 /**
  * The header carries the call actions and notifications inline; the less frequent channel actions
@@ -86,13 +89,17 @@ export function ChatHeader({
       testId: 'video-call-button',
       secondary: true,
     },
-    {
-      mode: 'screen' as const,
-      icon: MonitorUp,
-      label: t('chatHeader.shareScreen'),
-      testId: 'screen-share-button',
-      secondary: true,
-    },
+    ...(SCREEN_SHARE_SUPPORTED
+      ? [
+          {
+            mode: 'screen' as const,
+            icon: MonitorUp,
+            label: t('chatHeader.shareScreen'),
+            testId: 'screen-share-button',
+            secondary: true,
+          },
+        ]
+      : []),
   ];
 
   const isNarrow = useMediaQuery(NARROW_HEADER);

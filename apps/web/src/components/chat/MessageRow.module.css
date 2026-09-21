@@ -129,6 +129,22 @@
   font-weight: var(--font-weight-normal);
 }
 
+.editedButton {
+  border: 0;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.editedButton:hover,
+.editedButton:focus-visible {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
 /* Outranks `.meta span`, which would otherwise mute the badge like the timestamp. */
 .meta .webhookBadge {
   align-self: center;

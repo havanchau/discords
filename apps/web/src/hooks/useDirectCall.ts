@@ -6,7 +6,7 @@ import type { CallState, RemoteMedia } from '@/helpers';
 import type { StartCallOptions } from './useChannelCall';
 import { useTranslation } from '@/i18n/LocaleProvider';
 
-export type DirectCallMode = 'voice' | 'video';
+export type DirectCallMode = 'voice' | 'video' | 'screen';
 
 export interface IncomingDirectCall {
   conversationId: string;
@@ -135,10 +135,15 @@ export function useDirectCall({
     const call = incomingCall;
     setIncomingCall(null);
     if (callState) endCall();
-    await startCall(call.mode, {
+    const options = {
       callId: directCallId(call.conversationId),
       label: getConversationLabel(call.conversationId, call.caller.displayName),
-    });
+    };
+    // A screen call is the caller's share: the callee watches it, like a channel's "Join stream",
+    // instead of being asked to share their own screen.
+    await (call.mode === 'screen'
+      ? startCall('voice', { ...options, receiveOnly: true })
+      : startCall(call.mode, options));
   }
 
   function declineIncomingCall() {

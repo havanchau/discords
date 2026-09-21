@@ -122,6 +122,8 @@ import type {
   Message as ServerMessage,
   MessageAttachment as ServerMessageAttachment,
   MessageReaction as ServerMessageReaction,
+  MessageHistoryResult as ServerMessageHistoryResult,
+  MessageRevisionView as ServerMessageRevisionView,
   CreateMessageReportInput,
   CreateMessageReportResult as ServerCreateMessageReportResult,
   MessageReportReason,
@@ -129,7 +131,9 @@ import type {
   MessageReportView as ServerMessageReportView,
   UpdateMessageReportInput,
   NotificationItem as ServerNotificationItem,
+  MuteDuration,
   NotificationPreference as ServerNotificationPreference,
+  UpdateNotificationPreferenceInput,
   PollOptionView as ServerPollOptionView,
   PollUpdatedPayload as ServerPollUpdatedPayload,
   PollView as ServerPollView,
@@ -160,6 +164,8 @@ import type {
   ThreadMessageResult as ServerThreadMessageResult,
   ThreadSummary as ServerThreadSummary,
   User as ServerUser,
+  UserNote as ServerUserNote,
+  UserNoteResult as ServerUserNoteResult,
   UserProfile as ServerUserProfile,
   UserProfileServerContext as ServerUserProfileServerContext,
   VoiceAttachmentMetadata,
@@ -217,6 +223,8 @@ export type LinkPreview = Json<ServerLinkPreview>;
 export type Message = Json<ServerMessage>;
 export type MessageAttachment = Json<ServerMessageAttachment>;
 export type MessageReaction = Json<ServerMessageReaction>;
+export type MessageHistory = Json<ServerMessageHistoryResult>;
+export type MessageRevision = Json<ServerMessageRevisionView>;
 export type MessageReport = Json<ServerMessageReportView>;
 export type CreateMessageReportResult = Json<ServerCreateMessageReportResult>;
 export type {
@@ -227,6 +235,7 @@ export type {
 };
 export type NotificationItem = Json<ServerNotificationItem>;
 export type NotificationPreference = Json<ServerNotificationPreference>;
+export type { MuteDuration, UpdateNotificationPreferenceInput };
 export type Poll = Json<ServerPollView>;
 export type PollOption = Json<ServerPollOptionView>;
 export type PollUpdatedPayload = Json<ServerPollUpdatedPayload>;
@@ -282,6 +291,8 @@ export type {
 export type ThreadMessageResult = Json<ServerThreadMessageResult>;
 export type ThreadSummary = Json<ServerThreadSummary>;
 export type User = Json<ServerUser>;
+export type UserNote = Json<ServerUserNote>;
+export type UserNoteResult = Json<ServerUserNoteResult>;
 export type UserProfile = Json<ServerUserProfile>;
 export type UserProfileServerContext = Json<ServerUserProfileServerContext>;
 

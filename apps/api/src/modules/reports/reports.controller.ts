@@ -58,6 +58,15 @@ export class ReportsController {
     return this.reports.list(user.id, serverId, query.status);
   }
 
+  @Get(':reportId/message-history')
+  messageHistory(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Param('reportId') reportId: string,
+  ) {
+    return this.reports.getMessageHistory(user.id, serverId, reportId);
+  }
+
   @RateLimit({ keyPrefix: 'message-report-update', limit: 20, windowMs: 60_000 })
   @Patch(':reportId')
   updateStatus(

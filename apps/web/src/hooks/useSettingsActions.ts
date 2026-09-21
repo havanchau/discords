@@ -21,6 +21,7 @@ import {
   ChannelPermissionOverride,
   Invite,
   NotificationPreference,
+  UpdateNotificationPreferenceInput,
   Role,
   ServerDetail,
   uploadFile,
@@ -152,12 +153,7 @@ export function useSettingsActions({
     await notificationPreferencesResource.load(auth.user.id);
   }
 
-  async function updateNotificationPreference(
-    preference: Partial<NotificationPreference> & {
-      serverId?: string | null;
-      channelId?: string | null;
-    },
-  ) {
+  async function updateNotificationPreference(preference: UpdateNotificationPreferenceInput) {
     if (!auth) return;
     setPendingAction('notification-preference');
     try {
