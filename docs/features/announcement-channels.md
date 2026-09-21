@@ -1,0 +1,185 @@
+# Feature Spec: Announcement Channels
+
+A `ANNOUNCEMENT` channel type whose messages a moderator can "publish" (crosspost) into every server that follows it, delivered as a synthetic-author message in a chosen text channel of the following server — Discord's Announcement Channels / Follow / Crosspost parity.
+
+**Status**: draft — awaiting review
+
+## Goal
+
+Server owners running a multi-server community (e.g. an official server plus fan/partner servers) want to post once in an announcement channel and have it automatically copied into other servers that opted in, instead of members manually forwarding it. Today the repo has no cross-server broadcast mechanism: `forward-message.md`'s forwarding requires the forwarding user to already be a member of the destination (`open-questions.md` #13 — "destination must already be writable by the caller"), which does not fit "push into a server I do not belong to."
+
+Acceptance criteria:
+
+- Any member with `SendMessages` can post in a `ANNOUNCEMENT` channel, same as `TEXT`.
+- A member holding `ManageMessages` on the `ANNOUNCEMENT` channel can "publish" one of its messages; every server currently following that channel receives a copy of it in the target channel the follower chose, without the publisher needing membership in that server.
+- A member holding `ManageChannels` on a target channel can follow any `ANNOUNCEMENT` channel they can view into it, and unfollow later; following is idempotent per (source, target) pair.
+- A published message cannot be republished, and a crossposted copy can never itself be republished — no propagation loop regardless of the follow graph's shape.
+- Editing or deleting the original message never touches copies already delivered; a copy is an independent message from the moment it is created.
+
+## Scope
+
+**In scope**
+
+- New `ChannelType` value `ANNOUNCEMENT`; channel creation, sidebar icon, and the same send/permission rules `TEXT` already has.
+- Follow / unfollow a channel into a chosen text channel of the caller's server, reusing `ServerWebhook` and the incoming-webhooks delivery pattern (`docs/features/incoming-webhooks.md`) as the "who authored the copy" and "how it gets broadcast" mechanism.
+- Publish (crosspost) one message: fan-out to every follower, loop prevention, attachment/sticker copying (same approach `forward-message.md` uses), audit log entries.
+- API endpoints, DB migration, shared contract, i18n keys, and minimal web UI (follow/unfollow action, publish button, published/crossposted badges).
+
+**Out of scope**
+
+- Publishing multiple messages at once ("bulk publish").
+- Following a channel across a self-hosted federation / another deployment — this repo has one database, so "another server" always means another `Server` row in the same instance.
+- Auto-publish rules (e.g. "always publish every message in this channel").
+- Any change to `ForwardingService` — announcement publish is a distinct delivery path with a distinct authorization model (destination membership not required), not a variant of forward.
+- Editing or deleting a crossposted copy from the source side (propagation of edits/deletes) — see Changes → Edge cases and Trade-offs.
+- A dedicated "discover servers following me" UI beyond the existing follower list in channel settings.
+
+## Current behavior
+
+- `ChannelType` is `TEXT | VOICE | FORUM | STAGE` (`apps/api/prisma/models/channels.prisma:1-6`); `stage-channels.md` is this repo's precedent for adding a new `ChannelType` value rather than a flag.
+- `CreateChannelDto.type` is validated with `@IsIn(['TEXT', 'VOICE', 'FORUM', 'STAGE'])` (`apps/api/src/modules/channels/dto/create-channel.dto.ts:11-13`); `ChannelsService.createChannel` (`apps/api/src/modules/channels/channels.service.ts:19-42`) requires `ManageChannels` on the server, defaults `type` to `TEXT`, and only branches on `type === 'FORUM'` for `postGuidelines`. `UpdateChannelDto` has no `type` field (grepped `update-channel.dto.ts`), so a channel's type is immutable after creation — no "convert away from ANNOUNCEMENT" case exists to handle.
+- `MessagesService.requireCanPostInChannel` (`apps/api/src/modules/messages/messages.service.ts:172-183`) refuses a top-level send on `FORUM` (400) and `STAGE` (400); every other type, including the new `ANNOUNCEMENT`, falls through to `passSendGates` (`:191-197`), which checks `SendMessages`, timeout, onboarding, and slowmode — the same gates `TEXT` already has. No code change is needed here for ordinary sending; `ANNOUNCEMENT` simply is not one of the two refused types.
+- `ServerWebhook` (`apps/api/prisma/models/webhooks.prisma:4-22`) is a per-channel row owning one synthetic `User` (`webhookUserId`, `User.kind = 'WEBHOOK'`, `packages/shared/src/webhooks.ts:15`) that posts as its own author, decoupled from any real membership. `WebhooksService.create` (`apps/api/src/modules/webhooks/webhooks.service.ts:53-103`) creates the webhook, its synthetic `User`, and an audit row in one transaction, gated by `ManageChannels` on the target channel (`requireManageableChannel`, `:156-164`) — "whoever controls a channel already controls what posts into it" (`incoming-webhooks.md` Trade-offs).
+- `WebhookDeliveryService.post` (`apps/api/src/modules/webhooks/webhook-delivery.service.ts:61-116`) is the exact shape a crosspost delivery needs: it builds `authorNameOverride`/`authorAvatarOverride` on `Message` (already nullable, additive columns — `apps/api/prisma/models/messages.prisma:59-61`), runs `MessagesService.enforceAutoMod` against the **target** channel/server (so each server's own AutoMod rules apply to a copy, not just the source's), persists via `prisma.message.create`, then explicitly emits `message:created` and `unread:updated` (`:96-104`) because there is no socket connection to do it implicitly — the same reasoning applies to a crosspost, which has no request-originating socket either. It never checks membership or `ViewChannel`/`SendMessages` on the target, because the synthetic author has none — "holding the token is the authorization" for a webhook; for a follow, "the follow relationship existing is the authorization."
+- `ForwardingService.deliver` (`apps/api/src/modules/forwarding/forwarding.service.ts:101-151`) copies attachments by re-selecting the stored rows and mapping them with `toAttachmentInput` (`apps/api/src/modules/messages/message-attachments.ts`, imported at `forwarding.service.ts:13`) rather than re-uploading bytes — new `MessageAttachment` rows pointing at the same stored file URL. Stickers are carried separately via `carriedStickerAttachment`/`isStickerAttachment` (`forwarding.service.ts:15,111-115`). This is the model for copying a published message's attachments into each follower's copy.
+- `Permission` (`apps/api/src/modules/permissions/channel-permission.ts:1-15`) already has `ManageMessages` and `ManageChannels`; `MessagesService` already gates pin/delete-of-others-message on `ManageMessages` (`messages.service.ts:450`, `:516-522`), and forum-post-delete on `ManageMessages || ManageChannels` (`:608-612`) — this repo's established pattern of reusing a close-enough existing permission bit before adding a new one (`incoming-webhooks.md` Trade-offs; `stage-channels.md` Trade-offs) rather than minting `PUBLISH_MESSAGES`/`MANAGE_WEBHOOKS`.
+- `PermissionsService.requireChannelPermission`/`requireServerPermission` (`apps/api/src/modules/permissions/permissions.service.ts:32-41`, `:95-99`) throw `ForbiddenException` (`403`) for a missing permission bit on a channel/server the caller can already reach — distinct from `ChannelsService.requireReadableChannel`'s `404` for `ViewChannel` itself failing (`channels.service.ts:161-168`). This is the repo's existing convention for "channel visible, but this specific action is refused."
+- `AutoModScreeningService`'s `webhookAuthorName` input (`webhook-delivery.service.ts:79`) is the existing "screen a non-member post" path; the same input shape covers a crosspost's synthetic author.
+- Latest migration folder: `apps/api/prisma/migrations/20260918007000_add_stage_channels`; a new migration follows the same `YYYYMMDDHHmmss_description` naming.
+- The web sidebar already branches `item.type` for the channel icon (`apps/web/src/components/workspace/ChannelSidebar.tsx:124-133`: `FORUM` → `MessagesSquare`, `STAGE` → `Radio`, else `Hash`) and the create-channel dropdown offers `FORUM`/`STAGE` as explicit menu items (`:176-180`) beside the default `TEXT` create action; `ChannelCreateType` (`apps/web/src/components/workspace/types.ts:54`) is `'TEXT' | 'VOICE' | 'FORUM' | 'STAGE'`.
+- `apps/web/src/i18n/locales/en.ts` / `vi.ts` are the two locale catalogs, gated by `npm run i18n:check` (`package.json`, per `i18n-localization.md`).
+
+## Changes
+
+### Rules / Flow
+
+1. `ChannelType` gains `ANNOUNCEMENT`. It behaves exactly like `TEXT` for every existing check (`ViewChannel`, `SendMessages`, slowmode, onboarding, threads, pins, forum/stage refusals do not apply to it) except for the two new actions below. `CreateChannelDto.type` accepts `'ANNOUNCEMENT'` alongside the existing four values.
+2. **Follow**: a member holding `ManageChannels` on a target text (or announcement — decided, see edge cases) channel of their server can follow a source `ANNOUNCEMENT` channel they can view (`ViewChannel`), by creating a `ServerWebhook` row scoped to the target channel with a new `sourceChannelId` pointing at the source channel — this is the "model follow as a webhook" reuse: the follow row owns its own synthetic `User` (`kind = 'WEBHOOK'`), created and named exactly as `WebhooksService.create` already does (`name` = the source server's name, `avatarUrl` = the source server's icon), but with no plaintext token ever generated or exposed — a follow webhook is never invoked through `POST /webhooks/:id/:token`, only through the publish path below.
+3. Following is idempotent per `(sourceChannelId, targetChannelId)` pair: repeating the same follow with an existing active row is a no-op returning the existing follow, not a duplicate row (unique constraint, see DB / migration).
+4. **Unfollow**: the same `ManageChannels` holder on the target channel deletes the `ServerWebhook` row — reusing `WebhooksService.remove`'s permission check and audit shape, refused (`400`) if the row has no `sourceChannelId` (i.e., it is an ordinary incoming webhook, not a follow).
+5. **Publish**: a member holding `ManageMessages` on the source `ANNOUNCEMENT` channel calls publish on one of its own messages. The message must not already be published (`message.publishedAt` null) and must not itself be a crosspost copy (`message.isCrosspost` false) — see loop prevention below. On success: `message.publishedAt` is set once, and for every `ServerWebhook` row with `sourceChannelId` = this channel, a copy is delivered to that row's `channelId` following the exact `WebhookDeliveryService.post` shape (AutoMod screened against the **target** channel/server, `authorNameOverride`/`authorAvatarOverride` from the follow webhook's stored `name`/`avatarUrl`, `message:created` + `unread:updated` emitted per copy), plus `isCrosspost = true` and `content`/attachments copied from the source message at publish time (a snapshot, like `forwardOriginContent` — not a live reference).
+6. **Loop prevention**: a message with `isCrosspost = true` can never be published (step 5's precondition) — this is independent of the follow graph's shape, so mutual follows (A follows B and B follows A) or an announcement channel following another announcement channel cannot cascade, because a delivered copy is never itself publishable, regardless of the target channel's own type.
+7. Attachments and stickers on the published message are copied into each delivered copy the same way `ForwardingService.deliver` copies them (`toAttachmentInput` over the stored rows, stickers carried via `carriedStickerAttachment`) — new rows pointing at the same stored files, not a live/linked reference and not re-uploaded bytes.
+8. Audit: `CHANNEL_FOLLOW_CREATE` `{ sourceChannelId, targetChannelId }` on the **target** server (whoever followed acted on their own server) and `MESSAGE_PUBLISH` `{ messageId, followerCount }` on the **source** server, following the existing `writeAuditLog`/`auditLog.create` convention (`channels.service.ts:187-197`, `webhooks.service.ts:90-98`).
+9. Source channel deletion, target channel deletion, and source/target server deletion all clean up automatically through existing cascades: `ServerWebhook.channelId` already `onDelete: Cascade` from `Channel` (`webhooks.prisma:16`), and the new `sourceChannelId` gets the same `onDelete: Cascade` — deleting either channel removes the follow row, exactly like deleting a webhook's channel today (inferred from the existing `channelId` cascade; no explicit test of that cascade path was run in this session — flagged in Test plan).
+10. **Follower cap — decided**: no hard cap on followers per source channel in v1. `PublishService.publish` logs a `Logger.warn` (the same repo logger convention `rules/backend-nestjs.md` requires, no `console.*`) when a channel's follower count exceeds 50 at publish time, so an operator notices runaway fan-out before it becomes a performance problem, without blocking anyone's publish. Reason: publish is a moderator-only, deliberate action (not per-message traffic like a webhook), so the abuse surface is much smaller than `WEBHOOK_MAX_PER_CHANNEL`'s; a hard cap would need a product decision on the right number, which is not needed to ship v1.
+11. **`GET /channels/:channelId/followers` permission — decided**: listing followers requires `ManageMessages` on the source channel, the same bar as publishing (not merely `ViewChannel`) — see API contract and Edge cases. Reason: the follower list reveals which other servers subscribed to this channel, which is closer to moderation-facing information (like an audit log) than ordinary channel content, so it is gated at the same permission as the other moderator-only action on this channel.
+12. **Following into another `ANNOUNCEMENT` channel — decided**: allowed, as drafted (see Edge cases). Reason: loop prevention already relies solely on `isCrosspost` (Rules item 6), which holds regardless of the target channel's type, so restricting the target type would add a rule that buys no additional safety.
+
+### Edge cases
+
+| Case | Expected behavior |
+|---|---|
+| Follow the same (source, target) pair twice | No-op: returns the existing follow row, no duplicate (`@@unique([sourceChannelId, targetChannelId])`, follow row not of kind ordinary-webhook). |
+| Follow a channel into itself (source === target) | `400` — a channel cannot follow itself. |
+| Follow a non-`ANNOUNCEMENT` channel | `400` — only `ANNOUNCEMENT` channels can be followed. |
+| Target channel is itself `ANNOUNCEMENT` | Allowed — decided (Rules item 12): an announcement channel can subscribe to another server's announcements; the copy itself is never publishable regardless (Rules item 6), so this cannot become a propagation loop. |
+| Caller cannot view the source channel | `404 Channel not found` (matches `requireReadableChannel`'s pattern of not leaking channel existence). |
+| Caller lacks `ManageChannels` on the target | `403`. |
+| Caller can view the source channel but lacks `ManageMessages` on it, and calls `GET /channels/:channelId/followers` | `403 Missing permission: MANAGE_MESSAGES` — the channel itself is visible (so `404` would be wrong: the caller is not being told it does not exist), only the moderator-only follower list is refused, matching `PermissionsService.requireChannelPermission`'s existing convention of `ForbiddenException` for a missing permission bit on an already-visible channel (`permissions.service.ts:95-99`, the same path `messages.service.ts:450` and `:608-612` already use for `ManageMessages`-gated actions). |
+| Publish a message that is empty of both content and attachments | Cannot occur — `createMessage` already refuses an empty send (`messages.service.ts:219-221`), so no published message can be empty. |
+| Publish with zero followers | `200`, `followerCount: 0`, `publishedAt` still set (matches Discord: the publish action and the "has followers" state are independent). |
+| Publish twice (already published) | `400 Message already published`. |
+| Publish a crosspost copy | `400 A crossposted message cannot be published`. |
+| Edit the original after publishing | Copies are unaffected — each copy is its own `Message` row with its own content snapshot (see Trade-offs for why edits are not propagated). |
+| Delete the original after publishing | Copies are unaffected, same reasoning; `MESSAGE_PUBLISH`'s audit metadata (`followerCount`) still names how many copies existed at publish time. |
+| Delete the source channel with active follows | Follow rows cascade-delete via `sourceChannelId`'s `onDelete: Cascade` (inferred from the identical, already-shipped `channelId` cascade — not independently re-verified this session). |
+| Unauthorized (no session) on any of the new endpoints | `401`, unchanged — same `JwtAuthGuard` every other channel/message endpoint uses. |
+
+## Technical approach
+
+**Files touched**
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/models/channels.prisma` | Add `ANNOUNCEMENT` to `ChannelType`. |
+| `apps/api/prisma/models/webhooks.prisma` | `ServerWebhook` gains `sourceChannelId String?` + `sourceChannel Channel?` relation (`onDelete: Cascade`), `@@index([sourceChannelId])`. |
+| `apps/api/prisma/models/messages.prisma` | `Message` gains `publishedAt DateTime?` and `isCrosspost Boolean @default(false)`, both nullable/defaulted, additive. |
+| `apps/api/prisma/migrations/<timestamp>_add_announcement_channels/` | New hand-written migration. |
+| `apps/api/src/modules/channels/dto/create-channel.dto.ts` | `@IsIn([...])` gains `'ANNOUNCEMENT'`. |
+| `apps/api/src/modules/permissions/channel-permission.ts` | No change — `ManageMessages`/`ManageChannels` already exist and are reused. |
+| `apps/api/src/modules/announcements/` (new module) | `announcements.module.ts`, `channel-follows.service.ts` (follow/unfollow, reusing `WebhooksService`'s `requireManageableChannel` shape), `publish.service.ts` (publish/crosspost delivery, reusing `WebhookDeliveryService`'s message-creation + broadcast shape), `announcements.controller.ts`, `dto/create-follow.dto.ts`. |
+| `apps/api/src/modules/webhooks/webhook-token.ts` | Reuse `syntheticUserIdentity` for the follow webhook's synthetic author (no token generated/stored for a follow row — see DB / migration). |
+| `apps/api/src/modules/messages/message.format.ts` | `formatMessage` includes `publishedAt`/`isCrosspost` in its output shape. |
+| `packages/shared/src/api-contract.ts` | `ChannelType` gains `'ANNOUNCEMENT'`; `Message` gains `publishedAt?: Date | null`, `isCrosspost?: boolean`. |
+| `packages/shared/src/webhooks.ts` (or a new `packages/shared/src/announcements.ts`) | `ChannelFollow` view type, `PublishResult` type, any new caps as named constants. |
+| `apps/web/src/api.ts`, `hooks/useChannelWebhooks.ts` or new `hooks/useChannelFollows.ts` | Follow/unfollow/publish calls. |
+| `apps/web/src/components/workspace/ChannelSidebar.tsx` | New icon branch for `ANNOUNCEMENT` (e.g. `Megaphone`), new "Create announcement channel" menu item mirroring the existing `FORUM`/`STAGE` items (`:176-180`). |
+| `apps/web/src/components/workspace/types.ts` | `ChannelCreateType` gains `'ANNOUNCEMENT'`. |
+| `apps/web/src/components/chat/MessageRow.tsx` | Publish button (visible to `ManageMessages` holders in an `ANNOUNCEMENT` channel), "Published"/"Crossposted from #channel" badges. |
+| `apps/web/src/components/settings/ChannelWebhooksSection.tsx` (or a new `ChannelFollowsSection.tsx`) | Follow/unfollow list, following the existing webhooks-section pattern. |
+| `apps/web/src/i18n/locales/en.ts`, `vi.ts` | New `announcements.*` keys. |
+
+**API contract**
+
+| Method | Path | Auth | Body | Response | Status |
+|---|---|---|---|---|---|
+| `POST` | `/channels/:channelId/followers` | session | `{ targetChannelId: string }` | `{ follow: ChannelFollow }` | `201`, or `200` if already following |
+| `GET` | `/channels/:channelId/followers` | session, `ManageMessages` on the source channel (decided — same bar as publish, not just `ViewChannel`) | — | `{ followers: ChannelFollow[] }` | `200` |
+| `DELETE` | `/channels/:channelId/followers/:followId` | session | — | `{ ok: true }` | `200` |
+| `POST` | `/messages/:messageId/publish` | session | — | `{ message: Message, followerCount: number }` | `200` |
+
+Errors: `400` self-follow, non-`ANNOUNCEMENT` source, already published, publishing a crosspost · `403` caller lacks `ManageChannels` (follow) or `ManageMessages` (publish, list followers) · `404` source/target channel not found or not viewable, message not found.
+
+`GET /channels/:channelId/followers` deliberately sits under the **source** channel and requires `ManageMessages` there (decided, Rules item 11 — tighter than the general `ViewChannel` bar, since the follower list is moderator-facing information), while create/delete sit under the same path with the acting permission always checked against the **target** channel for follow/unfollow, and the **source** channel for publish — mirrors Discord's `POST /channels/{channel.id}/followers` shape.
+
+**DB / migration**
+
+- `ChannelType` enum: add `ANNOUNCEMENT` (Postgres `ALTER TYPE ... ADD VALUE`, additive, cannot run inside the same transaction as other DDL on some Postgres versions — the migration issues it as its own statement, per Postgres's `ADD VALUE` restriction, before any statement that could reference it).
+- `ServerWebhook.sourceChannelId String?` (nullable — an ordinary incoming webhook has none), `ON DELETE CASCADE` to `Channel`, indexed. `@@unique([sourceChannelId, channelId])` is **not** added on top of the existing table structure directly (Prisma cannot express a partial-unique easily); instead the service enforces idempotency via `findFirst` + create in a transaction (see Rules item 3) — a small window for a duplicate under concurrent identical requests is accepted (cosmetic: two rows deliver two copies) and not treated as a correctness bug, matching the repo's general posture that duplicate-not-crash beats blocking on a database-level constraint here (see Trade-offs).
+- `Message.publishedAt DateTime? `, `Message.isCrosspost Boolean @default(false)`, both additive, no backfill (existing rows get `publishedAt = NULL`, `isCrosspost = false`, i.e. "not published" / "not a copy" — correct for every message that predates this feature).
+- Migration file: `apps/api/prisma/migrations/<timestamp>_add_announcement_channels/migration.sql`, hand-written, with a `down()` that drops the two `ServerWebhook`/`Message` columns and their index; the `ChannelType` enum value itself is not dropped on rollback (Postgres cannot remove an enum value without recreating the type), matching Postgres's own limitation — noted explicitly as a one-way piece of this migration.
+- No lock-duration concern: `ServerWebhook` and `Message` are both non-trivial tables in a live server, but every added column is nullable or has a `DEFAULT`, which Postgres 11+ adds as a metadata-only change with no table rewrite.
+
+**Follower-count warning** — decided: no hard cap on followers per channel in v1. `PublishService.publish` counts the `ServerWebhook` rows with `sourceChannelId` = the source channel before fan-out and calls `this.logger.warn(...)` (Nest `Logger`, per `rules/backend-nestjs.md`) when that count exceeds 50, naming the channel id and the count — visibility for an operator, not a limit for the caller. No new config value; 50 is a constant in `publish.service.ts`.
+
+**Libraries** — none new; reuses `class-validator`, the existing `syntheticUserIdentity`/webhook token helpers, and `toAttachmentInput`/`carriedStickerAttachment` from the messages/forwarding modules.
+
+## Trade-offs
+
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| **A (chosen): follow row = `ServerWebhook` + `sourceChannelId`** | Reuses the entire delivery machinery (synthetic author, `authorNameOverride`, AutoMod-on-target, broadcast) with zero new tables; a follow and an ordinary incoming webhook share one settings surface and one audit shape. | Overloads `ServerWebhook`'s meaning (a row is now "an incoming URL" or "a follow," distinguished only by `sourceChannelId` being set); `tokenHash` stays `NOT NULL` and unused for a follow row (a harmless, never-read random value) rather than being made nullable, to avoid touching the column's existing constraint. | **Chosen** — directly does what the task asked ("model follow as a webhook with a source channel reference"), smallest schema diff. |
+| B: a new dedicated `ChannelFollow` table, publish writes directly via `MessagesService` | Cleaner model (a follow is not secretly a webhook); no unused `tokenHash`. | Needs its own synthetic-author strategy from scratch (duplicating what `ServerWebhook` already solved) or a new FK to a shared "system author" concept; more new surface for the same outcome. | Rejected — reinvents machinery the repo already has working and audited. |
+| C: publish creates real messages authored by the actual publishing user in every follower's channel | No synthetic user needed. | The publisher is not a member of the follower's server (the whole reason this feature exists), so `Message.authorId` would point at a user with zero membership in that server — breaks every membership-based read (mentions, presence, profile card) the same way `incoming-webhooks.md` already ruled out for webhooks. | Rejected — same reasoning `incoming-webhooks.md`'s Trade-offs already established for a webhook post. |
+| **D (chosen, decided): edits/deletes do not propagate to copies** | Matches Discord's own behavior; copies are truly independent rows, so no "phantom update" reaches a server whose moderators never approved that specific edit; avoids a fan-out write on every edit of a popular announcement. | A publisher who typos and edits the original leaves the typo live in every follower's copy — the only fix is deleting each copy manually (out of scope) or publishing a follow-up correction message. | **Decided** — matches the reference product and avoids turning every edit into a cross-server fan-out. |
+| E: propagate edits/deletes to every delivered copy | Keeps copies in sync with the source. | Requires tracking a copy↔source link per delivered message (a new column on `Message`), a fan-out write path for every edit (not just every publish), and a moderation question of whether a follower server's moderator can be overridden by a remote edit they did not see. | Rejected — meaningfully larger scope than "publish once," not requested by the acceptance criteria. |
+| **F (chosen): idempotency via `findFirst`+create, no DB-level partial unique** | Ships with Prisma's schema capabilities as used elsewhere in this repo (no raw SQL constraint); the failure mode of a rare duplicate is cosmetic (an extra copy), not a correctness bug. | A tight race between two identical follow requests can create two rows before either commits. | **Chosen** — consistent with the repo's general precedent of small, DB-agnostic idempotency checks in a service method rather than partial unique indexes; the risk is bounded and cosmetic. |
+
+What the chosen option (A) costs: any future reader of `ServerWebhook` must know that `sourceChannelId != null` changes what the row means (no token, delivery is triggered by publish rather than by an external POST) — this is called out in the model's doc comment and in `channel-follows.service.ts`'s module comment at implementation time.
+
+## Risks & rollback
+
+- **What can break**: reusing `ServerWebhook` for follows means a bug in `WebhooksService`'s channel/webhook lookups that does not account for `sourceChannelId` could let the ordinary incoming-webhooks UI list a follow row (or vice versa) — every existing `WebhooksService`/`WebhookDeliveryService` query must be re-checked to filter on `sourceChannelId: null` where it means "ordinary webhook only," and this doc's new services filter on `sourceChannelId: { not: null }` where it means "follow only." This is a real risk to verify at implementation time, not assumed solved by this doc.
+- **What can break**: fan-out on publish is synchronous (one HTTP request delivers to every follower in sequence or in `Promise.all`) — a source channel with many followers makes publish a slower request; no async queue exists in this repo (`saved-messages.md` Current behavior notes no scheduler is installed), so this doc accepts synchronous fan-out for v1. **Decided**: no hard follower cap; `PublishService.publish` logs `Logger.warn` above 50 followers at publish time so runaway fan-out is visible in server logs before it becomes a queue-worthy problem (Rules item 10).
+- **Not covered**: edit/delete propagation (Trade-offs D), bulk publish, cross-deployment federation.
+- **Rollback**: revert the code; the migration's `Message`/`ServerWebhook` column additions are additive and drop cleanly in `down()`. The `ChannelType.ANNOUNCEMENT` enum value cannot be removed by `down()` (Postgres limitation, noted in DB / migration) — any `ANNOUNCEMENT` channel created before rollback keeps that type in the database even after the code stops understanding it, which the rollback plan must treat as "leave them, they render as an unrecognized type client-side" rather than "data loss."
+
+## Test plan
+
+Not covered by automated tests (`RULE.md:77` — this repo forbids `*.test.ts`/`*.spec.ts` files). Verify with `npm run typecheck`, `npm run lint`, `npm run build`, `npm run i18n:check`.
+
+**Manual**
+
+1. Create an `ANNOUNCEMENT` channel in server A → post a message in it as an ordinary member with `SendMessages` → message appears normally, same as a `TEXT` channel.
+2. In server B, a member with `ManageChannels` on `#news` follows server A's announcement channel into `#news` → back in server A, a member with `ManageMessages` on the source channel calls `GET /channels/:id/followers` on the source and sees the new follow.
+3. A member with `ManageMessages` on the source channel publishes the message → it appears in server B's `#news` within the same request, authored as "Server A" with the announcement channel's follow-webhook avatar, `isCrosspost: true`; the source message shows `publishedAt` set and a "Published" badge.
+4. Attempt to publish the same message again → `400 Message already published`.
+5. Attempt to publish the delivered copy in server B (assuming a `ManageMessages` holder there tries) → `400 A crossposted message cannot be published`.
+6. **Failure case**: a member without `ManageMessages` on the source channel calls publish → `403`.
+7. **Failure case**: a member without `ManageChannels` on the target channel calls follow → `403`.
+8. **Failure case**: a member who can view the source `ANNOUNCEMENT` channel (`ViewChannel`) but lacks `ManageMessages` on it calls `GET /channels/:channelId/followers` → `403 Missing permission: MANAGE_MESSAGES`, not `404` (the channel stays visible; only the follower list is refused).
+9. Follow the same (source, target) pair twice → second call returns the existing follow, no duplicate row (verify via `GET /channels/:id/followers`, as a `ManageMessages` holder on the source, listing exactly one entry).
+10. Unfollow → publish the source message again (a *new* message) → the previously-following server's `#news` receives nothing.
+11. Edit the original message after publishing → the delivered copy in server B is unchanged.
+12. Delete the source `ANNOUNCEMENT` channel with an active follow → the follow row is gone (verified via the target server's settings no longer listing it), following the cascade named in Changes item 9 (this exact cascade path was reasoned from the existing `channelId` cascade, not independently exercised this session — call this out again at implementation time).
+13. Publish a message in a source channel with 51+ followers (or lower the constant locally to test) → publish still succeeds and delivers to all of them; server log shows the `Logger.warn` above the 50-follower threshold (Rules item 10).
+
+## Deployment notes
+
+- New env vars: none.
+- Migration `<timestamp>_add_announcement_channels` must run before deploying the API. The `ALTER TYPE ChannelType ADD VALUE 'ANNOUNCEMENT'` statement must commit before any subsequent statement in the same deploy references the new value (Postgres restriction) — the migration file's statement order enforces this.
+- Shared package (`packages/shared`) must be rebuilt before the API/web build, per the repo's monorepo build order.
+- No cache/queue to clear.
+- New i18n keys land in both `en.ts` and `vi.ts` in the same change; run `npm run i18n:check` before merging the web change.
+- Breaking API change: none — `ANNOUNCEMENT` is an additive `ChannelType` value, and the two new `Message` fields are optional/defaulted, so existing clients see no shape change on messages they already render.

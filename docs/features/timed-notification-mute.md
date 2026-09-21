@@ -1,0 +1,164 @@
+# Feature Spec: Timed Notification Mute
+
+Lets a user mute the global scope, a server, or a channel for a fixed duration (15m / 1h / 8h / 24h) or indefinitely, with automatic un-muting once the duration expires — no background job required.
+
+- **Status**: draft — awaiting review
+
+## Goal
+
+Today `NotificationPreference.muted` (`apps/api/prisma/models/notifications.prisma:6`) is a plain boolean: once set, it stays muted until the user manually flips it back, and only the global scope has UI (`apps/web/src/components/settings/ProfileSettings.tsx:238-289`). Users want to mute a noisy server or channel "for a while" without having to remember to unmute it.
+
+Acceptance criteria:
+
+- `PATCH /users/me/notification-preferences` accepts a `muteDuration` of `'15m' | '1h' | '8h' | '24h' | 'forever'` and stores the resulting expiry; a mute past its expiry is treated as not-muted everywhere the API checks `muted` today, with no sweep/cron needed.
+- Push suppression (`PushService.shouldSendPush`, `apps/api/src/modules/push/push.service.ts:164-182`) uses the same expiry-aware check.
+- A server icon in the server rail and a channel row each gain a context-menu "Mute" action with the same duration choices, plus "Unmute" when a mute is active.
+- The global settings switch (`ProfileSettings.tsx`) gains a duration selector next to the existing mute toggle.
+- `GET /users/me/notification-preferences` and the account data export reflect the stored expiry so the client can render "muted until …" and treat an expired row as unmuted without waiting for a server round trip.
+
+## Scope
+
+**In scope**
+
+- `mutedUntil` column on `NotificationPreference`, DTO/API changes to set it from a duration, and the `isMuteActive` read-time check used by push suppression.
+- Server-icon and channel-row context menu mute actions; duration selector on the existing global mute switch.
+- Adding a membership/`ViewChannel` authorization check to `updateNotificationPreference`, closing the gap described below (flagged as a behavior change, not silently shipped).
+
+**Out of scope**
+
+- Per-DM-conversation mute — `NotificationPreference` has no `conversationId` (`apps/api/prisma/models/notifications.prisma:1-17`); follow-up (decided 2026-09-18, `open-questions.md` #41: mute is push-only and DMs send no push today — a DM only creates an in-app `Notification` row, `direct-messages.service.ts:168-180` — so a DM mute would have no observable effect until DM push or in-app suppression exists).
+- Enforcing `mentionOnly` (already unread in the API — see Current behavior) and suppressing in-app `Notification` rows or unread counts; mute only ever gates push (decided 2026-09-18, `open-questions.md` #42: smallest change that delivers the value — suppressing badges touches unread tracking across several modules and is a follow-up). The web UI still shows a muted state visually (dimmed server icon / channel row), which is cosmetic only and does not touch unread counts.
+- Custom/arbitrary mute durations beyond the four fixed presets and "forever".
+- Any change to `reminder-sweep.service.ts`'s saved-message reminder delivery — it must keep bypassing mute, as it does today.
+
+## Current behavior
+
+- `NotificationPreference` (`apps/api/prisma/models/notifications.prisma:1-17`): `userId`, `serverId?`, `channelId?`, `muted Boolean @default(false)`, `mentionOnly`, `desktopEnabled`; indexed on `[userId, serverId]` and `[userId, channelId]`. No `conversationId`.
+- Shared contract `NotificationPreference` at `packages/shared/src/api-contract.ts:181-188` mirrors `muted`/`mentionOnly`/`desktopEnabled`, no expiry field.
+- `UpdateNotificationPreferenceDto` (`apps/api/src/modules/users/dto/update-notification-preference.dto.ts:3-24`): every field optional, `serverId`/`channelId` are bare `@IsString()`.
+- `GET`/`PATCH /users/me/notification-preferences` (`apps/api/src/modules/users/users.controller.ts:36-46`).
+- `UsersService.updateNotificationPreference` (`apps/api/src/modules/users/users.service.ts:209-235`): looks up the row by `(userId, serverId ?? null, channelId ?? null)`, then updates or creates it. The write is a **full replace**: any field missing from the DTO is written as `false` (lines 222-224), not merged with the existing row — a client that PATCHes only `mentionOnly` silently resets `muted` and `desktopEnabled` to `false`. **This method never checks the caller is a member of `serverId` or can view `channelId`** — any authenticated user can PATCH an arbitrary `serverId`/`channelId` they have no relationship to, creating an orphaned preference row. This is an existing authorization gap, not introduced by this change; the plan below closes it as part of adding scoped mute UI, which is itself a behavior change (see Changes → Edge cases).
+- `UsersService.listNotificationPreferences` (`:199-207`) returns all of the caller's rows, ordered by `updatedAt desc`, with no filtering.
+- Push suppression, `PushService.shouldSendPush` (`apps/api/src/modules/push/push.service.ts:164-182`): skip if the recipient is `ONLINE`; otherwise load all of the user's preference rows, pick `channelPreference ?? serverPreference ?? globalPreference` as the single "effective" row (whichever of the three exists, regardless of level), skip if the global row has `desktopEnabled === false`, skip if `effectivePreference?.muted`. `mentionOnly` is read nowhere else in the API — it exists on the model and DTO but no code branches on it.
+- `PushService.isPushAllowed` (`:150-162`), used by `sendGenericPush` (`:108-121`, called from `reminder-sweep.service.ts:101`), only checks online status and the **global** `desktopEnabled` — it does not consult `muted` at any level, so saved-message reminders are already unaffected by mute today and must stay that way.
+- Mention push is triggered from `MessagesService.notifyMentionedUsers` (`apps/api/src/modules/messages/messages.service.ts:703-738`), which calls `PushService.sendMentionPush` per mentioned user after a `ViewChannel` check.
+- In-app `Notification` rows are created without consulting `NotificationPreference` at all, e.g. for direct messages (`apps/api/src/modules/direct-messages/direct-messages.service.ts:168-180` `announceCreatedMessage` → `this.notifications.create(...)`). Channel mentions today only trigger a push, not an in-app `Notification` row — read from `notifyMentionedUsers` above, which never calls `NotificationsService.create`; **this is inferred from the absence of such a call in the method, not from a comment confirming it, and is not independently verified elsewhere.**
+- Web: `useSettingsActions.ts` `updateNotificationPreference` (`apps/web/src/hooks/useSettingsActions.ts:155-190`) PATCHes and writes the React Query cache keyed by `queryKeys.notificationPreferences(userId)` (`apps/web/src/query/queryKeys.ts:53`); it also toggles the browser push subscription when the **global** row's `desktopEnabled` changes. UI exists only for the global scope, in `ProfileSettings.tsx:238-289` — three `SwitchRow`s (mute, mentions-only, desktop), each sending the full preference object (confirming the "full replace" contract above).
+- The shared `ContextMenuRoot`/`ContextMenuTrigger`/`ContextMenuContent`/`ContextMenuItem` primitives (`apps/web/src/components/ui/ContextMenu.tsx`) are already used for per-row menus in `MemberSidebar.tsx` and `MessageRow.tsx`; the server rail (`apps/web/src/components/workspace/ServerRail.tsx`) and the channel list (`apps/web/src/components/workspace/ChannelList.tsx`) do not use a context menu today (grepped for `ContextMenuRoot`, no match in either file) — mute will be the first context-menu entry on the server icon and channel row.
+- i18n catalogs live in `apps/web/src/i18n/locales/en.ts` and `vi.ts`; the repo gates them with `npm run i18n:check` → `node scripts/i18n-scan.mjs` (`package.json:23`).
+- Latest migration folder: `apps/api/prisma/migrations/20260918007000_add_stage_channels`; a new migration follows that `YYYYMMDDHHmmss_description` naming.
+- The account data export includes preferences via `account-export-collector.ts:185-193` (selects `serverId, channelId, muted, mentionOnly, desktopEnabled`), with no expiry field yet.
+
+## Changes
+
+### Rules / Flow
+
+1. `NotificationPreference` gains a nullable `mutedUntil DateTime?`. Semantics:
+   - `muted = false` → not muted, `mutedUntil` is irrelevant (cleared to `null` on unmute).
+   - `muted = true, mutedUntil = null` → muted indefinitely ("until I turn it back on").
+   - `muted = true, mutedUntil = T` → muted only while `now < T`; once `now >= T` the preference behaves as unmuted everywhere `muted` is read, without any write happening — no sweep job flips the boolean back (see Trade-offs).
+2. A single pure helper, `isMuteActive(pref: { muted: boolean; mutedUntil: Date | null }, now: Date): boolean`, returns `pref.muted && (pref.mutedUntil === null || pref.mutedUntil > now)`. `PushService.shouldSendPush` calls it in place of the current `effectivePreference?.muted` read (`push.service.ts:180`).
+3. `UpdateNotificationPreferenceDto` gains `muteDuration?: '15m' | '1h' | '8h' | '24h' | 'forever'`. The service computes `mutedUntil` server-side from the server's UTC clock (`15m/1h/8h/24h` → `now + duration`; `forever` → `null`) rather than trusting a client-supplied ISO timestamp, so client clock skew cannot under- or over-mute (see Trade-offs). Sending `muted: false` (unmute) clears `mutedUntil` to `null` regardless of `muteDuration`. `muteDuration` is only meaningful when `muted: true` is also sent; sending `muteDuration` without `muted: true` is a `400`.
+4. `UsersService.updateNotificationPreference` changes from a full replace to a **partial merge**: fields absent from the DTO keep the existing row's value (fixes the bug in Current behavior where an unrelated PATCH silently reset other fields) instead of defaulting to `false`. This is a deliberate behavior change from today's semantics (decided 2026-09-18, `open-questions.md` #43 — accepted, since the only known caller, `ProfileSettings.tsx`, already sends every field and is unaffected) — see Edge cases.
+5. `updateNotificationPreference` now requires, when `serverId` is given, that the caller is a member of that server (`ServerMember` lookup, same pattern used elsewhere, e.g. `requireReadableChannel` in `member-timeout-and-slowmode.md`'s Current behavior), and when `channelId` is given, that the caller has `ViewChannel` on it (`PermissionsService.hasChannelPermission`). Failing either returns `404` (existence not leaked, matching the pattern in `saved-messages.md`). This closes the authorization gap named in Current behavior.
+6. `shouldSendPush`'s scope resolution changes from "pick the first existing row, then read its `muted`" (`channelPreference ?? serverPreference ?? globalPreference`, `push.service.ts:174-180`) to **per-level evaluation**: push is suppressed if `isMuteActive` is true for *any* of the channel, server, or global preference row — not just the single row the old `??` chain happened to pick. Concretely, `shouldSendPush` loads the three rows independently and skips the push when `isMuteActive(channelPreference) || isMuteActive(serverPreference) || isMuteActive(globalPreference)` (each treated as inactive when the row does not exist). This matches Discord's own layering (a channel-level unmute never overrides a server mute) and is a **deliberate behavior change** from today (decided 2026-09-18, `open-questions.md` #44): today, a channel row with `muted=false` — created e.g. by unmuting that one channel — masks an active server mute, because the old resolution picks the channel row and stops there and never looks at the server row at all. The global `desktopEnabled` check (`push.service.ts:178`, "skip if the global row exists and `desktopEnabled` is false") is unchanged.
+7. Web: server icon and channel row each get a `ContextMenuRoot`/`ContextMenuContent` (reusing `apps/web/src/components/ui/ContextMenu.tsx`, the same primitive `MessageRow.tsx` and `MemberSidebar.tsx` already use) with a "Mute" submenu offering the four durations plus "Forever", or "Unmute" + the current expiry when a mute is active. The global settings `SwitchRow` for mute (`ProfileSettings.tsx:243-254`) gets a duration `<select>` next to it, shown only while the switch is on.
+8. The client treats an expired mute as unmuted on render: `isMuteActive` (a small TS port of the same helper) is called against the cached preference and `Date.now()` wherever a "muted" badge or dimmed state is shown — no client-side timer is scheduled to flip state at the exact expiry moment; the UI catches up on the next render/refetch (React Query's normal `staleTime`/window-focus refetch), which is acceptable because the only consequence of a stale "still muted" badge for a few minutes is cosmetic — actual push suppression is decided by the API, not the client (see Trade-offs).
+
+### Edge cases
+
+| Case | Expected behavior |
+|---|---|
+| `muteDuration` omitted, `muted: true` | Treated as `forever` (`mutedUntil = null`), matching today's boolean-only behavior for existing callers. |
+| `muteDuration: 'forever'` with `muted: false` | `400` — `muteDuration` requires `muted: true`. |
+| PATCH after expiry (mute row exists, `mutedUntil` in the past) | Read as not-muted (`isMuteActive` false); a subsequent mute PATCH simply overwrites `mutedUntil` with a new future value, no special "re-mute" branch needed. |
+| PATCH with `serverId` for a server the caller is not a member of | `404` (new: was previously silently accepted — see Rules item 5, a deliberate behavior change from today). |
+| PATCH with `channelId` the caller cannot view | `404`, same reasoning. |
+| Duplicate mute PATCH (already muted, same duration) | Idempotent: `mutedUntil` recomputed from `now`, i.e. it extends by the full duration from the moment of the call, not merged with any remaining time. |
+| Server muted, channel row exists and is unmuted | No push: per-level evaluation (Rules item 6) suppresses on the active server mute regardless of the channel row's own state. |
+| Channel muted, server unmuted (or no server row) | No push for that channel; other channels on the same server are unaffected. |
+| Unauthorized (no `Authorization` header) | `401`, unchanged — the controller's existing guard is untouched. |
+
+## Technical approach
+
+**Files touched**
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/models/notifications.prisma` | Add `mutedUntil DateTime?` to `NotificationPreference`. |
+| `apps/api/prisma/migrations/<timestamp>_add_notification_mute_expiry/` | New hand-written migration. |
+| `apps/api/src/modules/users/dto/update-notification-preference.dto.ts` | Add `muteDuration?: '15m' \| '1h' \| '8h' \| '24h' \| 'forever'` (`@IsOptional() @IsIn([...])`). |
+| `apps/api/src/modules/users/users.service.ts` | `updateNotificationPreference`: partial merge instead of full replace, membership/`ViewChannel` check, `muteDuration` → `mutedUntil` resolution. |
+| `apps/api/src/modules/users/notification-mute.ts` (new) | `isMuteActive` helper + `resolveMutedUntil(duration, now)`, shared by the users service and the push service. |
+| `apps/api/src/modules/push/push.service.ts` | `shouldSendPush` moves from the `channelPreference ?? serverPreference ?? globalPreference` single-row pick to per-level `isMuteActive` evaluation across channel, server, and global rows (Rules item 6). |
+| `apps/api/src/modules/users/account-export-collector.ts` | Select `mutedUntil` alongside the existing preference fields. |
+| `packages/shared/src/api-contract.ts` | `NotificationPreference` gains `mutedUntil: string \| null`; add `MuteDuration` union type. |
+| `apps/web/src/api.ts`, `hooks/useSettingsActions.ts` | Pass `muteDuration` through `updateNotificationPreference`. |
+| `apps/web/src/utils/notificationMute.ts` (new) | Client-side `isMuteActive` port. |
+| `apps/web/src/components/settings/ProfileSettings.tsx` | Duration `<select>` beside the existing mute `SwitchRow`. |
+| `apps/web/src/components/workspace/ServerRail.tsx` | Wrap the server icon in `ContextMenuRoot`/`ContextMenuTrigger`, add mute submenu. |
+| `apps/web/src/components/workspace/ChannelList.tsx` | Same, per channel row. |
+| `apps/web/src/i18n/locales/en.ts`, `vi.ts` | New strings: duration labels, "Muted until …", "Mute", "Unmute". |
+
+**API contract**
+
+- `PATCH /users/me/notification-preferences`
+  - Request: `{ serverId?: string; channelId?: string; muted?: boolean; muteDuration?: '15m' | '1h' | '8h' | '24h' | 'forever'; mentionOnly?: boolean; desktopEnabled?: boolean }`
+  - Response `200`: `{ preference: NotificationPreference }` (now including `mutedUntil`)
+  - Errors: `400` `muteDuration` sent without `muted: true` · `404` `serverId` given but caller is not a member · `404` `channelId` given but caller lacks `ViewChannel`
+- `GET /users/me/notification-preferences` — response items include `mutedUntil`. No other change.
+
+**DB / migration**
+
+- Table: `NotificationPreference`. New column: `mutedUntil TIMESTAMP(3) NULL` (no default, no backfill — every existing row keeps `mutedUntil = NULL`, which per the semantics above means "muted indefinitely" for any row that already has `muted = true`; this preserves current behavior exactly for existing users).
+- Migration file: `apps/api/prisma/migrations/<timestamp>_add_notification_mute_expiry/migration.sql`, hand-written, `ALTER TABLE "NotificationPreference" ADD COLUMN "mutedUntil" TIMESTAMP(3);` with a `down()` dropping the column. Adding a nullable column with no default is a fast metadata-only change on Postgres; no lock-duration concern for a table this size (one row per user × scope).
+- No new index needed: existing `[userId, serverId]` / `[userId, channelId]` indexes already cover the lookups; `mutedUntil` is only ever filtered in application code (`isMuteActive`), never in a `WHERE`.
+
+**Libraries** — none new; reuses `class-validator`'s `@IsIn` (already used elsewhere in the repo's DTOs) and the existing `ContextMenu` primitives.
+
+## Trade-offs
+
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| **A (chosen): evaluate `mutedUntil > now` at read time** | No new job/process; correctness holds even if the API is down for a while; matches the repo's existing "compute expiry, don't sweep" pattern for `ServerMember.timeoutUntil` (`member-timeout-and-slowmode.md` Changes → Timeout rules: "a past value means not timed out, so expiry needs no job"). | `muted` stays `true` in the DB after expiry — any code that reads the raw `muted` boolean without going through `isMuteActive` will get a stale answer; mitigated by routing every read through the helper. | Chosen — consistent with the repo's precedent, zero infra cost. |
+| B: a sweep flips `muted` to `false` once `mutedUntil` passes | Raw `muted` boolean is always accurate for any future reader | Extra recurring job (the repo has no scheduler installed — confirmed in `saved-messages.md` Current behavior), write churn on every preference row, and a window between expiry and the next sweep tick where behavior still depends on `mutedUntil` anyway — so it does not even remove the need for the check. | Rejected — strictly more moving parts for no correctness gain. |
+| C: store `mutedUntil` only (drop the `muted` boolean), with a far-future sentinel for "forever" | One field instead of two | A magic sentinel date is easy to get wrong in a migration or a manual DB query, and breaks the simple `muted: boolean` shape every existing caller (DTO, contract, `ProfileSettings.tsx`) already depends on. | Rejected — keeps the existing boolean contract intact, `mutedUntil` is purely additive. |
+| D: client sends its own ISO `mutedUntil` instead of a duration enum | Simpler server code (no duration→timestamp mapping) | Trusts the client's clock; a user with a skewed clock could under- or over-mute, and the server would need to validate/clamp an arbitrary timestamp anyway. | Rejected — a closed enum resolved server-side is simpler to validate and impossible to skew. |
+| **E (chosen): per-level mute evaluation in `shouldSendPush`** (any of channel/server/global active mutes it) | Matches the mental model of muting a whole server ("nothing from here"); a channel-level unmute cannot accidentally leak notifications from a server the user muted on purpose. | One extra row load per push decision (channel + server + global, same three rows already fetched today, just no longer collapsed into a single pick); changes existing behavior for any user who unmuted a specific channel inside a muted server. | Chosen (decided 2026-09-18, `open-questions.md` #44) — matches Discord's own layering; the cost is one query pattern already in place, not a new one. |
+| F: keep today's "first existing row wins" resolution | No behavior change, simplest | A channel-level unmute silently defeats a server-level mute, which is surprising and was the exact bug open question 44 was raised about. | Rejected — the surprising interaction outweighs the simplicity. |
+
+What the chosen option costs: every place that reads `NotificationPreference.muted` directly (there is currently exactly one, `push.service.ts:180`) must be updated to go through `isMuteActive` instead — missing one is a silent bug where an expired mute still suppresses push. This is called out explicitly in Files touched and should be grepped for again at implementation time.
+
+## Risks & rollback
+
+- **What can break**: the switch from full-replace to partial-merge in `updateNotificationPreference` (Rules item 4) changes response shape for any existing caller that relied on the old "missing field defaults to `false`" behavior — the only known caller is `ProfileSettings.tsx`, which already sends all three boolean fields every time, so it is unaffected; still a behavior change worth flagging to reviewers.
+- **What can break**: adding the membership/`ViewChannel` check (Rules item 5) turns a previously-silent `serverId`/`channelId` mismatch into a `404`. If any existing client code (none found in this repo's `apps/web`, but a third-party caller of this API is not ruled out) relied on the old permissive behavior, it will start failing.
+- **What can break**: the per-level mute evaluation in `shouldSendPush` (Rules item 6) changes push delivery for any existing user who has unmuted a single channel inside a server they muted — they will stop getting push from that channel again, where today they silently still received it. This is the intended fix (decided via `open-questions.md` #44), but is a real, observable change for existing preference rows created before this ships.
+- **Not covered**: per-DM mute, `mentionOnly` enforcement, in-app `Notification`/unread-badge suppression — see Scope.
+- **Rollback**: revert the code; the migration is additive (`down()` drops `mutedUntil`) and safe to roll back independently since no other column depends on it. Rows written with a non-null `mutedUntil` are simply lost on rollback, which only means those users' scoped mutes lose their expiry (fail open to "muted forever" until manually unmuted) — not a data-loss risk for anything else.
+
+## Test plan
+
+Not covered by automated tests (repo has no test suite by policy).
+
+**Manual**
+
+1. Mute a channel for `15m` while offline, have another user mention the caller in that channel → no push arrives. Wait past 15 minutes, mention again → push arrives.
+2. Mute a channel `forever` → mention while offline → no push, indefinitely, until the user unmutes.
+3. Unmute a channel that has an active timed mute → `mutedUntil` clears, next mention pushes normally.
+4. `PATCH` with a `serverId` the caller is not a member of → `404`, no row created (verify via `GET` that no orphan preference exists).
+5. `PATCH` with only `mentionOnly: true` on an existing muted preference → `GET` afterward shows `muted` is still `true` (partial-merge, not reset to `false`).
+6. Trigger the account data export for a user with an active timed mute → the export's notification-preferences section includes `mutedUntil`.
+7. Global settings: toggle mute on, pick `1h`, save, reload the page → switch still shows on with the duration reflected (from the persisted `mutedUntil`, not local-only state).
+8. Server-icon and channel-row context menus show "Mute" with all five options when unmuted, and "Unmute" + the remaining time when muted.
+9. Mute the server for `1h`; leave the channel-level preference row unmuted (or absent) → mention the caller in that channel while offline → no push (per-level evaluation, Rules item 6 / edge case "server muted, channel row unmuted").
+10. Mute only a channel (server left unmuted) → mention the caller in that channel while offline → no push; a mention in a *different* channel of the same server still pushes normally.
+
+## Deployment notes
+
+- New env vars: none.
+- Migration `<timestamp>_add_notification_mute_expiry` must run before deploying the API (adds a nullable column, safe to run online).
+- Shared package (`packages/shared`) must be rebuilt before the API/web build, per the repo's monorepo build order.
+- No cache/queue to clear.
+- No breaking API change for existing clients: `muteDuration` is a new optional field; `mutedUntil` is a new optional response field. The tightened authorization on `serverId`/`channelId` (turning a silent accept into `404`) is the one behavior change worth flagging to the frontend team before this ships, even though this repo's own client never triggers it today.
+- Add the new i18n strings to `en.ts` and `vi.ts` and run `npm run i18n:check` before merging the web change.
