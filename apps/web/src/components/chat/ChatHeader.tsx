@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import {
   Bell,
   Edit3,
   FolderOpen,
   Hash,
   Lock,
+  Megaphone,
   Menu,
   MonitorUp,
   MoreVertical,
@@ -31,6 +33,7 @@ import {
   IconButton,
   Tooltip,
 } from '@/components/ui';
+import { FollowChannelDialog } from './FollowChannelDialog';
 import type { ChatPanelChannelAvatar, ChatPanelPanels } from './types';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import styles from './ChatHeader.module.css';
@@ -69,6 +72,7 @@ export function ChatHeader({
 }: ChatHeaderProps) {
   const t = useTranslation();
   const { server, openMemberList } = useWorkspace();
+  const [isFollowOpen, setIsFollowOpen] = useState(false);
   const canManageChannel = memberHasServerPermission(
     server,
     auth.user.id,
@@ -149,6 +153,8 @@ export function ChatHeader({
             />
           ) : channel?.type === 'STAGE' ? (
             <Radio size={18} aria-hidden="true" />
+          ) : channel?.type === 'ANNOUNCEMENT' ? (
+            <Megaphone size={18} aria-hidden="true" />
           ) : (
             <Hash size={18} aria-hidden="true" />
           )}
@@ -235,6 +241,12 @@ export function ChatHeader({
                 {t('chatHeader.channelSettings')}
               </DropdownMenuItem>
             ) : null}
+            {channel?.type === 'ANNOUNCEMENT' ? (
+              <DropdownMenuItem onSelect={() => setTimeout(() => setIsFollowOpen(true), 0)}>
+                <Megaphone size={16} aria-hidden="true" />
+                {t('announcement.follow.action')}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem disabled={!channel} onSelect={() => togglePanel('media')}>
               <FolderOpen size={16} aria-hidden="true" />
               {t('chatHeader.mediaFilesLinks')}
@@ -265,6 +277,9 @@ export function ChatHeader({
           <Search size={14} aria-hidden="true" />
         </Button>
       </div>
+      {isFollowOpen && channel?.type === 'ANNOUNCEMENT' ? (
+        <FollowChannelDialog source={channel} onOpenChange={setIsFollowOpen} />
+      ) : null}
     </header>
   );
 }

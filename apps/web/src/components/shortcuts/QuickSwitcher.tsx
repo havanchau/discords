@@ -1,4 +1,12 @@
-import { Hash, MessageCircle, MessagesSquare, Search, Server, Users } from 'lucide-react';
+import {
+  Hash,
+  Megaphone,
+  MessageCircle,
+  MessagesSquare,
+  Search,
+  Server,
+  Users,
+} from 'lucide-react';
 import {
   useEffect,
   useId,
@@ -156,6 +164,7 @@ function EntryIcon({ entry }: { entry: QuickSwitcherEntry }) {
   if (entry.kind === 'conversation') {
     return entry.conversation.isGroup ? <Users size={16} /> : <MessageCircle size={16} />;
   }
+  if (entry.channel.type === 'ANNOUNCEMENT') return <Megaphone size={16} />;
   return entry.channel.type === 'FORUM' ? <MessagesSquare size={16} /> : <Hash size={16} />;
 }
 

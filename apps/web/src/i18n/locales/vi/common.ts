@@ -59,6 +59,7 @@ export const common = {
   'error.fallback.cannot-mark-direct-message-read': 'Không đánh dấu đọc được tin nhắn riêng',
   'error.fallback.cannot-open-conversation': 'Không mở được cuộc trò chuyện',
   'error.fallback.cannot-open-server': 'Không mở được server',
+  'error.fallback.cannot-load-insights': 'Không tải được thống kê',
   'error.fallback.cannot-load-reports': 'Không tải được báo cáo',
   'error.fallback.cannot-load-message-history': 'Không tải được lịch sử chỉnh sửa',
   'error.fallback.cannot-report-message': 'Không báo cáo được tin nhắn',

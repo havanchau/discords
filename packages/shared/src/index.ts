@@ -1,3 +1,4 @@
+export * from './announcements.js';
 export * from './api-contract.js';
 export * from './bots.js';
 export * from './i18n.js';

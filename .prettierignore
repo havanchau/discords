@@ -7,4 +7,5 @@ artifacts/
 docs/screenshots/
 apps/api/prisma/migrations/
 .vercel/
+.claude/worktrees/
 .claude/settings.local.json

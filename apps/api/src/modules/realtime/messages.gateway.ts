@@ -38,10 +38,19 @@ export class MessagesGateway {
   @SubscribeMessage('channel:join')
   async joinChannel(@ConnectedSocket() client: Socket, @MessageBody() body: { channelId: string }) {
     const user = requireHumanSocketUser(client);
-    const channel = await this.access.requireViewableChannel(user.id, body.channelId);
+    const channel = await this.access.requireChannelView(user.id, body.channelId);
+    // The server room carries only server-wide events (presence, members, emoji, events), so it is
+    // joined before the age gate: an unconfirmed user whose first opened channel is age-restricted
+    // still gets them (docs/features/age-restricted-channels.md).
+    await client.join(this.publisher.serverRoom(channel.serverId));
+    try {
+      await this.access.requireAgeConfirmed(user.id, channel.id);
+    } catch (error) {
+      if (error instanceof HttpException) return this.socketErrors.ack(client, error);
+      throw error;
+    }
 
     await client.join(this.publisher.channelRoom(body.channelId));
-    await client.join(this.publisher.serverRoom(channel.serverId));
     return { ok: true, activeCall: await this.calls.getActiveCallSummary(body.channelId) };
   }
 

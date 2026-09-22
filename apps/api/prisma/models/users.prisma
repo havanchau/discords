@@ -45,6 +45,8 @@ model User {
   kind                      UserKind                   @default(HUMAN)
   status                    UserStatus                 @default(OFFLINE)
   emailVerifiedAt           DateTime?
+  /// Self-attested 18+ confirmation, global across servers; not identity or age verification.
+  ageConfirmedAt            DateTime?
   twoFactorSecret           String?
   twoFactorPendingSecret    String?
   twoFactorEnabledAt        DateTime?

@@ -267,6 +267,7 @@ export class MessagesService {
       serverId: channel.serverId,
       channelId: channel.id,
       channelName: channel.name,
+      isAgeRestricted: channel.isAgeRestricted,
       content,
     });
     await this.postAutoModAlerts(autoModAlerts);
@@ -387,6 +388,7 @@ export class MessagesService {
       serverId: rootMessage.serverId,
       channelId: rootMessage.channelId,
       channelName: rootMessage.channel.name,
+      isAgeRestricted: rootMessage.channel.isAgeRestricted,
       content,
     });
     await this.postAutoModAlerts(autoModAlerts);
@@ -728,6 +730,8 @@ export class MessagesService {
     serverId: string;
     channelId: string;
     channelName: string;
+    /** Age-restricted channels get a content-free push body, whoever the recipient is. */
+    isAgeRestricted: boolean;
     content: string;
   }) {
     const mentionedUsernames = [...new Set(parseMentions(input.content))];
@@ -757,6 +761,7 @@ export class MessagesService {
           serverId: input.serverId,
           channelId: input.channelId,
           channelName: input.channelName,
+          isAgeRestricted: input.isAgeRestricted,
           content: input.content,
         });
       }),

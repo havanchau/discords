@@ -8,6 +8,7 @@ import { CheckRow, SwitchRow } from './SettingsRows';
 import { SettingsSelect } from './SettingsSelect';
 import { ForumTagsSection } from './ForumTagsSection';
 import { ChannelWebhooksSection } from './ChannelWebhooksSection';
+import { ChannelFollowersSection, FollowedChannelsSection } from './ChannelFollowsSection';
 import { useAuthContext } from '@/contexts/appContexts';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
 import type { SettingsModalFields, SettingsSelectOption } from './types';
@@ -179,6 +180,12 @@ export function ChannelSettings({
           description={t('channel.private.hint')}
           defaultChecked={Boolean(channel.isPrivate)}
         />
+        <SwitchRow
+          name="isAgeRestricted"
+          title={t('channel.field.ageRestricted')}
+          description={t('channel.ageRestricted.hint')}
+          defaultChecked={Boolean(channel.isAgeRestricted)}
+        />
         <TextField
           label={t('channel.field.type')}
           value={
@@ -186,7 +193,9 @@ export function ChannelSettings({
               ? t('channel.type.voice')
               : channel.type === 'FORUM'
                 ? t('channel.type.forum')
-                : t('channel.type.text')
+                : channel.type === 'ANNOUNCEMENT'
+                  ? t('channel.type.announcement')
+                  : t('channel.type.text')
           }
           readOnly
           className={styles.readonlyInput}
@@ -200,6 +209,20 @@ export function ChannelSettings({
       channel.type === 'TEXT' &&
       memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS') ? (
         <ChannelWebhooksSection serverId={server.id} channelId={channel.id} />
+      ) : null}
+
+      {server &&
+      auth &&
+      channel.type === 'ANNOUNCEMENT' &&
+      memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES') ? (
+        <ChannelFollowersSection channelId={channel.id} />
+      ) : null}
+
+      {server &&
+      auth &&
+      (channel.type === 'TEXT' || channel.type === 'ANNOUNCEMENT') &&
+      memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS') ? (
+        <FollowedChannelsSection channelId={channel.id} />
       ) : null}
 
       {server ? (

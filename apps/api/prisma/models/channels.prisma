@@ -3,6 +3,7 @@ enum ChannelType {
   VOICE
   FORUM
   STAGE
+  ANNOUNCEMENT
 }
 
 model ChannelCategory {
@@ -29,6 +30,8 @@ model Channel {
   position                  Int                         @default(0)
   isPrivate                 Boolean                     @default(false)
   slowmodeSeconds           Int                         @default(0)
+  /// Members must have `User.ageConfirmedAt` set to read or post (docs/features/age-restricted-channels.md).
+  isAgeRestricted           Boolean                     @default(false)
   /// Shown above the new-post form of a FORUM channel; null on every other type.
   postGuidelines            String?
   createdAt                 DateTime                    @default(now())
@@ -46,7 +49,9 @@ model Channel {
   scheduledMessages         ScheduledMessage[]
   autoModAlertRules         AutoModRule[]
   forumTags                 ForumTag[]
-  webhooks                  ServerWebhook[]
+  webhooks                  ServerWebhook[]             @relation("WebhookChannel")
+  /// Follow rows (`ServerWebhook.sourceChannelId`) of other channels following this ANNOUNCEMENT channel.
+  followers                 ServerWebhook[]             @relation("WebhookSourceChannel")
   stageSpeakers             StageSpeaker[]
   stageSpeakRequests        StageSpeakRequest[]
 

@@ -27,6 +27,10 @@ export class UpdateChannelDto {
   isPrivate?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  isAgeRestricted?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   position?: number;

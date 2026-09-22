@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { FORUM_POST_GUIDELINES_MAX_LENGTH } from '@discord-clone/shared';
 
 export class CreateChannelDto {
@@ -8,8 +8,8 @@ export class CreateChannelDto {
   name!: string;
 
   @IsOptional()
-  @IsIn(['TEXT', 'VOICE', 'FORUM', 'STAGE'])
-  type?: 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE';
+  @IsIn(['TEXT', 'VOICE', 'FORUM', 'STAGE', 'ANNOUNCEMENT'])
+  type?: 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE' | 'ANNOUNCEMENT';
 
   @IsOptional()
   @IsString()
@@ -20,6 +20,10 @@ export class CreateChannelDto {
   @IsString()
   @MaxLength(64)
   categoryId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isAgeRestricted?: boolean;
 
   /** Kept only when `type` is FORUM. */
   @IsOptional()

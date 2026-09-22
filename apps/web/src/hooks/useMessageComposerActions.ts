@@ -15,6 +15,7 @@ import { executeSlashCommand } from '@/utils/executeSlashCommand';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { toBotSlashCommandDefinition } from '@/utils/slashCommands';
 import { useChannelMessageActions } from './useChannelMessageActions';
+import { usePublishMessage } from './usePublishMessage';
 import type { usePersistentDraft } from './usePersistentDrafts';
 import { useSlashCommandInvocation } from './useSlashCommandInvocation';
 
@@ -208,6 +209,17 @@ export function useMessageComposerActions({
     setReplyingToMessage(null);
   }
 
+  const canManageMessages = Boolean(
+    auth && memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES'),
+  );
+  const publishMessage = usePublishMessage({
+    auth,
+    decryptMessageForDisplay,
+    setMessages,
+    setWorkspaceError,
+    setWorkspaceNotice,
+    t,
+  });
   const messageActions = useChannelMessageActions({
     auth,
     socket,
@@ -223,9 +235,10 @@ export function useMessageComposerActions({
     setReplyingToMessage,
     openThread,
     togglePinnedMessage,
-    canManageMessages: Boolean(
-      auth && memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES'),
-    ),
+    canManageMessages,
+    // Server-level approximation, like `canManageMessages`; the API checks the channel.
+    canPublish: canManageMessages && channel?.type === 'ANNOUNCEMENT',
+    publishMessage,
   });
 
   return { sendChatMessage, sendMessage, messageActions, botCommands, pendingInteractionLabel };

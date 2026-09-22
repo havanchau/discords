@@ -16,6 +16,7 @@ import { bots } from './bots';
 import { stickersSoundboard } from './stickers-soundboard';
 import { platform } from './platform';
 import { stage } from './stage';
+import { announcements } from './announcements';
 
 export const en = {
   ...common,
@@ -34,4 +35,5 @@ export const en = {
   ...stickersSoundboard,
   ...platform,
   ...stage,
+  ...announcements,
 } as const;

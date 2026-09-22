@@ -15,6 +15,7 @@ interface SendMentionPushInput {
   serverId: string;
   channelId: string;
   channelName: string;
+  isAgeRestricted: boolean;
   content: string;
 }
 
@@ -85,10 +86,14 @@ export class PushService {
 
     const payload = JSON.stringify({
       title: this.i18n.t(locale, 'push.channelMessage.title', { channel: input.channelName }),
-      body: this.i18n.t(locale, 'push.channelMessage.body', {
-        author: input.fromUsername,
-        content: truncate(input.content, 100),
-      }),
+      // A lock screen is more public than the app: an age-restricted channel's push never carries
+      // its author or content, even for a recipient who confirmed their age.
+      body: input.isAgeRestricted
+        ? this.i18n.t(locale, 'push.channelMessage.ageRestrictedBody')
+        : this.i18n.t(locale, 'push.channelMessage.body', {
+            author: input.fromUsername,
+            content: truncate(input.content, 100),
+          }),
       icon: '/favicon.svg',
       badge: '/favicon.svg',
       data: {

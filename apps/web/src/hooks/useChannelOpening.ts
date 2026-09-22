@@ -14,6 +14,8 @@ import type { Translate } from '@/i18n/LocaleProvider';
 
 interface UseChannelOpeningOptions {
   channel: Channel | null;
+  /** The open channel is age-restricted and unconfirmed: the API would refuse its content and room. */
+  isAgeGated: boolean;
   auth: AuthState | null;
   socket: Socket | null;
   activeChannelIdRef: MutableRefObject<string | null>;
@@ -35,6 +37,7 @@ interface UseChannelOpeningOptions {
 /** Resets and refetches channel state (messages, unread marker, pins, active call) when the open channel changes. */
 export function useChannelOpening({
   channel,
+  isAgeGated,
   auth,
   socket,
   activeChannelIdRef,
@@ -73,6 +76,14 @@ export function useChannelOpening({
     closeThread();
     setSearchResults(null);
     setWorkspaceError(null);
+    if (isAgeGated) {
+      // The gate replaces the view: nothing to fetch, and no stale messages behind it. The join is
+      // still sent so the socket enters the server room; the API refuses the channel room itself.
+      setMessages([]);
+      setIsLoadingMessages(false);
+      socket?.emit('channel:join', { channelId: channel.id });
+      return;
+    }
     void apiRequest<{
       messages: Message[];
       nextCursor?: string | null;
@@ -133,10 +144,12 @@ export function useChannelOpening({
       },
     );
   });
-  // Opening a channel resets and refetches its state, so it runs on a new channel, token or socket only.
+  // Opening a channel resets and refetches its state, so it runs on a new channel, token or socket
+  // only — or when the age gate lifts, which loads the messages and emits `channel:join` without a
+  // reconnect (docs/features/age-restricted-channels.md, Rule 14).
   useEffect(() => {
     openChannel();
-  }, [channel?.id, auth?.accessToken, socket]);
+  }, [channel?.id, auth?.accessToken, socket, isAgeGated]);
 
   return { firstUnreadMessageId };
 }

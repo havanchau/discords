@@ -104,6 +104,10 @@ export interface ChannelMessageActions {
   updatePoll: (poll: Poll) => void;
   /** Server-level approximation for showing "Close poll"; the API applies channel overrides. */
   canManageMessages: boolean;
+  /** An ANNOUNCEMENT channel and a MANAGE_MESSAGES holder (server-level approximation). */
+  canPublish: boolean;
+  /** Crossposts one message to every following channel; reports its own failure. */
+  publish: (messageId: string) => Promise<void>;
 }
 
 export interface ChatPanelMessageActions extends ChannelMessageActions {

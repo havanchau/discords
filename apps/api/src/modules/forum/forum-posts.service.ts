@@ -156,6 +156,7 @@ export class ForumPostsService {
       serverId: channel.serverId,
       channelId,
       channelName: channel.name,
+      isAgeRestricted: channel.isAgeRestricted,
       content,
     });
     await this.messages.postAutoModAlerts(autoModAlerts);

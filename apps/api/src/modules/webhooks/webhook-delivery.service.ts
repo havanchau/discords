@@ -11,7 +11,7 @@ export interface AuthenticatedWebhook {
   id: string;
   name: string;
   webhookUserId: string;
-  channel: { id: string; name: string; type: string; serverId: string };
+  channel: { id: string; name: string; type: string; serverId: string; isAgeRestricted: boolean };
 }
 
 /**
@@ -40,14 +40,18 @@ export class WebhookDeliveryService {
         id: true,
         name: true,
         tokenHash: true,
+        sourceChannelId: true,
         webhookUserId: true,
         server: { select: { deletedAt: true } },
-        channel: { select: { id: true, name: true, type: true, serverId: true } },
+        channel: {
+          select: { id: true, name: true, type: true, serverId: true, isAgeRestricted: true },
+        },
       },
     });
     // Hash the token even when the id is unknown, so response time does not reveal valid ids.
     const tokenMatches = webhookTokenMatches(token, webhook?.tokenHash ?? '');
-    if (!webhook || !tokenMatches || webhook.server.deletedAt) {
+    // A follow row's token was never issued, but it is refused outright rather than by hash alone.
+    if (!webhook || !tokenMatches || webhook.sourceChannelId || webhook.server.deletedAt) {
       throw new NotFoundException('Not found');
     }
     return {
@@ -108,6 +112,7 @@ export class WebhookDeliveryService {
       serverId: channel.serverId,
       channelId: channel.id,
       channelName: channel.name,
+      isAgeRestricted: channel.isAgeRestricted,
       content,
     });
     await this.messages.postAutoModAlerts(autoModAlerts);

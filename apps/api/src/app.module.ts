@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { I18nModule } from './common/i18n/i18n.module';
 import { RateLimitGuard } from './common/rate-limit.guard';
+import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AutoModModule } from './modules/automod/automod.module';
 import { BotsModule } from './modules/bots/bots.module';
@@ -49,6 +50,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     FriendsModule,
     DirectMessagesModule,
     ForwardingModule,
+    AnnouncementsModule,
     ServersModule,
     ChannelsModule,
     MessagesModule,

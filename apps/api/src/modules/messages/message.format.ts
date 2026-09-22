@@ -94,6 +94,8 @@ export function formatMessage(
     thread: thread ?? null,
     poll: message.poll && !message.deletedAt ? formatPoll(message.poll, userId) : null,
     forwardOrigin: message.deletedAt ? null : formatForwardOrigin(message),
+    publishedAt: message.publishedAt,
+    isCrosspost: message.isCrosspost,
   };
 }
 

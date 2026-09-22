@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/node_modules/**',
       'apps/web/dist/**',
       'package-lock.json',
+      '.claude/worktrees/**',
     ],
   },
   js.configs.recommended,

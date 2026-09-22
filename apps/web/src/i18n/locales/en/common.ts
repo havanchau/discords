@@ -59,6 +59,7 @@ export const common = {
   'error.fallback.cannot-mark-direct-message-read': 'Cannot mark direct message read',
   'error.fallback.cannot-open-conversation': 'Cannot open conversation',
   'error.fallback.cannot-open-server': 'Cannot open server',
+  'error.fallback.cannot-load-insights': 'Cannot load insights',
   'error.fallback.cannot-load-reports': 'Cannot load reports',
   'error.fallback.cannot-load-message-history': 'Cannot load edit history',
   'error.fallback.cannot-report-message': 'Cannot report message',

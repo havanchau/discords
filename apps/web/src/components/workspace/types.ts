@@ -60,5 +60,5 @@ export interface WorkspaceSidebarProps {
   actions: WorkspaceSidebarActions;
 }
 
-export type ChannelCreateType = 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE';
+export type ChannelCreateType = 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE' | 'ANNOUNCEMENT';
 export type ServerAction = 'create' | 'join';

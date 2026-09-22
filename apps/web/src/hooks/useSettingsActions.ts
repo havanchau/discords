@@ -511,6 +511,7 @@ export function useSettingsActions({
             name: formText(form, 'name').trim(),
             topic: formText(form, 'topic').trim(),
             isPrivate: form.get('isPrivate') === 'on',
+            isAgeRestricted: form.get('isAgeRestricted') === 'on',
             position: positionValue ? Number(positionValue) : undefined,
             slowmodeSeconds: slowmodeValue === null ? undefined : Number(slowmodeValue),
             // The select is only rendered when the server has categories; '' means "No category".

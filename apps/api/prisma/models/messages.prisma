@@ -59,6 +59,10 @@ model Message {
   // Per-post name and avatar a webhook supplied; null means the author row's own values.
   authorNameOverride           String?
   authorAvatarOverride         String?
+  // Announcement channels: set once when the message is published to followers; null = never.
+  publishedAt                  DateTime?
+  // A copy delivered to a follower by a publish. Never publishable itself, which stops any loop.
+  isCrosspost                  Boolean             @default(false)
   editedAt                     DateTime?
   deletedAt                    DateTime?
   createdAt                    DateTime            @default(now())
@@ -76,6 +80,8 @@ model Message {
   @@index([channelId, createdAt])
   @@index([channelId, authorId, createdAt])
   @@index([threadId, createdAt])
+  // Server insights: messages per UTC day and per channel across one server.
+  @@index([serverId, createdAt])
 }
 
 // The content an edit replaced, one row per edit; the live text stays on Message.content. Capped per

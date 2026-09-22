@@ -178,6 +178,7 @@ export class AuthService {
         locale: true,
         status: true,
         emailVerifiedAt: true,
+        ageConfirmedAt: true,
         createdAt: true,
       },
     });
@@ -223,6 +224,7 @@ export class AuthService {
         locale: session.user.locale,
         status: session.user.status,
         emailVerifiedAt: session.user.emailVerifiedAt,
+        ageConfirmedAt: session.user.ageConfirmedAt,
         createdAt: session.user.createdAt,
       },
     };

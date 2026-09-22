@@ -33,9 +33,27 @@ export class UsersService {
   async getMe(userId: string): Promise<{ user: User }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { ...PROFILE_USER_SELECT, email: true, locale: true, platformRole: true },
+      select: {
+        ...PROFILE_USER_SELECT,
+        email: true,
+        locale: true,
+        platformRole: true,
+        ageConfirmedAt: true,
+      },
     });
     return { user: toProfileView(user) };
+  }
+
+  /**
+   * Records the self-attested 18+ confirmation (docs/features/age-restricted-channels.md). Conditional
+   * on the stored value, so a repeat call keeps the original timestamp instead of moving it.
+   */
+  async confirmAge(userId: string): Promise<{ user: User }> {
+    await this.prisma.user.updateMany({
+      where: { id: userId, ageConfirmedAt: null },
+      data: { ageConfirmedAt: new Date() },
+    });
+    return this.getMe(userId);
   }
 
   async updateMe(userId: string, dto: UpdateMeDto) {

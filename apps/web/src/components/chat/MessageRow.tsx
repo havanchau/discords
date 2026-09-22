@@ -53,6 +53,12 @@ import { ForwardMessageDialog } from './ForwardMessageDialog';
 import { AuthorMessageHistoryDialog } from './MessageHistoryDialog';
 import { MessageAttachments } from './MessageAttachments';
 import { PollCard } from './PollCard';
+import {
+  AnnouncementBadges,
+  canPublishMessage,
+  PublishActionButton,
+  PublishMenuItem,
+} from './PublishMessageAction';
 import { ReportMessageDialog } from './ReportMessageDialog';
 import styles from './MessageRow.module.css';
 import type { ChatPanelMessageActions } from './types';
@@ -223,6 +229,7 @@ export const MessageRow = memo(function MessageRow({
   const canReport = Boolean(serverId) && message.authorId !== auth.user.id;
   // Edit history is the author's own view; moderators reach it through a report instead.
   const canViewHistory = canManage && Boolean(message.editedAt);
+  const canPublish = canPublishMessage(message, actions);
   const isPopoverOpen = isEmojiOpen || isSaveOpen;
   // A webhook author is not a member and has no profile to open.
   const isWebhookAuthor = message.author.kind === 'WEBHOOK';
@@ -316,6 +323,7 @@ export const MessageRow = memo(function MessageRow({
                       {t('message.botBadge')}
                     </Badge>
                   ) : null}
+                  <AnnouncementBadges message={message} className={styles.webhookBadge} />
                   <span>{dates.dateTime(message.createdAt)}</span>
                   {canViewHistory ? (
                     <button
@@ -431,6 +439,7 @@ export const MessageRow = memo(function MessageRow({
                     messageId={message.id}
                     onOpenChange={setIsSaveOpen}
                   />
+                  {canPublish ? <PublishActionButton message={message} actions={actions} /> : null}
                   {canForward ? (
                     <Tooltip content={t('forward.action')}>
                       <IconButton
@@ -519,6 +528,7 @@ export const MessageRow = memo(function MessageRow({
               <Pin size={14} aria-hidden="true" />{' '}
               {isPinned ? t('message.menu.unpin') : t('message.menu.pin')}
             </ContextMenuItem>
+            {canPublish ? <PublishMenuItem message={message} actions={actions} /> : null}
             {canForward ? (
               <ContextMenuItem onClick={() => setIsForwardOpen(true)}>
                 <Forward size={14} aria-hidden="true" /> {t('forward.menu')}

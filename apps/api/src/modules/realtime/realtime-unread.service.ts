@@ -82,7 +82,7 @@ export class RealtimeUnreadService {
     if (!serverIds.length) return {};
 
     const channels = await this.prisma.channel.findMany({
-      where: { serverId: { in: serverIds }, type: { in: ['TEXT', 'FORUM'] } },
+      where: { serverId: { in: serverIds }, type: { in: ['TEXT', 'ANNOUNCEMENT', 'FORUM'] } },
       select: { id: true, serverId: true, isPrivate: true },
     });
     const viewableChannels = await this.permissions.filterViewableChannels(userId, channels);

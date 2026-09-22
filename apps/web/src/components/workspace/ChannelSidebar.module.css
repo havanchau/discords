@@ -182,6 +182,18 @@
   text-align: center;
 }
 
+/* Informational only: the gate screen, not the row, blocks an age-restricted channel. */
+.ageBadge {
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--badge-min-size);
+}
+
 .liveBadge {
   color: var(--text-on-accent);
   background: var(--state-success);

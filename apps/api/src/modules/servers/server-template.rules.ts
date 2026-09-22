@@ -92,7 +92,7 @@ const ROLE_NAME_MAX_LENGTH = 50;
 const ROLE_COLOR_MAX_LENGTH = 24;
 const CATEGORY_NAME_MAX_LENGTH = 80;
 const CHANNEL_TOPIC_MAX_LENGTH = 250;
-const channelTypes: readonly ChannelType[] = ['TEXT', 'VOICE', 'FORUM', 'STAGE'];
+const channelTypes: readonly ChannelType[] = ['TEXT', 'VOICE', 'FORUM', 'STAGE', 'ANNOUNCEMENT'];
 const knownPermissions: ReadonlySet<string> = new Set(ownerPermissions);
 const slowmodeOptions: ReadonlySet<number> = new Set(SLOWMODE_OPTIONS_SECONDS);
 

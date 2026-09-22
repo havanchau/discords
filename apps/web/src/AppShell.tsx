@@ -7,6 +7,7 @@ import { useChannelEncryption } from './hooks/useChannelEncryption';
 import { useChannelReadState } from './hooks/useChannelReadState';
 import { useChannelCall } from './hooks/useChannelCall';
 import { useChannelOpening } from './hooks/useChannelOpening';
+import { useAgeConfirmation } from './hooks/useAgeConfirmation';
 import { useComposerAttachments } from './hooks/useComposerAttachments';
 import { useComposerRestrictions } from './hooks/useComposerRestrictions';
 import { useDirectCall } from './hooks/useDirectCall';
@@ -29,6 +30,7 @@ import { useChatOrchestrator } from './hooks/useChatOrchestrator';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import { ActiveCallSummary } from './helpers';
 import { updateFaviconBadge } from './utils/faviconBadge';
+import { channelNeedsAgeConfirmation } from './utils/ageGate';
 import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
 import type { ActiveDialog, ActivePanel } from './components/chat/types';
 import { AuthGate } from './components/app/AuthGate';
@@ -347,8 +349,13 @@ export function AppShell() {
     clearChannelKeys();
   }, [auth, clearChannelKeys, clearDirectMessages]);
 
+  const confirmAge = useAgeConfirmation({ auth, setAuth });
+  // The gate replaces the message view, so nothing is fetched or joined until it lifts.
+  const isAgeGated = Boolean(channel && auth && channelNeedsAgeConfirmation(channel, auth.user));
+
   const { firstUnreadMessageId } = useChannelOpening({
     channel,
+    isAgeGated,
     auth,
     socket,
     activeChannelIdRef,
@@ -513,6 +520,7 @@ export function AppShell() {
     channel,
     server,
     memberIdentities,
+    confirmAge,
     selectedMember,
     messages,
     visibleMessages,

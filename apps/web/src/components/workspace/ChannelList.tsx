@@ -2,6 +2,7 @@ import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Channel } from '@/api';
 import type { ActiveCallSummary } from '@/helpers';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
 import {
   Button,
@@ -111,6 +112,7 @@ export function ChannelRow({
   contextMenu,
   onClick,
 }: ChannelRowProps) {
+  const t = useTranslation();
   const callLabel = activeCall
     ? activeCall.mode === 'screen'
       ? 'Live'
@@ -132,6 +134,11 @@ export function ChannelRow({
     >
       {icon}
       <span className={styles.channelName}>{channel.name}</span>
+      {channel.isAgeRestricted ? (
+        <span className={styles.ageBadge} title={t('channel.ageRestricted.label')}>
+          {t('channel.ageRestricted.badge')}
+        </span>
+      ) : null}
       {callLabel ? <span className={styles.liveBadge}>{callLabel}</span> : null}
       {badge?.mentions ? (
         <span className={styles.mentionBadge}>{badge.mentions}</span>

@@ -5,10 +5,16 @@ export const viApiMessages = {
   ACCOUNT_IS_NOT_SCHEDULED_FOR_DELETION: 'Tài khoản không có lịch xóa',
   ACCOUNT_IS_SCHEDULED_FOR_DELETION: 'Tài khoản đã được lên lịch xóa',
   ALREADY_A_STAGE_SPEAKER: 'Bạn đã là người nói trên sân khấu',
+  ANNOUNCEMENTS_CAN_ONLY_BE_FOLLOWED_INTO_A_TEXT_CHANNEL:
+    'Chỉ có thể theo dõi thông báo vào một kênh văn bản',
+  AN_AGE_RESTRICTED_CHANNEL_CAN_ONLY_BE_FOLLOWED_INTO_AN_AGE_RESTRICTED_CHANNEL:
+    'Kênh giới hạn độ tuổi chỉ có thể được theo dõi vào một kênh giới hạn độ tuổi',
   AN_EXPORT_IS_ALREADY_IN_PROGRESS: 'Một bản xuất dữ liệu đang được xử lý',
   AUTOMOD_RULE_LIMIT_REACHED: 'Đã đạt giới hạn số quy tắc AutoMod',
   AUTOMOD_RULE_NAME_CANNOT_BE_EMPTY: 'Tên quy tắc AutoMod không được để trống',
   AUTOMOD_RULE_NOT_FOUND: 'Không tìm thấy quy tắc AutoMod',
+  A_CHANNEL_CANNOT_FOLLOW_ITSELF: 'Kênh không thể tự theo dõi chính nó',
+  A_CROSSPOSTED_MESSAGE_CANNOT_BE_PUBLISHED: 'Không thể đăng tin nhắn được chia sẻ chéo',
   BAN_NOT_FOUND: 'Không tìm thấy lệnh cấm',
   BOT_ALREADY_IN_THIS_SERVER: 'Bot đã có trong máy chủ này',
   BOT_IS_NOT_A_MEMBER_OF_THIS_SERVER: 'Bot không phải là thành viên của máy chủ này',
@@ -67,6 +73,7 @@ export const viApiMessages = {
   EXPORT_NOT_FOUND: 'Không tìm thấy bản xuất dữ liệu',
   FILE_IS_REQUIRED: 'Cần chọn tệp',
   FILE_IS_TOO_LARGE: 'Tệp quá lớn',
+  FOLLOW_NOT_FOUND: 'Không tìm thấy lượt theo dõi',
   FORUM_POST_TITLE_IS_REQUIRED: 'Bài đăng cần có tiêu đề',
   FORUM_TAG_NAMES_MUST_BE_UNIQUE: 'Tên thẻ diễn đàn không được trùng nhau',
   FORUM_TAG_NOT_FOUND: 'Không tìm thấy thẻ diễn đàn',
@@ -107,6 +114,7 @@ export const viApiMessages = {
   MEMBER_NOT_FOUND: 'Không tìm thấy thành viên',
   MEMBER_OR_ROLE_NOT_FOUND: 'Không tìm thấy thành viên hoặc vai trò',
   MENTION_SPAM_RULES_NEED_A_MENTION_LIMIT: 'Quy tắc spam nhắc tên cần giới hạn số lượt nhắc',
+  MESSAGE_ALREADY_PUBLISHED: 'Tin nhắn đã được đăng',
   MESSAGE_CONTENT_CANNOT_BE_EMPTY: 'Nội dung tin nhắn không được để trống',
   MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS:
     'Tin nhắn không có tệp đính kèm thì không được để trống',
@@ -120,6 +128,9 @@ export const viApiMessages = {
   NOTIFICATION_NOT_FOUND: 'Không tìm thấy thông báo',
   NOT_FOUND: 'Không tìm thấy',
   NOT_IN_THIS_CALL: 'Bạn không ở trong cuộc gọi này',
+  ONLY_ANNOUNCEMENT_CHANNELS_CAN_BE_FOLLOWED: 'Kênh thông báo mới có thể được theo dõi',
+  ONLY_ANNOUNCEMENT_CHANNEL_MESSAGES_CAN_BE_PUBLISHED:
+    'Chỉ có thể đăng tin nhắn trong kênh thông báo',
   ONLY_GROUP_CONVERSATIONS_CAN_ADD_MEMBERS: 'Chỉ cuộc trò chuyện nhóm mới có thể thêm thành viên',
   ONLY_GROUP_CONVERSATIONS_CAN_BE_RENAMED: 'Chỉ cuộc trò chuyện nhóm mới có thể đổi tên',
   ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS: 'Chỉ cuộc trò chuyện nhóm mới có thể xoá thành viên',
@@ -200,6 +211,7 @@ export const viApiMessages = {
   THIS_BOT_IS_BANNED_FROM_THIS_SERVER: 'Bot này đã bị cấm khỏi máy chủ này',
   THIS_EVENT_WAS_CANCELLED: 'Sự kiện này đã bị huỷ',
   THIS_POLL_IS_CLOSED: 'Cuộc bình chọn này đã đóng',
+  THREAD_REPLIES_CANNOT_BE_PUBLISHED: 'Không thể đăng câu trả lời trong luồng',
   THREAD_ROOT_MESSAGE_NOT_FOUND: 'Không tìm thấy tin nhắn gốc của luồng',
   TIMEOUT_RULES_NEED_A_TIMEOUT_DURATION: 'Quy tắc phạt im lặng cần thời lượng',
   TOO_MANY_SCHEDULED_MESSAGES: 'Có quá nhiều tin nhắn đã lên lịch',
@@ -224,6 +236,7 @@ export const viApiMessages = {
   VOICE_MESSAGE_IS_TOO_LONG: 'Tin nhắn thoại quá dài',
   VOICE_SERVICE_IS_UNAVAILABLE: 'Dịch vụ thoại hiện không khả dụng',
   WEBHOOKS_CAN_ONLY_POST_IN_TEXT_CHANNELS: 'Webhook chỉ có thể đăng vào kênh văn bản',
+  WEBHOOK_IS_NOT_A_CHANNEL_FOLLOW: 'Webhook này không phải là lượt theo dõi kênh',
   WEBHOOK_LIMIT_REACHED: 'Đã đạt giới hạn số webhook',
   WEBHOOK_MESSAGE_CONTENT_CANNOT_BE_EMPTY: 'Nội dung tin nhắn webhook không được để trống',
   WEBHOOK_NAME_CANNOT_BE_EMPTY: 'Tên webhook không được để trống',
@@ -240,6 +253,7 @@ export const viApiMessages = {
   YOU_CANNOT_SEND_A_FRIEND_REQUEST_TO_THIS_USER:
     'Bạn không thể gửi lời mời kết bạn cho người dùng này',
   YOU_MUST_ACCEPT_THE_SERVER_RULES_FIRST: 'Bạn cần đồng ý với nội quy server trước',
+  YOU_MUST_CONFIRM_YOUR_AGE_TO_VIEW_THIS_CHANNEL: 'Bạn cần xác nhận độ tuổi để xem kênh này',
 
   // Interpolated errors, generic fallback, and non-HTTP copy.
   MISSING_PERMISSION: 'Thiếu quyền: {detail}',
@@ -261,8 +275,10 @@ export const viApiMessages = {
   'email.reset.ignore': 'Nếu bạn không yêu cầu, hãy bỏ qua email.',
   'push.channelMessage.title': '#{channel}',
   'push.channelMessage.body': '{author}: {content}',
+  'push.channelMessage.ageRestrictedBody': 'Tin nhắn mới trong kênh giới hạn độ tuổi',
   'reminder.savedMessage.title': 'Lời nhắc: tin nhắn đã lưu',
   'reminder.savedMessage.body': '{author}: {content}',
+  'reminder.savedMessage.ageRestrictedBody': 'Tin nhắn bạn đã lưu từ kênh giới hạn độ tuổi',
   'scheduledMessage.failed.title': 'Tin nhắn đã lên lịch chưa được gửi',
   'scheduledMessage.failed.body': '{reason} Tin nhắn: {content}',
   'scheduledMessage.failure.NO_ACCESS':

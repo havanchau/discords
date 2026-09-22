@@ -74,6 +74,7 @@ export class ReminderSweepService implements OnApplicationBootstrap, OnModuleDes
         where: { id: savedMessageId },
         select: {
           ownerId: true,
+          channelId: true,
           originalMessageId: true,
           snapshotContent: true,
           snapshotAuthorName: true,
@@ -98,13 +99,29 @@ export class ReminderSweepService implements OnApplicationBootstrap, OnModuleDes
         body,
         messageId: saved.originalMessageId,
       });
-      await this.push.sendGenericPush(saved.ownerId, { title, body, url: '/' });
+      // A push can show on a lock screen, so an age-restricted source never puts its author or
+      // content there, as for mention pushes (docs/features/age-restricted-channels.md).
+      const isAgeRestricted = await this.isFromAgeRestrictedChannel(saved.channelId);
+      const pushBody = isAgeRestricted
+        ? this.i18n.t(locale, 'reminder.savedMessage.ageRestrictedBody')
+        : body;
+      await this.push.sendGenericPush(saved.ownerId, { title, body: pushBody, url: '/' });
     } catch (error) {
       this.logger.error(
         `Saved message reminder delivery failed for ${savedMessageId}`,
         errorDetail(error),
       );
     }
+  }
+
+  /** Reads the channel's current flag, so a channel restricted after the save is covered too. */
+  private async isFromAgeRestrictedChannel(channelId: string | null) {
+    if (!channelId) return false;
+    const channel = await this.prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { isAgeRestricted: true },
+    });
+    return channel?.isAgeRestricted ?? false;
   }
 }
 

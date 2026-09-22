@@ -29,6 +29,8 @@ interface UseChannelMessageActionsOptions {
   openThread: (message: Message) => Promise<void>;
   togglePinnedMessage: (message: Message) => Promise<void>;
   canManageMessages: boolean;
+  canPublish: boolean;
+  publishMessage: (messageId: string) => Promise<void>;
 }
 
 /** Edit, delete, react, and pin actions for channel message rows, with stable identities. */
@@ -48,6 +50,8 @@ export function useChannelMessageActions({
   openThread,
   togglePinnedMessage,
   canManageMessages,
+  canPublish,
+  publishMessage,
 }: UseChannelMessageActionsOptions) {
   // Read through a ref so saveMessageEdit keeps its identity when new messages arrive.
   const messagesRef = useRef(messages);
@@ -152,6 +156,8 @@ export function useChannelMessageActions({
       togglePinned: (message) => void togglePinnedMessage(message),
       updatePoll,
       canManageMessages,
+      canPublish,
+      publish: publishMessage,
     }),
     [
       editingMessageId,
@@ -166,6 +172,8 @@ export function useChannelMessageActions({
       togglePinnedMessage,
       updatePoll,
       canManageMessages,
+      canPublish,
+      publishMessage,
     ],
   );
 

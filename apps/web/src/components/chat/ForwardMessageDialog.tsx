@@ -48,7 +48,11 @@ export function ForwardMessageDialog({
       ...servers.flatMap((server) =>
         server.channels
           // A forward is stored as plaintext, so it is not offered into a channel this client encrypts.
-          .filter((channel) => channel.type === 'TEXT' && !isChannelEncrypted(channel.id))
+          .filter(
+            (channel) =>
+              (channel.type === 'TEXT' || channel.type === 'ANNOUNCEMENT') &&
+              !isChannelEncrypted(channel.id),
+          )
           .map((channel) => ({
             type: 'channel' as const,
             id: channel.id,

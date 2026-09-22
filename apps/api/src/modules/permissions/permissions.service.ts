@@ -7,6 +7,7 @@ import {
   PermissionMember,
   PermissionValue,
 } from './channel-permission';
+import { AGE_CONFIRMATION_REQUIRED_MESSAGE, channelNeedsAgeConfirmation } from './age-gate';
 import { memberNeedsOnboarding, RULES_NOT_ACCEPTED_MESSAGE } from './onboarding-gate';
 
 export { Permission };
@@ -89,6 +90,33 @@ export class PermissionsService {
     // Membership itself is checked by the caller's access check, as for `requireNotTimedOut`.
     if (member && memberNeedsOnboarding(member.server, member)) {
       throw new ForbiddenException(RULES_NOT_ACCEPTED_MESSAGE);
+    }
+  }
+
+  /**
+   * Refuses an unconfirmed user on an age-restricted channel. Called after the `ViewChannel` check by
+   * both content choke points — `ChannelsService.requireReadableChannel` (REST) and
+   * `RealtimeAccessService.requireViewableChannel` (`channel:join`) — so they cannot drift apart.
+   * Bots are exempt, as for rules screening (docs/features/age-restricted-channels.md).
+   */
+  async requireAgeConfirmed(userId: string, channelId: string) {
+    const channel = await this.prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { serverId: true, isAgeRestricted: true },
+    });
+    // Existence and membership are checked by the caller's `ViewChannel` check.
+    if (!channel?.isAgeRestricted) return;
+
+    const [user, member] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { ageConfirmedAt: true } }),
+      this.prisma.serverMember.findUnique({
+        where: { userId_serverId: { userId, serverId: channel.serverId } },
+        select: { kind: true },
+      }),
+    ]);
+    if (member?.kind === 'BOT') return;
+    if (channelNeedsAgeConfirmation(channel, { ageConfirmedAt: user?.ageConfirmedAt ?? null })) {
+      throw new ForbiddenException(AGE_CONFIRMATION_REQUIRED_MESSAGE);
     }
   }
 

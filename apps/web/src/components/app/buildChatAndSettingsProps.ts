@@ -30,6 +30,7 @@ interface BuildChatAndSettingsPropsOptions {
   channel: Channel | null;
   server: ServerDetail | null;
   memberIdentities: Record<string, MemberIdentity>;
+  confirmAge: ChatPanelProps['confirmAge'];
   selectedMember: ServerDetail['members'][number] | null;
   messages: Message[];
   visibleMessages: Message[];
@@ -121,6 +122,7 @@ export function buildChatAndSettingsProps({
   channel,
   server,
   memberIdentities,
+  confirmAge,
   selectedMember,
   messages,
   visibleMessages,
@@ -293,6 +295,7 @@ export function buildChatAndSettingsProps({
         inputRef: settingsActions.channelAvatarInputRef,
         update: settingsActions.updateChannelAvatar,
       },
+      confirmAge,
     },
     settings: {
       dialog: {

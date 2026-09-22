@@ -1,10 +1,16 @@
 // Generated from the exception literals thrown across apps/api/src; npm run i18n:check keeps it in sync.
 export const ERROR_MESSAGE_CODES = {
+  'A channel cannot follow itself': 'A_CHANNEL_CANNOT_FOLLOW_ITSELF',
+  'A crossposted message cannot be published': 'A_CROSSPOSTED_MESSAGE_CANNOT_BE_PUBLISHED',
   'Account deletion is already scheduled': 'ACCOUNT_DELETION_IS_ALREADY_SCHEDULED',
   'Account is not scheduled for deletion': 'ACCOUNT_IS_NOT_SCHEDULED_FOR_DELETION',
   'Account is scheduled for deletion': 'ACCOUNT_IS_SCHEDULED_FOR_DELETION',
   'Already a stage speaker': 'ALREADY_A_STAGE_SPEAKER',
+  'An age-restricted channel can only be followed into an age-restricted channel':
+    'AN_AGE_RESTRICTED_CHANNEL_CAN_ONLY_BE_FOLLOWED_INTO_AN_AGE_RESTRICTED_CHANNEL',
   'An export is already in progress': 'AN_EXPORT_IS_ALREADY_IN_PROGRESS',
+  'Announcements can only be followed into a text channel':
+    'ANNOUNCEMENTS_CAN_ONLY_BE_FOLLOWED_INTO_A_TEXT_CHANNEL',
   'AutoMod rule limit reached': 'AUTOMOD_RULE_LIMIT_REACHED',
   'AutoMod rule name cannot be empty': 'AUTOMOD_RULE_NAME_CANNOT_BE_EMPTY',
   'AutoMod rule not found': 'AUTOMOD_RULE_NOT_FOUND',
@@ -66,6 +72,7 @@ export const ERROR_MESSAGE_CODES = {
   'Export not found': 'EXPORT_NOT_FOUND',
   'File is required': 'FILE_IS_REQUIRED',
   'File is too large': 'FILE_IS_TOO_LARGE',
+  'Follow not found': 'FOLLOW_NOT_FOUND',
   'Forum post title is required': 'FORUM_POST_TITLE_IS_REQUIRED',
   'Forum tag names must be unique': 'FORUM_TAG_NAMES_MUST_BE_UNIQUE',
   'Forum tag not found': 'FORUM_TAG_NOT_FOUND',
@@ -106,6 +113,7 @@ export const ERROR_MESSAGE_CODES = {
   'Member not found': 'MEMBER_NOT_FOUND',
   'Member or role not found': 'MEMBER_OR_ROLE_NOT_FOUND',
   'Mention spam rules need a mention limit': 'MENTION_SPAM_RULES_NEED_A_MENTION_LIMIT',
+  'Message already published': 'MESSAGE_ALREADY_PUBLISHED',
   'Message content cannot be empty': 'MESSAGE_CONTENT_CANNOT_BE_EMPTY',
   'Message content cannot be empty without attachments':
     'MESSAGE_CONTENT_CANNOT_BE_EMPTY_WITHOUT_ATTACHMENTS',
@@ -119,6 +127,9 @@ export const ERROR_MESSAGE_CODES = {
   'Not found': 'NOT_FOUND',
   'Not in this call': 'NOT_IN_THIS_CALL',
   'Notification not found': 'NOTIFICATION_NOT_FOUND',
+  'Only announcement channel messages can be published':
+    'ONLY_ANNOUNCEMENT_CHANNEL_MESSAGES_CAN_BE_PUBLISHED',
+  'Only announcement channels can be followed': 'ONLY_ANNOUNCEMENT_CHANNELS_CAN_BE_FOLLOWED',
   'Only group conversations can add members': 'ONLY_GROUP_CONVERSATIONS_CAN_ADD_MEMBERS',
   'Only group conversations can be renamed': 'ONLY_GROUP_CONVERSATIONS_CAN_BE_RENAMED',
   'Only group conversations can remove members': 'ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS',
@@ -197,6 +208,7 @@ export const ERROR_MESSAGE_CODES = {
   'This bot is banned from this server': 'THIS_BOT_IS_BANNED_FROM_THIS_SERVER',
   'This event was cancelled': 'THIS_EVENT_WAS_CANCELLED',
   'This poll is closed': 'THIS_POLL_IS_CLOSED',
+  'Thread replies cannot be published': 'THREAD_REPLIES_CANNOT_BE_PUBLISHED',
   'Thread root message not found': 'THREAD_ROOT_MESSAGE_NOT_FOUND',
   'Timeout rules need a timeout duration': 'TIMEOUT_RULES_NEED_A_TIMEOUT_DURATION',
   'Too many scheduled messages': 'TOO_MANY_SCHEDULED_MESSAGES',
@@ -221,6 +233,7 @@ export const ERROR_MESSAGE_CODES = {
   'Voice message is too long': 'VOICE_MESSAGE_IS_TOO_LONG',
   'Voice service is unavailable': 'VOICE_SERVICE_IS_UNAVAILABLE',
   'WebRTC relay is disabled': 'WEBRTC_RELAY_IS_DISABLED',
+  'Webhook is not a channel follow': 'WEBHOOK_IS_NOT_A_CHANNEL_FOLLOW',
   'Webhook limit reached': 'WEBHOOK_LIMIT_REACHED',
   'Webhook message content cannot be empty': 'WEBHOOK_MESSAGE_CONTENT_CANNOT_BE_EMPTY',
   'Webhook name cannot be empty': 'WEBHOOK_NAME_CANNOT_BE_EMPTY',
@@ -236,6 +249,8 @@ export const ERROR_MESSAGE_CODES = {
   'You cannot message this user': 'YOU_CANNOT_MESSAGE_THIS_USER',
   'You cannot send a friend request to this user': 'YOU_CANNOT_SEND_A_FRIEND_REQUEST_TO_THIS_USER',
   'You must accept the server rules first': 'YOU_MUST_ACCEPT_THE_SERVER_RULES_FIRST',
+  'You must confirm your age to view this channel':
+    'YOU_MUST_CONFIRM_YOUR_AGE_TO_VIEW_THIS_CHANNEL',
 } as const;
 
 /** Messages built with interpolation; matched by prefix because the tail varies per request. */

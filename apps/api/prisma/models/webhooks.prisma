@@ -1,22 +1,30 @@
 // An incoming webhook: a secret URL that posts into one text channel as its own synthetic `User`
 // (`webhookUserId`, kind WEBHOOK). Only the SHA-256 of the token is stored. Deleting the webhook keeps
 // that user row, so messages it already posted keep their author.
+//
+// A row with `sourceChannelId` set is not an incoming URL but a channel follow
+// (docs/features/announcement-channels.md): publishing a message in the source ANNOUNCEMENT channel
+// delivers a copy into `channelId` as this row's synthetic user. Its `tokenHash` is a random value
+// whose token was never returned, so the public posting endpoint can never match it.
 model ServerWebhook {
-  id            String   @id @default(cuid())
-  serverId      String
-  channelId     String
-  creatorId     String
-  webhookUserId String   @unique
-  name          String
-  avatarUrl     String?
-  tokenHash     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  server        Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  channel       Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  creator       User     @relation("WebhookCreator", fields: [creatorId], references: [id])
-  webhookUser   User     @relation("WebhookUser", fields: [webhookUserId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  serverId        String
+  channelId       String
+  creatorId       String
+  webhookUserId   String   @unique
+  name            String
+  avatarUrl       String?
+  tokenHash       String
+  sourceChannelId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel         Channel  @relation("WebhookChannel", fields: [channelId], references: [id], onDelete: Cascade)
+  sourceChannel   Channel? @relation("WebhookSourceChannel", fields: [sourceChannelId], references: [id], onDelete: Cascade)
+  creator         User     @relation("WebhookCreator", fields: [creatorId], references: [id])
+  webhookUser     User     @relation("WebhookUser", fields: [webhookUserId], references: [id], onDelete: Cascade)
 
   @@index([channelId])
   @@index([serverId])
+  @@index([sourceChannelId])
 }

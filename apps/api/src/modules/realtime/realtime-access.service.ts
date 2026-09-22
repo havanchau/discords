@@ -15,8 +15,15 @@ export class RealtimeAccessService {
     private readonly dmCalls: DmCallsService,
   ) {}
 
-  /** Returns the channel once the user is allowed to view it. */
+  /** Returns the channel once the user is allowed to view it and has passed its age gate. */
   async requireViewableChannel(userId: string, channelId: string) {
+    const channel = await this.requireChannelView(userId, channelId);
+    await this.requireAgeConfirmed(userId, channel.id);
+    return channel;
+  }
+
+  /** `ViewChannel` only: enough to know the user belongs to the channel's server. */
+  async requireChannelView(userId: string, channelId: string) {
     const channel = await this.prisma.channel.findUniqueOrThrow({ where: { id: channelId } });
     const canView = await this.permissions.hasChannelPermission(
       userId,
@@ -27,6 +34,14 @@ export class RealtimeAccessService {
       throw new UnauthorizedException('Not a channel member');
     }
     return channel;
+  }
+
+  /**
+   * Same gate as the REST content endpoints, so the socket never joins an age-restricted room the
+   * user has not confirmed for (docs/features/age-restricted-channels.md).
+   */
+  requireAgeConfirmed(userId: string, channelId: string) {
+    return this.permissions.requireAgeConfirmed(userId, channelId);
   }
 
   /** Server membership only — used where the channel-level check already happened on join. */

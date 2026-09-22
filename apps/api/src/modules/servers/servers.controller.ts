@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -24,7 +25,9 @@ import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
+import { InsightsQueryDto } from './dto/insights-query.dto';
 import { DeleteServerDto, TransferServerDto } from './dto/server-ownership.dto';
+import { ServerInsightsService } from './server-insights.service';
 import { ServerModerationService } from './server-moderation.service';
 import { ServerOnboardingService } from './server-onboarding.service';
 import { ServerOwnershipService } from './server-ownership.service';
@@ -38,6 +41,7 @@ export class ServersController {
     private readonly moderation: ServerModerationService,
     private readonly onboarding: ServerOnboardingService,
     private readonly ownership: ServerOwnershipService,
+    private readonly insights: ServerInsightsService,
   ) {}
 
   @RateLimit({ keyPrefix: 'server-create', limit: 5, windowMs: 60_000 })
@@ -116,6 +120,15 @@ export class ServersController {
   @Get('servers/:serverId/audit-logs')
   auditLogs(@CurrentUser() user: RequestUser, @Param('serverId') serverId: string) {
     return this.servers.listAuditLogs(user.id, serverId);
+  }
+
+  @Get('servers/:serverId/insights')
+  getInsights(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Query() query: InsightsQueryDto,
+  ) {
+    return this.insights.getInsights(user.id, serverId, query.range);
   }
 
   @Patch('servers/:serverId/members/me')

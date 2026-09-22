@@ -33,6 +33,8 @@ export interface User {
   status?: UserStatus;
   createdAt?: Date;
   emailVerifiedAt?: Date | null;
+  /** Self-attested 18+ confirmation, global; only on the caller's own session/"me" responses. */
+  ageConfirmedAt?: Date | null;
   /** Only present on the caller's own "me" response; never shown on another user's profile. */
   platformRole?: PlatformRole;
 }
@@ -176,6 +178,8 @@ export interface Channel {
   position?: number;
   isPrivate?: boolean;
   slowmodeSeconds?: number;
+  /** Message content needs `User.ageConfirmedAt`; the channel row itself stays visible. */
+  isAgeRestricted: boolean;
   /** Set only on a FORUM channel. */
   postGuidelines?: string | null;
   unreadCount?: number;
@@ -242,6 +246,41 @@ export interface AuditLogEntry {
   actor?: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
 }
 
+export const insightsRanges = ['7d', '30d'] as const;
+export type InsightsRange = (typeof insightsRanges)[number];
+
+/** One UTC calendar day of a server insights series; `date` is `YYYY-MM-DD`. */
+export interface InsightsDailyCount {
+  date: string;
+  count: number;
+}
+
+export interface InsightsSeries {
+  /** Every UTC day from the later of the range start and the server's creation day, up to today. */
+  series: InsightsDailyCount[];
+  total: number;
+}
+
+export interface InsightsTopChannel {
+  channelId: string;
+  name: string;
+  type: ChannelType;
+  messageCount: number;
+}
+
+/** `GET /servers/:serverId/insights`: live counts for a MANAGE_SERVER holder, UTC day buckets. */
+export interface ServerInsights {
+  range: InsightsRange;
+  generatedAt: Date;
+  membersJoined: InsightsSeries;
+  membersLeft: InsightsSeries;
+  membersKicked: InsightsSeries;
+  membersBanned: InsightsSeries;
+  messagesPerDay: InsightsSeries;
+  /** Up to 5 text/announcement/forum channels the viewer can view, busiest first. */
+  topChannels: InsightsTopChannel[];
+}
+
 export interface Message {
   id: string;
   channelId: string;
@@ -270,6 +309,10 @@ export interface Message {
   poll?: PollView | null;
   /** Set only on a forwarded copy. */
   forwardOrigin?: ForwardOrigin | null;
+  /** When an ANNOUNCEMENT channel message was published to its followers; null if never. */
+  publishedAt?: Date | null;
+  /** A copy delivered by a publish into a following channel; never publishable itself. */
+  isCrosspost?: boolean;
 }
 
 export type ForwardSourceType = 'CHANNEL' | 'DIRECT';

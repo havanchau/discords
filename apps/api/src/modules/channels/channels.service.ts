@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import type { Channel, ChannelPermissionOverride } from '@discord-clone/shared';
 import { ServersService } from '@/modules/servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -14,6 +15,7 @@ export class ChannelsService {
     private readonly prisma: PrismaService,
     private readonly servers: ServersService,
     private readonly permissions: PermissionsService,
+    private readonly realtime: RealtimePublisher,
   ) {}
 
   async createChannel(userId: string, serverId: string, dto: CreateChannelDto) {
@@ -29,6 +31,7 @@ export class ChannelsService {
         name,
         type,
         topic: dto.topic,
+        isAgeRestricted: dto.isAgeRestricted,
         postGuidelines: type === 'FORUM' ? normalizeGuidelines(dto.postGuidelines) : undefined,
         categoryId: dto.categoryId,
         position: channelCount,
@@ -37,6 +40,7 @@ export class ChannelsService {
     await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_CREATE', channel.id, {
       name: channel.name,
       type: channel.type,
+      isAgeRestricted: channel.isAgeRestricted,
     });
     return { channel };
   }
@@ -87,6 +91,7 @@ export class ChannelsService {
         topic: dto.topic,
         avatarUrl: dto.avatarUrl,
         isPrivate: dto.isPrivate,
+        isAgeRestricted: dto.isAgeRestricted,
         position: dto.position,
         slowmodeSeconds: dto.slowmodeSeconds,
         categoryId: dto.categoryId,
@@ -96,10 +101,14 @@ export class ChannelsService {
     await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_UPDATE', channel.id, {
       name: channel.name,
       isPrivate: channel.isPrivate,
+      isAgeRestricted: channel.isAgeRestricted,
       position: channel.position,
       slowmodeSeconds: channel.slowmodeSeconds,
       categoryId: channel.categoryId,
     });
+    if (channel.isAgeRestricted && !existing.isAgeRestricted) {
+      await this.evictUnconfirmedMembers(channel.serverId, channel.id);
+    }
     return { channel };
   }
 
@@ -164,6 +173,7 @@ export class ChannelsService {
       throw new NotFoundException('Channel not found');
     }
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.ViewChannel);
+    await this.permissions.requireAgeConfirmed(userId, channel.id);
     return channel;
   }
 
@@ -174,6 +184,22 @@ export class ChannelsService {
       throw new BadRequestException('Channel is not a forum channel');
     }
     return channel;
+  }
+
+  /**
+   * Persist first, emit second: once a channel becomes age-restricted, sockets of members who never
+   * confirmed stop receiving its live events, as `channel:join` would now refuse them. Bots are exempt
+   * from the gate (and never sit in `userRoom`), so they are left alone.
+   */
+  private async evictUnconfirmedMembers(serverId: string, channelId: string) {
+    const members = await this.prisma.serverMember.findMany({
+      where: { serverId, kind: { not: 'BOT' }, user: { ageConfirmedAt: null } },
+      select: { userId: true },
+    });
+    this.realtime.removeUsersFromRooms(
+      members.map((member) => member.userId),
+      [this.realtime.channelRoom(channelId)],
+    );
   }
 
   private async requireCategoryInServer(serverId: string, categoryId: string) {

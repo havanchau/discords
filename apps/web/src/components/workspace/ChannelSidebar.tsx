@@ -6,6 +6,7 @@ import {
   Hash,
   Loader2,
   LogOut,
+  Megaphone,
   MessageSquare,
   MessagesSquare,
   Radio,
@@ -145,6 +146,8 @@ export function ChannelSidebar({
             <MessagesSquare size={16} aria-hidden="true" />
           ) : item.type === 'STAGE' ? (
             <Radio size={16} aria-hidden="true" />
+          ) : item.type === 'ANNOUNCEMENT' ? (
+            <Megaphone size={16} aria-hidden="true" />
           ) : (
             <Hash size={16} aria-hidden="true" />
           )
@@ -197,6 +200,14 @@ export function ChannelSidebar({
                 <DropdownMenuItem onSelect={() => setTimeout(() => onCreateChannel('STAGE'), 0)}>
                   <Radio size={16} aria-hidden="true" />
                   {t('channel.dialog.createStage')}
+                </DropdownMenuItem>
+              ) : null}
+              {canManageChannels ? (
+                <DropdownMenuItem
+                  onSelect={() => setTimeout(() => onCreateChannel('ANNOUNCEMENT'), 0)}
+                >
+                  <Megaphone size={16} aria-hidden="true" />
+                  {t('channel.dialog.createAnnouncement')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem onSelect={() => setTimeout(onOpenEvents, 0)}>

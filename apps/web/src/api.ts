@@ -118,6 +118,8 @@ import type {
   FriendRequestEntry as ServerFriendRequestEntry,
   FriendsSummary as ServerFriendsSummary,
   Invite as ServerInvite,
+  InsightsRange,
+  ServerInsights as ServerServerInsights,
   LinkPreview as ServerLinkPreview,
   Message as ServerMessage,
   MessageAttachment as ServerMessageAttachment,
@@ -177,6 +179,9 @@ import type {
   ServerTemplateSummary as ServerServerTemplateSummary,
   UpdateServerDiscoveryInput,
   ChannelWebhook as ServerChannelWebhook,
+  ChannelFollow as ServerChannelFollow,
+  CreateChannelFollowInput,
+  PublishMessageResult as ServerPublishMessageResult,
   CreateWebhookInput,
   CreateWebhookResult as ServerCreateWebhookResult,
   WebhookSecret,
@@ -219,6 +224,8 @@ export type FriendEntry = Json<ServerFriendEntry>;
 export type FriendRequestEntry = Json<ServerFriendRequestEntry>;
 export type FriendsSummary = Json<ServerFriendsSummary>;
 export type Invite = Json<ServerInvite>;
+export type ServerInsights = Json<ServerServerInsights>;
+export type { InsightsRange };
 export type LinkPreview = Json<ServerLinkPreview>;
 export type Message = Json<ServerMessage>;
 export type MessageAttachment = Json<ServerMessageAttachment>;
@@ -272,6 +279,9 @@ export type ServerSummary = Json<ServerServerSummary>;
 export type ChannelWebhook = Json<ServerChannelWebhook>;
 export type CreateWebhookResult = Json<ServerCreateWebhookResult>;
 export type { CreateWebhookInput, WebhookSecret };
+export type ChannelFollow = Json<ServerChannelFollow>;
+export type PublishMessageResult = Json<ServerPublishMessageResult>;
+export type { CreateChannelFollowInput };
 export type OwnedBot = Json<ServerOwnedBot>;
 export type CreateBotResult = Json<ServerCreateBotResult>;
 export type BotAuthorization = Json<BotAuthorizationView>;

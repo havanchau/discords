@@ -8,6 +8,7 @@ import { StageModule } from '@/modules/stage/stage.module';
 import { UploadsModule } from '@/modules/uploads/uploads.module';
 import { ServerDiscoveryController } from './server-discovery.controller';
 import { ServerDiscoveryService } from './server-discovery.service';
+import { ServerInsightsService } from './server-insights.service';
 import { ServerModerationService } from './server-moderation.service';
 import { ServerOnboardingService } from './server-onboarding.service';
 import { ServerOwnershipService } from './server-ownership.service';
@@ -30,6 +31,7 @@ import { ServersService } from './servers.service';
   providers: [
     ServersService,
     ServerModerationService,
+    ServerInsightsService,
     ServerOnboardingService,
     ServerOwnershipService,
     ServerTemplatesService,

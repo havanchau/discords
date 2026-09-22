@@ -42,8 +42,9 @@ export class WebhooksService {
     channelId: string,
   ): Promise<{ webhooks: ChannelWebhook[] }> {
     await this.requireManageableChannel(userId, serverId, channelId);
+    // A follow row (`sourceChannelId` set) is managed by the announcements module, not listed here.
     const webhooks = await this.prisma.serverWebhook.findMany({
-      where: { channelId },
+      where: { channelId, sourceChannelId: null },
       select: webhookSelect,
       orderBy: { createdAt: 'asc' },
     });
@@ -62,7 +63,9 @@ export class WebhooksService {
     }
     const name = dto.name.trim();
     if (!name) throw new BadRequestException('Webhook name cannot be empty');
-    const count = await this.prisma.serverWebhook.count({ where: { channelId } });
+    const count = await this.prisma.serverWebhook.count({
+      where: { channelId, sourceChannelId: null },
+    });
     if (count >= WEBHOOK_MAX_PER_CHANNEL) {
       throw new BadRequestException('Webhook limit reached');
     }
@@ -163,9 +166,10 @@ export class WebhooksService {
     return channel;
   }
 
+  /** Ordinary webhooks only: a follow row must never be given a working token or deleted here. */
   private async requireWebhook(channelId: string, webhookId: string) {
     const webhook = await this.prisma.serverWebhook.findFirst({
-      where: { id: webhookId, channelId },
+      where: { id: webhookId, channelId, sourceChannelId: null },
       select: { id: true, name: true },
     });
     if (!webhook) throw new NotFoundException('Webhook not found');

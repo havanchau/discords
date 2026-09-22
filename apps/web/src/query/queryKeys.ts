@@ -1,3 +1,5 @@
+import type { InsightsRange } from '@discord-clone/shared';
+
 /**
  * Every key that affects a result is part of the key, so a change of server or user refetches
  * instead of showing the previous one's data.
@@ -27,6 +29,8 @@ export const queryKeys = {
   reportMessageHistory: (serverId: string, reportId: string) =>
     ['report-message-history', serverId, reportId] as const,
   auditLogs: (serverId: string) => ['audit-logs', serverId] as const,
+  serverInsights: (serverId: string, range: InsightsRange) =>
+    ['server-insights', serverId, range] as const,
   autoModRules: (serverId: string) => ['automod-rules', serverId] as const,
   serverOnboarding: (serverId: string) => ['server-onboarding', serverId] as const,
   serverTemplates: (userId: string) => ['server-templates', userId] as const,
@@ -41,6 +45,10 @@ export const queryKeys = {
   serverInvites: (serverId: string) => ['server-invites', serverId] as const,
   channelOverrides: (channelId: string) => ['channel-overrides', channelId] as const,
   channelWebhooks: (channelId: string) => ['channel-webhooks', channelId] as const,
+  /** Source side of announcement follows: who follows this ANNOUNCEMENT channel. */
+  channelFollowers: (channelId: string) => ['channel-followers', channelId] as const,
+  /** Target side: which announcement channels this channel follows. */
+  channelFollowedChannels: (channelId: string) => ['channel-followed-channels', channelId] as const,
   ownedBots: (userId: string) => ['owned-bots', userId] as const,
   botAuthorization: (userId: string, botId: string) =>
     ['bot-authorization', userId, botId] as const,

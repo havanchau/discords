@@ -449,3 +449,15 @@ Agents cannot edit `.env*` files.
 - [ ] Carry voice and video channels over a LiveKit SFU with a mesh rollback flag (implemented and verified locally; 8+ participants, TURN and production hosting not verified).
 - [x] Host stage channels with speakers and audience.
 - [x] Decide open questions 30–39, including account deletion for server owners (row 38). Decided 2026-09-18; the code changes are in [server-ownership-lifecycle.md](features/server-ownership-lifecycle.md) and [open-question-decisions-2026-09-18.md](features/open-question-decisions-2026-09-18.md). Row 40 (an audit trail that survives server delete) is open.
+
+## Wave 5 Backlog — 2026-09-22
+
+- **Age-restricted channels:** [age-restricted-channels.md](features/age-restricted-channels.md). Implemented 2026-09-22; migration `20260922001000_add_age_restricted_channels` is not applied yet.
+- **Server insights:** [server-insights.md](features/server-insights.md). Implemented 2026-09-22; migration `20260922002000_add_message_server_created_at_index` is not applied yet (index build locks writes on `Message`, confirm the deploy window or build it `CONCURRENTLY` first).
+- **Announcement channels:** [announcement-channels.md](features/announcement-channels.md). Implemented 2026-09-22; migration `20260922003000_add_announcement_channels` is not applied yet (its `ChannelType` enum value cannot be rolled back).
+
+### Checklist
+
+- [ ] Apply the migration locally and run the manual test plan in [age-restricted-channels.md](features/age-restricted-channels.md) (REST gate, `channel:join` refusal, eviction on flip, push body, bot exemption, web gate).
+- [ ] Apply the migration locally and run the manual test plan in [server-insights.md](features/server-insights.md) (counts vs direct SQL for 7d/30d, `403` for non-member and member without `MANAGE_SERVER`, `400` for an invalid range, young server, private channel excluded from top channels, empty state).
+- [ ] Apply the migration locally and run the manual test plan in [announcement-channels.md](features/announcement-channels.md) (follow/idempotent follow, publish fan-out and `isCrosspost`, `400` republish and copy publish, `403` without `MANAGE_MESSAGES`/`MANAGE_CHANNELS`, unfollow, source-channel delete cascade, age-restricted source refused into an unrestricted target).

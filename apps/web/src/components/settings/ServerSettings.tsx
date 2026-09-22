@@ -8,6 +8,7 @@ import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
 import { ServerDangerZoneSection } from './ServerDangerZoneSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
+import { ServerInsightsSection } from './ServerInsightsSection';
 import { ServerSoundboardSection } from './ServerSoundboardSection';
 import { ServerStickersSection } from './ServerStickersSection';
 import { ServerDiscoverySettings } from './ServerDiscoverySettings';
@@ -241,6 +242,10 @@ export function ServerSettings({
 
       {memberHasServerPermission(server, auth.user.id, 'MANAGE_MESSAGES') ? (
         <ReportsSection serverId={server.id} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerInsightsSection serverId={server.id} />
       ) : null}
 
       <section className={cn(styles.settingsSection, 'audit-section')}>

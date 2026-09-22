@@ -6,11 +6,13 @@ import { MessageList, type MessageListHandle } from './chat/MessageList';
 import { MessageRow } from './chat/MessageRow';
 import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
+import { AgeGate } from './chat/AgeGate';
 import { ForumChannelView } from './forum/ForumChannelView';
 import { StageChannelView } from './stage/StageChannelView';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { resolveMemberIdentity } from '@/utils/memberIdentity';
+import { channelNeedsAgeConfirmation } from '@/utils/ageGate';
 import { Button } from './ui';
 import { cn } from '@/utils/cn';
 import { clearMessageJump, usePendingMessageJump } from '@/utils/pendingMessageJump';
@@ -41,6 +43,8 @@ export interface ChatPanelProps {
   composer: ChatPanelComposer;
   thread: ChatPanelThread;
   channelAvatar: ChatPanelChannelAvatar;
+  /** Records the caller's 18+ confirmation and updates the cached user (age-restricted channels). */
+  confirmAge: () => Promise<void>;
 }
 
 export function ChatPanel({
@@ -54,6 +58,7 @@ export function ChatPanel({
   composer,
   thread,
   channelAvatar,
+  confirmAge,
 }: ChatPanelProps) {
   const t = useTranslation();
   const [previewAttachment, setPreviewAttachment] = useState<PreviewAttachment | null>(null);
@@ -74,6 +79,10 @@ export function ChatPanel({
     clearMessageJump();
     jumpToMessage(pendingJump.messageId);
   }, [pendingJump, channelId, messages.isLoading, messages.visible, jumpToMessage]);
+
+  const needsAgeConfirmation = Boolean(
+    session.channel && channelNeedsAgeConfirmation(session.channel, session.auth.user),
+  );
 
   // Announce incoming messages to screen readers
   const lastMessage = messages.all[messages.all.length - 1];
@@ -155,6 +164,9 @@ export function ChatPanel({
           channel={session.channel}
           call={call}
         />
+      ) : needsAgeConfirmation && session.channel ? (
+        // Stage audio is not message content, so only the forum and message views are gated.
+        <AgeGate key={session.channel.id} channel={session.channel} confirmAge={confirmAge} />
       ) : session.channel?.type === 'FORUM' ? (
         <ForumChannelView
           key={session.channel.id}

@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RequestUser } from '@/common/request-user';
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
@@ -22,6 +33,12 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateMeDto) {
     return this.users.updateMe(user.id, dto);
+  }
+
+  @HttpCode(200)
+  @Post('me/age-confirmation')
+  confirmAge(@CurrentUser() user: RequestUser) {
+    return this.users.confirmAge(user.id);
   }
 
   // Declared after `me/...` routes so the literal paths are not swallowed by `:userId`.
