@@ -24,6 +24,7 @@ interface AuthenticatedWorkspaceProps {
   auth: AuthState;
   socket: Socket | null;
   uiTheme: SettingsModalProps['theme']['uiTheme'];
+  resolvedTheme: 'light' | 'dark';
   setUiTheme: SettingsModalProps['actions']['setUiTheme'];
   server: ServerDetail | null;
   workspace: WorkspaceSidebarProps;
@@ -42,6 +43,7 @@ export function AuthenticatedWorkspace({
   auth,
   socket,
   uiTheme,
+  resolvedTheme,
   setUiTheme,
   server,
   workspace,
@@ -58,7 +60,7 @@ export function AuthenticatedWorkspace({
   return (
     <AuthProvider auth={auth}>
       <SocketProvider socket={socket}>
-        <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
+        <ThemeProvider uiTheme={uiTheme} resolvedTheme={resolvedTheme} setUiTheme={setUiTheme}>
           <ServerEmojiProvider emojis={serverEmojis}>
             <TooltipProvider>
               <main className={cn(styles.shell, !server && styles.homeShell)}>

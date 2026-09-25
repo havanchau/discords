@@ -9,10 +9,12 @@ import {
   Megaphone,
   MessageSquare,
   MessagesSquare,
+  Moon,
   Radio,
   Search,
   Settings,
   ShieldCheck,
+  Sun,
   UserPlus,
   Volume2,
 } from 'lucide-react';
@@ -34,6 +36,7 @@ import {
   IconButton,
   TextField,
 } from '@/components/ui';
+import { useThemeContext } from '@/contexts/appContexts';
 import { useCollapsedCategories } from '@/hooks/useCollapsedCategories';
 import { groupChannelsByCategory } from '@/utils/channelCategories';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
@@ -88,6 +91,8 @@ export function ChannelSidebar({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPlatformReportsOpen, setIsPlatformReportsOpen] = useState(false);
   const isPlatformAdmin = usePlatformAdminAccess();
+  const { resolvedTheme, setUiTheme } = useThemeContext();
+  const isDarkTheme = resolvedTheme === 'dark';
   const { collapsedIds, toggleCategory } = useCollapsedCategories();
   const isSearching = Boolean(channelQuery.trim());
   const canManageChannels = memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS');
@@ -383,17 +388,33 @@ export function ChannelSidebar({
           <strong>{auth.user.displayName}</strong>
           <span>@{auth.user.username}</span>
         </div>
-        {isPlatformAdmin ? (
-          <IconButton label={t('platform.navLabel')} onClick={() => setIsPlatformReportsOpen(true)}>
-            <ShieldCheck size={16} aria-hidden="true" />
+        <div className={styles.userActions}>
+          {isPlatformAdmin ? (
+            <IconButton
+              label={t('platform.navLabel')}
+              onClick={() => setIsPlatformReportsOpen(true)}
+            >
+              <ShieldCheck size={16} aria-hidden="true" />
+            </IconButton>
+          ) : null}
+          {/* Quick switch only ever sets an explicit theme; `system` stays reachable from settings. */}
+          <IconButton
+            label={isDarkTheme ? t('sidebar.theme.toLight') : t('sidebar.theme.toDark')}
+            onClick={() => setUiTheme(isDarkTheme ? 'light' : 'dark')}
+          >
+            {isDarkTheme ? (
+              <Sun size={16} aria-hidden="true" />
+            ) : (
+              <Moon size={16} aria-hidden="true" />
+            )}
           </IconButton>
-        ) : null}
-        <IconButton label={t('sidebar.editProfile')} onClick={() => setActiveDialog('profile')}>
-          <Edit3 size={16} aria-hidden="true" />
-        </IconButton>
-        <IconButton label={t('sidebar.logOut')} onClick={logout}>
-          <LogOut size={16} aria-hidden="true" />
-        </IconButton>
+          <IconButton label={t('sidebar.editProfile')} onClick={() => setActiveDialog('profile')}>
+            <Edit3 size={16} aria-hidden="true" />
+          </IconButton>
+          <IconButton label={t('sidebar.logOut')} onClick={logout}>
+            <LogOut size={16} aria-hidden="true" />
+          </IconButton>
+        </div>
       </div>
       <PlatformReportsPage open={isPlatformReportsOpen} onOpenChange={setIsPlatformReportsOpen} />
     </aside>

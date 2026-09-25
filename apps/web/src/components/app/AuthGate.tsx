@@ -7,16 +7,24 @@ import type { UiTheme } from '@/components/settings/types';
 interface AuthGateProps {
   auth: AuthState | null;
   uiTheme: UiTheme;
+  resolvedTheme: 'light' | 'dark';
   setUiTheme: (theme: UiTheme) => void;
   children: ReactNode;
   authScreen: AuthScreenProps;
 }
 
-export function AuthGate({ auth, uiTheme, setUiTheme, children, authScreen }: AuthGateProps) {
+export function AuthGate({
+  auth,
+  uiTheme,
+  resolvedTheme,
+  setUiTheme,
+  children,
+  authScreen,
+}: AuthGateProps) {
   if (!auth) {
     return (
       <AuthProvider auth={auth}>
-        <ThemeProvider uiTheme={uiTheme} setUiTheme={setUiTheme}>
+        <ThemeProvider uiTheme={uiTheme} resolvedTheme={resolvedTheme} setUiTheme={setUiTheme}>
           <AuthScreen {...authScreen} />
         </ThemeProvider>
       </AuthProvider>

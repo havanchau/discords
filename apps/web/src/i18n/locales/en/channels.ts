@@ -142,6 +142,8 @@ export const channels = {
   'sidebar.searchChannels': 'Search channels',
   'sidebar.serverChannels': '{server} channels',
   'sidebar.textChannels': 'Text channels',
+  'sidebar.theme.toDark': 'Switch to dark theme',
+  'sidebar.theme.toLight': 'Switch to light theme',
   'sidebar.upcomingEvents': '{count} upcoming events',
   'sidebar.voiceChannels': 'Voice channels',
   'sidebar.voiceMutedSuffix': ' · muted',

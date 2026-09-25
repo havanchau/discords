@@ -14,6 +14,8 @@ interface SocketContextValue {
 
 interface ThemeContextValue {
   uiTheme: UiTheme;
+  /* What is actually on screen: `uiTheme` with `system` already resolved against the OS setting. */
+  resolvedTheme: 'light' | 'dark';
   setUiTheme: (theme: UiTheme) => void;
 }
 
@@ -31,10 +33,15 @@ export function SocketProvider({ socket, children }: PropsWithChildren<SocketCon
 
 export function ThemeProvider({
   uiTheme,
+  resolvedTheme,
   setUiTheme,
   children,
 }: PropsWithChildren<ThemeContextValue>) {
-  return <ThemeContext.Provider value={{ uiTheme, setUiTheme }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ uiTheme, resolvedTheme, setUiTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useAuthContext() {

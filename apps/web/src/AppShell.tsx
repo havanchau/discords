@@ -179,7 +179,7 @@ export function AppShell() {
     pushNotification,
   } = useNotifications({ auth, setWorkspaceError });
 
-  const { uiTheme, setUiTheme } = useTheme();
+  const { uiTheme, resolvedTheme, setUiTheme } = useTheme();
 
   const {
     channelKeys,
@@ -434,7 +434,13 @@ export function AppShell() {
 
   if (!auth || !homeProps) {
     return (
-      <AuthGate auth={auth} uiTheme={uiTheme} setUiTheme={setUiTheme} authScreen={authScreen}>
+      <AuthGate
+        auth={auth}
+        uiTheme={uiTheme}
+        resolvedTheme={resolvedTheme}
+        setUiTheme={setUiTheme}
+        authScreen={authScreen}
+      >
         {null}
       </AuthGate>
     );
@@ -612,6 +618,7 @@ export function AppShell() {
         auth={auth}
         socket={socket}
         uiTheme={uiTheme}
+        resolvedTheme={resolvedTheme}
         setUiTheme={setUiTheme}
         server={server}
         workspace={workspace}

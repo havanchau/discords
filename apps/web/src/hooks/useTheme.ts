@@ -46,12 +46,14 @@ export function useTheme() {
     return () => query.removeEventListener('change', onChange);
   }, []);
 
+  const resolvedTheme = resolveTheme(uiTheme, prefersDark);
+
   useEffect(() => {
-    document.documentElement.dataset.theme = resolveTheme(uiTheme, prefersDark);
+    document.documentElement.dataset.theme = resolvedTheme;
     localStorage.setItem(THEME_KEY, uiTheme);
-  }, [uiTheme, prefersDark]);
+  }, [uiTheme, resolvedTheme]);
 
   const selectTheme = useCallback((theme: UiTheme) => setUiTheme(theme), []);
 
-  return { uiTheme, setUiTheme: selectTheme };
+  return { uiTheme, resolvedTheme, setUiTheme: selectTheme };
 }

@@ -142,6 +142,8 @@ export const channels = {
   'sidebar.searchChannels': 'Tìm kênh',
   'sidebar.serverChannels': 'Các kênh của {server}',
   'sidebar.textChannels': 'Kênh văn bản',
+  'sidebar.theme.toDark': 'Chuyển sang giao diện tối',
+  'sidebar.theme.toLight': 'Chuyển sang giao diện sáng',
   'sidebar.upcomingEvents': '{count} sự kiện sắp diễn ra',
   'sidebar.voiceChannels': 'Kênh thoại',
   'sidebar.voiceMutedSuffix': ' · đã tắt tiếng',
