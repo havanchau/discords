@@ -4,6 +4,7 @@ enum ChannelType {
   FORUM
   STAGE
   ANNOUNCEMENT
+  DECISION
 }
 
 model ChannelCategory {
@@ -54,6 +55,7 @@ model Channel {
   followers                 ServerWebhook[]             @relation("WebhookSourceChannel")
   stageSpeakers             StageSpeaker[]
   stageSpeakRequests        StageSpeakRequest[]
+  decisions                 Decision[]
 
   @@unique([serverId, name])
   @@index([categoryId])

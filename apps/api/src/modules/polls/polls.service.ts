@@ -19,6 +19,7 @@ import { RealtimeUnreadService } from '@/modules/realtime/realtime-unread.servic
 import { CreatePollDto } from './dto/create-poll.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
 import {
+  buildPollCreateData,
   formatPoll,
   pollInclude,
   pollUpdatedPayload,
@@ -66,7 +67,7 @@ export class PollsService {
           authorId: userId,
           // The question doubles as the message text, so previews, search and replies read naturally.
           content: input.question,
-          poll: { create: this.pollCreateData(userId, input) },
+          poll: { create: buildPollCreateData(userId, input) },
         },
         select: { id: true, poll: { select: { id: true } } },
       });
@@ -125,7 +126,7 @@ export class PollsService {
           conversationId,
           authorId: userId,
           content: input.question,
-          poll: { create: this.pollCreateData(userId, input) },
+          poll: { create: buildPollCreateData(userId, input) },
         },
         select: { id: true },
       });
@@ -256,19 +257,6 @@ export class PollsService {
       allowMultiple: dto.allowMultiple ?? false,
       showVoters: dto.showVoters ?? false,
       expiresAt,
-    };
-  }
-
-  private pollCreateData(userId: string, input: ReturnType<PollsService['normalizeInput']>) {
-    return {
-      creatorId: userId,
-      question: input.question,
-      allowMultiple: input.allowMultiple,
-      showVoters: input.showVoters,
-      expiresAt: input.expiresAt,
-      options: {
-        create: input.options.map((label, position) => ({ label, position })),
-      },
     };
   }
 

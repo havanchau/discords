@@ -114,6 +114,8 @@ model Thread {
   messages      Message[]           @relation("ThreadMessages")
   participants  ThreadParticipant[]
   tags          ThreadTag[]
+  /// Set only when this thread is a decision proposal's post (docs/features/decision-channels.md).
+  decision      Decision?
 
   @@index([channelId, updatedAt])
   @@index([serverId])

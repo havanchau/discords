@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AutoModModule } from './modules/automod/automod.module';
 import { BotsModule } from './modules/bots/bots.module';
 import { ChannelsModule } from './modules/channels/channels.module';
+import { DecisionsModule } from './modules/decisions/decisions.module';
 import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
 import { EmojisModule } from './modules/emojis/emojis.module';
 import { SoundboardModule } from './modules/soundboard/soundboard.module';
@@ -53,6 +54,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AnnouncementsModule,
     ServersModule,
     ChannelsModule,
+    DecisionsModule,
     MessagesModule,
     EmojisModule,
     StickersModule,

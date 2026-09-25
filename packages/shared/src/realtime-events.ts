@@ -49,6 +49,12 @@ export const RealtimeEvents = {
   NotificationUnread: 'notification:unread',
   /** `{ serverId, channelId }` after a channel's settings change; clients refetch the server detail. */
   ChannelUpdated: 'channel:updated',
+  /** `{ decision, thread, rootMessage }` to the channel room when a proposal is posted. */
+  DecisionCreated: 'decision:created',
+  /** The full view to the channel room on any status transition. */
+  DecisionUpdated: 'decision:updated',
+  /** `{ serverId, channelId, decisionId }` to the server room; clients refetch the decision index. */
+  DecisionIndexUpdated: 'decision:index-updated',
   ChannelJoin: 'channel:join',
   ChannelLeave: 'channel:leave',
   TypingStart: 'typing:start',

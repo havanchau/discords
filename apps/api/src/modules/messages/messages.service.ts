@@ -180,12 +180,23 @@ export class MessagesService {
     if (channel.type === 'STAGE') {
       throw new BadRequestException('Stage channels have no text chat');
     }
+    // A DECISION channel takes only decision proposals, so every top-level send path is refused
+    // here at once, same shape as FORUM above.
+    if (channel.type === 'DECISION') {
+      throw new BadRequestException('Use decision proposals on a DECISION channel');
+    }
     return this.passSendGates(userId, channel);
   }
 
   /** The same gates for a forum post, the only top-level message a FORUM channel accepts. */
   async requireCanPostInForum(userId: string, channelId: string) {
     const channel = await this.channels.requireReadableForumChannel(userId, channelId);
+    return this.passSendGates(userId, channel);
+  }
+
+  /** The same gates for a decision proposal, the only top-level message a DECISION channel accepts. */
+  async requireCanPostInDecision(userId: string, channelId: string) {
+    const channel = await this.channels.requireReadableDecisionChannel(userId, channelId);
     return this.passSendGates(userId, channel);
   }
 

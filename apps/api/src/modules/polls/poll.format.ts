@@ -65,3 +65,32 @@ export function pollUpdatedPayload(
 export function withoutViewerVotes<T extends { poll?: PollView | null }>(message: T): T {
   return message.poll ? { ...message, poll: { ...message.poll, votedOptionIds: [] } } : message;
 }
+
+/**
+ * The nested-create shape for a poll's `Prisma.PollCreateWithoutMessageInput` (or its DM
+ * equivalent), given already-normalized input. Shared by `PollsService.createChannelPoll`/
+ * `createDmPoll` and `DecisionsService`'s proposal-creation transaction, so a decision's Accept/
+ * Reject poll is built exactly like any other poll (docs/features/decision-channels.md → Voting →
+ * `pollCreateData`, decided).
+ */
+export function buildPollCreateData(
+  userId: string,
+  input: {
+    question: string;
+    options: string[];
+    allowMultiple: boolean;
+    showVoters: boolean;
+    expiresAt: Date | null;
+  },
+) {
+  return {
+    creatorId: userId,
+    question: input.question,
+    allowMultiple: input.allowMultiple,
+    showVoters: input.showVoters,
+    expiresAt: input.expiresAt,
+    options: {
+      create: input.options.map((label, position) => ({ label, position })),
+    },
+  };
+}

@@ -115,6 +115,8 @@ model User {
   uploads                   Upload[]
   stageSpeakers             StageSpeaker[]
   stageSpeakRequests        StageSpeakRequest[]
+  proposedDecisions         Decision[]                 @relation("DecisionProposer")
+  decidedDecisions          Decision[]                 @relation("DecisionDecider")
 
   @@index([deletionScheduledAt])
   @@index([avatarUrl])

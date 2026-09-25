@@ -437,6 +437,62 @@ export interface ThreadMessageResult {
   messages?: Message[];
 }
 
+// Decision channels (docs/features/decision-channels.md). A proposal is a titled Thread (reused
+// from forum posts) with an Accept/Reject Poll (reused unchanged); `DecisionStatus` tracks the
+// proposal's own outcome, separate from `PollStatus` (open/closed voting).
+export const DECISION_TITLE_MAX_LENGTH = 150;
+
+export type DecisionStatus = 'PROPOSED' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
+
+export interface CreateDecisionInput {
+  title: string;
+  content: string;
+  attachments?: MessageAttachment[];
+  votingDeadlineAt: string;
+  quorumCount?: number;
+}
+
+export interface ResolveDecisionInput {
+  status: Extract<DecisionStatus, 'ACCEPTED' | 'REJECTED'>;
+}
+
+export interface SupersedeDecisionInput {
+  supersededByDecisionId: string;
+}
+
+/**
+ * `expiredAt` set while `status` is still PROPOSED is the client's signal to render "expired — needs
+ * manual resolution" (the deadline passed without meeting `quorumCount`); the decision itself is
+ * still resolvable through the same resolve endpoint.
+ */
+export interface DecisionView {
+  id: string;
+  channelId: string;
+  channelName: string;
+  threadId: string;
+  title: string;
+  status: DecisionStatus;
+  votingDeadlineAt: Date;
+  quorumCount: number | null;
+  expiredAt: Date | null;
+  decidedAt: Date | null;
+  decidedById: string | null;
+  supersededByDecisionId: string | null;
+  poll: PollView;
+  proposer: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+}
+
+export interface DecisionDetailResult {
+  decision: DecisionView;
+  thread: ThreadSummary;
+  rootMessage: Message;
+}
+
+export interface DecisionListResult {
+  decisions: DecisionView[];
+  nextCursor: string | null;
+}
+
 export interface MessageAttachment {
   id?: string;
   fileName: string;

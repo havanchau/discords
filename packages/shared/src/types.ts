@@ -1,5 +1,5 @@
 export type UserStatus = 'ONLINE' | 'OFFLINE' | 'IDLE' | 'DND' | 'INVISIBLE';
-export type ChannelType = 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE' | 'ANNOUNCEMENT';
+export type ChannelType = 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE' | 'ANNOUNCEMENT' | 'DECISION';
 export type MemberRole = 'OWNER' | 'ADMIN' | 'MODERATOR' | 'MEMBER';
 
 export interface ApiErrorResponse {

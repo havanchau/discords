@@ -88,7 +88,7 @@ export class ServerInsightsService {
         WHERE m."serverId" = ${serverId}
           AND m."deletedAt" IS NULL
           AND m."createdAt" >= ${since}
-          AND c."type" IN ('TEXT', 'ANNOUNCEMENT', 'FORUM')
+          AND c."type" IN ('TEXT', 'ANNOUNCEMENT', 'FORUM', 'DECISION')
         GROUP BY c."id"
         ORDER BY "messageCount" DESC, c."id" ASC
       `,

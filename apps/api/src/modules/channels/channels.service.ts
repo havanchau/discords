@@ -198,6 +198,15 @@ export class ChannelsService {
     return channel;
   }
 
+  /** A readable channel that must be a DECISION channel (decision proposals). */
+  async requireReadableDecisionChannel(userId: string, channelId: string) {
+    const channel = await this.requireReadableChannel(userId, channelId);
+    if (channel.type !== 'DECISION') {
+      throw new BadRequestException('Channel is not a decision channel');
+    }
+    return channel;
+  }
+
   /**
    * Persist first, emit second: once a channel becomes age-restricted, sockets of members who never
    * confirmed stop receiving its live events, as `channel:join` would now refuse them. Bots are exempt

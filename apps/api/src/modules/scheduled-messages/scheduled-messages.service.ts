@@ -45,6 +45,9 @@ export class ScheduledMessagesService {
     if (channel.type === 'STAGE') {
       throw new BadRequestException('Stage channels have no text chat');
     }
+    if (channel.type === 'DECISION') {
+      throw new BadRequestException('Use decision proposals on a DECISION channel');
+    }
     await this.permissions.requireChannelPermission(userId, channel.id, Permission.SendMessages);
     return this.create(userId, { channelId, conversationId: null }, dto);
   }

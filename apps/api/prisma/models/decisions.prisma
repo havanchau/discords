@@ -1,0 +1,41 @@
+// Decision channels (docs/features/decision-channels.md). A proposal is a titled `Thread` (reused
+// from forum posts) with an Accept/Reject `Poll` (reused unchanged) and a status lifecycle tracked
+// here. No vote-counting lives on this model; `Decision` only adds the quorum threshold and the
+// resolved/superseded outcome.
+enum DecisionStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+}
+
+model Decision {
+  id                     String         @id @default(cuid())
+  channelId              String
+  threadId               String         @unique
+  proposerId             String
+  status                 DecisionStatus @default(PROPOSED)
+  votingDeadlineAt       DateTime
+  quorumCount            Int?
+  /// Set by the deadline sweep when the voting window closed without meeting quorumCount; status
+  /// stays PROPOSED. Null once resolved or if quorumCount is null. Not a status value on its own
+  /// (open-questions.md #60): a proposal nobody voted on must not silently read as REJECTED.
+  expiredAt              DateTime?
+  decidedAt              DateTime?
+  decidedById            String?
+  supersededByDecisionId String?        @unique
+  createdAt              DateTime       @default(now())
+  channel                Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  thread                 Thread         @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  proposer               User           @relation("DecisionProposer", fields: [proposerId], references: [id])
+  decidedBy              User?          @relation("DecisionDecider", fields: [decidedById], references: [id])
+  /// The newer, ACCEPTED decision that replaced this one (set only when status = SUPERSEDED).
+  supersededBy            Decision?     @relation("DecisionSupersession", fields: [supersededByDecisionId], references: [id])
+  /// The reverse of supersededBy: the older decision this one replaced, if any (at most one, per the
+  /// unique constraint on supersededByDecisionId).
+  supersededDecision      Decision?     @relation("DecisionSupersession")
+
+  @@index([channelId, status])
+  @@index([status, votingDeadlineAt])
+  @@index([status, expiredAt])
+}
