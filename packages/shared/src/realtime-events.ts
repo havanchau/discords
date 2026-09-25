@@ -47,6 +47,8 @@ export const RealtimeEvents = {
   ScheduledMessageUpdated: 'scheduled-message:updated',
   NotificationCreated: 'notification:created',
   NotificationUnread: 'notification:unread',
+  /** `{ serverId, channelId }` after a channel's settings change; clients refetch the server detail. */
+  ChannelUpdated: 'channel:updated',
   ChannelJoin: 'channel:join',
   ChannelLeave: 'channel:leave',
   TypingStart: 'typing:start',

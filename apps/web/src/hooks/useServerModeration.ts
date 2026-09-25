@@ -158,6 +158,13 @@ export function useServerModeration({
       });
     };
 
+    // Channel settings live on the server detail's `channels`, so a settings change refetches it.
+    // `channelId` is unused here on purpose: the payload documents the full change, not just what
+    // today's single reader needs.
+    const handleChannelUpdated = (payload: { serverId: string; channelId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+    };
+
     // Member kinds changed on both sides; the detail refetch moves owner-only UI to the new owner.
     const handleOwnershipTransferred = (payload: { serverId: string }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
@@ -180,6 +187,7 @@ export function useServerModeration({
     socket.on(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
     socket.on(RealtimeEvents.AccountDeleted, handleAccountDeleted);
     socket.on(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
+    socket.on(RealtimeEvents.ChannelUpdated, handleChannelUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerOwnershipTransferred, handleOwnershipTransferred);
@@ -187,6 +195,7 @@ export function useServerModeration({
       socket.off(RealtimeEvents.ServerMemberUpdated, handleMemberUpdated);
       socket.off(RealtimeEvents.AccountDeleted, handleAccountDeleted);
       socket.off(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
+      socket.off(RealtimeEvents.ChannelUpdated, handleChannelUpdated);
     };
   }, [socket, openHome, patchServer, patchServers, queryClient]);
 

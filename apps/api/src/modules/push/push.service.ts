@@ -25,6 +25,16 @@ interface SendGenericPushInput {
   url: string;
 }
 
+interface SendDirectMessagePushInput {
+  toUserId: string;
+  fromUserId: string;
+  conversationId: string;
+  /** The same display title already computed for the in-app `Notification` row, reused as-is. */
+  title: string;
+  /** The same content-with-fallback text already computed for the in-app `Notification.body`. */
+  body: string;
+}
+
 @Injectable()
 export class PushService {
   private readonly logger = new Logger(PushService.name);
@@ -100,6 +110,43 @@ export class PushService {
         channelId: input.channelId,
         serverId: input.serverId,
         url: `/channels/${input.channelId}`,
+      },
+    });
+
+    await this.deliver(subscriptions, payload);
+  }
+
+  /**
+   * A direct message has no server/channel scope, so it is gated by the global `NotificationPreference`
+   * row only (`shouldSendDirectMessagePush`), and carries no per-recipient rate limit (see
+   * docs/features/dm-push-notifications.md, Trade-offs) — every DM that passes the mute/online check
+   * sends one push.
+   */
+  async sendDirectMessagePush(input: SendDirectMessagePushInput) {
+    if (input.toUserId === input.fromUserId) return;
+    if (!(await this.shouldSendDirectMessagePush(input.toUserId))) return;
+
+    const subscriptions = await this.prisma.pushSubscription.findMany({
+      where: { userId: input.toUserId },
+    });
+    if (!subscriptions.length) return;
+
+    const recipient = await this.prisma.user.findUnique({
+      where: { id: input.toUserId },
+      select: { locale: true },
+    });
+    const locale = this.i18n.resolveUserLocale(recipient?.locale);
+
+    const payload = JSON.stringify({
+      title: this.i18n.t(locale, 'push.directMessage.title', { title: input.title }),
+      body: this.i18n.t(locale, 'push.directMessage.body', {
+        content: truncate(input.body, 100),
+      }),
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      data: {
+        conversationId: input.conversationId,
+        url: `/channels/@me/${input.conversationId}`,
       },
     });
 
@@ -193,6 +240,24 @@ export class PushService {
       return false;
     }
     return true;
+  }
+
+  /**
+   * The global-only slice of `shouldSendPush`: a DM has no server/channel scope, so only the global
+   * `NotificationPreference` row (`serverId: null, channelId: null`) gates it.
+   */
+  private async shouldSendDirectMessagePush(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    if (user?.status === 'ONLINE') return false;
+
+    const globalPreference = await this.prisma.notificationPreference.findFirst({
+      where: { userId, serverId: null, channelId: null },
+    });
+    if (globalPreference && !globalPreference.desktopEnabled) return false;
+    return !isMuteActive(globalPreference, new Date());
   }
 
   private async reserveRateLimit(userId: string, channelId: string) {

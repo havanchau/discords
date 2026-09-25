@@ -52,6 +52,11 @@ export const queryKeys = {
   ownedBots: (userId: string) => ['owned-bots', userId] as const,
   botAuthorization: (userId: string, botId: string) =>
     ['bot-authorization', userId, botId] as const,
+  /** Servers one of the viewer's own bots is a member of. */
+  botServers: (userId: string, botId: string) => ['bot-servers', userId, botId] as const,
+  /** One bot's slash commands in one server; both ids change the result, so both are in the key. */
+  botCommands: (userId: string, botId: string, serverId: string) =>
+    ['bot-commands', userId, botId, serverId] as const,
   savedMessages: (userId: string) => ['saved-messages', userId] as const,
   scheduledMessages: (userId: string, destinationType: string, destinationId: string) =>
     ['scheduled-messages', userId, destinationType, destinationId] as const,

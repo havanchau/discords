@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { DirectConversation } from '@discord-clone/shared';
@@ -6,6 +6,7 @@ import type { DirectMessage } from '@discord-clone/shared';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { PushService } from '@/modules/push/push.service';
 import { countDirectUnread } from '@/modules/messages/unread-counts';
 import { findBlockBetween } from '@/modules/friends/user-blocks';
 import { readVoiceMaxBytes, toAttachmentCreateData } from '@/modules/messages/message-attachments';
@@ -21,11 +22,13 @@ import {
 @Injectable()
 export class DirectMessagesService {
   private readonly voiceMaxBytes: number;
+  private readonly logger = new Logger(DirectMessagesService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimePublisher,
     private readonly notifications: NotificationsService,
+    private readonly push: PushService,
     config: ConfigService,
   ) {
     this.voiceMaxBytes = readVoiceMaxBytes(config);
@@ -165,17 +168,48 @@ export class DirectMessagesService {
       message,
     );
     await this.emitDirectUnread(recipientIds, conversationId, message.id);
+    const title = directMessageNotificationTitle(conversation, message.author.displayName);
+    const body = message.content || message.forwardOrigin?.content || '';
     await Promise.all(
       recipientIds.map((recipientId) =>
         this.notifications.create({
           userId: recipientId,
           actorId: authorId,
           type: 'DIRECT_MESSAGE',
-          title: directMessageNotificationTitle(conversation, message.author.displayName),
-          body: (message.content || message.forwardOrigin?.content || '').slice(0, 180),
+          title,
+          body: body.slice(0, 180),
           conversationId,
         }),
       ),
+    );
+    // Push is a non-DB side effect: the message, in-app notifications, and unread state above are
+    // already committed, so a push failure must never fail the DM-create request (rules/failure-and-state.md).
+    await this.sendDirectMessagePushes(authorId, conversationId, recipientIds, title, body);
+  }
+
+  private async sendDirectMessagePushes(
+    authorId: string,
+    conversationId: string,
+    recipientIds: string[],
+    title: string,
+    body: string,
+  ) {
+    await Promise.all(
+      recipientIds.map(async (recipientId) => {
+        try {
+          await this.push.sendDirectMessagePush({
+            toUserId: recipientId,
+            fromUserId: authorId,
+            conversationId,
+            title,
+            body,
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Direct message push failed for recipient ${recipientId} on conversation ${conversationId}: ${String(err)}`,
+          );
+        }
+      }),
     );
   }
 

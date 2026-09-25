@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { Bot, Copy, Link, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { Bot, Copy, Link, Loader2, RefreshCw, SquareSlash, Trash2 } from 'lucide-react';
 import { BOT_MAX_PER_OWNER, BOT_NAME_MAX_LENGTH, BOT_NAME_MIN_LENGTH } from '@discord-clone/shared';
 import { assetUrl, type OwnedBot } from '@/api';
+import { BotCommandsDialog } from '@/components/bots/BotCommandsDialog';
 import { Avatar, Button, IconButton, TextField } from '@/components/ui';
 import { botAuthorizeUrl, useOwnedBots } from '@/hooks/useOwnedBots';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -31,6 +32,7 @@ export function BotsSection() {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [secretToken, setSecretToken] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<PendingConfirm>(null);
+  const [commandsBot, setCommandsBot] = useState<OwnedBot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isFull = bots.bots.length >= BOT_MAX_PER_OWNER;
   const trimmedName = name.trim();
@@ -225,6 +227,14 @@ export function BotsSection() {
                       <Link size={14} aria-hidden="true" />
                     </IconButton>
                     <IconButton
+                      label={t('bot.action.manageCommands', { name: bot.name })}
+                      size="sm"
+                      disabled={bot.serverCount === 0}
+                      onClick={() => setCommandsBot(bot)}
+                    >
+                      <SquareSlash size={14} aria-hidden="true" />
+                    </IconButton>
+                    <IconButton
                       label={t('bot.action.regenerate', { name: bot.name })}
                       size="sm"
                       onClick={() => setConfirm({ botId: bot.id, action: 'regenerate' })}
@@ -248,6 +258,10 @@ export function BotsSection() {
           <p className="empty-note">{t('bot.empty')}</p>
         )}
       </div>
+
+      {commandsBot ? (
+        <BotCommandsDialog bot={commandsBot} onClose={() => setCommandsBot(null)} />
+      ) : null}
     </section>
   );
 }

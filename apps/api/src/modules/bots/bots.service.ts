@@ -10,8 +10,10 @@ import {
 import { hashSecretToken } from '@/common/secret-token';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { ServersService } from '@/modules/servers/servers.service';
 import { BotAuthorizationService } from './bot-authorization.service';
 import { deleteBotWithMemberships } from './bot-memberships';
+import type { RequestBot } from './bot-request';
 import { botUserIdentity, issueBotToken } from './bot-token';
 import { CreateBotDto } from './dto/create-bot.dto';
 
@@ -41,6 +43,7 @@ export class BotsService {
     private readonly prisma: PrismaService,
     private readonly authorization: BotAuthorizationService,
     private readonly realtime: RealtimePublisher,
+    private readonly servers: ServersService,
   ) {}
 
   async list(userId: string): Promise<{ bots: OwnedBot[] }> {
@@ -132,10 +135,34 @@ export class BotsService {
     return { ok: true };
   }
 
+  /**
+   * The servers the bot itself is a member of — not the servers its owner administers, which is what
+   * the authorize view lists. Read with the bot's own user id, the same way `/bot-api/servers` does.
+   */
+  async listServers(userId: string, botId: string) {
+    const bot = await this.requireOwnedBot(userId, botId);
+    return this.servers.listForUser(bot.botUserId);
+  }
+
+  /**
+   * The `RequestBot` a `/bot-api/*` route would carry, for a bot the caller owns. It lets an owner's
+   * session reach `SlashCommandsService` without the bot's token; the service's own rules are
+   * unchanged, and a bot another user owns reads as not found.
+   */
+  async getRequestBotOrThrow(userId: string, botId: string): Promise<RequestBot> {
+    const bot = await this.requireOwnedBot(userId, botId);
+    return { botId: bot.id, userId: bot.botUserId, username: bot.botUser.username };
+  }
+
   private async requireOwnedBot(userId: string, botId: string) {
     const bot = await this.prisma.bot.findFirst({
       where: { id: botId, ownerId: userId },
-      select: { id: true, name: true, botUserId: true },
+      select: {
+        id: true,
+        name: true,
+        botUserId: true,
+        botUser: { select: { username: true } },
+      },
     });
     if (!bot) throw new NotFoundException('Bot not found');
     return bot;

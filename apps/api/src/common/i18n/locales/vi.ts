@@ -276,6 +276,8 @@ export const viApiMessages = {
   'push.channelMessage.title': '#{channel}',
   'push.channelMessage.body': '{author}: {content}',
   'push.channelMessage.ageRestrictedBody': 'Tin nhắn mới trong kênh giới hạn độ tuổi',
+  'push.directMessage.title': '{title}',
+  'push.directMessage.body': '{content}',
   'reminder.savedMessage.title': 'Lời nhắc: tin nhắn đã lưu',
   'reminder.savedMessage.body': '{author}: {content}',
   'reminder.savedMessage.ageRestrictedBody': 'Tin nhắn bạn đã lưu từ kênh giới hạn độ tuổi',

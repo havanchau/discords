@@ -272,6 +272,8 @@ export const enApiMessages = {
   'push.channelMessage.title': '#{channel}',
   'push.channelMessage.body': '{author}: {content}',
   'push.channelMessage.ageRestrictedBody': 'New message in an age-restricted channel',
+  'push.directMessage.title': '{title}',
+  'push.directMessage.body': '{content}',
   'reminder.savedMessage.title': 'Reminder: saved message',
   'reminder.savedMessage.body': '{author}: {content}',
   'reminder.savedMessage.ageRestrictedBody': 'A message you saved from an age-restricted channel',

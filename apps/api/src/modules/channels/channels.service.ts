@@ -3,7 +3,11 @@ import { Prisma } from '@prisma/client';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
-import type { Channel, ChannelPermissionOverride } from '@discord-clone/shared';
+import {
+  RealtimeEvents,
+  type Channel,
+  type ChannelPermissionOverride,
+} from '@discord-clone/shared';
 import { ServersService } from '@/modules/servers/servers.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
@@ -109,6 +113,14 @@ export class ChannelsService {
     if (channel.isAgeRestricted && !existing.isAgeRestricted) {
       await this.evictUnconfirmedMembers(channel.serverId, channel.id);
     }
+    // Persist first, emit second, and after the eviction above so a refetching client can no
+    // longer re-join a room it should now be refused. The payload carries ids only: open tabs
+    // refetch the server detail, which re-applies the channel visibility filter server-side.
+    this.realtime.emitToRoom(
+      this.realtime.serverRoom(channel.serverId),
+      RealtimeEvents.ChannelUpdated,
+      { serverId: channel.serverId, channelId: channel.id },
+    );
     return { channel };
   }
 
