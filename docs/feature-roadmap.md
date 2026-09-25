@@ -452,12 +452,58 @@ Agents cannot edit `.env*` files.
 
 ## Wave 5 Backlog — 2026-09-22
 
-- **Age-restricted channels:** [age-restricted-channels.md](features/age-restricted-channels.md). Implemented 2026-09-22; migration `20260922001000_add_age_restricted_channels` is not applied yet.
-- **Server insights:** [server-insights.md](features/server-insights.md). Implemented 2026-09-22; migration `20260922002000_add_message_server_created_at_index` is not applied yet (index build locks writes on `Message`, confirm the deploy window or build it `CONCURRENTLY` first).
-- **Announcement channels:** [announcement-channels.md](features/announcement-channels.md). Implemented 2026-09-22; migration `20260922003000_add_announcement_channels` is not applied yet (its `ChannelType` enum value cannot be rolled back).
+- **Age-restricted channels:** [age-restricted-channels.md](features/age-restricted-channels.md). Implemented 2026-09-22; migration `20260922001000_add_age_restricted_channels` applied to the local dev database 2026-09-25.
+- **Server insights:** [server-insights.md](features/server-insights.md). Implemented 2026-09-22; migration `20260922002000_add_message_server_created_at_index` applied to the local dev database 2026-09-25. The production caveat stands: the index build locks writes on `Message`, so confirm the deploy window or build it `CONCURRENTLY` first.
+- **Announcement channels:** [announcement-channels.md](features/announcement-channels.md). Implemented 2026-09-22; migration `20260922003000_add_announcement_channels` applied to the local dev database 2026-09-25 (its `ChannelType` enum value still cannot be rolled back).
 
 ### Checklist
 
-- [ ] Apply the migration locally and run the manual test plan in [age-restricted-channels.md](features/age-restricted-channels.md) (REST gate, `channel:join` refusal, eviction on flip, push body, bot exemption, web gate).
-- [ ] Apply the migration locally and run the manual test plan in [server-insights.md](features/server-insights.md) (counts vs direct SQL for 7d/30d, `403` for non-member and member without `MANAGE_SERVER`, `400` for an invalid range, young server, private channel excluded from top channels, empty state).
-- [ ] Apply the migration locally and run the manual test plan in [announcement-channels.md](features/announcement-channels.md) (follow/idempotent follow, publish fan-out and `isCrosspost`, `400` republish and copy publish, `403` without `MANAGE_MESSAGES`/`MANAGE_CHANNELS`, unfollow, source-channel delete cascade, age-restricted source refused into an unrestricted target).
+- [x] Apply the migration locally and run the manual test plan in [age-restricted-channels.md](features/age-restricted-channels.md). Run 2026-09-25: 23/23 across REST (gate `403`, confirm idempotent, global across servers, flag-off reopens), sockets (`channel:join` refused, no `message:created` leak, eviction on flip) and the browser gate. **Not run**: the push-body step and the bot-exemption step — both need a real bot member in an age-restricted channel.
+- [x] Apply the migration locally and run the manual test plan in [server-insights.md](features/server-insights.md). Run 2026-09-25: 7/7, with `membersJoined` cross-checked against direct SQL (7d = 7, 30d = 9, exact match) and a freshly created server returning only days since creation. **Not run**: the "private channel excluded from top channels" step.
+- [x] Apply the migration locally and run the manual test plan in [announcement-channels.md](features/announcement-channels.md). Run 2026-09-25: 17/17 over steps 1-11. **Not run**: step 13 (51+ followers). **Not runnable as written**: step 12 asks to delete the source announcement channel, but the repo has no channel-delete endpoint — the test plan is wrong there, not the code.
+
+## Wave 6 Backlog — 2026-09-25
+
+Sixth wave: three small gaps found by auditing the codebase against Discord parity, plus three
+larger specs. Everything here is uncommitted working-tree state unless noted.
+
+- **Live channel settings sync:** [channel-live-settings-sync.md](features/channel-live-settings-sync.md).
+  Implemented. `updateChannel` emits an id-only `channel:updated` to the server room; the web
+  invalidates `serverDetail`. Closes the "stale until reopen" gap
+  [age-restricted-channels.md](features/age-restricted-channels.md) recorded, and open question #49.
+  Verified in a browser: the age gate, the `18+` badge and a rename all land live without reopening.
+- **Bot slash command registration UI:** [bot-command-registration-ui.md](features/bot-command-registration-ui.md).
+  Implemented. Five session-JWT routes on `BotsController` (the existing command routes sit behind
+  `BotAuthGuard`, which only accepts a bot token, so an owner's session could not reach them), plus a
+  dialog, a hook and en/vi strings. `SlashCommandsService` is unchanged. REST verified 11/11,
+  including a non-owner getting `404` rather than `403`. The dialog itself has not been driven in a
+  browser.
+- **DM push notifications:** [dm-push-notifications.md](features/dm-push-notifications.md).
+  Implemented. DMs previously created only an in-app `Notification` row. Push now fires after the DM
+  is committed, isolated per recipient so a push failure cannot fail the send. Unblocks open
+  question #41 (per-conversation DM mute), which stays out of scope. Actual push delivery to a
+  browser subscription is unverified — no VAPID subscription exists locally.
+- **Decision channels:** [decision-channels.md](features/decision-channels.md). Backend implemented,
+  **migration `20260925001000_add_decision_channels` written but not applied to any database**, web UI
+  not built. Nothing in the feature has been executed. Its `ChannelType` enum value cannot be rolled
+  back, same as `ANNOUNCEMENT`.
+- **Channel workflows:** [channel-workflows.md](features/channel-workflows.md). Spec only, reviewed.
+  `HTTP_CALL` requires a per-server hostname allowlist that is empty by default, so the action is off
+  until someone deliberately turns it on; the check runs again at request time against the resolved
+  host of every redirect hop, and every call is audited.
+- **E2EE key management:** [e2ee-key-management.md](features/e2ee-key-management.md). Spec only,
+  awaiting a decision on the threat model. Replaces today's shared-passphrase E2EE
+  (`apps/web/src/e2ee.ts`) with per-device ECDH keys and wrapped content keys, and encrypts DMs by
+  default. Losing every device permanently loses encrypted history — no recovery, decided
+  deliberately. Must not ship to users until the two rotation gaps named in its Risks section close.
+
+### Checklist
+
+- [x] Sync channel settings to open clients over a socket event.
+- [x] Let a bot owner register slash commands from the UI instead of the bot REST API.
+- [x] Send a push notification for a direct message.
+- [ ] Add a `DECISION` channel type with proposal states, quorum voting and a decisions index
+      (backend only; migration unapplied, web UI not built, nothing executed).
+- [ ] Let a server define automated workflows in chat (spec reviewed, no code).
+- [ ] Replace passphrase E2EE with per-device key management (spec reviewed, no code, gated on a
+      threat-model decision).

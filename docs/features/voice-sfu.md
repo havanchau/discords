@@ -4,7 +4,7 @@ This specification covers replacing the full-mesh WebRTC signaling used by voice
 
 **Depends on**: [`realtime-scale-out.md`](./realtime-scale-out.md) — an SFU issues per-participant join tokens and relies on call authorization (`assertPeer`-equivalent) working correctly when the API runs more than one instance; deploying an SFU before that doc ships means the API must still stay single-instance, which defeats part of the reason to add an SFU (supporting more concurrent load).
 
-**Status**: implemented 2026-09-18 (uncommitted), verified locally against a LiveKit container — see Deviations From The Original Design. `VOICE_TRANSPORT` still defaults to `mesh`; no environment has been flipped to `livekit`.
+**Status**: implemented 2026-09-18 (uncommitted), verified locally against a LiveKit container — see Deviations From The Original Design. `VOICE_TRANSPORT` still defaults to `mesh`. Local dev was run with `VOICE_TRANSPORT=livekit` on 2026-09-25 against the `livekit` compose service and a 2-client call was verified end to end (both clients saw `#general - 2 participants`; the LiveKit container logged both participants in the same room with track publishes, so media went through the SFU, not the mesh fallback). No deployed environment has been flipped.
 
 ## Goal
 

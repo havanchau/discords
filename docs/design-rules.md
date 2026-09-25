@@ -47,6 +47,12 @@ Rules:
 and re-evaluates when it changes. The attribute lives on `:root` rather than `body` so portalled
 Radix content is themed too.
 
+The hook also returns `resolvedTheme` — `uiTheme` with `system` already resolved — and
+`ThemeProvider` carries it, so a component can tell which theme is actually on screen without
+reading `matchMedia` a second time. The quick toggle in the channel sidebar's user strip uses it: it
+always sets an explicit `light` or `dark`, the opposite of what is rendering. `system` stays
+selectable from Settings → Profile.
+
 ### Contrast is enforced, not reviewed
 
 [`tokens.css`](../apps/web/src/styles/tokens.css) ends with an `@contrast-pairs` block declaring the

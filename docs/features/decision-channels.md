@@ -5,7 +5,7 @@ A `DECISION` channel type whose top-level posts are proposals with a status life
 mechanism, resolved automatically at a deadline, and listed in a server-wide index of closed
 decisions — organizational memory for "what did we decide, and when."
 
-**Status**: draft — awaiting review
+**Status**: backend implemented 2026-09-25 (migration written, **not applied to any database**); web UI not built yet — see Deviations.
 
 ## Goal
 
@@ -553,3 +553,43 @@ runs for a channel-type addition (`npm run i18n:check`, `npm run check:file-size
 - This doc's conclusions are not yet folded into any `overview.md` — this repo's `docs/features/`
   keeps flat per-feature files (see `ls docs/features/`), not a `<menu>/overview.md` split, matching
   every sibling channel-type doc (`forum-channels.md`, `announcement-channels.md`).
+
+## Deviations
+
+Backend built 2026-09-25 against the approved spec. The web UI is **not built**; the API contract
+below is what it will consume. Differences from the text above:
+
+1. **`users.prisma` had to change too.** Prisma requires both sides of a relation, so `User` gained
+   `proposedDecisions`/`decidedDecisions` back-relations, and `Decision` gained a
+   `supersededDecision` self-relation field. Neither is in the doc's schema listing; both are
+   mechanical consequences of the schema it does specify, not a design change.
+2. **`404` vs `403` for a caller who cannot view the channel.** The edge-case table says `404`. The
+   real `requireReadableChannel`/`requireReadableForumChannel` return `403 Missing permission:
+   VIEW_CHANNEL` when the member exists but lacks the permission, and `404` only when the channel
+   does not exist. The implementation follows the real code, since the doc's own instruction was to
+   mirror `requireReadableForumChannel`. The doc's table is the thing that was wrong.
+3. **Self-supersede guard added.** `decisionId === supersededByDecisionId` returns `400`. Not in the
+   doc; it protects the self-relation's invariant.
+4. **Server index date filter uses `decidedAt`**, not `createdAt` or `votingDeadlineAt`. The doc did
+   not say which. `decidedAt` matches what the index is for: what was decided, and when.
+5. **Realtime payload split after review.** The implementation first emitted the full `DecisionView`
+   to both the channel room and a hand-built `server:<serverId>:decisions` room that nothing joins.
+   That was corrected: the full view goes only to `channelRoom` (everyone there already passed the
+   channel's view check), and the server room gets an id-only `decision:index-updated`
+   (`{ serverId, channelId, decisionId }`) so a refetch re-applies channel visibility. A full payload
+   on the server room would have leaked a private decision channel's title and status to members who
+   cannot view it. The three events now live in `packages/shared/src/realtime-events.ts` rather than
+   as string literals.
+6. **Four `ChannelType` sites outside the doc's file list were updated**, all of them direct
+   consequences of adding the type (the doc's own Risks section predicted this audit):
+   `scheduled-messages.service.ts` now refuses a `DECISION` target up front instead of failing later
+   in the sweep; `realtime-unread.service.ts` counts `DECISION` channels, or a new proposal would
+   never show as unread; `server-insights.service.ts` counts them in top channels, as it already does
+   for `FORUM`; `server-template.rules.ts` allows the type in templates.
+
+**Verified**: `typecheck`, `lint` (`eslint --max-warnings 0`), `i18n:check` (en/vi parity),
+`check:file-size` all pass.
+
+**Not verified — nothing in this feature has been run**: the migration has not been applied to any
+database, so no endpoint, no sweep tick, and no state transition has ever executed. The manual test
+plan above is entirely unrun. `prisma migrate diff` has not been checked against the entities.
