@@ -19,6 +19,7 @@ import { AddConversationMemberDto } from './dto/add-conversation-member.dto';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
 import { CreateGroupConversationDto } from './dto/create-group-conversation.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
+import { UpdateDirectConversationMuteDto } from './dto/update-direct-conversation-mute.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('direct-conversations')
@@ -67,6 +68,16 @@ export class DirectMessagesController {
     @Param('userId') targetUserId: string,
   ) {
     return this.conversations.removeMember(user.id, conversationId, targetUserId);
+  }
+
+  @RateLimit({ keyPrefix: 'direct-conversation-mute', limit: 30, windowMs: 60_000 })
+  @Patch(':conversationId/mute')
+  muteConversation(
+    @CurrentUser() user: RequestUser,
+    @Param('conversationId') conversationId: string,
+    @Body() dto: UpdateDirectConversationMuteDto,
+  ) {
+    return this.directMessages.muteConversation(user.id, conversationId, dto);
   }
 
   @Get(':conversationId/messages')

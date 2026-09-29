@@ -3,10 +3,13 @@ import {
   apiRequest,
   AuthState,
   DirectConversation,
+  DirectConversationWithMute,
   DirectMessage,
   FriendEntry,
   FriendRequestEntry,
   FriendsSummary,
+  MuteDuration,
+  muteDirectConversation,
   uploadMessageAttachments,
 } from '@/api';
 import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
@@ -31,8 +34,10 @@ export function useDirectMessages({
 }: UseDirectMessagesOptions) {
   const t = useTranslation();
   const [friendsSummary, setFriendsSummary] = useState<FriendsSummary | null>(null);
-  const [directConversations, setDirectConversations] = useState<DirectConversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<DirectConversation | null>(null);
+  const [directConversations, setDirectConversations] = useState<DirectConversationWithMute[]>([]);
+  const [activeConversation, setActiveConversation] = useState<DirectConversationWithMute | null>(
+    null,
+  );
   const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [replyingToDirectMessage, setReplyingToDirectMessage] = useState<DirectMessage | null>(
     null,
@@ -64,7 +69,7 @@ export function useDirectMessages({
   async function loadDirectConversations(token = auth?.accessToken) {
     if (!token) return;
     try {
-      const result = await apiRequest<{ conversations: DirectConversation[] }>(
+      const result = await apiRequest<{ conversations: DirectConversationWithMute[] }>(
         '/direct-conversations',
         {},
         token,
@@ -247,6 +252,44 @@ export function useDirectMessages({
     }
   }
 
+  /**
+   * `PATCH .../mute`, then refetch the list (docs/features/dm-conversation-mute.md) — the same
+   * "write then refetch" shape `useGroupConversations.ts`'s `runGroupAction` uses for a
+   * conversation-scoped write, generalized here since mute applies to every conversation, not only
+   * groups.
+   */
+  async function muteDirectConversationAction(conversationId: string, muteDuration?: MuteDuration) {
+    if (!auth) return;
+    setPendingAction(`mute-${conversationId}`);
+    setWorkspaceError(null);
+    try {
+      await muteDirectConversation(conversationId, { muted: true, muteDuration }, auth.accessToken);
+      await loadDirectConversations(auth.accessToken);
+    } catch (err) {
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-mute-conversation'),
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function unmuteDirectConversation(conversationId: string) {
+    if (!auth) return;
+    setPendingAction(`mute-${conversationId}`);
+    setWorkspaceError(null);
+    try {
+      await muteDirectConversation(conversationId, { muted: false }, auth.accessToken);
+      await loadDirectConversations(auth.accessToken);
+    } catch (err) {
+      setWorkspaceError(
+        err instanceof Error ? err.message : t('error.fallback.cannot-mute-conversation'),
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   /** Back to the friends/DM list; only the single-pane Home layout (below desktop width) offers it. */
   function closeDirectConversation() {
     activeConversationIdRef.current = null;
@@ -423,5 +466,7 @@ export function useDirectMessages({
     startDirectConversation,
     sendDirectMessage,
     sendDirectVoiceMessage,
+    muteDirectConversation: muteDirectConversationAction,
+    unmuteDirectConversation,
   };
 }

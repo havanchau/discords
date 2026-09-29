@@ -16,6 +16,7 @@ import {
   ListPlatformReportsQueryDto,
 } from './dto/list-platform-reports-query.dto';
 import { ResolvePlatformReportDto } from './dto/resolve-platform-report.dto';
+import { PlatformAuditService } from './platform-audit.service';
 
 const reportSelect = {
   id: true,
@@ -38,6 +39,7 @@ export class PlatformReportsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly i18n: I18nService,
+    private readonly platformAudit: PlatformAuditService,
   ) {}
 
   async list(query: ListPlatformReportsQueryDto): Promise<PlatformReportPage> {
@@ -128,9 +130,16 @@ export class PlatformReportsService {
     const { report, delistedServer } = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.serverReport.findUnique({
         where: { id: reportId },
-        select: { id: true, serverId: true },
+        select: { id: true, serverId: true, server: { select: { name: true } } },
       });
       if (!existing) throw new NotFoundException('Report not found');
+      // `admin.username` is already on the caller's `RequestUser`, but `displayName` is not
+      // (`common/request-user.ts`) — one extra select by primary key for the platform audit
+      // snapshot (docs/features/platform-audit-log.md Deviations).
+      const admin = await tx.user.findUniqueOrThrow({
+        where: { id: adminId },
+        select: { username: true, displayName: true },
+      });
 
       // Conditional on `resolvedAt IS NULL` so two admins resolving the same report cannot both
       // succeed.
@@ -155,15 +164,32 @@ export class PlatformReportsService {
             })
           : null;
 
+      const platformAction =
+        resolution === 'DISMISSED' ? 'PLATFORM_REPORT_DISMISS' : 'PLATFORM_REPORT_DELIST';
       await tx.auditLog.create({
         data: {
           serverId: existing.serverId,
           actorId: adminId,
-          action: resolution === 'DISMISSED' ? 'PLATFORM_REPORT_DISMISS' : 'PLATFORM_REPORT_DELIST',
+          action: platformAction,
           targetId: reportId,
           metadata: { reportId },
         },
       });
+      // Also written to the platform-wide table, so this record survives the reported server being
+      // deleted later (docs/features/platform-audit-log.md).
+      await this.platformAudit.record(
+        platformAction,
+        {
+          actorId: adminId,
+          actorUsername: admin.username,
+          actorDisplayName: admin.displayName,
+          targetType: 'REPORT',
+          targetId: reportId,
+          targetName: existing.server.name,
+          metadata: { serverId: existing.serverId },
+        },
+        tx,
+      );
 
       const report = await tx.serverReport.findUniqueOrThrow({
         where: { id: reportId },

@@ -3,6 +3,7 @@ import type { AuthState, Channel, Message, NotificationItem, ServerDetail } from
 import type { ActiveCallSummary, CallState, RemoteMedia } from '@/helpers';
 import type { ComposerRestriction } from '@/hooks/useComposerRestrictions';
 import type { SoundboardPlayback } from '@/hooks/useSoundboardPlayback';
+import type { useRoleAppearanceActions } from '@/hooks/useRoleAppearanceActions';
 import type { useServerEmojis } from '@/hooks/useServerEmojis';
 import type { useServerModeration } from '@/hooks/useServerModeration';
 import type { useSettingsActions } from '@/hooks/useSettingsActions';
@@ -105,10 +106,12 @@ interface BuildChatAndSettingsPropsOptions {
   moderation: ReturnType<typeof useServerModeration>;
   serverEmojis: ReturnType<typeof useServerEmojis>;
   settingsActions: ChatSettingsActions;
+  roleAppearance: ReturnType<typeof useRoleAppearanceActions>;
   uiTheme: UiTheme;
   setUiTheme: (theme: UiTheme) => void;
   logout: () => void;
   setSelectedMemberId: (memberId: string | null) => void;
+  deleteChannel: (channelId: string) => Promise<boolean>;
 }
 
 const NO_PINNED_MESSAGE_IDS: string[] = [];
@@ -192,10 +195,12 @@ export function buildChatAndSettingsProps({
   moderation,
   serverEmojis,
   settingsActions,
+  roleAppearance,
   uiTheme,
   setUiTheme,
   logout,
   setSelectedMemberId,
+  deleteChannel,
 }: BuildChatAndSettingsPropsOptions): {
   chat: ChatPanelProps;
   settings: SettingsModalProps;
@@ -340,11 +345,15 @@ export function buildChatAndSettingsProps({
         updateNotificationPreference: settingsActions.updateNotificationPreference,
         updateServerSettings: settingsActions.updateServerSettings,
         updateChannelSettings: settingsActions.updateChannelSettings,
+        deleteChannel,
         toggleChannelRoleOverride: settingsActions.toggleChannelRoleOverride,
         toggleChannelMemberOverride: settingsActions.toggleChannelMemberOverride,
         createRole: settingsActions.createRole,
         toggleRolePermission: settingsActions.toggleRolePermission,
         deleteRole: settingsActions.deleteRole,
+        updateRoleHoist: roleAppearance.updateRoleHoist,
+        uploadRoleIcon: roleAppearance.uploadRoleIcon,
+        removeRoleIcon: roleAppearance.removeRoleIcon,
         toggleMemberRole: settingsActions.toggleMemberRole,
         removeMember: settingsActions.removeMember,
         loadBans: moderation.loadBans,

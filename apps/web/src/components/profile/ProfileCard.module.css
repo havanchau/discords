@@ -68,11 +68,24 @@
 }
 
 .roleChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   border-radius: var(--radius-full);
   padding: 2px var(--space-2);
   color: var(--text-secondary);
   background: var(--surface-sunken);
   font-size: var(--font-size-xs);
+}
+
+/* Each chip's own role icon (docs/features/role-hoist-and-icon.md) — not the "one icon per member"
+   pick used by the member list and message author line. */
+.roleChipIcon {
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-sm);
+  flex: none;
+  object-fit: cover;
 }
 
 .dates {

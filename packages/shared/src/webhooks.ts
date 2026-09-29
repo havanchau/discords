@@ -12,7 +12,7 @@ export const WEBHOOK_POSTS_PER_MINUTE = 30;
  * What a `User` row stands for. Only HUMAN users sign in or appear in friend lists; a BOT joins servers
  * as a member (member kind BOT) and authenticates with its bot token, never a session.
  */
-export type UserKind = 'HUMAN' | 'WEBHOOK' | 'BOT';
+export type UserKind = 'HUMAN' | 'WEBHOOK' | 'BOT' | 'WORKFLOW';
 
 /** A webhook as settings list it. The token is never part of it. */
 export interface ChannelWebhook {

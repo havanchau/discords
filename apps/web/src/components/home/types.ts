@@ -2,10 +2,12 @@ import type { FormEvent, RefObject } from 'react';
 import type {
   AuthState,
   DirectConversation,
+  DirectConversationWithMute,
   DirectMessage,
   FriendEntry,
   FriendRequestEntry,
   FriendsSummary,
+  MuteDuration,
   Poll,
 } from '@/api';
 import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
@@ -15,8 +17,8 @@ import type { DirectCallMode, OutgoingDirectCall } from '@/hooks/useDirectCall';
 export interface HomePanelState {
   auth: AuthState;
   friendsSummary: FriendsSummary | null;
-  conversations: DirectConversation[];
-  activeConversation: DirectConversation | null;
+  conversations: DirectConversationWithMute[];
+  activeConversation: DirectConversationWithMute | null;
   directMessages: DirectMessage[];
   directMessageDraft: string;
   replyingToDirectMessage: DirectMessage | null;
@@ -56,6 +58,8 @@ export interface HomePanelActions {
   renameGroupConversation: (conversationId: string, name: string) => Promise<boolean>;
   addGroupMember: (conversationId: string, userId: string) => Promise<void>;
   removeGroupMember: (conversationId: string, userId: string) => Promise<void>;
+  muteDirectConversation: (conversationId: string, muteDuration?: MuteDuration) => Promise<void>;
+  unmuteDirectConversation: (conversationId: string) => Promise<void>;
 }
 
 export interface HomeDirectCall {

@@ -158,10 +158,29 @@ export function useServerModeration({
       });
     };
 
+    // A role's create/update/delete (including icon changes) lives on the server detail's `roles`.
+    const handleRolesUpdated = (payload: { serverId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+    };
+
     // Channel settings live on the server detail's `channels`, so a settings change refetches it.
     // `channelId` is unused here on purpose: the payload documents the full change, not just what
     // today's single reader needs.
     const handleChannelUpdated = (payload: { serverId: string; channelId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+    };
+
+    // The channel is already gone server-side; the detail refetch drops it from `server.channels`.
+    const handleChannelDeleted = (payload: { serverId: string; channelId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+    };
+
+    // Channel and category order both live inside `serverDetail`; no new query key needed.
+    const handleChannelsReordered = (payload: { serverId: string }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
+    };
+
+    const handleCategoriesReordered = (payload: { serverId: string }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.serverDetail(payload.serverId) });
     };
 
@@ -188,6 +207,10 @@ export function useServerModeration({
     socket.on(RealtimeEvents.AccountDeleted, handleAccountDeleted);
     socket.on(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
     socket.on(RealtimeEvents.ChannelUpdated, handleChannelUpdated);
+    socket.on(RealtimeEvents.ChannelDeleted, handleChannelDeleted);
+    socket.on(RealtimeEvents.ChannelsReordered, handleChannelsReordered);
+    socket.on(RealtimeEvents.CategoriesReordered, handleCategoriesReordered);
+    socket.on(RealtimeEvents.RolesUpdated, handleRolesUpdated);
     return () => {
       socket.off(RealtimeEvents.ServerMemberRemoved, handleMemberRemoved);
       socket.off(RealtimeEvents.ServerOwnershipTransferred, handleOwnershipTransferred);
@@ -196,6 +219,10 @@ export function useServerModeration({
       socket.off(RealtimeEvents.AccountDeleted, handleAccountDeleted);
       socket.off(RealtimeEvents.ServerOnboardingUpdated, handleOnboardingUpdated);
       socket.off(RealtimeEvents.ChannelUpdated, handleChannelUpdated);
+      socket.off(RealtimeEvents.ChannelDeleted, handleChannelDeleted);
+      socket.off(RealtimeEvents.ChannelsReordered, handleChannelsReordered);
+      socket.off(RealtimeEvents.CategoriesReordered, handleCategoriesReordered);
+      socket.off(RealtimeEvents.RolesUpdated, handleRolesUpdated);
     };
   }, [socket, openHome, patchServer, patchServers, queryClient]);
 

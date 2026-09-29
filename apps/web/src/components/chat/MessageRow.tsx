@@ -52,6 +52,7 @@ import { ForwardedHeader } from './ForwardedHeader';
 import { ForwardMessageDialog } from './ForwardMessageDialog';
 import { AuthorMessageHistoryDialog } from './MessageHistoryDialog';
 import { MessageAttachments } from './MessageAttachments';
+import { MessageComponents } from './MessageComponents';
 import { PollCard } from './PollCard';
 import {
   AnnouncementBadges,
@@ -130,6 +131,9 @@ function MessageContent({
             ) : null
           }
         />
+      ) : null}
+      {message.components && message.components.length > 0 ? (
+        <MessageComponents message={message} />
       ) : null}
       {!message.threadId && message.thread?.replyCount ? (
         <button
@@ -305,7 +309,16 @@ export const MessageRow = memo(function MessageRow({
             <div className={styles.body}>
               {isFirstInGroup && (
                 <div className={styles.meta}>
-                  <strong>{authorIdentity.displayName}</strong>
+                  <strong>
+                    {authorIdentity.roleIconUrl ? (
+                      <img
+                        className={styles.roleIcon}
+                        src={assetUrl(authorIdentity.roleIconUrl)}
+                        alt=""
+                      />
+                    ) : null}
+                    {authorIdentity.displayName}
+                  </strong>
                   {isWebhookAuthor ? (
                     <Badge
                       variant="neutral"

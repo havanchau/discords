@@ -43,12 +43,20 @@ export const RealtimeEvents = {
   ServerEventsUpdated: 'server:events-updated',
   /** `{ serverId }` after rules screening settings change; clients refetch the server detail. */
   ServerOnboardingUpdated: 'server:onboarding-updated',
+  /** `{ serverId }` after a role is created, updated, or deleted (including its icon); clients refetch the server detail. */
+  RolesUpdated: 'server:roles-updated',
   PollUpdated: 'poll:updated',
   ScheduledMessageUpdated: 'scheduled-message:updated',
   NotificationCreated: 'notification:created',
   NotificationUnread: 'notification:unread',
   /** `{ serverId, channelId }` after a channel's settings change; clients refetch the server detail. */
   ChannelUpdated: 'channel:updated',
+  /** `{ serverId, channelId }` after a channel is permanently deleted; clients drop it from server.channels. */
+  ChannelDeleted: 'channel:deleted',
+  /** `{ serverId }` after a bulk channel reorder; clients refetch the server detail. */
+  ChannelsReordered: 'channels:reordered',
+  /** `{ serverId }` after a bulk category reorder; clients refetch the server detail. */
+  CategoriesReordered: 'categories:reordered',
   /** `{ decision, thread, rootMessage }` to the channel room when a proposal is posted. */
   DecisionCreated: 'decision:created',
   /** The full view to the channel room on any status transition. */

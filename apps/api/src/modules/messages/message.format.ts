@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import type { Message, ThreadSummary } from '@discord-clone/shared';
+import type { Message, MessageComponentRow, ThreadSummary } from '@discord-clone/shared';
 import { formatForwardOrigin } from '@/common/forward-snapshot';
 import { formatPoll, pollInclude } from '@/modules/polls/poll.format';
 import { attachmentStickerInclude, formatAttachment } from './message-attachments';
@@ -96,6 +96,9 @@ export function formatMessage(
     forwardOrigin: message.deletedAt ? null : formatForwardOrigin(message),
     publishedAt: message.publishedAt,
     isCrosspost: message.isCrosspost,
+    components: message.deletedAt
+      ? null
+      : ((message.components as MessageComponentRow[] | null) ?? null),
   };
 }
 

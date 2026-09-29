@@ -7,6 +7,7 @@ export const enApiMessages = {
   ALREADY_A_STAGE_SPEAKER: 'Already a stage speaker',
   ANNOUNCEMENTS_CAN_ONLY_BE_FOLLOWED_INTO_A_TEXT_CHANNEL:
     'Announcements can only be followed into a text channel',
+  AN_ACTION_ROW_CANNOT_BE_EMPTY: 'An action row cannot be empty',
   AN_AGE_RESTRICTED_CHANNEL_CAN_ONLY_BE_FOLLOWED_INTO_AN_AGE_RESTRICTED_CHANNEL:
     'An age-restricted channel can only be followed into an age-restricted channel',
   AN_EXPORT_IS_ALREADY_IN_PROGRESS: 'An export is already in progress',
@@ -16,6 +17,13 @@ export const enApiMessages = {
   A_CHANNEL_CANNOT_FOLLOW_ITSELF: 'A channel cannot follow itself',
   A_CROSSPOSTED_MESSAGE_CANNOT_BE_PUBLISHED: 'A crossposted message cannot be published',
   A_DECISION_CANNOT_SUPERSEDE_ITSELF: 'A decision cannot supersede itself',
+  A_LINK_BUTTON_CANNOT_CARRY_A_CUSTOMID: 'A LINK button cannot carry a customId',
+  A_LINK_BUTTON_REQUIRES_A_URL: 'A LINK button requires a url',
+  A_NON_LINK_BUTTON_REQUIRES_A_CUSTOMID: 'A non-LINK button requires a customId',
+  A_ROW_HOLDS_EITHER_ONE_SELECT_MENU_OR_UP_TO_5_BUTTONS_NEVER_BOTH:
+    'A row holds either one select menu or up to 5 buttons, never both',
+  A_SELECT_MENU_REQUIRES_AT_LEAST_ONE_OPTION: 'A select menu requires at least one option',
+  A_SELECT_MENU_REQUIRES_A_CUSTOMID: 'A select menu requires a customId',
   BAN_NOT_FOUND: 'Ban not found',
   BOT_ALREADY_IN_THIS_SERVER: 'Bot already in this server',
   BOT_IS_NOT_A_MEMBER_OF_THIS_SERVER: 'Bot is not a member of this server',
@@ -55,6 +63,8 @@ export const enApiMessages = {
   COMMAND_NAME_ALREADY_USED_IN_THIS_SERVER: 'Command name already used in this server',
   COMMAND_NAME_IS_RESERVED: 'Command name is reserved',
   COMMAND_NOT_FOUND: 'Command not found',
+  COMPONENT_IS_DISABLED: 'Component is disabled',
+  COMPONENT_NOT_FOUND: 'Component not found',
   CONVERSATION_NOT_FOUND: 'Conversation not found',
   DECISION_ALREADY_RESOLVED: 'Decision already resolved',
   DECISION_IS_NOT_AN_ACCEPTED_DECISION: 'Decision is not an accepted decision',
@@ -62,6 +72,8 @@ export const enApiMessages = {
   DECISION_TITLE_IS_REQUIRED: 'Decision title is required',
   DELETION_ALREADY_COMPLETED: 'Deletion already completed',
   DO_NOT_INCLUDE_YOURSELF_IN_USERIDS: 'Do not include yourself in userIds',
+  DUPLICATE_CUSTOMID: 'Duplicate customId',
+  DUPLICATE_SELECT_OPTION_VALUE: 'Duplicate select option value',
   EMAIL_IS_NOT_VERIFIED: 'Email is not verified',
   EMAIL_OR_USERNAME_ALREADY_EXISTS: 'Email or username already exists',
   EMOJI_LIMIT_REACHED: 'Emoji limit reached',
@@ -96,6 +108,7 @@ export const enApiMessages = {
   INVALID_DISCOVERY_TAG: 'Invalid discovery tag',
   INVALID_EMAIL_OR_PASSWORD: 'Invalid email or password',
   INVALID_MESSAGE: 'Invalid message',
+  INVALID_OPTION_VALUE: 'Invalid option value',
   INVALID_OR_EXPIRED_RESET_TOKEN: 'Invalid or expired reset token',
   INVALID_OR_EXPIRED_SIGN_IN_CODE: 'Invalid or expired sign-in code',
   INVALID_OR_EXPIRED_VERIFICATION_TOKEN: 'Invalid or expired verification token',
@@ -136,6 +149,7 @@ export const enApiMessages = {
   ONLY_ANNOUNCEMENT_CHANNELS_CAN_BE_FOLLOWED: 'Only announcement channels can be followed',
   ONLY_ANNOUNCEMENT_CHANNEL_MESSAGES_CAN_BE_PUBLISHED:
     'Only announcement channel messages can be published',
+  ONLY_A_LINK_BUTTON_CARRIES_A_URL: 'Only a LINK button carries a url',
   ONLY_GROUP_CONVERSATIONS_CAN_ADD_MEMBERS: 'Only group conversations can add members',
   ONLY_GROUP_CONVERSATIONS_CAN_BE_RENAMED: 'Only group conversations can be renamed',
   ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS: 'Only group conversations can remove members',
@@ -229,6 +243,8 @@ export const enApiMessages = {
   UNKNOWN_FORUM_TAG: 'Unknown forum tag',
   UNKNOWN_POLL_OPTION: 'Unknown poll option',
   UNSUPPORTED_FILE_TYPE: 'Unsupported file type',
+  UPDATE_MESSAGE_REQUIRES_A_COMPONENT_INTERACTION:
+    'UPDATE_MESSAGE requires a component interaction',
   UPLOAD_CHUNK_IS_MISSING: 'Upload chunk is missing',
   UPLOAD_CHUNK_IS_REQUIRED: 'Upload chunk is required',
   UPLOAD_CHUNK_IS_TOO_LARGE: 'Upload chunk is too large',
@@ -313,4 +329,25 @@ export const enApiMessages = {
     'AutoMod rule "{rule}" blocked a message from @{author} in #{channel}:\n{content}',
   'automod.alert.flagged':
     'AutoMod rule "{rule}" flagged a message from @{author} in #{channel}:\n{content}',
+  // Channel workflows (docs/features/channel-workflows.md).
+  ALLOWLIST_ENTRY_NOT_FOUND: 'Allowlist entry not found',
+  CHANNEL_MUST_BE_A_TEXT_CHANNEL: 'Channel must be a text channel',
+  CHANNEL_NOT_FOUND_IN_THIS_SERVER: 'Channel not found in this server',
+  HOST_ALREADY_IN_ALLOWLIST: 'Host already in allowlist',
+  HOST_NOT_IN_ALLOWLIST: 'Host not in allowlist',
+  HTTP_ACTIONS_ARE_DISABLED_UNTIL_AN_ALLOWED_HOST_IS_CONFIGURED:
+    'HTTP actions are disabled until an allowed host is configured',
+  IDEMPOTENCY_KEY_REQUIRED: 'Idempotency key required',
+  ONLY_A_WEBHOOK_RECEIVED_WORKFLOW_HAS_A_TOKEN_TO_REGENERATE:
+    'Only a WEBHOOK_RECEIVED workflow has a token to regenerate',
+  WORKFLOW_CHANNEL_ID_REQUIRED_FOR_MESSAGE_MATCHES: 'channelId is required for MESSAGE_MATCHES',
+  WORKFLOW_CHANNEL_ID_REQUIRED_FOR_POST_MESSAGE: 'channelId is required for POST_MESSAGE',
+  WORKFLOW_CONTENT_REQUIRED_FOR_POST_MESSAGE: 'content is required for POST_MESSAGE',
+  WORKFLOW_INTERVAL_MINUTES_REQUIRED_FOR_SCHEDULE: 'intervalMinutes is required for SCHEDULE',
+  WORKFLOW_LIMIT_REACHED: 'Workflow limit reached',
+  WORKFLOW_METHOD_REQUIRED_FOR_HTTP_CALL: 'method is required for HTTP_CALL',
+  WORKFLOW_NEEDS_AT_LEAST_ONE_STEP: 'Workflow needs at least one step',
+  WORKFLOW_NOT_FOUND: 'Workflow not found',
+  WORKFLOW_TERMS_REQUIRED_FOR_MESSAGE_MATCHES: 'terms is required for MESSAGE_MATCHES',
+  WORKFLOW_URL_REQUIRED_FOR_HTTP_CALL: 'url is required for HTTP_CALL',
 } as const;

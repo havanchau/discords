@@ -41,25 +41,34 @@ model SlashCommand {
   @@index([botId])
 }
 
-// One invocation of a slash command, from invoke to the bot's callback or its timeout. `token` is the
-// bearer credential the bot's callback authenticates with, matching the webhook/bot token shape
-// (`generateSecretToken`). `botId`/`serverId`/`channelId`/`invokerUserId` are plain ids, not foreign
-// keys: an interaction is a short-lived audit record of the invocation, not a live reference that
-// must be kept in sync if the channel or invoker is later deleted.
+// One invocation — a slash command or a message component click — from invoke to the bot's callback
+// or its timeout (docs/features/bot-message-components.md extends the original slash-command-only
+// shape with `type`). `token` is the bearer credential the bot's callback authenticates with,
+// matching the webhook/bot token shape (`generateSecretToken`). `botId`/`serverId`/`channelId`/
+// `invokerUserId` are plain ids, not foreign keys: an interaction is a short-lived audit record of the
+// invocation, not a live reference that must be kept in sync if the channel or invoker is later
+// deleted. `messageId` is the same kind of plain id for a component interaction.
 model Interaction {
   id            String            @id @default(cuid())
   token         String            @unique
-  commandId     String
+  type          InteractionType   @default(APPLICATION_COMMAND)
+  // Null for a MESSAGE_COMPONENT interaction, which has no SlashCommand.
+  commandId     String?
   botId         String
   serverId      String
   channelId     String
   invokerUserId String
   args          Json
+  // MESSAGE_COMPONENT-only fields; null for an APPLICATION_COMMAND interaction.
+  messageId     String?
+  customId      String?
+  componentType String?
+  values        Json?
   status        InteractionStatus @default(PENDING)
   createdAt     DateTime          @default(now())
   respondedAt   DateTime?
 
-  command SlashCommand @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  command SlashCommand? @relation(fields: [commandId], references: [id], onDelete: Cascade)
 
   @@index([botId, status])
 }
@@ -68,4 +77,9 @@ enum InteractionStatus {
   PENDING
   RESPONDED
   TIMED_OUT
+}
+
+enum InteractionType {
+  APPLICATION_COMMAND
+  MESSAGE_COMPONENT
 }

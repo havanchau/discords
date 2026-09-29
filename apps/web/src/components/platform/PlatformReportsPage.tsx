@@ -6,6 +6,7 @@ import { usePlatformReportQueue } from '@/hooks/usePlatformReports';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDateFormat } from '@/i18n/useDateFormat';
 import { cn } from '@/utils/cn';
+import { PlatformAuditLogPage } from './PlatformAuditLogPage';
 import { PlatformReportDetail } from './PlatformReportDetail';
 import styles from './Platform.module.css';
 
@@ -14,15 +15,18 @@ interface PlatformReportsPageProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type PlatformSection = 'reports' | 'auditLog';
+
 function statusVariant(status: string): 'danger' | 'neutral' | 'success' {
   if (status === 'OPEN') return 'danger';
   if (status === 'SERVER_DELISTED') return 'success';
   return 'neutral';
 }
 
-/** Admin-only queue for `ServerReport` rows filed from public discovery. */
+/** Admin-only dialog: the `ServerReport` queue, plus the platform-wide audit log as a sibling tab. */
 export function PlatformReportsPage({ open, onOpenChange }: PlatformReportsPageProps) {
   const t = useTranslation();
+  const [section, setSection] = useState<PlatformSection>('reports');
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -31,7 +35,29 @@ export function PlatformReportsPage({ open, onOpenChange }: PlatformReportsPageP
         title={t('platform.title')}
         description={t('platform.description')}
       >
-        {open ? <PlatformReportsBrowser /> : null}
+        {open ? (
+          <div className={styles.browser}>
+            <div className={styles.tabs} role="group" aria-label={t('platform.sectionFilter')}>
+              <button
+                type="button"
+                className={cn(styles.tab, section === 'reports' && styles.selected)}
+                aria-pressed={section === 'reports'}
+                onClick={() => setSection('reports')}
+              >
+                {t('platform.section.reports')}
+              </button>
+              <button
+                type="button"
+                className={cn(styles.tab, section === 'auditLog' && styles.selected)}
+                aria-pressed={section === 'auditLog'}
+                onClick={() => setSection('auditLog')}
+              >
+                {t('platform.section.auditLog')}
+              </button>
+            </div>
+            {section === 'reports' ? <PlatformReportsBrowser /> : <PlatformAuditLogPage />}
+          </div>
+        ) : null}
       </DialogContent>
     </DialogRoot>
   );

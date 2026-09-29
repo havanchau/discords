@@ -131,6 +131,11 @@ export class ServersController {
     return this.insights.getInsights(user.id, serverId, query.range);
   }
 
+  @Get('servers/:serverId/bots')
+  listInstalledBots(@CurrentUser() user: RequestUser, @Param('serverId') serverId: string) {
+    return this.servers.listInstalledBots(user.id, serverId);
+  }
+
   @Patch('servers/:serverId/members/me')
   updateMyMembership(
     @CurrentUser() user: RequestUser,

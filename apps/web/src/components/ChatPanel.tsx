@@ -8,6 +8,7 @@ import { MessageComposer } from './chat/MessageComposer';
 import { ThreadPanel } from './chat/ThreadPanel';
 import { AgeGate } from './chat/AgeGate';
 import { ForumChannelView } from './forum/ForumChannelView';
+import { DecisionChannelView } from './decisions/DecisionChannelView';
 import { StageChannelView } from './stage/StageChannelView';
 import { AttachmentPreviewDialog, PreviewAttachment } from './chat/AttachmentPreviewDialog';
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -173,6 +174,14 @@ export function ChatPanel({
           channel={session.channel}
           disabledReason={composer.restriction.disabledReason}
           onOpenPost={messageActions.openThread}
+        />
+      ) : session.channel?.type === 'DECISION' ? (
+        <DecisionChannelView
+          key={session.channel.id}
+          channel={session.channel}
+          disabledReason={composer.restriction.disabledReason}
+          canManageMessages={messageActions.canManageMessages}
+          openThread={messageActions.openThread}
         />
       ) : (
         <>

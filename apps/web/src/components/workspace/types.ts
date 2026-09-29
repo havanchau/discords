@@ -9,6 +9,7 @@ import type {
 } from '@/api';
 import type { ActiveCallSummary } from '@/helpers';
 import type { ServerEventsState } from '@/hooks/useServerEvents';
+import type { ChannelOrderEntry } from '@/hooks/useWorkspaceNavigation';
 import type { ActiveDialog } from '@/components/ChatPanel';
 
 export interface ChannelBadgeState {
@@ -38,12 +39,11 @@ export interface WorkspaceSidebarActions {
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   joinInvite: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   createChannel: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  reorderChannels: (entries: ChannelOrderEntry[]) => Promise<boolean>;
   createCategory: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
-  updateCategory: (
-    categoryId: string,
-    changes: { name: string; position: number },
-  ) => Promise<boolean>;
+  updateCategory: (categoryId: string, changes: { name: string }) => Promise<boolean>;
   deleteCategory: (categoryId: string) => Promise<boolean>;
+  reorderCategories: (orderedCategoryIds: string[]) => Promise<boolean>;
   createInvite: () => Promise<void>;
   updateProfileAvatar: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   logout: () => void;
@@ -60,5 +60,5 @@ export interface WorkspaceSidebarProps {
   actions: WorkspaceSidebarActions;
 }
 
-export type ChannelCreateType = 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE' | 'ANNOUNCEMENT';
+export type ChannelCreateType = 'TEXT' | 'VOICE' | 'FORUM' | 'STAGE' | 'ANNOUNCEMENT' | 'DECISION';
 export type ServerAction = 'create' | 'join';

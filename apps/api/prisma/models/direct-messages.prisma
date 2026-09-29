@@ -9,6 +9,7 @@ model DirectConversation {
   members           DirectConversationMember[]
   messages          DirectMessage[]
   readStates        DirectReadState[]
+  mutes             DirectConversationMute[]
   scheduledMessages ScheduledMessage[]
 }
 
@@ -93,4 +94,22 @@ model DirectReadState {
 
   @@unique([userId, conversationId])
   @@index([conversationId, lastReadAt])
+}
+
+/// Per-user, per-conversation push mute (docs/features/dm-conversation-mute.md). Suppresses only
+/// `PushService.sendDirectMessagePush`; the in-app Notification row and unread count are untouched.
+model DirectConversationMute {
+  id             String             @id @default(cuid())
+  userId         String
+  conversationId String
+  muted          Boolean            @default(false)
+  // Same semantics as NotificationPreference.mutedUntil: null + muted = forever, a past value = expired.
+  mutedUntil     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([conversationId])
 }

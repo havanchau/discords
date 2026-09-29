@@ -1,0 +1,50 @@
+.botList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.botRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commandList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-6);
+  list-style: none;
+}
+
+.commandRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.commandRow strong {
+  font-family: var(--font-family-mono);
+}
+
+.commandRow small {
+  color: var(--text-muted);
+}

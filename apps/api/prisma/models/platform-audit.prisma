@@ -1,0 +1,36 @@
+// Platform audit log (docs/features/platform-audit-log.md). Survives the deletion of the thing it
+// describes — unlike `AuditLog` (servers.prisma), which is server-scoped and cascades with its
+// `Server`. `actorId`/`targetId` carry no foreign key, deliberately: `targetId` points at three
+// different tables depending on `targetType`, and any FK strong enough to enforce that would either
+// block the very delete this table exists to record (`Restrict`) or erase the one identifying fact
+// the row exists to keep (`Cascade`/`SetNull`) — see the doc's Data model section.
+enum PlatformAuditAction {
+  SERVER_DELETE
+  SERVER_OWNERSHIP_TRANSFER
+  PLATFORM_REPORT_DISMISS
+  PLATFORM_REPORT_DELIST
+  ACCOUNT_DELETION
+}
+
+enum PlatformAuditTargetType {
+  SERVER
+  USER
+  REPORT
+}
+
+model PlatformAuditLog {
+  id               String                  @id @default(cuid())
+  action           PlatformAuditAction
+  actorId          String?
+  actorUsername    String?
+  actorDisplayName String?
+  targetType       PlatformAuditTargetType
+  targetId         String
+  targetName       String?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+
+  @@index([action, createdAt])
+  @@index([targetId])
+  @@index([actorId])
+}

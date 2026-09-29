@@ -1,8 +1,9 @@
 import { Plus, Users } from 'lucide-react';
-import type { DirectConversation } from '@/api';
+import type { DirectConversation, DirectConversationWithMute } from '@/api';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { Button, IconButton } from '@/components/ui';
 import { cn } from '@/utils/cn';
+import { isMuteActive } from '@/utils/notificationMute';
 import { conversationDisplayName, conversationPartners } from './conversationDisplay';
 import { UserAvatar } from './UserAvatar';
 import styles from './HomePanel.module.css';
@@ -10,7 +11,7 @@ import { handleListKeyboardNavigation } from './keyboardNavigation';
 
 type ConversationListProps = {
   viewerId: string;
-  conversations: DirectConversation[];
+  conversations: DirectConversationWithMute[];
   activeConversationId?: string;
   onOpenConversation: (conversation: DirectConversation) => Promise<void>;
   onCreateGroup: () => void;
@@ -41,6 +42,10 @@ export function ConversationList({
           visibleConversations.map((conversation) => {
             const partners = conversationPartners(conversation, viewerId);
             const selected = activeConversationId === conversation.id;
+            const muted = isMuteActive({
+              muted: conversation.muted ?? false,
+              mutedUntil: conversation.mutedUntil ?? null,
+            });
             const lastMessage = conversation.messages[0];
             const meta = lastMessage?.deletedAt
               ? t('message.deleted')
@@ -67,7 +72,7 @@ export function ConversationList({
                   <UserAvatar user={partners[0]} />
                 )}
                 <span className={styles.rowText}>
-                  <span className={styles.rowTitle}>
+                  <span className={cn(styles.rowTitle, muted && styles.rowTitleMuted)}>
                     {conversationDisplayName(conversation, viewerId)}
                   </span>
                   <span className={styles.rowMeta}>{meta}</span>

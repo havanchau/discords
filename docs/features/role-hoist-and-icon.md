@@ -1,0 +1,250 @@
+# Feature Spec: Role Hoist and Role Icon
+
+Displaying a role's members as their own group in the member list ("hoist"), and letting a role carry a small image shown wherever the role is referenced.
+
+- **Status**: draft — awaiting review
+- **Date**: 2026-09-29
+- **Related**: [`custom-emoji.md`](custom-emoji.md), [`stickers-and-soundboard.md`](stickers-and-soundboard.md), [`upload-ownership.md`](upload-ownership.md), [`channel-live-settings-sync.md`](channel-live-settings-sync.md), [`user-profile.md`](user-profile.md)
+
+## Goal
+
+`Role` has no `hoist` or `icon` concept today — grepped across `apps/api/src`, `apps/web/src`, and `packages/shared/src` for `hoist` and `roleIcon`/`iconUrl` on `Role`: zero hits. The member list groups **every** non-`@everyone` role that has an online member (`apps/web/src/components/MemberSidebar.tsx:76-98`), with no way for a server to turn that off for a given role, and no server can give a role a small badge image the way Discord does. This doc adds a per-role `isHoisted` toggle that gates the existing grouping behavior, and a per-role `iconUrl` shown in the member list, the message author line, and the profile card.
+
+**Acceptance criteria**:
+
+- [ ] A role with `isHoisted: false` (the default for roles created after this migration) never gets its own group in the member list; its online members fall back into the plain "Online" bucket, exactly as a member with no roles does today.
+- [ ] Every role that existed before this migration is backfilled to `isHoisted: true`, so no server's member list loses a grouping it had the day before the deploy.
+- [ ] A role with `isHoisted: true` gets its own online-members group, labelled with the role's name and color, the same rendering the member list already has for every role today.
+- [ ] A member holding two hoisted roles appears under the one with the higher `position` (see Changes → Member-list grouping for the precise rule).
+- [ ] A `MANAGE_ROLES` holder can upload a small PNG/WEBP image as a role's icon, and remove it; a holder who cannot grant that role's permissions (`canGrantRoles`) gets `403`.
+- [ ] The role's icon renders next to the member's name in the member list, next to the author's name on the first message of a group in a channel, and on each matching role chip in the profile card — using the member's highest-position role that has an icon, wherever a single icon is shown per member.
+- [ ] A hoist toggle, an icon change, and an icon removal reach every other open client without a reload.
+- [ ] `npm run lint`, `npm run typecheck`, `npm run build`, `npm run i18n:check`, `npm run ui:scan`, `npm run check:file-size` pass; the manual scenarios in Test Plan are run.
+
+## Scope
+
+**In scope**
+
+- `Role.isHoisted` (member-list grouping toggle) and `Role.iconUrl`/`Role.iconMimeType` (upload, render, delete).
+- The member-list grouping rule change: only hoisted roles form their own group; the "highest position wins" tie-break for a member with several hoisted roles.
+- Icon upload/remove endpoints, following the sticker/soundboard `uploadBuffer` + content-sniff + `removeStoredFileQuietly` path (`apps/api/src/modules/stickers/stickers.service.ts:73-131`) rather than the generic `Upload`-ownership path, for the same reason stickers/soundboard/emoji are out of scope of [`upload-ownership.md`](upload-ownership.md#scope): each row gets a fresh, server-generated storage key that only that row ever references, so no reference-count check is needed before deleting it.
+- One new realtime event so a role's create/update/delete (including the new icon endpoints) reaches every open client of that server.
+- Settings UI: a hoist checkbox and an icon upload/remove control on each role editor in `RolesSettings.tsx`.
+
+**Out of scope**
+
+- Reordering roles (`Role.position` has no reorder endpoint today — `apps/api/src/modules/roles/roles.controller.ts` has no route for it, and `position` is only ever set once, at creation, to `count()` of existing roles, `apps/api/src/modules/roles/roles.service.ts:34`). This doc does not add one; "highest position" uses whatever `position` values already exist.
+- Realtime sync for `addMemberRole`/`removeMemberRole` (which roles a member holds). Neither method emits any realtime event today (`apps/api/src/modules/roles/roles.service.ts:96-135`, no `this.realtime` call in either) — a pre-existing gap, identical in shape to the one this doc closes for role *definitions*, but a separate write path. Left as-is; noted in the hand-back as a related open question.
+- Animated role icons, a role-icon picker reusing the emoji/sticker picker UI, or showing the icon in the composer or slash-command UI.
+- Changing today's existing `topRole`/name-color resolution (`MemberSidebar.tsx:121`, `RolesSettings.tsx:261`: "first role in array order with a color"), which is a different, pre-existing selection rule from the "highest position" rule this doc introduces for hoist grouping and icon selection. Left unchanged — fixing it is a separate concern from adding hoist/icon.
+- A generic role-reorder UI or drag handles in `RolesSettings.tsx`.
+
+## Current behavior
+
+- `Role` (`apps/api/prisma/models/servers.prisma:145-157`) has exactly `id, serverId, name, color, position, permissions[], createdAt, updatedAt, server, members, permissionOverrides`. No `isHoisted`, no `iconUrl`.
+- `position` defaults to `0` and is set once, at role creation, to `await this.prisma.role.count({ where: { serverId } })` (`roles.service.ts:34,41`) — never updated afterward (no reorder endpoint exists). `@everyone` is always created at position `0` (`apps/api/src/modules/servers/server-bootstrap.ts:52`, comment: `"@everyone" is always position 0`), so every role created after it gets a strictly increasing `position`, making a higher `position` the more-recently-created, more "senior" role by this repo's only existing convention.
+- **Existing latent risk, not introduced or fixed here**: because `position` is derived from `count()` at creation time rather than from `MAX(position) + 1`, deleting a role and then creating a new one can hand the new role a `position` that collides with an existing role's `position` (e.g. roles at positions `0,1,2`; delete the role at `1`; the next `count()` is `2`, which duplicates the surviving role's position). No code path corrects this. This doc's "highest position wins" tie-break (see Changes) is deterministic even on a duplicate — see Edge cases — but the duplicate itself is a pre-existing data-integrity gap, reported in the hand-back rather than fixed here.
+- `GET /servers/:serverId` returns `roles: { orderBy: { position: 'asc' } }` (`apps/api/src/modules/servers/servers.service.ts:112`) — the client's `server.roles` array is already sorted ascending by `position`. `ServerMember.roles` (a member's own role rows) has **no** `orderBy` (`servers.service.ts:108`, `:248`: `roles: { include: { role: true } }`), so a member's roles arrive in the DB's own join order, not `position` order — this is why the existing `topRole = member.roles?.find(({ role }) => role.color)?.role` pick (`MemberSidebar.tsx:121`, same pattern `RolesSettings.tsx:261`) already picks "the first role with a color in an order this repo does not control," not "the highest role." Confirmed by reading both call sites; this doc does not touch that logic (Scope).
+- **Member-list grouping today** (`MemberSidebar.tsx:65-105`): online members (`user.status` set and not `OFFLINE`) and offline members are split first; every non-`@everyone` server role that has at least one online member becomes its own group (`displayRoles.forEach` builds one `roleGroups` entry per role unconditionally, lines 79-98); a member is placed in the **first** `displayRoles` entry (ascending `position` order) they hold, i.e., their **lowest**-position non-`@everyone` role, not the highest; a member with no matching role goes to `onlineNoRole`; offline members always form one flat "Offline" group regardless of role (`offlineMembers`, line 71-73, never split by role). Groups render in this order: each role group in ascending `position` order, then "Online" (`onlineNoRole`), then "Offline" (`offlineMembers`) — lines 101-105.
+- `packages/shared/src/api-contract.ts:163-168` declares the client-side `Role` type as `{ id, name, color?, permissions }` — **missing `position`**, even though the API's Prisma-backed response already includes it in the actual JSON payload (TypeScript's structural typing lets `roles.service.ts`'s `Promise<{ roles: Role[] }>` return type accept the wider Prisma row; the extra fields are erased from the type, not from the wire). Today no client code reads `role.position` because the type does not expose it. This doc adds `position: number` to the shared `Role` interface so the grouping code below can type-check reading a value that already crosses the wire today.
+- `ServerMemberDetail.roles?: Array<{ role: Role }>` (`packages/shared/src/api-contract.ts:86`) is the only per-member role list the client has; `MemberIdentity` (`apps/web/src/utils/memberIdentity.ts:3-6`) carries only `{ displayName, avatarUrl }` — no role reference at all.
+- `RolesService.createRole`/`updateRole`/`deleteRole` (`roles.service.ts:29-89`) each require `Permission.ManageRoles` (`packages/shared/src/permissions.ts:7`: `ManageRoles: 'MANAGE_ROLES'`) and then `requireCanGrant`, which — unless the caller is the server owner — calls `canGrantRoles` (`apps/api/src/modules/permissions/role-grant.ts:39-68`): every server-level permission of the role(s) being touched must already be held by the caller, and every channel override granting something to those roles must be within the caller's own channel permissions. None of the three methods emits any realtime event today — grepped `roles.service.ts` for `this.realtime`: zero matches. A role change reaches other open clients only when they next refetch `GET /servers/:serverId` for an unrelated reason.
+- The sticker upload/store/delete path this doc follows: `StickersService.create` (`stickers.service.ts:52-107`) sniffs the uploaded bytes with `sniffStickerImageType` (`apps/api/src/modules/uploads/file-signature.ts:33-37`, PNG or WEBP only, `null` for anything else including GIF/JPEG), rejects over `STICKER_MAX_BYTES` (`packages/shared/src/stickers-soundboard.ts:9`, `512 * 1024`), stores via `UploadsService.uploadBuffer` (`apps/api/src/modules/uploads/uploads.service.ts:159-179`, which mints a fresh `randomUUID()`-based storage key per call — `buildStorageKey`, comment at `uploads.service.ts:183-187` confirms this key is never reused across rows, so no reference-count check is needed to delete it safely), and `StickersService.remove` (`stickers.service.ts:110-127`) deletes the DB row first, then calls `this.uploads.removeStoredFileQuietly(sticker.url, sticker.mimeType)` after the transaction commits.
+- `UsersService` builds the profile card's server-role list with `roles: { select: { role: { select: { id: true, name: true, color: true } } } }` (`apps/api/src/modules/users/users.service.ts:181`) — no `position`, no `iconUrl` selected; `ProfileCard.tsx:64-113` renders each role as a plain colored chip.
+- `MessageRow.tsx` never reads any role field — grepped `apps/web/src/components/chat/MessageRow.tsx` for `role`: zero matches. The author line shows only `authorIdentity.displayName`/avatar (`memberIdentity.ts:38-47`, `buildMemberIdentityMap`), no role color, no role icon.
+- No realtime event exists for a role change today (`packages/shared/src/realtime-events.ts:4-86`: no `role`-prefixed key). The nearest precedent for "an id-only payload after a config row changes; clients refetch" is `ChannelUpdated: 'channel:updated'` (`:51`, added by `channel-live-settings-sync.md`, itself modeled on `ServerOnboardingUpdated`/`ServerEmojisUpdated`/`ServerStickersUpdated`).
+- `apps/web/src/hooks/useSettingsActions.ts` is 829 lines against the 1000-line cap enforced by `npm run check:file-size` (`docs/code-style.md`'s tooling table). `user-profile.md` already moved a related concern (server-profile actions) into its own hook rather than growing this file further (`user-profile.md:126`).
+- The repo keeps no automated test suite (`RULE.md`, confirmed again by `package.json` scripts: `dev`, `build`, `lint`, `typecheck`, `format`, `i18n:check`, `ui:scan`, `ui:smoke`, `check:file-size`, `docs:check` — no `test`).
+- `MemberSidebar.tsx` renders every member of `server.members` directly with no pagination or virtualization — grepped the file and its stylesheet for `slice(`, `react-window`, `pagination`: no matches. This is unchanged by this doc; see Trade-offs → Performance.
+
+## Changes
+
+### Rules
+
+- **`Role.isHoisted`**: `boolean`, default `false`. Settable only through `PATCH /roles/:roleId` (extends `UpdateRoleDto`), gated by the same `MANAGE_ROLES` + `canGrantRoles` check `updateRole` already runs (Current behavior). Toggling it never affects `permissions`, so `requireCanGrant` is called with the role's *existing* permissions unchanged — a holder who can already edit some other field of the role (name, color) can also flip its hoist flag; it grants nothing.
+- **`Role.iconUrl` / `Role.iconMimeType`**: both `String?`, set together, cleared together. Set by a new `POST /roles/:roleId/icon` (multipart `file`), cleared by a new `DELETE /roles/:roleId/icon`. Same permission gate as above (`MANAGE_ROLES` + `canGrantRoles([existing])` — the icon does not change `permissions` either).
+- **Icon validation**: the uploaded bytes are sniffed with the existing `sniffStickerImageType` (PNG or WEBP only; GIF/JPEG/anything else → `400 Role icon must be a PNG or WEBP image`, the same message shape stickers use). Size cap: a new shared constant `ROLE_ICON_MAX_BYTES = 512 * 1024` (same numeric value as `STICKER_MAX_BYTES`, given its own name because "sticker" would be a misleading name for a role's field — see Trade-offs). Over the cap → `400 Role icon is too large`, multer's `limits.fileSize` refuses the upload before the service reads it (mirrors `StickersController.create`'s `FileInterceptor` config).
+- **Replacing an icon**: uploading a new icon while one already exists updates the DB row first (new `iconUrl`/`iconMimeType`), then deletes the old file after the write commits — same commit-then-delete order `StickersService.remove` uses, and safe for the same reason (a fresh, unshared storage key per upload).
+- **Deleting a role** (`deleteRole`) that has an icon now also deletes the stored icon file (`removeStoredFileQuietly`) after the role row is deleted, mirroring `StickersService.remove`'s "DB row gone, then best-effort file cleanup" order. `@everyone` cannot be deleted today (`findMutableRole` already throws `403` for it, `roles.service.ts:159-166`), so `@everyone` can still receive an icon (Edge cases) but the delete path for it is unreachable, same as for every other role field.
+- **Member-list grouping** (`MemberSidebar.tsx`): the per-role group is built only for roles with `isHoisted: true` (excluding `@everyone`, unchanged). A member's group is their **highest-`position` hoisted role** they hold — not the first-in-array-order role as today's non-hoist-gated code picks. Precisely:
+  1. Filter `server.roles` to `role.isHoisted && role.name !== '@everyone'` → `hoistedRoles`, already in ascending `position` order (server already returns roles this way).
+  2. For each online member, compute `memberRoleIds = member.roles?.map((mr) => mr.role.id) ?? []`.
+  3. Candidate roles = `hoistedRoles.filter((role) => memberRoleIds.includes(role.id))`.
+  4. If candidates is non-empty, the member's group is the **last** one in that filtered list (since `hoistedRoles` is ascending by `position`, the last element has the highest `position` among the member's hoisted roles — including the duplicate-position edge case in Current behavior, where "last in ascending order" is still a single deterministic pick, just not a meaningfully distinguishing one between the tied pair).
+  5. If candidates is empty, the member falls into the existing plain "Online" bucket (`onlineNoRole`), exactly as a member with no roles at all does today.
+  6. Offline members are **not** re-split by hoisted role — they keep today's single flat "Offline" group regardless of any role, hoisted or not (Discord's own behavior, and this repo's existing `offlineMembers` list is untouched).
+  7. Group **display order** is unchanged: each hoisted-role group in ascending `position` order (i.e., in `server.roles`'s existing order, filtered to hoisted-and-non-empty), then "Online", then "Offline" — this doc does not flip the group ordering, only which roles get a group and which one wins per member (Scope).
+- **Icon selection for rendering** (member list, message author line, profile card): the member's **highest-`position` role that has a non-null `iconUrl`**, independent of `isHoisted` — a role can carry an icon without being hoisted, and vice versa, matching the two toggles being unrelated `Role` columns. Same "last matching entry in `server.roles`'s ascending-`position` order" computation as hoist grouping, just filtered on `iconUrl` instead of `isHoisted`. `@everyone` is excluded from this pick as well (an account-wide default role showing a "role icon" next to every single member would be visual noise, and matches every other role-based rendering rule in this repo already excluding `@everyone`, e.g. `MemberSidebar.tsx:76`, `RolesSettings.tsx:259`).
+- **Audit log**: `ROLE_UPDATE`'s existing metadata (`{ name, permissions }`, `roles.service.ts:71`) is unchanged (icon/hoist changes are not permission-sensitive, so they are not separately called out — consistent with how a color change is not audited beyond the same `ROLE_UPDATE` entry today). The two new icon endpoints reuse the same `ROLE_UPDATE` audit action (`{ name: role.name }` as metadata), rather than inventing a fourth action, since an icon change is one more `Role` field change, not a new kind of operation.
+- **Realtime**: `RealtimeEvents.RolesUpdated: 'server:roles-updated'`, payload `{ serverId }` (matching `ServerEmojisUpdated`/`ServerStickersUpdated`'s id-only, "client refetches" shape), emitted unconditionally at the end of `createRole`, `updateRole`, `deleteRole`, and the two new icon endpoints — the same "emit on every successful write to this path, regardless of which field changed" reasoning `channel:updated` already uses (`channel-live-settings-sync.md`'s Rules item 2: "no cost to emitting it... the same way as for a security-relevant one"). Web: a new `handleRolesUpdated` listener in `useServerModeration.ts`, structurally identical to `handleChannelUpdated` (`useServerModeration.ts:159-163`): invalidates `queryKeys.serverDetail(serverId)`.
+
+### Edge cases
+
+| Case | Expected behavior |
+|---|---|
+| Role has `isHoisted: true` but no online member holds it | No group rendered (existing `.filter((g) => g.members.length > 0)` at `MemberSidebar.tsx:105` already drops empty groups; unchanged). |
+| Member holds two hoisted roles with distinct `position` | Grouped under the higher-`position` one (Rules, step 4). |
+| Member holds two hoisted roles that happen to share a `position` (pre-existing duplicate-position bug, Current behavior) | Grouped under whichever of the two appears later in `server.roles`'s stored order — deterministic per request, but which of the tied pair "wins" is not meaningful; not a new failure mode introduced here. |
+| Member holds a hoisted role and goes offline | Moves to the flat "Offline" group like every other member, same as today. |
+| `@everyone` given `isHoisted: true` | Accepted at the DTO/DB level (no explicit rejection) but has no visible effect: `@everyone`'s own name is already excluded from `hoistedRoles`/`displayRoles` by name (`role.name !== '@everyone'`), unchanged from today's behavior for the ungated grouping. |
+| Icon uploaded, is a GIF | `400 Role icon must be a PNG or WEBP image` (same sniff result as a sticker GIF upload today). |
+| Icon uploaded, over 512 KB | Multer's `limits.fileSize` rejects it before the service runs, same as stickers. |
+| Two roles both have icons, member holds both | Only the higher-`position` role's icon renders, per member, in every one of the three surfaces (Rules, "Icon selection"). |
+| Role deleted while its icon is mid-upload from a concurrent request | The mutable-role lookup (`findMutableRole`) re-reads the role by id at request time for both the icon endpoints and `deleteRole`; whichever request's DB write commits second either 404s (role already gone) or writes an icon onto a row a following `deleteRole` will then also clean up — no orphaned file survives either ordering, since both paths call `removeStoredFileQuietly` on whatever `iconUrl` is present at their own read time. |
+| Caller has `MANAGE_ROLES` but not every permission the target role holds | `403` from the existing `canGrantRoles` check — unchanged; applies identically to a hoist toggle and an icon change as it does to a name/color change today. |
+| Caller lacks `MANAGE_ROLES` entirely | `403` from `requireServerPermission`, before `canGrantRoles` is even evaluated — unchanged. |
+
+## Technical approach
+
+**Files touched**
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/models/servers.prisma` | `Role` gains `isHoisted Boolean @default(false)`, `iconUrl String?`, `iconMimeType String?`. |
+| `apps/api/prisma/migrations/20260925003000_add_role_hoist_and_icon/` | New hand-written migration. |
+| `apps/api/src/modules/roles/dto/update-role.dto.ts` | `isHoisted?: boolean` (`@IsOptional() @IsBoolean()`). |
+| `apps/api/src/modules/roles/roles.service.ts` | `updateRole` writes `isHoisted` when present; `createRole`/`updateRole`/`deleteRole` each emit `RolesUpdated` after their existing write; `deleteRole` deletes the stored icon file (if any) after the row delete commits; new `uploadIcon`/`removeIcon` methods, gated the same way as `updateRole` (permission + `requireCanGrant`), reusing `findMutableRole`. |
+| `apps/api/src/modules/roles/roles.controller.ts` | `POST roles/:roleId/icon` (multipart, `FileInterceptor` with `memoryStorage()` and `limits.fileSize: ROLE_ICON_MAX_BYTES`, matching `StickersController.create`), `DELETE roles/:roleId/icon`. |
+| `apps/api/src/modules/roles/roles.module.ts` | Imports `UploadsModule` (needed for `UploadsService.uploadBuffer`/`removeStoredFileQuietly` in `RolesService`, same wiring `StickersModule` already has). |
+| `packages/shared/src/permissions.ts` | No change — reuses the existing `MANAGE_ROLES` value. |
+| `packages/shared/src/api-contract.ts` | `Role` gains `position: number`, `isHoisted: boolean`, `iconUrl?: string \| null`. |
+| `packages/shared/src/stickers-soundboard.ts` or a new `packages/shared/src/roles.ts` (naming: this repo groups shared limits by feature file, e.g. `stickers-soundboard.ts`; a role icon is not a sticker/soundboard concept, so a small new `roles.ts` holds `ROLE_ICON_MAX_BYTES = 512 * 1024`) | New shared constant. |
+| `packages/shared/src/realtime-events.ts` | `RolesUpdated: 'server:roles-updated'`, doc comment: `/** { serverId } after a role is created, updated, or deleted (including its icon); clients refetch the server detail. */`. |
+| `apps/api/src/modules/users/users.service.ts:181` | Role select for the profile card gains `position: true, iconUrl: true`. |
+| `apps/web/src/utils/memberIdentity.ts` | `MemberIdentity` gains `roleIconUrl: string \| null`; `resolveMemberIdentity`'s `PerServerIdentity` input gains an optional `roles?: Array<{ role: Pick<Role, 'id' \| 'position' \| 'iconUrl'> }>`; the highest-`position`-with-icon pick (Rules) is computed here, the single place this fallback chain already lives (`memberIdentity.ts:13-16`'s own comment). `memberIdentityOf`/`buildMemberIdentityMap` pass `member.roles`; `profileIdentityOf` passes `server?.roles` from `UserProfileServerContext`. |
+| `apps/web/src/components/MemberSidebar.tsx` | Grouping restricted to `role.isHoisted`; per-member group pick uses the highest-position rule (Rules); renders `identity.roleIconUrl` next to the member's name. |
+| `apps/web/src/components/chat/MessageRow.tsx` | Renders `authorIdentity.roleIconUrl` next to the author name on the first message of a group (same place `identity.displayName` already renders, `MessageRow.tsx` author-line block). |
+| `apps/web/src/components/profile/ProfileCard.tsx` | Each role chip (`ProfileCard.tsx:106-113`) renders that role's own `iconUrl` if present (not the "one icon per member" pick — a full role list already shows every role, so each chip shows its own icon, independent of which role is "highest"). |
+| `apps/web/src/api.ts` | `UserProfileServerContext`'s `roles` field (already `Json<ServerUserProfileServerContext['server']['roles']>` or equivalent — matches whatever the shared `Role` type now includes) picks up `position`/`iconUrl` automatically once the shared type does. |
+| `apps/web/src/components/settings/types.ts` | New fields on `SettingsModalFields`: `updateRoleHoist(role: Role, isHoisted: boolean): Promise<void>`, `uploadRoleIcon(role: Role, file: File): Promise<boolean>`, `removeRoleIcon(role: Role): Promise<void>`. |
+| `apps/web/src/hooks/useRoleAppearanceActions.ts` (new) | The three actions above, following the exact `apiRequest` + `reloadCurrentServer()` + `pendingAction` pattern `toggleRolePermission`/`deleteRole` already use (`useSettingsActions.ts:672-707`) — kept out of `useSettingsActions.ts` because that file is already 829 lines against the 1000-line cap (Current behavior), the same reason `user-profile.md` gave for `useServerProfileActions` (formerly named differently, see that doc). |
+| `apps/web/src/components/settings/RolesSettings.tsx` | Each role editor (`RolesSettings.tsx:190-247`) gains a hoist checkbox (reusing `CheckRow`, same component the permission grid already uses) and an icon upload/remove control (reusing the file-input pattern from `ServerEmojiSection.tsx:65-77`, adapted to a single image with a remove button instead of a name+file pair). |
+| `apps/web/src/hooks/useServerModeration.ts` | New `handleRolesUpdated` listener (`RealtimeEvents.RolesUpdated` → invalidate `queryKeys.serverDetail`), registered/unregistered alongside the existing pairs (`useServerModeration.ts:177-190`). |
+| `apps/web/src/i18n/locales/en/servers.ts`, `apps/web/src/i18n/locales/vi/servers.ts` | New `roles.*` keys (Rules-adjacent copy: hoist checkbox label/hint, icon upload/remove button labels, error messages) alongside the existing `roles.*` block (`servers.ts:148-176`). |
+
+**API contract**
+
+| Method | Path | Body | Response | Notes |
+|---|---|---|---|---|
+| `PATCH` | `/roles/:roleId` | existing fields plus `isHoisted?: boolean` | `{ role }` | Unchanged permission gate. |
+| `POST` | `/roles/:roleId/icon` | multipart `file` | `201 { role }` | `MANAGE_ROLES` + `canGrantRoles([existing])`; `400 Role icon must be a PNG or WEBP image`, `400 Role icon is too large`, `403`, `404 Role not found`. |
+| `DELETE` | `/roles/:roleId/icon` | — | `{ role }` | Same gate; no-op-safe if `iconUrl` is already `null` (clears nothing, still returns the role, matching `updateMyMembership`'s "only write what changed" spirit — no error for clearing an already-clear field). |
+
+`Role` in every response now includes `position`, `isHoisted`, `iconUrl` (nullable).
+
+**DB / migration**
+
+```prisma
+model Role {
+  // ...existing fields
+  isHoisted    Boolean @default(false)
+  iconUrl      String?
+  iconMimeType String?
+}
+```
+
+```sql
+-- Role hoist and icon (docs/features/role-hoist-and-icon.md). Additive only: two nullable columns
+-- and one defaulted boolean on "Role". No existing column changes type, nullability, or default;
+-- no data is rewritten.
+--
+-- down(): ALTER TABLE "Role" DROP COLUMN "isHoisted", DROP COLUMN "iconUrl", DROP COLUMN "iconMimeType";
+ALTER TABLE "Role" ADD COLUMN "isHoisted" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Role" ADD COLUMN "iconUrl" TEXT;
+ALTER TABLE "Role" ADD COLUMN "iconMimeType" TEXT;
+
+-- Backfill: every role that exists before this migration keeps the grouping it has today.
+-- MemberSidebar.tsx:75-98 groups online members by EVERY non-'@everyone' role right now, so
+-- shipping the column at its `false` default would silently delete every server's existing member
+-- list grouping on deploy day. That is a behavior change nobody asked for (AGENTS.md section 1), so
+-- existing rows are backfilled to true and only roles created AFTER this migration get the
+-- Discord-style opt-in default of false.
+UPDATE "Role" SET "isHoisted" = true;
+```
+
+- Migration name: `20260925003000_add_role_hoist_and_icon` — checked `apps/api/prisma/migrations/` (most recent is `20260925001000_add_decision_channels`) and grepped `docs/features/*.md` for reserved timestamps: `platform-audit-log.md` reserves `20260925002000` (`docs/features/platform-audit-log.md:105-107`) and states no doc reserves anything after it; this doc takes the next free slot, `20260925003000`.
+- All three new columns are additive; `isHoisted` has a `DEFAULT false` and `iconUrl`/`iconMimeType` are nullable — no bare `NOT NULL` on the populated `Role` table (`rules/database.md`).
+- `Role` is small per server (a handful of rows); the lock this `ALTER TABLE` takes is brief regardless of total row count across all servers, since Postgres locks are per-table, not per-server-partition — not flagged as a high-risk migration.
+- No new index: nothing filters or sorts on `isHoisted`/`iconUrl` in a query (both are read as part of the whole-role row already fetched).
+
+**Libraries** — none new; reuses Prisma, `multer`'s existing `FileInterceptor`/`memoryStorage`, and the existing `UploadsService`/`sniffStickerImageType`.
+
+## Trade-offs
+
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| **`uploadBuffer` + content-sniff + `removeStoredFileQuietly`, no `Upload`-table participation (chosen)** | Matches the exact precedent the task asked for (stickers/soundboard/emoji); each icon gets a fresh, never-shared storage key, so deletion needs no reference-count query; smallest new surface area | A role icon cannot be "reused" the way an account avatar can be pointed at an arbitrary previously-uploaded URL — every icon change is a fresh upload, even to reuse an image already uploaded elsewhere | Chosen — the task brief explicitly asks to follow the sticker/soundboard/emoji path, and reference-counting exists specifically to solve the *client-chosen, freely-reused* URL problem `upload-ownership.md` documents for avatar/banner, which does not apply here |
+| Generic `POST /uploads` + `Upload`-ownership check (the avatar/banner path) | Reuses one code path for every image field in the app | Requires the caller to upload through a separate endpoint first, then submit the resulting URL to `PATCH /roles/:roleId` — two round trips instead of one; and `Upload`-ownership deletion is reference-counted across `User`/`Server`/`ServerMember`, none of which a `Role` icon shares, so the check would always trivially pass, adding a query for no safety benefit | Ruled out — solves a sharing problem this data does not have, at the cost of an extra round trip and a per-request DB read that never changes the outcome |
+| Reusing `STICKER_MAX_BYTES` directly instead of a new `ROLE_ICON_MAX_BYTES` constant | Zero new constant | `STICKER_MAX_BYTES` reads as sticker-specific in every other call site; importing it for a role icon would read as a typo or an accidental cross-feature dependency to the next person editing either limit independently | Ruled out — same numeric value, but a role's own name for its own limit avoids the two features' caps drifting apart by accident later |
+| "Highest position wins" computed client-side per render (chosen) vs. the API returning a precomputed `topHoistedRoleId`/`topIconRoleId` per member | Zero new API surface; the same rule is trivially reusable in the member list, message rows, and any future consumer, since `server.roles` (with `position`) and `member.roles` are already on the wire | A member's "current" derived role must be recomputed by every list that renders a member, rather than once, server-side | Chosen — the two other file-identity resolutions in this repo (`resolveMemberIdentity`'s nickname/avatar fallback, and the existing `topRole` color pick) already work this way, client-side, off data already on the wire; adding a third, differently-shaped server-computed field would be the one inconsistent surface |
+| Emitting `RolesUpdated` unconditionally on every `updateRole` call vs. only when `isHoisted`/`iconUrl` actually changed | The conditional version sends fewer events | Adds a diffing branch to a method that otherwise treats every field the same way, for a payload that already costs nothing to send (id-only, `channel:updated`'s own stated reasoning) — and, as a side effect, finally gives every role definition change realtime sync, closing a gap that existed for every field, not just the two new ones | Chosen — matches the existing `channel:updated` precedent exactly; the "side effect" is reported plainly above rather than silently, since it does touch behavior beyond hoist/icon (Scope explicitly does not extend this to `addMemberRole`/`removeMemberRole`, which remains a separate, unaddressed gap) |
+
+**Performance**: `MemberSidebar.tsx` already renders every member of `server.members` with no pagination or virtualization (Current behavior); this doc adds one more `Array.filter`/`.find`-shaped pass per member during grouping (same big-O as today's ungated grouping, since every role was already being matched against every member) and one more field read (`roleIconUrl`) per rendered row. Not measured against a real large-server member count — no profiling was run, and none of this doc's acceptance criteria asks for one. If a server's member count later makes this list slow, that is `performance-optimization.md`'s problem to fix generally (pagination/virtualization), not something to special-case for hoist grouping alone.
+
+## Risks & rollback
+
+- **What can break**: which of two hoisted roles "wins" per member changes from today's first-in-array (effectively lowest-`position`) pick to highest-`position`. This is an intended behavior change (Rules), affecting only members who hold two or more hoisted roles; a member with one role or none sees no difference.
+- **Deploy-day grouping is preserved, deliberately.** The column default is `false`, but the migration backfills every pre-existing row to `true` (DB / migration). Without that backfill every server's member list would show **zero** role groups on deploy day — every member collapsing into "Online" — because `MemberSidebar.tsx:75-98` groups by every non-`@everyone` role today with no opt-in. Silently deleting a shipped, always-on behavior is not an acceptable cost of adding a toggle (`AGENTS.md` §1: do not change existing behavior unless explicitly asked). Roles created after this migration get the Discord-style `false` default, so the opt-in semantics apply going forward without rewriting the past.
+- **Rollback consequence of the backfill**: `down()` drops the column, so the pre-migration always-on grouping returns — no data loss, and no server is left in a state the old code cannot render. Re-running `up()` after a rollback would backfill `true` a second time, including for roles an admin had since set to `false`; a redeploy after a rollback therefore needs the backfill statement removed, or those roles re-toggled by hand. Named here rather than solved, because a rollback-then-redeploy of this specific migration is the only path that hits it.
+- **Not covered**: `addMemberRole`/`removeMemberRole` realtime sync (Scope); the pre-existing duplicate-`position` risk (Current behavior); role reordering.
+- **Rollback**: revert the code; the migration is additive (`down()` drops the three new columns) — data loss on rollback is limited to whichever roles had `isHoisted: true` or an `iconUrl` set, which is expected and stated in the migration's own comment.
+
+## Test plan
+
+**Automated**: none — this repo keeps no automated test suite (`RULE.md`, confirmed in Current behavior). Verified with `npm run lint`, `npm run typecheck`, `npm run build`, `npm run i18n:check`, `npm run ui:scan`, `npm run check:file-size`.
+
+**Manual**
+
+1. Create two roles, A (lower position) and B (higher position), both `isHoisted: true`; give one online member both roles → the member's group is B's, not A's.
+2. Toggle `isHoisted: false` on a role that currently has its own group with online members → the group disappears; those members move to "Online".
+3. A member with a hoisted role goes offline → moves to the flat "Offline" group, not a role-specific one.
+4. Upload a PNG under 512 KB as a role's icon (as a `MANAGE_ROLES` holder who holds every permission that role has) → `201`; the icon renders in the member list next to that role's members, in the message author line on their next message, and in the profile card's role chip for a second signed-in browser without a reload.
+5. Upload a GIF as a role icon → `400 Role icon must be a PNG or WEBP image`.
+6. Upload a 600 KB PNG → rejected by the multipart size limit before the service runs.
+7. **Failure case**: a `MANAGE_ROLES` holder who does not hold every permission a target role grants attempts to upload that role's icon or toggle its hoist flag → `403`.
+8. Replace an existing role icon with a new upload → the old file is gone from storage (local or Cloudinary, depending on `STORAGE_DRIVER`) after the request completes; the new one renders everywhere the old one did.
+9. Delete a role that has an icon → the icon file is removed from storage; the role and its members' groups disappear from the member list for every open client (via the new `server:roles-updated` refetch) without a reload.
+10. **Layout**: desktop (1440×900) and 390×844 — the role icon next to a member name and next to a message author's name does not overlap the status dot, the display name, or wrap awkwardly at the narrow width.
+
+## Deviations
+
+Found during implementation, not re-litigating the design above — recorded here per `AGENTS.md` §1b.
+
+- **`apps/api/src/modules/users/users.service.ts:181`** (the profile card's role `select`) could
+  **not** be updated to add `position: true, iconUrl: true` — that file is outside this change's
+  ownership boundary (owned by another agent this wave). Consequence: `ProfileCard.tsx`'s per-chip
+  icon (Rules → "Icon selection") never renders today, because the API response it reads never
+  carries `iconUrl` for that surface, even though the member list and message author line do (both
+  read from `ServerMemberDetail`, a different, already-complete query). `packages/shared/src/api-contract.ts`'s
+  `UserProfileServerContext.roles` was made to carry `position`/`iconUrl` as **optional** (rather
+  than required, as originally written) specifically so this one incomplete `select` does not fail
+  the build; every other `Role`-bearing response still returns them.
+
+  **Closed afterwards.** The ownership boundary was a planning choice, not a design one, so the two
+  fields were added directly: `users.service.ts`'s profile-card role `select` now carries
+  `position: true, iconUrl: true`, and `UserProfileServerContext.roles[]` in
+  `packages/shared/src/api-contract.ts` is back to **required** `position: number` and
+  `iconUrl: string | null` — an optional field there would have let a future incomplete `select`
+  silently reintroduce the same blank-chip bug. `ProfileCard.tsx` needed no change; it already
+  rendered the icon and was only ever missing the data.
+- `useRoleAppearanceActions.ts`'s three actions do **not** call `useSettingsActions.ts`'s private
+  `reloadCurrentServer()` as originally described (Technical approach) — that function is a closure
+  internal to `useSettingsActions.ts` and cannot be imported by a sibling hook. Instead, each action
+  invalidates `queryKeys.serverDetail(serverId)` directly via `useQueryClient()`, the same
+  invalidate-and-refetch pattern `useServerEmojis`/`useServerStickers` already use for their own
+  mutations. Net effect on the user is identical (the server detail refetches on success); only the
+  internal wiring differs from the literal wording in Technical approach.
+- The role icon rendered on the member-list group name and the message author line uses a plain
+  `<img>` at `--space-4` sized with `--radius-sm`, not the `Avatar` primitive — `Avatar` expects to
+  own the whole avatar slot (fallback initials, sizing variants) and did not fit inline next to a
+  display name the way a role badge does. Flagged as a minor deviation from `docs/design-rules.md`'s
+  "build on `components/ui/` primitives before a raw element" guidance; a small, single-purpose
+  inline badge with no fallback/initials concept did not have a matching primitive to reuse.
+
+## Deployment notes
+
+- Run migration `20260925003000_add_role_hoist_and_icon` before deploying the API.
+- Deploy API before web; the web reads `role.isHoisted`/`role.iconUrl`/`role.position` an older API does not return.
+- No new environment variables. Icon uploads use the existing upload driver (`STORAGE_DRIVER`) and storage quota, same as sticker/soundboard/emoji uploads.
+- No cache/queue to clear.
+- Breaking change: none — every new field is additive and defaulted; existing `PATCH /roles/:roleId` callers that omit `isHoisted` are unaffected.

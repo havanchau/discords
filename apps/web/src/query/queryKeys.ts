@@ -67,6 +67,32 @@ export const queryKeys = {
   /** Prefix for every tag filter of one forum channel, for invalidating them together. */
   forumPostsOf: (channelId: string) => ['forum-posts', channelId] as const,
   forumTags: (channelId: string) => ['forum-tags', channelId] as const,
+  decisionsChannel: (channelId: string, status: string | null) =>
+    ['decisions-channel', channelId, status ?? 'all'] as const,
+  /** Prefix for every status filter of one decision channel, for invalidating them together. */
+  decisionsChannelOf: (channelId: string) => ['decisions-channel', channelId] as const,
+  decisionsIndex: (
+    serverId: string,
+    filters: {
+      status: string | null;
+      channelId: string | null;
+      from: string | null;
+      to: string | null;
+    },
+  ) =>
+    [
+      'decisions-index',
+      serverId,
+      filters.status ?? 'all',
+      filters.channelId ?? 'all',
+      filters.from ?? '',
+      filters.to ?? '',
+    ] as const,
+  /** Prefix for every filter combination of one server's index, for invalidating them together. */
+  decisionsIndexOf: (serverId: string) => ['decisions-index', serverId] as const,
+  /** Other ACCEPTED decisions in a channel, offered as supersession targets. */
+  decisionSupersedeTargets: (channelId: string) =>
+    ['decision-supersede-targets', channelId] as const,
   stageRoster: (channelId: string) => ['stage-roster', channelId] as const,
   notificationPreferences: (userId: string) => ['notification-preferences', userId] as const,
   platformReports: (status: string, serverId: string) =>
@@ -74,6 +100,15 @@ export const queryKeys = {
   /** Prefix for every filter combination of the queue, for invalidating them together. */
   platformReportsOf: () => ['platform-reports'] as const,
   platformReportDetail: (reportId: string) => ['platform-report-detail', reportId] as const,
+  platformAuditLogs: (action: string, targetId: string, actorId: string) =>
+    ['platform-audit-logs', action || 'all', targetId || 'all', actorId || 'all'] as const,
+  /** Prefix for every filter combination of the audit log list, for invalidating them together. */
+  platformAuditLogsOf: () => ['platform-audit-logs'] as const,
   /** `GET /users/me`, read once per session to check `platformRole` (narrower on `auth.user`). */
   meProfile: (userId: string) => ['me-profile', userId] as const,
+  /** A server's installed bots and their commands in that server, for a `MANAGE_SERVER` admin. */
+  serverBots: (serverId: string) => ['server-bots', serverId] as const,
+  serverWorkflows: (serverId: string) => ['server-workflows', serverId] as const,
+  workflowRuns: (workflowId: string) => ['workflow-runs', workflowId] as const,
+  workflowHttpAllowlist: (serverId: string) => ['workflow-http-allowlist', serverId] as const,
 } as const;

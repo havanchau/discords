@@ -5,6 +5,8 @@ export const home = {
   'dm.emptyCopy': 'Kết bạn hoặc chọn một cuộc trò chuyện gần đây.',
   'dm.emptyTitle': 'Tin nhắn riêng của bạn',
   'dm.header.memberCount': '{count} thành viên',
+  'dm.header.mute': 'Tắt thông báo cuộc trò chuyện',
+  'dm.header.unmute': 'Bật lại thông báo cuộc trò chuyện',
   'dm.threadLabel': 'Luồng tin nhắn riêng',
   'group.addFriend': 'Thêm {name}',
   'group.addFriendsTitle': 'Thêm bạn bè',

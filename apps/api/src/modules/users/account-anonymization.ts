@@ -12,6 +12,9 @@ export interface AnonymizedAccount {
   /** The account's avatar/banner just before they were nulled, for post-commit orphan cleanup. */
   avatarUrl: string | null;
   bannerUrl: string | null;
+  /** Pre-anonymization identity, for the `ACCOUNT_DELETION` platform audit snapshot. */
+  username: string | null;
+  displayName: string | null;
 }
 
 export type AnonymizationOutcome =
@@ -43,7 +46,7 @@ export async function anonymizeAccount(
   // transaction has committed (upload-ownership.md rule 6) — mirroring `exportFileKeys` below.
   const before = await tx.user.findUnique({
     where: { id: userId },
-    select: { avatarUrl: true, bannerUrl: true },
+    select: { avatarUrl: true, bannerUrl: true, username: true, displayName: true },
   });
 
   const { count } = await tx.user.updateMany({
@@ -94,6 +97,8 @@ export async function anonymizeAccount(
       removedBots,
       avatarUrl: before?.avatarUrl ?? null,
       bannerUrl: before?.bannerUrl ?? null,
+      username: before?.username ?? null,
+      displayName: before?.displayName ?? null,
     },
   };
 }

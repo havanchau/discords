@@ -85,6 +85,8 @@ export function useHomeWorkspace({
           renameGroupConversation: groups.renameGroupConversation,
           addGroupMember: groups.addGroupMember,
           removeGroupMember: groups.removeGroupMember,
+          muteDirectConversation: directMessages.muteDirectConversation,
+          unmuteDirectConversation: directMessages.unmuteDirectConversation,
         },
       }
     : null;

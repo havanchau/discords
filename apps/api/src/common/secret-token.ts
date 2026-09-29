@@ -26,7 +26,10 @@ export function secretTokenMatches(token: string, storedHash: string) {
  * than registration and provider sign-up allow (32 characters) and use a reserved domain, so they
  * can never collide with a person; the password hash is of a random value nobody holds.
  */
-export async function syntheticUserIdentity(prefix: 'webhook' | 'bot', emailDomain: string) {
+export async function syntheticUserIdentity(
+  prefix: 'webhook' | 'bot' | 'workflow',
+  emailDomain: string,
+) {
   const suffix = randomUUID().replaceAll('-', '');
   return {
     username: `${prefix}-${suffix}`,

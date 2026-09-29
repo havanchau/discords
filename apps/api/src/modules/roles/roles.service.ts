@@ -1,9 +1,18 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { RealtimeEvents, ROLE_ICON_MAX_BYTES, type Role } from '@discord-clone/shared';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { canGrantRoles, loadRoleGrantContext } from '@/modules/permissions/role-grant';
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import type { Role } from '@discord-clone/shared';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { RealtimeViewEvictionService } from '@/modules/realtime/realtime-view-eviction.service';
+import { SNIFFED_EXTENSIONS, sniffStickerImageType } from '@/modules/uploads/file-signature';
+import { UploadsService } from '@/modules/uploads/uploads.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
@@ -12,6 +21,9 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
+    private readonly realtime: RealtimePublisher,
+    private readonly viewEviction: RealtimeViewEvictionService,
+    private readonly uploads: UploadsService,
   ) {}
 
   async listRoles(userId: string, serverId: string): Promise<{ roles: Role[] }> {
@@ -45,6 +57,7 @@ export class RolesService {
       name: role.name,
       permissions: role.permissions,
     });
+    this.emitRolesUpdated(serverId);
     return { role };
   }
 
@@ -66,12 +79,20 @@ export class RolesService {
         name: dto.name?.trim(),
         color: dto.color,
         permissions: dto.permissions,
+        isHoisted: dto.isHoisted,
+        isMentionable: dto.isMentionable,
       },
     });
     await this.writeAuditLog(existing.serverId, userId, 'ROLE_UPDATE', role.id, {
       name: role.name,
       permissions: role.permissions,
     });
+    // A permissions change is the only field here that can remove a holder's `VIEW_CHANNEL`
+    // (docs/features/channel-view-eviction.md).
+    if (dto.permissions !== undefined) {
+      await this.viewEviction.evictServerForRole(existing.serverId, roleId);
+    }
+    this.emitRolesUpdated(existing.serverId);
     return { role };
   }
 
@@ -83,11 +104,89 @@ export class RolesService {
       Permission.ManageRoles,
     );
     await this.requireCanGrant(granter, [existing]);
+    // Captured before the delete: `MemberRole.role` cascades on delete (servers.prisma:158-165), so
+    // querying "who holds roleId" after the delete would find nobody — see channel-view-eviction.md,
+    // Deviations.
+    const holders = await this.prisma.serverMember.findMany({
+      where: { serverId: existing.serverId, roles: { some: { roleId } } },
+      select: { userId: true },
+    });
     await this.prisma.role.delete({ where: { id: roleId } });
     await this.writeAuditLog(existing.serverId, userId, 'ROLE_DELETE', roleId, {
       name: existing.name,
     });
+    // Per captured holder, not `evictServerForRole`: the role's `ChannelPermissionOverride` rows and
+    // `MemberRole` join rows have already cascade-deleted by this point, so each holder's current
+    // roles (reloaded fresh, without the deleted role) is the only source of truth left
+    // (docs/features/channel-view-eviction.md, Deviations).
+    await Promise.all(
+      holders.map((holder) => this.viewEviction.evictMember(existing.serverId, holder.userId)),
+    );
+    // Best-effort, after the row is gone — mirrors StickersService.remove's cleanup order.
+    if (existing.iconUrl) {
+      await this.uploads.removeStoredFileQuietly(existing.iconUrl, existing.iconMimeType ?? '');
+    }
+    this.emitRolesUpdated(existing.serverId);
     return { ok: true };
+  }
+
+  /** `POST /roles/:roleId/icon` — same sniff/size/uploadBuffer path as stickers/soundboard. */
+  async uploadIcon(userId: string, roleId: string, file: Express.Multer.File | undefined) {
+    const existing = await this.findMutableRole(roleId);
+    const granter = await this.permissions.requireServerPermission(
+      userId,
+      existing.serverId,
+      Permission.ManageRoles,
+    );
+    await this.requireCanGrant(granter, [existing]);
+    if (!file) throw new BadRequestException('File is required');
+    if (file.buffer.length > ROLE_ICON_MAX_BYTES) {
+      throw new BadRequestException('Role icon is too large');
+    }
+    const mimeType = sniffStickerImageType(file.buffer);
+    if (!mimeType) throw new BadRequestException('Role icon must be a PNG or WEBP image');
+
+    const stored = await this.uploads.uploadBuffer({
+      buffer: file.buffer,
+      size: file.buffer.length,
+      mimetype: mimeType,
+      originalname: `${existing.id}${SNIFFED_EXTENSIONS[mimeType]}`,
+    });
+
+    const role = await this.prisma.role.update({
+      where: { id: roleId },
+      data: { iconUrl: stored.url, iconMimeType: mimeType },
+    });
+    await this.writeAuditLog(existing.serverId, userId, 'ROLE_UPDATE', role.id, {
+      name: role.name,
+    });
+    // Commit first, then delete the previous file — same order as replacing a sticker.
+    if (existing.iconUrl) {
+      await this.uploads.removeStoredFileQuietly(existing.iconUrl, existing.iconMimeType ?? '');
+    }
+    this.emitRolesUpdated(existing.serverId);
+    return { role };
+  }
+
+  /** `DELETE /roles/:roleId/icon` — no-op-safe if the role has no icon. */
+  async removeIcon(userId: string, roleId: string) {
+    const existing = await this.findMutableRole(roleId);
+    const granter = await this.permissions.requireServerPermission(
+      userId,
+      existing.serverId,
+      Permission.ManageRoles,
+    );
+    await this.requireCanGrant(granter, [existing]);
+
+    const role = await this.prisma.role.update({
+      where: { id: roleId },
+      data: { iconUrl: null, iconMimeType: null },
+    });
+    if (existing.iconUrl) {
+      await this.uploads.removeStoredFileQuietly(existing.iconUrl, existing.iconMimeType ?? '');
+    }
+    this.emitRolesUpdated(existing.serverId);
+    return { role };
   }
 
   async addMemberRole(userId: string, serverId: string, memberId: string, roleId: string) {
@@ -112,6 +211,9 @@ export class RolesService {
       update: {},
     });
     await this.writeAuditLog(serverId, userId, 'MEMBER_ROLE_ADD', memberId, { roleId });
+    // The added role can itself carry a channel override with `deny: ['VIEW_CHANNEL']`, so gaining a
+    // role can remove access the member already had (docs/features/channel-view-eviction.md).
+    await this.viewEviction.evictMember(serverId, member.userId);
     return { ok: true };
   }
 
@@ -130,8 +232,20 @@ export class RolesService {
     }
     await this.requireCanGrant(granter, [role]);
 
+    // Looked up, not required to exist: `memberRole.deleteMany` below is already a no-op-safe
+    // blind delete for an unknown `memberId` (unchanged), so a missing member here only means there
+    // is nobody to evict, not a 404 (docs/features/channel-view-eviction.md).
+    const member = await this.prisma.serverMember.findUnique({
+      where: { id: memberId },
+      select: { userId: true },
+    });
     await this.prisma.memberRole.deleteMany({ where: { memberId, roleId } });
     await this.writeAuditLog(serverId, userId, 'MEMBER_ROLE_REMOVE', memberId, { roleId });
+    // The removed role may have been the member's only source of `VIEW_CHANNEL`
+    // (docs/features/channel-view-eviction.md).
+    if (member) {
+      await this.viewEviction.evictMember(serverId, member.userId);
+    }
     return { ok: true };
   }
 
@@ -149,6 +263,12 @@ export class RolesService {
     if (!canGrantRoles(context, roles)) {
       throw new ForbiddenException('Cannot manage a role with permissions you do not have');
     }
+  }
+
+  private emitRolesUpdated(serverId: string) {
+    this.realtime.emitToRoom(this.realtime.serverRoom(serverId), RealtimeEvents.RolesUpdated, {
+      serverId,
+    });
   }
 
   private async findMutableRole(roleId: string) {

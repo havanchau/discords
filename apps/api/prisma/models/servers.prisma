@@ -44,6 +44,8 @@ model Server {
   serverReports           ServerReport[]
   webhooks                ServerWebhook[]
   slashCommands           SlashCommand[]
+  workflows               ChannelWorkflow[]
+  workflowHttpAllowlist   WorkflowHttpAllowlistEntry[]
 
   @@index([listed, deletedAt])
   @@index([avatarUrl])
@@ -142,6 +144,10 @@ model Role {
   color               String?
   position            Int                         @default(0)
   permissions         String[]                    @default([])
+  isHoisted           Boolean                     @default(false)
+  iconUrl             String?
+  iconMimeType        String?
+  isMentionable       Boolean                     @default(true)
   createdAt           DateTime                    @default(now())
   updatedAt           DateTime                    @updatedAt
   server              Server                      @relation(fields: [serverId], references: [id], onDelete: Cascade)

@@ -152,6 +152,31 @@
   white-space: nowrap;
 }
 
+.sortableRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sortableRowContent {
+  min-width: 0;
+  flex: 1;
+}
+
+.dragHandle {
+  flex: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragOverlay {
+  min-width: 160px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-overlay);
+  padding: var(--space-1) var(--space-2);
+}
+
 .voiceBlock + .voiceBlock {
   margin-top: 2px;
 }

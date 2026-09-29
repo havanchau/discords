@@ -1,0 +1,68 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  max-width: 420px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.success {
+  color: var(--state-success);
+}
+
+/* A LINK component is a real anchor, not a Button (Button always renders a <button>): it must
+   support ctrl/cmd-click, "open in new tab", and screen-reader link semantics, and it never posts to
+   the API. Sized and coloured to match Button's `secondary` variant so the row reads as one group. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height-sm);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-link);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link:hover {
+  background: var(--surface-hover);
+}
+
+.select {
+  min-height: var(--control-height-sm);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.waiting,
+.error {
+  font-size: var(--font-size-sm);
+}
+
+.waiting {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--state-danger);
+}

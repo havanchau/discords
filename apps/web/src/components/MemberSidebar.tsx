@@ -72,10 +72,10 @@ export function MemberSidebar({
     (member) => !member.user.status || member.user.status === 'OFFLINE',
   );
 
-  // 3. Exclude '@everyone' role from display grouping
-  const displayRoles = server.roles.filter((role) => role.name !== '@everyone');
+  // 3. Only hoisted roles (excluding '@everyone') get their own group.
+  const displayRoles = server.roles.filter((role) => role.isHoisted && role.name !== '@everyone');
 
-  // 4. Map online members to their highest priority role
+  // 4. Map online members to their highest-position hoisted role.
   const roleGroups: Record<
     string,
     { label: string; color?: string | null; members: typeof server.members }
@@ -88,8 +88,10 @@ export function MemberSidebar({
 
   onlineMembers.forEach((member) => {
     const memberRoleIds = member.roles?.map((mr) => mr.role.id) ?? [];
-    // Find the first role in displayRoles (which is sorted by priority) that the member has
-    const highestRole = displayRoles.find((r) => memberRoleIds.includes(r.id));
+    // `displayRoles` is ascending by position (server already returns roles this way), so the last
+    // matching entry is the member's highest-position hoisted role.
+    const candidateRoles = displayRoles.filter((r) => memberRoleIds.includes(r.id));
+    const highestRole = candidateRoles.at(-1);
     if (highestRole) {
       roleGroups[highestRole.id].members.push(member);
     } else {
@@ -163,6 +165,13 @@ export function MemberSidebar({
                           </div>
                           <div className={styles.memberInfo}>
                             <strong style={topRole?.color ? { color: topRole.color } : undefined}>
+                              {identity.roleIconUrl ? (
+                                <img
+                                  className={styles.roleIcon}
+                                  src={assetUrl(identity.roleIconUrl)}
+                                  alt=""
+                                />
+                              ) : null}
                               {identity.displayName}
                             </strong>
                             {member.kind === 'BOT' ? (

@@ -58,6 +58,7 @@ export interface SettingsModalFields {
   updateNotificationPreference: (preference: UpdateNotificationPreferenceInput) => Promise<void>;
   updateServerSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   updateChannelSettings: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  deleteChannel: (channelId: string) => Promise<boolean>;
   toggleChannelRoleOverride: (
     roleId: string,
     permission: string,
@@ -72,6 +73,9 @@ export interface SettingsModalFields {
   createRole: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   toggleRolePermission: (role: Role, permission: string, enabled: boolean) => Promise<void>;
   deleteRole: (role: Role) => Promise<void>;
+  updateRoleHoist: (role: Role, isHoisted: boolean) => Promise<void>;
+  uploadRoleIcon: (role: Role, file: File) => Promise<boolean>;
+  removeRoleIcon: (role: Role) => Promise<void>;
   toggleMemberRole: (memberId: string, roleId: string, enabled: boolean) => Promise<void>;
   removeMember: (memberId: string) => Promise<void>;
   loadBans: (serverId: string) => Promise<void>;
@@ -128,11 +132,15 @@ export interface SettingsModalProps {
     | 'updateNotificationPreference'
     | 'updateServerSettings'
     | 'updateChannelSettings'
+    | 'deleteChannel'
     | 'toggleChannelRoleOverride'
     | 'toggleChannelMemberOverride'
     | 'createRole'
     | 'toggleRolePermission'
     | 'deleteRole'
+    | 'updateRoleHoist'
+    | 'uploadRoleIcon'
+    | 'removeRoleIcon'
     | 'toggleMemberRole'
     | 'removeMember'
     | 'loadBans'

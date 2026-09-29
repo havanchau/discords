@@ -1,4 +1,6 @@
-import { ChevronDown, Pencil, Plus } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { ChevronDown, GripVertical, Pencil, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Channel } from '@/api';
 import type { ActiveCallSummary } from '@/helpers';
@@ -43,6 +45,8 @@ interface CategorySectionProps {
   onCreate: () => void;
   /** Present only for members who can manage channels. */
   onEdit?: () => void;
+  /** Present only when the viewer can drag this category (`SortableCategorySection`). */
+  dragHandle?: ReactNode;
   children: ReactNode;
 }
 
@@ -53,11 +57,13 @@ export function CategorySection({
   onToggle,
   onCreate,
   onEdit,
+  dragHandle,
   children,
 }: CategorySectionProps) {
   return (
     <section className={styles.group}>
       <h2 className={styles.groupTitle}>
+        {dragHandle}
         <button
           type="button"
           className={styles.categoryToggle}
@@ -154,5 +160,83 @@ export function ChannelRow({
       <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
       <ContextMenuContent>{contextMenu}</ContextMenuContent>
     </ContextMenuRoot>
+  );
+}
+
+interface SortableChannelItemProps {
+  channelId: string;
+  /** Only the handle initiates a drag; a tap anywhere else on the row still opens the channel. */
+  dragHandleLabel: string;
+  /** Whatever rendering a channel produces — a plain `ChannelRow`, or a voice row plus its
+   * occupant list — wrapped as one draggable unit. */
+  children: ReactNode;
+}
+
+/**
+ * Wraps one rendered channel item with `@dnd-kit/sortable`'s `useSortable`, with its own drag
+ * handle so a tap anywhere else on the row still opens the channel
+ * (docs/features/channel-reorder.md → Web).
+ */
+export function SortableChannelItem({
+  channelId,
+  dragHandleLabel,
+  children,
+}: SortableChannelItemProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } =
+    useSortable({ id: channelId });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={styles.sortableRow}
+    >
+      <IconButton
+        ref={setActivatorNodeRef}
+        label={dragHandleLabel}
+        size="sm"
+        className={styles.dragHandle}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical size={14} aria-hidden="true" />
+      </IconButton>
+      <div className={styles.sortableRowContent}>{children}</div>
+    </div>
+  );
+}
+
+interface SortableCategorySectionProps extends CategorySectionProps {
+  categoryId: string;
+  dragHandleLabel: string;
+}
+
+/** `CategorySection` wrapped for dragging the category itself, reordering the category list. */
+export function SortableCategorySection({
+  categoryId,
+  dragHandleLabel,
+  ...sectionProps
+}: SortableCategorySectionProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } =
+    useSortable({ id: categoryId });
+
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <CategorySection
+        {...sectionProps}
+        dragHandle={
+          <IconButton
+            ref={setActivatorNodeRef}
+            label={dragHandleLabel}
+            size="sm"
+            className={styles.dragHandle}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical size={14} aria-hidden="true" />
+          </IconButton>
+        }
+      />
+    </div>
   );
 }

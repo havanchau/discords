@@ -58,6 +58,16 @@
   background: var(--accent);
 }
 
+/* `@everyone`/`@here` — a wider-reaching mention than a resolved user, so it renders "already active"
+   rather than waiting for hover (docs/features/everyone-here-and-role-mentions.md). */
+.mentionKeyword {
+  padding: 0 3px;
+  border-radius: var(--radius-sm);
+  color: var(--text-on-accent);
+  background: var(--accent);
+  font-weight: var(--font-weight-bold);
+}
+
 .spoiler {
   border: 0;
   border-radius: var(--radius-sm);

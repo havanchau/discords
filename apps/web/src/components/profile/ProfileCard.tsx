@@ -109,6 +109,9 @@ export function ProfileCard({
                   className={styles.roleChip}
                   style={role.color ? { color: role.color } : undefined}
                 >
+                  {role.iconUrl ? (
+                    <img className={styles.roleChipIcon} src={assetUrl(role.iconUrl)} alt="" />
+                  ) : null}
                   {role.name}
                 </small>
               ))}

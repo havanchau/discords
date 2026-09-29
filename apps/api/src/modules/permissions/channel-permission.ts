@@ -12,6 +12,9 @@ export const Permission = {
   SpeakVoice: 'SPEAK_VOICE',
   UploadFiles: 'UPLOAD_FILES',
   MuteMembers: 'MUTE_MEMBERS',
+  // Read nowhere until docs/features/everyone-here-and-role-mentions.md: gates @everyone, @here,
+  // and a @role mention, checked before the message is persisted (MessagesService.requireMentionPermission).
+  MentionEveryone: 'MENTION_EVERYONE',
 } as const;
 
 export type PermissionValue = (typeof Permission)[keyof typeof Permission];

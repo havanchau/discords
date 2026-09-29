@@ -15,8 +15,11 @@ import { webhooks } from './webhooks';
 import { bots } from './bots';
 import { stickersSoundboard } from './stickers-soundboard';
 import { platform } from './platform';
+import { platformAudit } from './platform-audit';
 import { stage } from './stage';
 import { announcements } from './announcements';
+import { decisions } from './decisions';
+import { workflows } from './workflows';
 
 export const vi = {
   ...common,
@@ -34,6 +37,9 @@ export const vi = {
   ...bots,
   ...stickersSoundboard,
   ...platform,
+  ...platformAudit,
   ...stage,
   ...announcements,
+  ...decisions,
+  ...workflows,
 } as const;

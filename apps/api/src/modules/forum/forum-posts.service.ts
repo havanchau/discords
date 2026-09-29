@@ -90,6 +90,7 @@ export class ForumPostsService {
       const known = await this.prisma.forumTag.count({ where: { channelId, id: { in: tagIds } } });
       if (known !== tagIds.length) throw new BadRequestException('Unknown forum tag');
     }
+    await this.messages.requireMentionPermission(userId, channel.serverId, `${title} ${content}`);
     // The title is screened with the body, so a rule cannot be dodged by writing it in the title.
     const autoModAlerts = await this.messages.enforceAutoMod({
       userId,
@@ -157,6 +158,7 @@ export class ForumPostsService {
       channelId,
       channelName: channel.name,
       isAgeRestricted: channel.isAgeRestricted,
+      isPrivate: channel.isPrivate,
       content,
     });
     await this.messages.postAutoModAlerts(autoModAlerts);

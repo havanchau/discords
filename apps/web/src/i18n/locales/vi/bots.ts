@@ -74,6 +74,12 @@ export const bots = {
   'bot.section.hint':
     'Bot gọi API bằng token của nó. Gửi liên kết cấp quyền cho quản trị viên máy chủ để thêm bot vào máy chủ. Tạo lại hoặc xóa sẽ vô hiệu token cũ ngay lập tức.',
   'bot.section.title': 'Bot ({count}/{max})',
+  'bot.serverBots.empty': 'Máy chủ này chưa cài bot nào.',
+  'bot.serverBots.hint':
+    'Bot đã cài trong máy chủ này và các slash command mỗi bot đã đăng ký ở đây. Chỉ xem: chỉ chủ sở hữu bot mới đổi được command của nó.',
+  'bot.serverBots.loading': 'Đang tải danh sách bot',
+  'bot.serverBots.noCommands': 'Bot này chưa đăng ký command nào trong máy chủ này.',
+  'bot.serverBots.title': 'Bot của máy chủ',
   'bot.summary': 'Tạo lúc {date} · Máy chủ: {count}',
   'error.fallback.cannot-authorize-bot': 'Không thể cấp quyền cho bot',
   'error.fallback.cannot-create-bot': 'Không thể tạo bot',
@@ -83,6 +89,7 @@ export const bots = {
   'error.fallback.cannot-load-bot-commands': 'Không thể tải danh sách command',
   'error.fallback.cannot-load-bot-servers': 'Không thể tải danh sách máy chủ của bot này',
   'error.fallback.cannot-load-bots': 'Không thể tải danh sách bot',
+  'error.fallback.cannot-load-server-bots': 'Không thể tải danh sách bot của máy chủ này',
   'error.fallback.cannot-regenerate-bot-token': 'Không thể tạo lại bot token',
   'error.fallback.cannot-save-bot-command': 'Không thể lưu command',
   'members.botBadgeLabel': 'Bot do quản trị viên máy chủ thêm vào',

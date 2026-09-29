@@ -6,6 +6,7 @@
  * Dates are ISO 8601 strings, as they are on the wire.
  */
 import { ChannelType, UserStatus } from './types.js';
+import type { MessageComponentRow } from './bots.js';
 import type { MessageStickerRef } from './stickers-soundboard.js';
 import type { UserKind } from './webhooks.js';
 import type { SlashCommandView } from './bots.js';
@@ -45,7 +46,13 @@ export interface UserProfileServerContext {
   nickname: string | null;
   avatarUrl: string | null;
   joinedAt: Date;
-  roles: Array<{ id: string; name: string; color?: string | null }>;
+  roles: Array<{
+    id: string;
+    name: string;
+    color?: string | null;
+    position: number;
+    iconUrl: string | null;
+  }>;
 }
 
 export interface UserProfile extends PublicUser {
@@ -165,6 +172,10 @@ export interface Role {
   name: string;
   color?: string | null;
   permissions: string[];
+  position: number;
+  isHoisted: boolean;
+  iconUrl?: string | null;
+  isMentionable: boolean;
 }
 
 export interface Channel {
@@ -313,6 +324,8 @@ export interface Message {
   publishedAt?: Date | null;
   /** A copy delivered by a publish into a following channel; never publishable itself. */
   isCrosspost?: boolean;
+  /** Buttons/select menus a bot attached; null for every human message and most bot messages. */
+  components?: MessageComponentRow[] | null;
 }
 
 export type ForwardSourceType = 'CHANNEL' | 'DIRECT';

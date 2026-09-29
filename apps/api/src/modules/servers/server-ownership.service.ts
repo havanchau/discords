@@ -10,6 +10,7 @@ import { TwoFactorService } from '@/modules/auth/two-factor.service';
 import { syncBotGatewayOnRemoval } from '@/modules/bots/bot-gateway-sync';
 import { LivekitService } from '@/modules/livekit/livekit.service';
 import { PermissionsService } from '@/modules/permissions/permissions.service';
+import { PlatformAuditService } from '@/modules/platform/platform-audit.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { CallRegistryService } from '@/modules/realtime/call-registry.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
@@ -31,6 +32,7 @@ export class ServerOwnershipService {
     private readonly livekit: LivekitService,
     private readonly uploads: UploadsService,
     private readonly servers: ServersService,
+    private readonly platformAudit: PlatformAuditService,
   ) {}
 
   async transferOwnership(userId: string, serverId: string, dto: TransferServerDto) {
@@ -48,6 +50,17 @@ export class ServerOwnershipService {
     await this.twoFactor.verifyReauthentication(userId, dto.password, dto.code, {
       requireSecondFactor: true,
     });
+
+    // `requireOwner` only loads the `ServerMember` row (no `user` relation), so the old owner's
+    // username/displayName for the platform audit snapshot need their own select
+    // (docs/features/platform-audit-log.md Deviations).
+    const [{ name: serverName }, oldOwner] = await Promise.all([
+      this.prisma.server.findUniqueOrThrow({ where: { id: serverId }, select: { name: true } }),
+      this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { username: true, displayName: true },
+      }),
+    ]);
 
     await this.prisma.$transaction(async (tx) => {
       // Conditional on the caller still owning it, so two concurrent transfers cannot both win.
@@ -70,6 +83,21 @@ export class ServerOwnershipService {
           metadata: { fromUserId: userId, toUserId: dto.userId, toUsername: target.user.username },
         },
       });
+      // Also written to the platform-wide table, so this record survives the server being deleted
+      // later (docs/features/platform-audit-log.md).
+      await this.platformAudit.record(
+        'SERVER_OWNERSHIP_TRANSFER',
+        {
+          actorId: userId,
+          actorUsername: oldOwner.username,
+          actorDisplayName: oldOwner.displayName,
+          targetType: 'SERVER',
+          targetId: serverId,
+          targetName: serverName,
+          metadata: { fromUserId: userId, toUserId: dto.userId, toUsername: target.user.username },
+        },
+        tx,
+      );
     });
 
     this.realtime.emitToRoom(
@@ -92,11 +120,18 @@ export class ServerOwnershipService {
     const [server, members, channels, stickers, clips] = await Promise.all([
       this.prisma.server.findUniqueOrThrow({
         where: { id: serverId },
-        select: { avatarUrl: true },
+        select: { name: true, avatarUrl: true },
       }),
       this.prisma.serverMember.findMany({
         where: { serverId },
-        select: { userId: true, avatarUrl: true, user: { select: { kind: true } } },
+        // `username`/`displayName` added alongside `kind`: the owner's own row (matched below by
+        // `userId`) is the platform audit snapshot's actor, read in the same query rather than a
+        // second one.
+        select: {
+          userId: true,
+          avatarUrl: true,
+          user: { select: { kind: true, username: true, displayName: true } },
+        },
       }),
       this.prisma.channel.findMany({ where: { serverId }, select: { id: true } }),
       this.prisma.serverSticker.findMany({
@@ -114,9 +149,29 @@ export class ServerOwnershipService {
       where: { id: serverId, ownerId: userId },
     });
     if (count === 0) throw new NotFoundException('Server not found');
-    // The server's own audit log went with the cascade; this line is the only trace left (open
-    // question 40).
+    // The server's own audit log went with the cascade; recorded durably in the platform-wide
+    // table instead (docs/features/platform-audit-log.md, closing open question 40). The
+    // `Logger.warn` stays as a same-process breadcrumb, not the record of truth.
     this.logger.warn(`Server ${serverId} deleted by its owner ${userId}`);
+    const owner = members.find((member) => member.userId === userId);
+    try {
+      await this.platformAudit.record('SERVER_DELETE', {
+        actorId: userId,
+        actorUsername: owner?.user.username,
+        actorDisplayName: owner?.user.displayName,
+        targetType: 'SERVER',
+        targetId: serverId,
+        targetName: server.name,
+      });
+    } catch (error) {
+      // The delete already committed (`deleteMany` above); a failure here means a missing audit
+      // row, not a silently-failed delete (docs/features/platform-audit-log.md Risks & rollback).
+      this.logger.error(
+        `Could not write the platform audit row for deleted server ${serverId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
 
     const memberUserIds = members.map((member) => member.userId);
     const channelIds = channels.map((channel) => channel.id);

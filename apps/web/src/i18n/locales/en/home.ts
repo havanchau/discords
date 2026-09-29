@@ -5,6 +5,8 @@ export const home = {
   'dm.emptyCopy': 'Add a friend or select a recent DM.',
   'dm.emptyTitle': 'Your direct messages',
   'dm.header.memberCount': '{count} members',
+  'dm.header.mute': 'Mute conversation',
+  'dm.header.unmute': 'Unmute conversation',
   'dm.threadLabel': 'Direct message thread',
   'group.addFriend': 'Add {name}',
   'group.addFriendsTitle': 'Add friends',

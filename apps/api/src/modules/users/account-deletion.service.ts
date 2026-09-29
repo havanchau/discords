@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import type { AccountDeletedPayload, AccountDeletionScheduledResult } from '@discord-clone/shared';
 import { RedisFixedWindowLimiter } from '@/common/redis-fixed-window-limiter';
 import { TwoFactorService } from '@/modules/auth/two-factor.service';
+import { PlatformAuditService } from '@/modules/platform/platform-audit.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { PrivateFileStorageService } from '@/modules/uploads/private-file-storage.service';
@@ -30,6 +31,7 @@ export class AccountDeletionService {
     private readonly storage: PrivateFileStorageService,
     private readonly limiter: RedisFixedWindowLimiter,
     private readonly uploads: UploadsService,
+    private readonly platformAudit: PlatformAuditService,
   ) {}
 
   /** Per account, counted in Redis so the ceiling holds across API instances. */
@@ -134,6 +136,27 @@ export class AccountDeletionService {
       return;
     }
     if (outcome.status === 'NOT_DUE') return;
+
+    // The first persisted record of an account deletion at all — until now this event only ever
+    // reached the application logger (docs/features/platform-audit-log.md). Anonymization already
+    // committed above; a failure here means a missing audit row, not a silently-failed deletion
+    // (docs/features/platform-audit-log.md Risks & rollback).
+    try {
+      await this.platformAudit.record('ACCOUNT_DELETION', {
+        actorId: userId,
+        actorUsername: outcome.account.username ?? undefined,
+        actorDisplayName: outcome.account.displayName ?? undefined,
+        targetType: 'USER',
+        targetId: userId,
+        targetName: outcome.account.displayName ?? undefined,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Could not write the platform audit row for deleted account ${userId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
 
     const payload: AccountDeletedPayload = { userId };
     this.realtime.emitToRooms(

@@ -13,6 +13,7 @@ import type { IncomingCallDialog } from '@/components/home/IncomingCallDialog';
 import type { ComponentProps } from 'react';
 import { assetUrl } from '@/api';
 import type { useSettingsActions } from '@/hooks/useSettingsActions';
+import type { ChannelOrderEntry } from '@/hooks/useWorkspaceNavigation';
 
 interface BuildWorkspaceShellPropsOptions {
   auth: AuthState;
@@ -41,12 +42,11 @@ interface BuildWorkspaceShellPropsOptions {
   createServer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   joinInvite: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   createChannel: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  reorderChannels: (entries: ChannelOrderEntry[]) => Promise<boolean>;
   createCategory: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
-  updateCategory: (
-    categoryId: string,
-    changes: { name: string; position: number },
-  ) => Promise<boolean>;
+  updateCategory: (categoryId: string, changes: { name: string }) => Promise<boolean>;
   deleteCategory: (categoryId: string) => Promise<boolean>;
+  reorderCategories: (orderedCategoryIds: string[]) => Promise<boolean>;
   logout: () => void;
   selectChannel: SelectChannel;
   setChannelQuery: (query: string) => void;
@@ -95,9 +95,11 @@ export function buildWorkspaceShellProps({
   createServer,
   joinInvite,
   createChannel,
+  reorderChannels,
   createCategory,
   updateCategory,
   deleteCategory,
+  reorderCategories,
   logout,
   selectChannel,
   setChannelQuery,
@@ -152,9 +154,11 @@ export function buildWorkspaceShellProps({
         createServer,
         joinInvite,
         createChannel,
+        reorderChannels,
         createCategory,
         updateCategory,
         deleteCategory,
+        reorderCategories,
         createInvite: async () => {
           await settingsActions.createInviteFromSettings();
         },

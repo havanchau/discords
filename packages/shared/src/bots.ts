@@ -29,6 +29,19 @@ export interface CreateBotInput {
   avatarUrl?: string | null;
 }
 
+/**
+ * A bot as a server's `MANAGE_SERVER` admin sees it (`server-bot-commands-admin-view.md`) — not the
+ * bot's owner. Deliberately excludes `OwnedBot.serverCount` and any owner identity: a non-owner admin
+ * must never learn which other servers a bot belongs to or who owns it.
+ */
+export interface ServerInstalledBot {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  /** This bot's slash commands registered in the one server being viewed, not its commands elsewhere. */
+  commands: SlashCommandView[];
+}
+
 /** Returned once, by create and regenerate. Nothing can return the token again. */
 export interface BotSecret {
   token: string;
@@ -122,17 +135,41 @@ export interface InvokeInteractionResult {
   interactionToken: string;
 }
 
-/** `POST /bot-api/interactions/:interactionToken/callback` body — identical shape to a bot's message send. */
+/**
+ * `POST /bot-api/interactions/:interactionToken/callback` body
+ * (`bot-message-components.md` → Changes, step 7).
+ *
+ * `type` defaults to `'MESSAGE'` when omitted, so a bot that only ever answered a slash command
+ * before this feature needs no change. `content` is required for `'MESSAGE'` and optional for
+ * `'UPDATE_MESSAGE'` (an update may touch only `components`, e.g. disabling a button after a click,
+ * without changing the text — omitted keeps the existing content). `components` replaces the
+ * message's components wholesale when present; omitted leaves them unchanged.
+ */
 export interface InteractionCallbackInput {
-  content: string;
+  type?: 'MESSAGE' | 'UPDATE_MESSAGE';
+  content?: string;
   replyToMessageId?: string;
+  components?: MessageComponentRow[];
 }
+
+export type InteractionType = 'APPLICATION_COMMAND' | 'MESSAGE_COMPONENT';
 
 /** Delivered only to the owning bot's gateway socket (targeted emit, not a room broadcast). */
 export interface InteractionCreatePayload {
   interactionToken: string;
-  commandName: string;
-  args: string;
+  type: InteractionType;
+  /** Set only for `type: 'APPLICATION_COMMAND'`. */
+  commandName?: string;
+  /** Set only for `type: 'APPLICATION_COMMAND'`. */
+  args?: string;
+  /** Set only for `type: 'MESSAGE_COMPONENT'`. */
+  messageId?: string;
+  /** Set only for `type: 'MESSAGE_COMPONENT'`. */
+  customId?: string;
+  /** Set only for `type: 'MESSAGE_COMPONENT'`. */
+  componentType?: MessageComponentType;
+  /** The select's chosen values; set only for a `'SELECT'` component click. */
+  values?: string[];
   channelId: string;
   serverId: string;
   invoker: { id: string; username: string; displayName: string };
@@ -141,4 +178,69 @@ export interface InteractionCreatePayload {
 /** Delivered to the invoker's own room once their interaction times out with no answer. */
 export interface InteractionTimeoutPayload {
   interactionToken: string;
+}
+
+/**
+ * Message components — buttons and a single-select select menu attached by a bot
+ * (`bot-message-components.md` → Scope/Changes). Up to 5 action rows, each row either up to 5
+ * buttons or exactly 1 select menu; enforced server-side by `message-components.ts`'s
+ * `validateComponentRows`, not by these types alone.
+ */
+export const MESSAGE_COMPONENT_MAX_ROWS = 5;
+export const MESSAGE_COMPONENT_MAX_BUTTONS_PER_ROW = 5;
+export const MESSAGE_COMPONENT_LABEL_MAX_LENGTH = 80;
+export const MESSAGE_COMPONENT_CUSTOM_ID_MAX_LENGTH = 100;
+export const MESSAGE_COMPONENT_URL_MAX_LENGTH = 1000;
+export const SELECT_OPTIONS_MIN = 1;
+export const SELECT_OPTIONS_MAX = 25;
+export const SELECT_OPTION_LABEL_MAX_LENGTH = 100;
+export const SELECT_OPTION_VALUE_MAX_LENGTH = 100;
+export const SELECT_OPTION_DESCRIPTION_MAX_LENGTH = 100;
+export const SELECT_PLACEHOLDER_MAX_LENGTH = 150;
+
+export type MessageComponentType = 'BUTTON' | 'SELECT';
+export type ButtonStyle = 'PRIMARY' | 'SECONDARY' | 'SUCCESS' | 'DANGER' | 'LINK';
+export const BUTTON_STYLES: ButtonStyle[] = ['PRIMARY', 'SECONDARY', 'SUCCESS', 'DANGER', 'LINK'];
+
+export interface SelectOption {
+  label: string;
+  value: string;
+  description?: string;
+}
+
+export interface ButtonComponent {
+  type: 'BUTTON';
+  style: ButtonStyle;
+  label: string;
+  /** Required for every style except `'LINK'`; mutually exclusive with `url`. */
+  customId?: string;
+  /** Required only for `style: 'LINK'`; validated `http`/`https`. Never sent to the API on click. */
+  url?: string;
+  disabled?: boolean;
+}
+
+export interface SelectComponent {
+  type: 'SELECT';
+  customId: string;
+  options: SelectOption[];
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+export type MessageComponent = ButtonComponent | SelectComponent;
+
+/** One action row on a message. */
+export interface MessageComponentRow {
+  components: MessageComponent[];
+}
+
+/**
+ * `POST /messages/:messageId/component-interactions` body (session auth — the same click-invoke
+ * shape a slash-command invoke has, but keyed on the message and its component instead of a
+ * registered command).
+ */
+export interface ComponentClickInput {
+  customId: string;
+  /** The select's chosen values; omitted/ignored for a button. */
+  values?: string[];
 }

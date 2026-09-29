@@ -1,25 +1,36 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { LivekitService } from '@/modules/livekit/livekit.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { CallRegistryService } from '@/modules/realtime/call-registry.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
+import { RealtimeViewEvictionService } from '@/modules/realtime/realtime-view-eviction.service';
 import {
   RealtimeEvents,
   type Channel,
   type ChannelPermissionOverride,
 } from '@discord-clone/shared';
 import { ServersService } from '@/modules/servers/servers.service';
+import { UploadsService } from '@/modules/uploads/uploads.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelOverridesDto } from './dto/channel-overrides.dto';
+import { ReorderChannelsDto } from './dto/reorder-channels.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 
 @Injectable()
 export class ChannelsService {
+  private readonly logger = new Logger(ChannelsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly servers: ServersService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimePublisher,
+    private readonly viewEviction: RealtimeViewEvictionService,
+    private readonly calls: CallRegistryService,
+    private readonly livekit: LivekitService,
+    private readonly uploads: UploadsService,
   ) {}
 
   async createChannel(userId: string, serverId: string, dto: CreateChannelDto) {
@@ -62,6 +73,78 @@ export class ChannelsService {
       }
     }
     return { channels: visibleChannels };
+  }
+
+  /**
+   * Replaces the server's *entire* channel order in one transaction (docs/features/channel-reorder.md).
+   * The client's raw `position` values are ignored as the write source: dense positions `0..n-1` are
+   * recomputed per category from the submitted array order, so a client sending gapped or duplicate
+   * positions cannot corrupt storage. Two moderators reordering concurrently each run one transaction —
+   * whichever commits second wins outright ("last write commits"), and both clients converge on the
+   * same final state via the `channels:reordered` event below (no partial interleave within either
+   * request, since a transaction is all-or-nothing).
+   */
+  async reorderChannels(
+    userId: string,
+    serverId: string,
+    dto: ReorderChannelsDto,
+  ): Promise<{ channels: Channel[] }> {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageChannels);
+
+    const existing = await this.prisma.channel.findMany({
+      where: { serverId },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((item) => item.id));
+    const payloadIds = dto.channels.map((entry) => entry.id);
+    if (new Set(payloadIds).size !== payloadIds.length) {
+      throw new BadRequestException('Duplicate channel id in reorder payload');
+    }
+    const payloadIdSet = new Set(payloadIds);
+    const isExactSet =
+      payloadIdSet.size === existingIds.size &&
+      [...payloadIdSet].every((id) => existingIds.has(id));
+    if (!isExactSet) {
+      throw new BadRequestException(
+        "Reorder payload must include exactly the server's current channels",
+      );
+    }
+
+    const categoryIds = new Set(
+      dto.channels
+        .map((entry) => entry.categoryId)
+        .filter((categoryId): categoryId is string => categoryId !== null),
+    );
+    for (const categoryId of categoryIds) {
+      await this.requireCategoryInServer(serverId, categoryId);
+    }
+
+    // Dense positions per category (including `null`/uncategorized), assigned 0, 1, 2, … in the
+    // order each category's entries appear in the submitted array (Position scheme).
+    const nextPositionByCategory = new Map<string | null, number>();
+    const updates = dto.channels.map((entry) => {
+      const position = nextPositionByCategory.get(entry.categoryId) ?? 0;
+      nextPositionByCategory.set(entry.categoryId, position + 1);
+      return { id: entry.id, categoryId: entry.categoryId, position };
+    });
+
+    await this.prisma.$transaction(
+      updates.map((update) =>
+        this.prisma.channel.update({
+          where: { id: update.id },
+          data: { categoryId: update.categoryId, position: update.position },
+        }),
+      ),
+    );
+
+    await this.writeAuditLog(serverId, userId, 'CHANNELS_REORDER', undefined, {
+      count: updates.length,
+    });
+    this.realtime.emitToRoom(this.realtime.serverRoom(serverId), RealtimeEvents.ChannelsReordered, {
+      serverId,
+    });
+
+    return this.listChannels(userId, serverId);
   }
 
   async getChannel(userId: string, channelId: string): Promise<{ channel: Channel }> {
@@ -113,7 +196,11 @@ export class ChannelsService {
     if (channel.isAgeRestricted && !existing.isAgeRestricted) {
       await this.evictUnconfirmedMembers(channel.serverId, channel.id);
     }
-    // Persist first, emit second, and after the eviction above so a refetching client can no
+    // `isPrivate` is the only field here that can remove `VIEW_CHANNEL` (docs/features/channel-view-eviction.md).
+    if (dto.isPrivate !== undefined) {
+      await this.viewEviction.evictChannel(channel.id);
+    }
+    // Persist first, evict second, emit third, so a refetching client can no
     // longer re-join a room it should now be refused. The payload carries ids only: open tabs
     // refetch the server detail, which re-applies the channel visibility filter server-side.
     this.realtime.emitToRoom(
@@ -122,6 +209,73 @@ export class ChannelsService {
       { serverId: channel.serverId, channelId: channel.id },
     );
     return { channel };
+  }
+
+  /**
+   * Hard delete: every row the schema already cascades from `Channel` (messages, threads, pins,
+   * overrides, read state, decisions, stage rows, follow rows, …) goes with it in one statement —
+   * no application code re-implements what the FK cascades already do
+   * (docs/features/channel-delete.md Current behavior).
+   */
+  async deleteChannel(userId: string, channelId: string) {
+    const channel = await this.prisma.channel.findUnique({ where: { id: channelId } });
+    if (!channel) {
+      throw new NotFoundException('Channel not found');
+    }
+    await this.permissions.requireServerPermission(
+      userId,
+      channel.serverId,
+      Permission.ManageChannels,
+    );
+
+    // Read before the cascade removes them: who to evict from the channel's room
+    // (server-ownership.service.ts's "read before the cascade" ordering).
+    const members = await this.prisma.serverMember.findMany({
+      where: { serverId: channel.serverId },
+      select: { userId: true },
+    });
+
+    await this.endCall(channelId);
+    await this.prisma.channel.delete({ where: { id: channelId } });
+    await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_DELETE', channelId, {
+      name: channel.name,
+      type: channel.type,
+    });
+
+    // Evict, then emit: a client cannot re-join a room for a channel that no longer exists.
+    this.realtime.removeUsersFromRooms(
+      members.map((member) => member.userId),
+      [this.realtime.channelRoom(channelId)],
+    );
+    this.realtime.emitToRoom(
+      this.realtime.serverRoom(channel.serverId),
+      RealtimeEvents.ChannelDeleted,
+      {
+        serverId: channel.serverId,
+        channelId,
+      },
+    );
+
+    if (channel.avatarUrl) {
+      await this.uploads.deleteUploadIfUnreferenced(channel.avatarUrl);
+    }
+    return { ok: true };
+  }
+
+  /** Like `ServerOwnershipService`'s `endCalls`, for a single channel: nobody stays in a deleted call. */
+  private async endCall(channelId: string) {
+    await this.calls.endCalls([channelId]);
+    if (this.livekit.transport !== 'livekit') return;
+    try {
+      await this.livekit.deleteRooms([channelId]);
+    } catch (error) {
+      // The channel is already gone and every join is refused; log so an operator can act.
+      this.logger.error(
+        `Could not close the LiveKit room of deleted channel ${channelId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async listPermissionOverrides(
@@ -176,6 +330,9 @@ export class ChannelsService {
     await this.writeAuditLog(channel.serverId, userId, 'CHANNEL_OVERRIDES_UPDATE', channel.id, {
       count: overrides.length,
     });
+    // This endpoint's only purpose is changing overrides, so there is no cheaper condition to gate
+    // eviction on (docs/features/channel-view-eviction.md).
+    await this.viewEviction.evictChannel(channelId);
     return this.listPermissionOverrides(userId, channelId);
   }
 

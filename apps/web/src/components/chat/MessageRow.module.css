@@ -117,6 +117,18 @@
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A role's icon rendered next to the author's name (docs/features/role-hoist-and-icon.md). */
+.roleIcon {
+  width: var(--space-4);
+  height: var(--space-4);
+  border-radius: var(--radius-sm);
+  flex: none;
+  object-fit: cover;
 }
 
 .meta strong:hover {

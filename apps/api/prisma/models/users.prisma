@@ -12,6 +12,7 @@ enum UserKind {
   HUMAN
   WEBHOOK
   BOT
+  WORKFLOW
 }
 
 enum FriendStatus {
@@ -81,6 +82,7 @@ model User {
   createdThreads            Thread[]                   @relation("ThreadCreator")
   threadParticipants        ThreadParticipant[]
   directReadStates          DirectReadState[]
+  directConversationMutes   DirectConversationMute[]
   notifications             Notification[]              @relation("NotificationUser")
   actedNotifications        Notification[]              @relation("NotificationActor")
   directMessageReactions    DirectMessageReaction[]
@@ -112,6 +114,10 @@ model User {
   webhook                   ServerWebhook?             @relation("WebhookUser")
   ownedBots                 Bot[]                      @relation("BotOwner")
   bot                       Bot?                       @relation("BotUser")
+  /// The workflow this row is the synthetic executor of; null for every other User kind. No
+  /// createdBy-style relation for ChannelWorkflow.createdById — plain id, no foreign key, same
+  /// precedent as AutoModRule.createdById (a workflow outlives the account that created it).
+  workflow                  ChannelWorkflow?           @relation("WorkflowExecutor")
   uploads                   Upload[]
   stageSpeakers             StageSpeaker[]
   stageSpeakRequests        StageSpeakRequest[]

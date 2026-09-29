@@ -6,6 +6,7 @@ import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { auditActionLabel } from '@/utils/auditLogLabels';
 import { AutoModSection } from './AutoModSection';
 import { ServerBansSection } from './ServerBansSection';
+import { ServerBotsSection } from './ServerBotsSection';
 import { ServerDangerZoneSection } from './ServerDangerZoneSection';
 import { ServerEmojiSection } from './ServerEmojiSection';
 import { ServerInsightsSection } from './ServerInsightsSection';
@@ -14,6 +15,7 @@ import { ServerStickersSection } from './ServerStickersSection';
 import { ServerDiscoverySettings } from './ServerDiscoverySettings';
 import { ServerOnboardingSettings } from './ServerOnboardingSettings';
 import { ServerTemplatesSection } from './ServerTemplatesSection';
+import { WorkflowsSection } from './WorkflowsSection';
 import { ReportsSection } from './ReportsSection';
 import type { SettingsModalFields } from './types';
 import styles from '@/components/SettingsModal.module.css';
@@ -217,6 +219,10 @@ export function ServerSettings({
       ) : null}
 
       {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <WorkflowsSection server={server} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
         <ServerOnboardingSettings server={server} />
       ) : null}
 
@@ -246,6 +252,10 @@ export function ServerSettings({
 
       {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
         <ServerInsightsSection serverId={server.id} />
+      ) : null}
+
+      {memberHasServerPermission(server, auth.user.id, 'MANAGE_SERVER') ? (
+        <ServerBotsSection serverId={server.id} />
       ) : null}
 
       <section className={cn(styles.settingsSection, 'audit-section')}>

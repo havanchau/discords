@@ -10,7 +10,13 @@ import { slugifyChannelName } from '@/common/slugify';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { toSlashCommandView } from '@/modules/bots/slash-commands.service';
-import type { AuditLogEntry, Invite, ServerDetail, ServerSummary } from '@discord-clone/shared';
+import type {
+  AuditLogEntry,
+  Invite,
+  ServerDetail,
+  ServerInstalledBot,
+  ServerSummary,
+} from '@discord-clone/shared';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { countChannelUnread } from '@/modules/messages/unread-counts';
 import { memberNeedsOnboarding } from '@/modules/permissions/onboarding-gate';
@@ -219,6 +225,49 @@ export class ServersService {
     });
     return {
       logs: logs.map((log) => ({ ...log, metadata: toMetadataObject(log.metadata) })),
+    };
+  }
+
+  /**
+   * Per-server, read-only admin view of installed bots and their commands in this server
+   * (`server-bot-commands-admin-view.md`). The `select` clause is the security boundary: `tokenHash`,
+   * `ownerId`, `botUserId`, and the owner's `User` row are never fetched, and `Interaction` is never
+   * queried — not merely omitted from the response after the fact.
+   */
+  async listInstalledBots(
+    userId: string,
+    serverId: string,
+  ): Promise<{ bots: ServerInstalledBot[] }> {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageServer);
+    const bots = await this.prisma.bot.findMany({
+      where: { botUser: { memberships: { some: { serverId } } } },
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        slashCommands: {
+          where: { serverId },
+          orderBy: { name: 'asc' },
+          select: {
+            id: true,
+            botId: true,
+            serverId: true,
+            name: true,
+            description: true,
+            options: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+    return {
+      bots: bots.map((bot) => ({
+        id: bot.id,
+        name: bot.name,
+        avatarUrl: bot.avatarUrl,
+        commands: bot.slashCommands.map(toSlashCommandView),
+      })),
     };
   }
 

@@ -1,0 +1,108 @@
+.workflowRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.workflowRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.workflowRow strong,
+.workflowRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowRow small {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.allowlistRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.form > strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.checkGroup {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.checkGroup legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.stepCard {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.runRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+@media (max-width: 480px) {
+  .workflowRow {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .workflowRow > div {
+    grid-column: 1 / -1;
+  }
+}

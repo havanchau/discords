@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, MessageSquare, MonitorUp, Phone, Users, Video } from 'lucide-react';
-import type { AuthState, DirectConversation, DirectMessage, FriendEntry } from '@/api';
+import type { AuthState, DirectConversationWithMute, DirectMessage, FriendEntry } from '@/api';
 import { directCallId, type DirectCallMode } from '@/hooks/useDirectCall';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { cn } from '@/utils/cn';
@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
   Tooltip,
 } from '@/components/ui';
+import { DirectConversationMuteMenu } from './DirectConversationMuteMenu';
 import { DirectMessageComposer } from './DirectMessageComposer';
 import type { DirectMessageRowActions } from './DirectMessageRow';
 import { DirectMessageTimeline, jumpToDirectMessage } from './DirectMessageTimeline';
@@ -28,7 +29,7 @@ import { clearMessageJump, usePendingMessageJump } from '@/utils/pendingMessageJ
 
 type HomeDirectMessageViewProps = {
   auth: AuthState;
-  activeConversation: DirectConversation | null;
+  activeConversation: DirectConversationWithMute | null;
   directMessages: DirectMessage[];
   directMessageDraft: string;
   pendingAction: string | null;
@@ -52,6 +53,8 @@ type HomeDirectMessageViewProps = {
     | 'addGroupMember'
     | 'removeGroupMember'
     | 'closeDirectConversation'
+    | 'muteDirectConversation'
+    | 'unmuteDirectConversation'
   >;
   call: HomeDirectCall;
   onSendDirectMessage: HomePanelActions['sendDirectMessage'];
@@ -188,6 +191,15 @@ export function HomeDirectMessageView({
                   </Tooltip>
                 );
               })}
+              <DirectConversationMuteMenu
+                muted={activeConversation.muted ?? false}
+                mutedUntil={activeConversation.mutedUntil ?? null}
+                disabled={pendingAction === `mute-${activeConversation.id}`}
+                onMute={(duration) =>
+                  void actions.muteDirectConversation(activeConversation.id, duration)
+                }
+                onUnmute={() => void actions.unmuteDirectConversation(activeConversation.id)}
+              />
               {isGroup ? (
                 <GroupConversationMenu
                   conversation={activeConversation}

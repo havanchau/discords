@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ChevronRight, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { assetUrl } from '@/api';
 import { accentClass, initials, PERMISSION_VALUES } from '@/helpers';
@@ -22,6 +22,9 @@ type RolesSettingsProps = Pick<
   | 'selectedMember'
   | 'server'
   | 'toggleRolePermission'
+  | 'updateRoleHoist'
+  | 'uploadRoleIcon'
+  | 'removeRoleIcon'
 >;
 
 export function RolesSettings({
@@ -32,11 +35,15 @@ export function RolesSettings({
   selectedMember,
   server,
   toggleRolePermission,
+  updateRoleHoist,
+  uploadRoleIcon,
+  removeRoleIcon,
 }: RolesSettingsProps) {
   const t = useTranslation();
   const [previewRoleId, setPreviewRoleId] = useState<string | null>(null);
   const [previewMemberId, setPreviewMemberId] = useState<string | null>(null);
   const [previewChannelFilter, setPreviewChannelFilter] = useState('');
+  const iconInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!server) return null;
 
@@ -190,12 +197,20 @@ export function RolesSettings({
             <section key={role.id} className={styles.roleEditor}>
               <div className={styles.roleEditorHeader}>
                 <div className={styles.roleIdentity}>
-                  <span
-                    className={styles.roleColorDot}
-                    style={{ backgroundColor: role.color || undefined }}
-                  >
-                    {!role.color ? <ShieldCheck size={14} aria-hidden="true" /> : null}
-                  </span>
+                  {role.iconUrl ? (
+                    <img
+                      src={assetUrl(role.iconUrl)}
+                      alt=""
+                      className={cn(styles.roleColorDot, styles.roleIconImage)}
+                    />
+                  ) : (
+                    <span
+                      className={styles.roleColorDot}
+                      style={{ backgroundColor: role.color || undefined }}
+                    >
+                      {!role.color ? <ShieldCheck size={14} aria-hidden="true" /> : null}
+                    </span>
+                  )}
                   <div>
                     <strong style={{ color: role.color || undefined }}>{role.name}</strong>
                     <div className={styles.roleMeta}>
@@ -224,6 +239,53 @@ export function RolesSettings({
                   </IconButton>
                 ) : null}
               </div>
+              {!isEveryone ? (
+                <div className={styles.roleAppearanceRow}>
+                  <CheckRow
+                    className={cn(styles.checkRow, styles.permissionToggle)}
+                    label={t('roles.hoist.label')}
+                    checked={role.isHoisted}
+                    disabled={pendingAction === `role-${role.id}`}
+                    onCheckedChange={(checked) => void updateRoleHoist(role, checked)}
+                  >
+                    <span>{t('roles.hoist.label')}</span>
+                  </CheckRow>
+                  <input
+                    ref={(node) => {
+                      iconInputRefs.current[role.id] = node;
+                    }}
+                    className={styles.hiddenInput}
+                    type="file"
+                    accept="image/png,image/webp"
+                    aria-label={t('roles.icon.upload')}
+                    onChange={(event) => {
+                      const selected = event.target.files?.[0] ?? null;
+                      event.target.value = '';
+                      if (selected) void uploadRoleIcon(role, selected);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={pendingAction === `role-${role.id}`}
+                    onClick={() => iconInputRefs.current[role.id]?.click()}
+                  >
+                    {role.iconUrl ? t('roles.icon.replace') : t('roles.icon.upload')}
+                  </Button>
+                  {role.iconUrl ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pendingAction === `role-${role.id}`}
+                      onClick={() => void removeRoleIcon(role)}
+                    >
+                      {t('roles.icon.remove')}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
               <div className={styles.permissionGrid}>
                 {PERMISSION_VALUES.map((permission) => (
                   <CheckRow

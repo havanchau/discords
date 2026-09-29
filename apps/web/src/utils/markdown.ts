@@ -5,7 +5,10 @@ export type MarkdownNode =
   | { type: 'codeBlock'; language: string | null; value: string }
   | { type: 'blockquote'; children: MarkdownNode[] }
   | { type: 'link'; href: string }
-  | { type: 'mention'; value: string }
+  // `kind` mirrors the server's everyone/here keywords only — it does not resolve against real role
+  // data, so a role mention renders with `kind: 'user'`, the same as an unresolved username
+  // (docs/features/everyone-here-and-role-mentions.md, Trade-offs: no round trip from the renderer).
+  | { type: 'mention'; value: string; kind: 'everyone' | 'here' | 'user' }
   | { type: 'emoji'; name: string };
 
 type ContainerType = 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler';
@@ -41,6 +44,14 @@ const CONTAINER_GROUPS: Array<[number, ContainerType]> = [
   [6, 'italic'],
   [7, 'italic'],
 ];
+
+/** `token` includes the leading `@`, e.g. `@everyone`. */
+function mentionKind(token: string): 'everyone' | 'here' | 'user' {
+  const word = token.slice(1).toLowerCase();
+  if (word === 'everyone') return 'everyone';
+  if (word === 'here') return 'here';
+  return 'user';
+}
 
 export function parseMarkdown(content: string): MarkdownNode[] {
   const nodes: MarkdownNode[] = [];
@@ -118,7 +129,8 @@ function parseInline(text: string, depth: number): MarkdownNode[] {
       continue;
     }
     if (match[8] !== undefined) nodes.push({ type: 'link', href: match[8] });
-    else if (match[9] !== undefined) nodes.push({ type: 'mention', value: match[9] });
+    else if (match[9] !== undefined)
+      nodes.push({ type: 'mention', value: match[9], kind: mentionKind(match[9]) });
     else if (match[10] !== undefined) nodes.push({ type: 'emoji', name: match[10].slice(1, -1) });
   }
 

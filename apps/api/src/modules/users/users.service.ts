@@ -178,7 +178,15 @@ export class UsersService {
             nickname: true,
             avatarUrl: true,
             joinedAt: true,
-            roles: { select: { role: { select: { id: true, name: true, color: true } } } },
+            // `position` and `iconUrl` are what the profile card needs to pick and render the
+            // member's highest-position role icon (docs/features/role-hoist-and-icon.md).
+            roles: {
+              select: {
+                role: {
+                  select: { id: true, name: true, color: true, position: true, iconUrl: true },
+                },
+              },
+            },
           },
         })
       : null;

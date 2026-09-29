@@ -3,6 +3,7 @@ import { DiscoveryDialog } from './discovery/DiscoveryDialog';
 import { ChannelSidebar } from './workspace/ChannelSidebar';
 import { ServerRail } from './workspace/ServerRail';
 import { ServerEventsDialog } from './events/ServerEventsDialog';
+import { DecisionIndexView } from './decisions/DecisionIndexView';
 import { EditCategoryDialog } from './workspace/EditCategoryDialog';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -33,6 +34,7 @@ export function WorkspaceSidebar({
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ChannelCategory | null>(null);
   const [isEventsOpen, setIsEventsOpen] = useState(false);
+  const [isDecisionsOpen, setIsDecisionsOpen] = useState(false);
   const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false);
   const memberServerIds = useMemo(
     () => new Set(workspace.servers.map((item) => item.id)),
@@ -60,6 +62,7 @@ export function WorkspaceSidebar({
         workspace={workspace}
         serverEvents={serverEvents}
         onOpenEvents={() => setIsEventsOpen(true)}
+        onOpenDecisions={() => setIsDecisionsOpen(true)}
         profileAvatarInputRef={profileAvatarInputRef}
         actions={actions}
         onCreateChannel={(type, categoryId) => {
@@ -77,6 +80,15 @@ export function WorkspaceSidebar({
           canManage={memberHasServerPermission(server, workspace.auth.user.id, 'MANAGE_SERVER')}
           serverEvents={serverEvents}
           onOpenChange={setIsEventsOpen}
+        />
+      ) : null}
+
+      {server ? (
+        <DecisionIndexView
+          open={isDecisionsOpen}
+          onOpenChange={setIsDecisionsOpen}
+          serverId={server.id}
+          channels={server.channels}
         />
       ) : null}
 

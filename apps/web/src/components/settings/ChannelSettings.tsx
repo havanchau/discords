@@ -61,6 +61,7 @@ type ChannelSettingsProps = Pick<
   | 'toggleChannelRoleOverride'
   | 'toggleChannelMemberOverride'
   | 'updateChannelSettings'
+  | 'deleteChannel'
 >;
 
 export function ChannelSettings({
@@ -73,6 +74,7 @@ export function ChannelSettings({
   toggleChannelRoleOverride,
   toggleChannelMemberOverride,
   updateChannelSettings,
+  deleteChannel,
 }: ChannelSettingsProps) {
   const t = useTranslation();
   const { auth } = useAuthContext();
@@ -82,8 +84,20 @@ export function ChannelSettings({
     () => members.find((member) => member.id === selectedMemberId) ?? members[0] ?? null,
     [members, selectedMemberId],
   );
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   if (!channel) return null;
+
+  const canManageChannels = Boolean(
+    server && auth && memberHasServerPermission(server, auth.user.id, 'MANAGE_CHANNELS'),
+  );
+  const isDeletePending = pendingAction === `channel-${channel.id}`;
+
+  async function confirmDelete() {
+    if (!channel) return;
+    const deleted = await deleteChannel(channel.id);
+    if (deleted) setActiveDialog(null);
+  }
 
   return (
     <form className={styles.settingsForm} onSubmit={(event) => void updateChannelSettings(event)}>
@@ -114,22 +128,13 @@ export function ChannelSettings({
             {t('channel.changeAvatar')}
           </Button>
         </div>
-        <div className={styles.settingsGrid}>
-          <TextField
-            label={t('channel.field.name')}
-            name="name"
-            defaultValue={channel.name}
-            maxLength={80}
-            required
-          />
-          <TextField
-            label={t('channel.field.position')}
-            name="position"
-            type="number"
-            min={0}
-            defaultValue={channel.position ?? 0}
-          />
-        </div>
+        <TextField
+          label={t('channel.field.name')}
+          name="name"
+          defaultValue={channel.name}
+          maxLength={80}
+          required
+        />
         {server?.categories?.length ? (
           <SettingsSelect
             name="categoryId"
@@ -407,6 +412,30 @@ export function ChannelSettings({
             </div>
           ) : (
             <p className={styles.settingsEmptyCopy}>{t('channel.memberOverrides.empty')}</p>
+          )}
+        </section>
+      ) : null}
+      {canManageChannels ? (
+        <section className={styles.settingsSection}>
+          {isConfirmingDelete ? (
+            <Button
+              type="button"
+              variant="danger"
+              fullWidth
+              disabled={isDeletePending}
+              onClick={() => void confirmDelete()}
+            >
+              {t('channel.action.confirmDelete')}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              fullWidth
+              onClick={() => setIsConfirmingDelete(true)}
+            >
+              {t('channel.action.delete')}
+            </Button>
           )}
         </section>
       ) : null}

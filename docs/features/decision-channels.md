@@ -593,3 +593,81 @@ below is what it will consume. Differences from the text above:
 **Not verified — nothing in this feature has been run**: the migration has not been applied to any
 database, so no endpoint, no sweep tick, and no state transition has ever executed. The manual test
 plan above is entirely unrun. `prisma migrate diff` has not been checked against the entities.
+
+### Web client (built 2026-09-29)
+
+7. **i18n catalog location.** This doc's Technical approach table says
+   `apps/web/src/i18n/locales/en.ts`, `vi.ts`. The repo has since split the catalogs into one module
+   per area under `locales/en/`/`locales/vi/`, merged by each locale's `index.ts`
+   (`apps/web/src/i18n/locales/en/announcements.ts` is the precedent this doc's own web build
+   predates). The web client follows the current layout: `locales/en/decisions.ts` and
+   `locales/vi/decisions.ts`, merged into `en`/`vi` in each `index.ts` — same key set, current
+   convention, not the doc's now-stale file names.
+8. **Decision list payload stays light; the discussion thread is fetched on demand.** The doc's
+   `DecisionView` (Technical approach → API contract) has no `rootMessage`/`Message` field, only
+   `threadId`. Opening "Discuss" on a card therefore calls `GET /decisions/:decisionId` to get the
+   full `rootMessage` before opening the thread panel, rather than the channel list already carrying
+   it (as a forum post's list row does via `ForumPostView.rootMessage`). Not a deviation from the API
+   contract — the contract already shipped this way — but the UI consequence (an extra request per
+   "Discuss" click, with its own loading/error state) is worth recording since it was not spelled out
+   in Technical approach.
+9. **Supersede target picker.** The doc leaves the UI mechanism open ("a new proposal that names the
+   `ACCEPTED` decision it replaces, or a separate 'Mark as superseded' action... decided: superseding
+   happens as an explicit action after the new decision is `ACCEPTED`"). The web client builds the
+   explicit-action variant: a `MANAGE_MESSAGES` holder on an `ACCEPTED` card opens an inline picker
+   listing the channel's other `ACCEPTED` decisions (fetched through the existing
+   `GET /channels/:channelId/decisions?status=ACCEPTED`, no new endpoint) and confirms
+   `POST /decisions/:decisionId/supersede`.
+10. **`PollCard`'s `canClose` is always `false` on a decision's embedded poll.** Nothing in Changes or
+    Who can change status describes a "close the poll early" action separate from resolve/supersede;
+    the poll's own `expiresAt` (set to `votingDeadlineAt` at creation) is what ends voting. Exposing
+    `PollCard`'s existing close button here would let a `MANAGE_MESSAGES` holder close the poll
+    without resolving the decision — a state the doc's lifecycle never describes reading — so it
+    stays hidden.
+11. **Found, not fixed — the deadline sweep's realtime emit does not reach the server index.**
+    Deviation 5 above says the server room "gets an id-only `decision:index-updated`... corrected"
+    after review. Reading the two emit sites: `DecisionsService.emitUpdated`
+    (`apps/api/src/modules/decisions/decisions.service.ts:345-360`, used by manual `resolve`/
+    `supersede`) does exactly that — `RealtimeEvents.DecisionUpdated` to `channelRoom`, plus
+    `RealtimeEvents.DecisionIndexUpdated` (`{ serverId, channelId, decisionId }`) to
+    `this.realtime.serverRoom(serverId)`, which is the room every connected member's socket actually
+    joins (`server:${serverId}`, `realtime-publisher.service.ts:79-81`). But
+    `DecisionSweepService.emitUpdated` (`apps/api/src/modules/decisions/decision-sweep.service.ts:
+    125-141`, used by the automatic deadline sweep — both the resolve and the quorum-expire path)
+    instead emits the **full** `formatDecision(row, null)` payload under the raw string literal
+    `'decision:updated'` to two rooms: `channelRoom(channelId)` (fine — matches
+    `RealtimeEvents.DecisionUpdated`'s value and reaches members who opened that channel) and
+    `` `server:${channel.serverId}:decisions` `` — a room string no client ever joins (clients join
+    `serverRoom(serverId)` = `` `server:${serverId}` ``, not this one), and it never emits
+    `decision:index-updated` at all. Net effect: a decision that leaves `PROPOSED` **automatically**
+    (deadline reached, accepted/rejected/expired-for-quorum by the sweep, not by a manual
+    resolve/supersede) does not live-update `DecisionIndexView` for any member who is not currently
+    viewing that channel — the index only shows it after the dialog is closed and reopened
+    (`decisionsIndexOf` gets invalidated on `DecisionIndexUpdated`, which the sweep never sends).
+    Manual resolve/supersede are unaffected and update the index live, per Verified below.
+
+    **Fixed after the web task handed back.** The web task was scoped out of `apps/api/**`, so it
+    reported the defect instead of fixing it; the fix landed separately, because the code as written
+    contradicted this doc (Deviation 5 states the server room gets the id-only index event — the
+    sweep was the one path that did not do it, so the code, not the doc, was wrong). The sweep's
+    `emitUpdated` now mirrors `DecisionsService.emitUpdated` exactly: `RealtimeEvents.DecisionUpdated`
+    with the full view to `channelRoom(channelId)`, and `RealtimeEvents.DecisionIndexUpdated` with
+    `{ serverId, channelId, decisionId }` to `serverRoom(channel.serverId)`. The dead
+    `` `server:${serverId}:decisions` `` room string and the raw `'decision:updated'` literal are
+    gone. Verified by `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check` and `ui:scan`;
+    **not** verified by observing a real sweep tick fire in a running stack (see Not verified below).
+
+**Web client verified**: `npm run build:shared`, `npm run typecheck`, `npm run lint`
+(`eslint --max-warnings 0`), `npm run build` (shared + api + web), `npm run check:file-size`,
+`npm run i18n:check`, `npm run ui:scan` (token/contrast scan) all pass — real command output in the
+implementation report, not re-pasted here. `npx prettier --check .` was run repo-wide; it already
+failed on pre-existing files outside this task's scope (docs, unrelated `apps/api` sources) before
+this change — every file this task touched was formatted with `npx prettier --write` individually and
+re-verified.
+
+**Web client not verified**: the API dev server could not be started in this environment (port 3001
+was already occupied by an unrelated container) and the migration has never been applied to any
+database (per the "Not verified" note above), so no manual scenario below was exercised end-to-end
+against a running backend — only read against the real controller/service/DTO code and verified by
+build tooling. The manual verification scenario for the web client is written in the implementation
+report, not run.

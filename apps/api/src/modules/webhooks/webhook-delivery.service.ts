@@ -11,7 +11,14 @@ export interface AuthenticatedWebhook {
   id: string;
   name: string;
   webhookUserId: string;
-  channel: { id: string; name: string; type: string; serverId: string; isAgeRestricted: boolean };
+  channel: {
+    id: string;
+    name: string;
+    type: string;
+    serverId: string;
+    isAgeRestricted: boolean;
+    isPrivate: boolean;
+  };
 }
 
 /**
@@ -44,7 +51,14 @@ export class WebhookDeliveryService {
         webhookUserId: true,
         server: { select: { deletedAt: true } },
         channel: {
-          select: { id: true, name: true, type: true, serverId: true, isAgeRestricted: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            serverId: true,
+            isAgeRestricted: true,
+            isPrivate: true,
+          },
         },
       },
     });
@@ -74,6 +88,10 @@ export class WebhookDeliveryService {
     const authorAvatarOverride = dto.avatarUrl ?? null;
     const authorName = authorNameOverride ?? webhook.name;
 
+    // A webhook's synthetic author has no ServerMember row, so this always throws 403 for a webhook
+    // message containing @everyone/@here/a role — fails closed, same as any other server permission
+    // check on a non-member (docs/features/everyone-here-and-role-mentions.md, Rules item 4).
+    await this.messages.requireMentionPermission(webhook.webhookUserId, channel.serverId, content);
     // A BLOCK rule throws a 400 here, before anything is stored.
     const autoModAlerts = await this.messages.enforceAutoMod({
       userId: webhook.webhookUserId,
@@ -113,6 +131,7 @@ export class WebhookDeliveryService {
       channelId: channel.id,
       channelName: channel.name,
       isAgeRestricted: channel.isAgeRestricted,
+      isPrivate: channel.isPrivate,
       content,
     });
     await this.messages.postAutoModAlerts(autoModAlerts);

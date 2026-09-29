@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useCallback, useMemo, useState } from 'react';
 import {
   apiRequest,
@@ -10,8 +11,16 @@ import {
 import { ActiveDialog } from '@/components/chat/types';
 import type { ChannelCreateType } from '@/components/workspace/types';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import { queryKeys } from '@/query/queryKeys';
 import { useWorkspaceStore } from '@/query/useWorkspaceStore';
 import { formText } from '@/utils/formText';
+
+/** One entry of a `PUT /servers/:serverId/channels/order` payload (channel-reorder.md). */
+export interface ChannelOrderEntry {
+  id: string;
+  categoryId: string | null;
+  position: number;
+}
 
 interface UseWorkspaceNavigationProps {
   auth: AuthState | null;
@@ -31,6 +40,7 @@ export function useWorkspaceNavigation({
   setActiveDialog,
 }: UseWorkspaceNavigationProps) {
   const t = useTranslation();
+  const queryClient = useQueryClient();
   const [inviteCode] = useState<string | null>(null);
   const [channelQuery, setChannelQuery] = useState('');
 
@@ -235,7 +245,7 @@ export function useWorkspaceNavigation({
   );
 
   const updateCategory = useCallback(
-    async (categoryId: string, changes: { name: string; position: number }) => {
+    async (categoryId: string, changes: { name: string }) => {
       if (!auth) return false;
       setPendingAction(`category-${categoryId}`);
       setWorkspaceError(null);
@@ -291,6 +301,122 @@ export function useWorkspaceNavigation({
     [auth, patchServer, setPendingAction, setWorkspaceError, t],
   );
 
+  const deleteChannel = useCallback(
+    async (channelId: string) => {
+      if (!auth) return false;
+      setPendingAction(`channel-${channelId}`);
+      setWorkspaceError(null);
+      try {
+        await apiRequest(`/channels/${channelId}`, { method: 'DELETE' }, auth.accessToken);
+        patchServer((current) => ({
+          ...current,
+          channels: current.channels.filter((item) => item.id !== channelId),
+        }));
+        return true;
+      } catch (err) {
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-delete-channel'),
+        );
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, patchServer, setPendingAction, setWorkspaceError, t],
+  );
+
+  /**
+   * The client's `channels` array order *is* the display order (`groupChannelsByCategory` trusts it,
+   * not `position`), so the optimistic patch reorders the array itself before the request fires.
+   * On failure the last-known-good order is restored by refetching the server detail rather than
+   * guessing a rollback (docs/features/channel-reorder.md → Web: optimistic update + rollback).
+   */
+  const reorderChannels = useCallback(
+    async (entries: ChannelOrderEntry[]) => {
+      if (!auth || !server) return false;
+      const serverId = server.id;
+      setPendingAction('channels-reorder');
+      setWorkspaceError(null);
+      patchServer((current) =>
+        current.id === serverId
+          ? {
+              ...current,
+              channels: entries.flatMap((entry) => {
+                const existing = current.channels.find((item) => item.id === entry.id);
+                return existing
+                  ? [{ ...existing, categoryId: entry.categoryId, position: entry.position }]
+                  : [];
+              }),
+            }
+          : current,
+      );
+      try {
+        const data = await apiRequest<{ channels: Channel[] }>(
+          `/servers/${serverId}/channels/order`,
+          { method: 'PUT', body: JSON.stringify({ channels: entries }) },
+          auth.accessToken,
+        );
+        patchServer((current) =>
+          current.id === serverId ? { ...current, channels: data.channels } : current,
+        );
+        return true;
+      } catch (err) {
+        await queryClient.refetchQueries({ queryKey: queryKeys.serverDetail(serverId) });
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-reorder-channels'),
+        );
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, server, patchServer, queryClient, setPendingAction, setWorkspaceError, t],
+  );
+
+  /** Independent of channel order — reordering categories never touches any `Channel` row. */
+  const reorderCategories = useCallback(
+    async (orderedCategoryIds: string[]) => {
+      if (!auth || !server) return false;
+      const serverId = server.id;
+      setPendingAction('categories-reorder');
+      setWorkspaceError(null);
+      patchServer((current) =>
+        current.id === serverId
+          ? {
+              ...current,
+              categories: orderedCategoryIds.flatMap((categoryId, position) => {
+                const existing = (current.categories ?? []).find((item) => item.id === categoryId);
+                return existing ? [{ ...existing, position }] : [];
+              }),
+            }
+          : current,
+      );
+      try {
+        const data = await apiRequest<{ categories: ChannelCategory[] }>(
+          `/servers/${serverId}/categories/order`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({ categories: orderedCategoryIds.map((id) => ({ id })) }),
+          },
+          auth.accessToken,
+        );
+        patchServer((current) =>
+          current.id === serverId ? { ...current, categories: data.categories } : current,
+        );
+        return true;
+      } catch (err) {
+        await queryClient.refetchQueries({ queryKey: queryKeys.serverDetail(serverId) });
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('error.fallback.cannot-reorder-categories'),
+        );
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [auth, server, patchServer, queryClient, setPendingAction, setWorkspaceError, t],
+  );
+
   const textChannels = useMemo(
     // Forum channels are listed with text channels; only voice channels have their own group.
     () => server?.channels.filter((item) => item.type !== 'VOICE') ?? [],
@@ -336,8 +462,11 @@ export function useWorkspaceNavigation({
     createServer,
     joinInvite,
     createChannel,
+    deleteChannel,
+    reorderChannels,
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
   };
 }

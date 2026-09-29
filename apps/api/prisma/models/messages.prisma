@@ -63,6 +63,9 @@ model Message {
   publishedAt                  DateTime?
   // A copy delivered to a follower by a publish. Never publishable itself, which stops any loop.
   isCrosspost                  Boolean             @default(false)
+  // MessageComponentRow[] a bot attached (buttons/select menus); null for every human message and
+  // any bot message that never carried any (docs/features/bot-message-components.md).
+  components                   Json?
   editedAt                     DateTime?
   deletedAt                    DateTime?
   createdAt                    DateTime            @default(now())

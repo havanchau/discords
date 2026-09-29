@@ -125,6 +125,11 @@
   font-weight: 700;
 }
 
+/* Cosmetic only: push suppression is decided by the API, unread badges and ordering are unaffected. */
+.rowTitleMuted {
+  color: var(--text-disabled);
+}
+
 .rowMeta {
   color: var(--text-muted);
   font-size: var(--font-size-sm);

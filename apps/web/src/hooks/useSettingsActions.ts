@@ -499,7 +499,6 @@ export function useSettingsActions({
     setPendingAction('channel-update');
     setWorkspaceError(null);
     try {
-      const positionValue = formText(form, 'position').trim();
       const slowmodeValue = form.get('slowmodeSeconds');
       const categoryValue = form.get('categoryId');
       const guidelinesValue = form.get('postGuidelines');
@@ -512,7 +511,6 @@ export function useSettingsActions({
             topic: formText(form, 'topic').trim(),
             isPrivate: form.get('isPrivate') === 'on',
             isAgeRestricted: form.get('isAgeRestricted') === 'on',
-            position: positionValue ? Number(positionValue) : undefined,
             slowmodeSeconds: slowmodeValue === null ? undefined : Number(slowmodeValue),
             // The select is only rendered when the server has categories; '' means "No category".
             categoryId: categoryValue === null ? undefined : formText(form, 'categoryId') || null,

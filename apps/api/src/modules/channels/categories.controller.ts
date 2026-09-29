@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RateLimit } from '@/common/rate-limit.decorator';
 import { RequestUser } from '@/common/request-user';
 import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { ReorderCategoriesDto } from './dto/reorder-categories.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -20,6 +21,15 @@ export class CategoriesController {
     @Body() dto: CreateCategoryDto,
   ) {
     return this.categories.createCategory(user.id, serverId, dto);
+  }
+
+  @Put('servers/:serverId/categories/order')
+  reorder(
+    @CurrentUser() user: RequestUser,
+    @Param('serverId') serverId: string,
+    @Body() dto: ReorderCategoriesDto,
+  ) {
+    return this.categories.reorderCategories(user.id, serverId, dto);
   }
 
   @Patch('categories/:categoryId')

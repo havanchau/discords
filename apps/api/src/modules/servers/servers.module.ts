@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { LivekitModule } from '@/modules/livekit/livekit.module';
 import { PermissionsModule } from '@/modules/permissions/permissions.module';
+import { PlatformModule } from '@/modules/platform/platform.module';
 import { CallRegistryModule } from '@/modules/realtime/call-registry.module';
 import { RealtimePublisherModule } from '@/modules/realtime/realtime-publisher.module';
 import { StageModule } from '@/modules/stage/stage.module';
@@ -23,6 +24,7 @@ import { ServersService } from './servers.service';
     CallRegistryModule,
     LivekitModule,
     PermissionsModule,
+    PlatformModule,
     RealtimePublisherModule,
     StageModule,
     UploadsModule,

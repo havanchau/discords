@@ -102,7 +102,14 @@ import type {
   CreatePollInput as ServerCreatePollInput,
   CreateSavedMessageInput as ServerCreateSavedMessageInput,
   CustomStatus as ServerCustomStatus,
+  CreateDecisionInput as ServerCreateDecisionInput,
+  DecisionDetailResult as ServerDecisionDetailResult,
+  DecisionListResult as ServerDecisionListResult,
+  DecisionStatus,
+  DecisionView as ServerDecisionView,
   DirectConversation as ServerDirectConversation,
+  DirectConversationMuteResult as ServerDirectConversationMuteResult,
+  DirectConversationWithMute as ServerDirectConversationWithMute,
   DirectMessage as ServerDirectMessage,
   DirectMessageReaction as ServerDirectMessageReaction,
   DirectMessageReplyPreview as ServerDirectMessageReplyPreview,
@@ -139,6 +146,9 @@ import type {
   PollOptionView as ServerPollOptionView,
   PollUpdatedPayload as ServerPollUpdatedPayload,
   PollView as ServerPollView,
+  PlatformAuditAction,
+  PlatformAuditLogPage as ServerPlatformAuditLogPage,
+  PlatformAuditLogView as ServerPlatformAuditLogView,
   PlatformReportDetail as ServerPlatformReportDetail,
   PlatformReportPage as ServerPlatformReportPage,
   PlatformReportResolution,
@@ -147,6 +157,8 @@ import type {
   PlatformServerReportView as ServerPlatformServerReportView,
   PlatformServerSummary as ServerPlatformServerSummary,
   ResolvePlatformReportInput,
+  ResolveDecisionInput,
+  SupersedeDecisionInput,
   PublicUser as ServerPublicUser,
   Role as ServerRole,
   SavedMessageView as ServerSavedMessageView,
@@ -165,6 +177,7 @@ import type {
   UpdateServerOnboardingInput,
   ThreadMessageResult as ServerThreadMessageResult,
   ThreadSummary as ServerThreadSummary,
+  UpdateDirectConversationMuteInput,
   User as ServerUser,
   UserNote as ServerUserNote,
   UserNoteResult as ServerUserNoteResult,
@@ -194,6 +207,16 @@ import type {
   ServerSticker as ServerServerSticker,
   SoundboardClip as ServerSoundboardClip,
   SoundboardPlayedPayload,
+  AddWorkflowHttpAllowlistEntryInput,
+  CreateWorkflowInput,
+  CreateWorkflowResult as ServerCreateWorkflowResult,
+  UpdateWorkflowInput,
+  WorkflowHttpAllowlistEntryView as ServerWorkflowHttpAllowlistEntryView,
+  WorkflowRunView as ServerWorkflowRunView,
+  WorkflowStepInput,
+  WorkflowTriggerInput,
+  WorkflowTriggerResult,
+  WorkflowView as ServerWorkflowView,
 } from '@discord-clone/shared';
 
 export type AccountDeletionScheduledResult = Json<ServerAccountDeletionScheduledResult>;
@@ -209,7 +232,15 @@ export type CreatePollInput = Json<ServerCreatePollInput>;
 export type CreateSavedMessageInput = Json<ServerCreateSavedMessageInput>;
 export type CreateServerEventInput = Json<ServerCreateServerEventInput>;
 export type CustomStatus = Json<ServerCustomStatus>;
+export type CreateDecisionInput = Json<ServerCreateDecisionInput>;
+export type DecisionDetailResult = Json<ServerDecisionDetailResult>;
+export type DecisionListResult = Json<ServerDecisionListResult>;
+export type DecisionView = Json<ServerDecisionView>;
+export type { DecisionStatus, ResolveDecisionInput, SupersedeDecisionInput };
 export type DirectConversation = Json<ServerDirectConversation>;
+export type DirectConversationWithMute = Json<ServerDirectConversationWithMute>;
+export type DirectConversationMuteResult = Json<ServerDirectConversationMuteResult>;
+export type { UpdateDirectConversationMuteInput };
 export type DirectMessage = Json<ServerDirectMessage>;
 export type DirectMessageReaction = Json<ServerDirectMessageReaction>;
 export type DirectMessageReplyPreview = Json<ServerDirectMessageReplyPreview>;
@@ -246,11 +277,14 @@ export type { MuteDuration, UpdateNotificationPreferenceInput };
 export type Poll = Json<ServerPollView>;
 export type PollOption = Json<ServerPollOptionView>;
 export type PollUpdatedPayload = Json<ServerPollUpdatedPayload>;
+export type PlatformAuditLogPage = Json<ServerPlatformAuditLogPage>;
+export type PlatformAuditLogView = Json<ServerPlatformAuditLogView>;
 export type PlatformReportDetail = Json<ServerPlatformReportDetail>;
 export type PlatformReportPage = Json<ServerPlatformReportPage>;
 export type PlatformServerReportView = Json<ServerPlatformServerReportView>;
 export type PlatformServerSummary = Json<ServerPlatformServerSummary>;
 export type {
+  PlatformAuditAction,
   PlatformReportResolution,
   PlatformReportStatus,
   PlatformRole,
@@ -290,6 +324,18 @@ export type ServerTemplateSummary = Json<ServerServerTemplateSummary>;
 export type ServerSticker = Json<ServerServerSticker>;
 export type SoundboardClip = Json<ServerSoundboardClip>;
 export type { SoundboardPlayedPayload };
+export type WorkflowView = Json<ServerWorkflowView>;
+export type WorkflowRunView = Json<ServerWorkflowRunView>;
+export type WorkflowHttpAllowlistEntryView = Json<ServerWorkflowHttpAllowlistEntryView>;
+export type CreateWorkflowResult = Json<ServerCreateWorkflowResult>;
+export type {
+  AddWorkflowHttpAllowlistEntryInput,
+  CreateWorkflowInput,
+  UpdateWorkflowInput,
+  WorkflowStepInput,
+  WorkflowTriggerInput,
+  WorkflowTriggerResult,
+};
 export type {
   DiscoveryJoinResult,
   DiscoveryServerCard,
@@ -330,6 +376,19 @@ export async function apiRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+/** `PATCH /direct-conversations/:conversationId/mute` (docs/features/dm-conversation-mute.md). */
+export async function muteDirectConversation(
+  conversationId: string,
+  input: UpdateDirectConversationMuteInput,
+  token: string,
+): Promise<DirectConversationMuteResult> {
+  return apiRequest<DirectConversationMuteResult>(
+    `/direct-conversations/${conversationId}/mute`,
+    { method: 'PATCH', body: JSON.stringify(input) },
+    token,
+  );
 }
 
 /** A file route that needs the bearer token, so it cannot be a plain link. */

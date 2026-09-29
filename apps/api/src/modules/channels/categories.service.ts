@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { RealtimeEvents, type ChannelCategory } from '@discord-clone/shared';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { ReorderCategoriesDto } from './dto/reorder-categories.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
@@ -10,6 +13,7 @@ export class CategoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissions: PermissionsService,
+    private readonly realtime: RealtimePublisher,
   ) {}
 
   async createCategory(userId: string, serverId: string, dto: CreateCategoryDto) {
@@ -45,6 +49,64 @@ export class CategoriesService {
       position: category.position,
     });
     return { category };
+  }
+
+  /**
+   * Replaces the server's *entire* category order in one transaction (docs/features/channel-reorder.md).
+   * Order in the submitted array *is* the order — categories have no parent to move between, unlike
+   * channels. This is also the first realtime event `CategoriesService` ever emits: category
+   * renames/other-field updates still do not broadcast (pre-existing gap, out of scope here).
+   */
+  async reorderCategories(
+    userId: string,
+    serverId: string,
+    dto: ReorderCategoriesDto,
+  ): Promise<{ categories: ChannelCategory[] }> {
+    await this.permissions.requireServerPermission(userId, serverId, Permission.ManageChannels);
+
+    const existing = await this.prisma.channelCategory.findMany({
+      where: { serverId },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((item) => item.id));
+    const payloadIds = dto.categories.map((entry) => entry.id);
+    if (new Set(payloadIds).size !== payloadIds.length) {
+      throw new BadRequestException('Duplicate category id in reorder payload');
+    }
+    const payloadIdSet = new Set(payloadIds);
+    const isExactSet =
+      payloadIdSet.size === existingIds.size &&
+      [...payloadIdSet].every((id) => existingIds.has(id));
+    if (!isExactSet) {
+      throw new BadRequestException(
+        "Reorder payload must include exactly the server's current categories",
+      );
+    }
+
+    await this.prisma.$transaction(
+      dto.categories.map((entry, position) =>
+        this.prisma.channelCategory.update({
+          where: { id: entry.id },
+          data: { position },
+        }),
+      ),
+    );
+
+    await this.writeAuditLog(serverId, userId, 'CATEGORIES_REORDER', undefined, {
+      count: dto.categories.length,
+    });
+    this.realtime.emitToRoom(
+      this.realtime.serverRoom(serverId),
+      RealtimeEvents.CategoriesReordered,
+      { serverId },
+    );
+
+    return {
+      categories: await this.prisma.channelCategory.findMany({
+        where: { serverId },
+        orderBy: { position: 'asc' },
+      }),
+    };
   }
 
   async deleteCategory(userId: string, categoryId: string) {

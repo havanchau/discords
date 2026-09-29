@@ -76,6 +76,12 @@ export class DecisionsService {
     const expiryError = validatePollExpiry(votingDeadlineAt, new Date());
     if (expiryError) throw new BadRequestException(expiryError);
 
+    // `@everyone`/`@here`/`@role` needs MentionEveryone here too — a decision proposal is a channel
+    // send like any other, and a rule enforced in four of five write paths is not enforced
+    // (docs/features/everyone-here-and-role-mentions.md). Title screened with the body, as AutoMod
+    // does below, so the permission cannot be dodged by putting the mention in the title.
+    await this.messages.requireMentionPermission(userId, channel.serverId, `${title} ${content}`);
+
     // The title is screened with the body, so a rule cannot be dodged by writing it in the title.
     const autoModAlerts = await this.messages.enforceAutoMod({
       userId,
@@ -169,6 +175,7 @@ export class DecisionsService {
       channelId,
       channelName: channel.name,
       isAgeRestricted: channel.isAgeRestricted,
+      isPrivate: channel.isPrivate,
       content,
     });
     await this.messages.postAutoModAlerts(autoModAlerts);
@@ -191,7 +198,8 @@ export class DecisionsService {
     const page = decisions.slice(0, DECISION_PAGE_SIZE);
     return {
       decisions: page.map((decision) => formatDecision(decision, userId)),
-      nextCursor: decisions.length > DECISION_PAGE_SIZE ? (page[page.length - 1]?.id ?? null) : null,
+      nextCursor:
+        decisions.length > DECISION_PAGE_SIZE ? (page[page.length - 1]?.id ?? null) : null,
     };
   }
 
@@ -247,7 +255,8 @@ export class DecisionsService {
     const page = decisions.slice(0, DECISION_PAGE_SIZE);
     return {
       decisions: page.map((decision) => formatDecision(decision, userId)),
-      nextCursor: decisions.length > DECISION_PAGE_SIZE ? (page[page.length - 1]?.id ?? null) : null,
+      nextCursor:
+        decisions.length > DECISION_PAGE_SIZE ? (page[page.length - 1]?.id ?? null) : null,
     };
   }
 
@@ -352,11 +361,15 @@ export class DecisionsService {
     // The server-wide index gets ids only, like `channel:updated`: the server room is not scoped per
     // channel, so a full payload would leak a private decision channel's title and status to members
     // who cannot view it. The refetch it triggers re-applies the channel visibility filter.
-    this.realtime.emitToRoom(this.realtime.serverRoom(serverId), RealtimeEvents.DecisionIndexUpdated, {
-      serverId,
-      channelId,
-      decisionId: decision.id,
-    });
+    this.realtime.emitToRoom(
+      this.realtime.serverRoom(serverId),
+      RealtimeEvents.DecisionIndexUpdated,
+      {
+        serverId,
+        channelId,
+        decisionId: decision.id,
+      },
+    );
   }
 
   private async loadDetail(decisionId: string, viewerId: string): Promise<DecisionDetailResult> {

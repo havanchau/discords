@@ -1,15 +1,22 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Channel, Prisma } from '@prisma/client';
-import type { Message, MessageHistoryResult, ThreadSummary } from '@discord-clone/shared';
+import type {
+  Message,
+  MessageComponentRow,
+  MessageHistoryResult,
+  ThreadSummary,
+} from '@discord-clone/shared';
 import { ForwardSnapshot } from '@/common/forward-snapshot';
 import {
   AutoModAlert,
@@ -19,6 +26,8 @@ import {
 import { ChannelsService } from '@/modules/channels/channels.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { WorkflowTriggerService } from '@/modules/workflows/workflow-trigger.service';
+import { errorStack, threadSummaryInclude, type ThreadWithSummary } from './thread-summary';
 import { withoutViewerVotes } from '@/modules/polls/poll.format';
 import { PushService } from '@/modules/push/push.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
@@ -26,6 +35,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { formatMessage, messageInclude, notificationAuthorName } from './message.format';
 import { readVoiceMaxBytes, toAttachmentCreateData } from './message-attachments';
 import { listMessageRevisions, recordMessageRevision } from './message-revisions';
+import { parseMentionTokens, requiresMentionEveryonePermission } from './mentions';
 import { resolveStickerAttachment, StickerAttachmentData } from './message-stickers';
 import { ReactionDto } from './dto/reaction.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -48,6 +58,10 @@ export class MessagesService {
     private readonly push: PushService,
     private readonly realtime: RealtimePublisher,
     private readonly automod: AutoModScreeningService,
+    // forwardRef: WorkflowsModule already imports MessagesModule for its POST_MESSAGE step, so the
+    // message-match trigger closes the cycle (docs/features/channel-workflows.md).
+    @Inject(forwardRef(() => WorkflowTriggerService))
+    private readonly workflowTrigger: WorkflowTriggerService,
     config: ConfigService,
   ) {
     this.voiceMaxBytes = readVoiceMaxBytes(config);
@@ -96,7 +110,7 @@ export class MessagesService {
       messages.map((message) => message.id),
     );
 
-    const nextCursor = messages.length === 50 ? messages[messages.length - 1]?.id ?? null : null;
+    const nextCursor = messages.length === 50 ? (messages[messages.length - 1]?.id ?? null) : null;
     const ordered = [...messages].reverse();
 
     const readState = await this.prisma.readState.findUnique({
@@ -218,6 +232,8 @@ export class MessagesService {
     dto: CreateMessageDto,
     forward?: ForwardSnapshot,
     carriedStickers: StickerAttachmentData[] = [],
+    /** Bot-only (`bot-message-components.md`); `CreateMessageDto` itself never carries this field. */
+    components?: MessageComponentRow[],
   ) {
     const channel = await this.requireCanPostInChannel(userId, channelId);
     const content = dto.content.trim();
@@ -244,6 +260,7 @@ export class MessagesService {
         throw new NotFoundException('Reply target not found');
       }
     }
+    await this.requireMentionPermission(userId, channel.serverId, content);
     // A forward carries the source text too, so a rule cannot be dodged by forwarding.
     const autoModAlerts = await this.enforceAutoMod({
       userId,
@@ -260,6 +277,9 @@ export class MessagesService {
         content,
         replyToMessageId: dto.replyToMessageId,
         ...forward,
+        ...(components !== undefined
+          ? { components: components as unknown as Prisma.InputJsonValue }
+          : {}),
         attachments: attachments.length ? { create: attachments } : undefined,
       },
       include: messageInclude,
@@ -279,9 +299,19 @@ export class MessagesService {
       channelId: channel.id,
       channelName: channel.name,
       isAgeRestricted: channel.isAgeRestricted,
+      isPrivate: channel.isPrivate,
       content,
     });
     await this.postAutoModAlerts(autoModAlerts);
+    // Message-match workflow triggers fire only on a message AutoMod already let through
+    // (docs/features/channel-workflows.md). `evaluateMessage` catches and logs its own failures, so
+    // a broken workflow can never reject a send that already succeeded.
+    await this.workflowTrigger.evaluateMessage({
+      id: message.id,
+      serverId: channel.serverId,
+      channelId: channel.id,
+      content,
+    });
 
     return {
       message: formatMessage(
@@ -335,6 +365,7 @@ export class MessagesService {
     if (!content && attachments.length === 0) {
       throw new ForbiddenException('Message content cannot be empty without attachments');
     }
+    await this.requireMentionPermission(userId, rootMessage.serverId, content);
     const autoModAlerts = await this.enforceAutoMod({
       userId,
       serverId: rootMessage.serverId,
@@ -400,6 +431,7 @@ export class MessagesService {
       channelId: rootMessage.channelId,
       channelName: rootMessage.channel.name,
       isAgeRestricted: rootMessage.channel.isAgeRestricted,
+      isPrivate: rootMessage.channel.isPrivate,
       content,
     });
     await this.postAutoModAlerts(autoModAlerts);
@@ -407,7 +439,18 @@ export class MessagesService {
     return { thread: threadSummary, rootMessage: formattedRoot, message: formattedMessage };
   }
 
-  async updateMessage(userId: string, messageId: string, dto: UpdateMessageDto) {
+  /**
+   * A human's own edit (`PATCH messages/:messageId`), and a bot's `UPDATE_MESSAGE` callback when it
+   * changes `content` (`bot-message-components.md` → Changes, step 7). `components` is bot-only —
+   * `UpdateMessageDto` itself never carries it — and, when present, is written in the same
+   * transaction as the content edit so the broadcast carries both at once.
+   */
+  async updateMessage(
+    userId: string,
+    messageId: string,
+    dto: UpdateMessageDto,
+    components?: MessageComponentRow[],
+  ) {
     const message = await this.prisma.message.findUnique({
       where: { id: messageId },
       include: { poll: { select: { id: true } } },
@@ -439,7 +482,13 @@ export class MessagesService {
       await recordMessageRevision(tx, messageId, message.content, editedAt);
       return tx.message.update({
         where: { id: messageId },
-        data: { content, editedAt },
+        data: {
+          content,
+          editedAt,
+          ...(components !== undefined
+            ? { components: components as unknown as Prisma.InputJsonValue }
+            : {}),
+        },
         include: messageInclude,
       });
     });
@@ -450,6 +499,45 @@ export class MessagesService {
       formatted,
     );
     await this.postAutoModAlerts(autoModAlerts);
+    return { message: formatted };
+  }
+
+  /**
+   * A bot's `UPDATE_MESSAGE` callback when it touches only `components` (`content` omitted) — the
+   * existing text and `editedAt` are left alone, so no AutoMod re-screening or revision is recorded
+   * (nothing textual changed). Same author-only gate as `updateMessage`
+   * (`bot-message-components.md` → Changes, step 7; Edge cases → "Callback UPDATE_MESSAGE for a
+   * message the responding bot does not own").
+   */
+  async updateMessageComponents(
+    userId: string,
+    messageId: string,
+    components: MessageComponentRow[] | null,
+  ) {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+    await this.channels.requireReadableChannel(userId, message.channelId);
+    if (message.authorId !== userId) {
+      throw new ForbiddenException('Only the author can edit this message');
+    }
+    await this.permissions.requireNotTimedOut(userId, message.serverId);
+    await this.permissions.requireOnboardingAccepted(userId, message.serverId);
+
+    const updated = await this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        components: components ? (components as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+      },
+      include: messageInclude,
+    });
+    const formatted = formatMessage(updated, userId);
+    this.realtime.emitToRoom(
+      this.realtime.channelRoom(formatted.channelId),
+      updated.threadId ? 'thread:message:updated' : 'message:updated',
+      formatted,
+    );
     return { message: formatted };
   }
 
@@ -735,6 +823,24 @@ export class MessagesService {
     });
   }
 
+  /**
+   * Refuses the send before `prisma.message.create` if `content` contains `@everyone`, `@here`, or
+   * a `@<role name>` and the author lacks `MentionEveryone` — a denied send must never create the
+   * message row (docs/features/everyone-here-and-role-mentions.md). A plain `@username` never
+   * requires this permission.
+   */
+  async requireMentionPermission(userId: string, serverId: string, content: string) {
+    if (!content.includes('@')) return;
+    const roles = await this.prisma.role.findMany({ where: { serverId }, select: { name: true } });
+    const tokens = parseMentionTokens(
+      content,
+      roles.map((role) => role.name),
+    );
+    if (requiresMentionEveryonePermission(tokens)) {
+      await this.permissions.requireServerPermission(userId, serverId, Permission.MentionEveryone);
+    }
+  }
+
   async notifyMentionedUsers(input: {
     authorId: string;
     authorUsername: string;
@@ -743,30 +849,109 @@ export class MessagesService {
     channelName: string;
     /** Age-restricted channels get a content-free push body, whoever the recipient is. */
     isAgeRestricted: boolean;
+    /** Required: every call site passes its channel's real value, so an `@everyone` fan-out in a
+     * private channel can never fall back to the permissive default. */
+    isPrivate: boolean;
     content: string;
   }) {
-    const mentionedUsernames = [...new Set(parseMentions(input.content))];
-    if (!mentionedUsernames.length) return;
+    if (!input.content.includes('@')) return;
 
-    const mentionedUsers = await this.prisma.user.findMany({
-      where: {
-        username: { in: mentionedUsernames, mode: 'insensitive' },
-        memberships: { some: { serverId: input.serverId } },
-      },
-      select: { id: true },
+    const roles = await this.prisma.role.findMany({
+      where: { serverId: input.serverId },
+      select: { id: true, name: true, isMentionable: true },
     });
+    const tokens = parseMentionTokens(
+      input.content,
+      roles.map((role) => role.name),
+    );
+    if (!tokens.length) return;
+
+    const wantsEveryone = tokens.some((token) => token.kind === 'everyone');
+    const wantsHere = tokens.some((token) => token.kind === 'here');
+    const roleNamesLower = new Set(
+      tokens.flatMap((token) => (token.kind === 'role' ? [token.name.toLowerCase()] : [])),
+    );
+    const usernames = [
+      ...new Set(tokens.flatMap((token) => (token.kind === 'user' ? [token.username] : []))),
+    ];
+
+    const recipientIds = new Set<string>();
+
+    if (wantsEveryone || wantsHere || roleNamesLower.size) {
+      const members = await this.prisma.serverMember.findMany({
+        where: { serverId: input.serverId },
+        select: {
+          id: true,
+          kind: true,
+          user: { select: { id: true, status: true } },
+          roles: {
+            select: { roleId: true, role: { select: { permissions: true } } },
+          },
+        },
+      });
+      const viewers = await this.permissions.filterMembersWhoCanView(
+        { id: input.channelId, isPrivate: input.isPrivate ?? false },
+        members,
+      );
+
+      if (wantsEveryone) {
+        for (const member of viewers) recipientIds.add(member.user.id);
+      }
+      if (wantsHere) {
+        for (const member of viewers) {
+          if (member.user.status === 'ONLINE') recipientIds.add(member.user.id);
+        }
+      }
+      if (roleNamesLower.size) {
+        // A @role mention already required MentionEveryone to be typed at all (requireMentionPermission),
+        // so the sender holding it is always true here; checked explicitly anyway to match the rule
+        // literally (docs/features/everyone-here-and-role-mentions.md, Rules item 2).
+        const senderCanMentionEveryone = await this.permissions.hasServerPermission(
+          input.authorId,
+          input.serverId,
+          Permission.MentionEveryone,
+        );
+        const mentionedRoleIds = new Set(
+          roles
+            .filter(
+              (role) =>
+                roleNamesLower.has(role.name.toLowerCase()) &&
+                (role.isMentionable || senderCanMentionEveryone),
+            )
+            .map((role) => role.id),
+        );
+        for (const member of viewers) {
+          if (member.roles.some((memberRole) => mentionedRoleIds.has(memberRole.roleId))) {
+            recipientIds.add(member.user.id);
+          }
+        }
+      }
+    }
+
+    if (usernames.length) {
+      const mentionedUsers = await this.prisma.user.findMany({
+        where: {
+          username: { in: usernames, mode: 'insensitive' },
+          memberships: { some: { serverId: input.serverId } },
+        },
+        select: { id: true },
+      });
+      await Promise.all(
+        mentionedUsers.map(async (user) => {
+          const canViewChannel = await this.permissions.hasChannelPermission(
+            user.id,
+            input.channelId,
+            Permission.ViewChannel,
+          );
+          if (canViewChannel) recipientIds.add(user.id);
+        }),
+      );
+    }
 
     await Promise.all(
-      mentionedUsers.map(async (user) => {
-        const canViewChannel = await this.permissions.hasChannelPermission(
-          user.id,
-          input.channelId,
-          Permission.ViewChannel,
-        );
-        if (!canViewChannel) return;
-
-        await this.push.sendMentionPush({
-          toUserId: user.id,
+      [...recipientIds].map((toUserId) =>
+        this.push.sendMentionPush({
+          toUserId,
           fromUserId: input.authorId,
           fromUsername: input.authorUsername,
           serverId: input.serverId,
@@ -774,8 +959,8 @@ export class MessagesService {
           channelName: input.channelName,
           isAgeRestricted: input.isAgeRestricted,
           content: input.content,
-        });
-      }),
+        }),
+      ),
     );
   }
 
@@ -790,30 +975,4 @@ export class MessagesService {
       data: { serverId, actorId, action, targetId, metadata: metadata as Prisma.InputJsonValue },
     });
   }
-}
-
-const threadSummaryInclude = {
-  messages: {
-    where: { deletedAt: null },
-    orderBy: { createdAt: 'desc' as const },
-    take: 1,
-  },
-  participants: {
-    include: {
-      user: {
-        select: { id: true, username: true, displayName: true, avatarUrl: true },
-      },
-    },
-  },
-  tags: { select: { tag: { select: { id: true, name: true, position: true } } } },
-  _count: { select: { messages: true } },
-} satisfies Prisma.ThreadInclude;
-
-type ThreadWithSummary = Prisma.ThreadGetPayload<{ include: typeof threadSummaryInclude }>;
-function parseMentions(content: string) {
-  return [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map((match) => match[1]);
-}
-
-function errorStack(error: unknown) {
-  return error instanceof Error ? error.stack : String(error);
 }

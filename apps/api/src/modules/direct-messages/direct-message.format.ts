@@ -166,6 +166,27 @@ export async function findFormattedDirectMessage(prisma: PrismaClient, messageId
   return formatted;
 }
 
+/**
+ * Batch-loads this viewer's `DirectConversationMute` rows for a list of conversation ids in one
+ * query, the same shape as `countDirectUnread` — no per-conversation round trip
+ * (docs/features/dm-conversation-mute.md).
+ */
+export async function loadDirectConversationMutes(
+  prisma: PrismaClient,
+  userId: string,
+  conversationIds: string[],
+): Promise<Record<string, { muted: boolean; mutedUntil: Date | null }>> {
+  if (!conversationIds.length) return {};
+
+  const rows = await prisma.directConversationMute.findMany({
+    where: { userId, conversationId: { in: conversationIds } },
+    select: { conversationId: true, muted: true, mutedUntil: true },
+  });
+  return Object.fromEntries(
+    rows.map((row) => [row.conversationId, { muted: row.muted, mutedUntil: row.mutedUntil }]),
+  );
+}
+
 /** Non-members get the same 404 as a missing conversation, so conversation ids are not confirmed. */
 export async function requireConversationMembership(
   prisma: PrismaClient,

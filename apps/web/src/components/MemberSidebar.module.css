@@ -108,6 +108,18 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A role's icon rendered next to the member's name (docs/features/role-hoist-and-icon.md). */
+.roleIcon {
+  width: var(--space-4);
+  height: var(--space-4);
+  border-radius: var(--radius-sm);
+  flex: none;
+  object-fit: cover;
 }
 
 .member:hover .memberInfo strong {

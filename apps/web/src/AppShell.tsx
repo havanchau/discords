@@ -17,6 +17,7 @@ import { useMessageComposerActions } from './hooks/useMessageComposerActions';
 import { useMessageHistory } from './hooks/useMessageHistory';
 import { useNotifications } from './hooks/useNotifications';
 import { useRealtimeSocket } from './hooks/useRealtimeSocket';
+import { useRoleAppearanceActions } from './hooks/useRoleAppearanceActions';
 import { useServerEmojis } from './hooks/useServerEmojis';
 import { useServerEvents } from './hooks/useServerEvents';
 import { useServerModeration } from './hooks/useServerModeration';
@@ -96,9 +97,12 @@ export function AppShell() {
     createServer,
     joinInvite,
     createChannel,
+    deleteChannel,
+    reorderChannels,
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
   } = useWorkspaceNavigation({
     auth,
     clearAuth,
@@ -227,6 +231,13 @@ export function AppShell() {
     setWorkspaceError,
     setChannelBadges,
     openServer,
+  });
+
+  const roleAppearance = useRoleAppearanceActions({
+    auth,
+    serverId: server?.id ?? null,
+    setPendingAction,
+    setWorkspaceError,
   });
 
   const socket = useRealtimeSocket({
@@ -494,9 +505,11 @@ export function AppShell() {
     createServer,
     joinInvite,
     createChannel,
+    reorderChannels,
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
     logout,
     selectChannel,
     setChannelQuery,
@@ -596,10 +609,12 @@ export function AppShell() {
     moderation,
     serverEmojis,
     settingsActions,
+    roleAppearance,
     uiTheme,
     setUiTheme,
     logout,
     setSelectedMemberId,
+    deleteChannel,
   });
 
   return (

@@ -1,9 +1,20 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import type { DirectConversation } from '@discord-clone/shared';
+import type {
+  DirectConversationMuteResult,
+  DirectConversationWithMute,
+} from '@discord-clone/shared';
 import type { DirectMessage } from '@discord-clone/shared';
+import { RealtimeEvents } from '@discord-clone/shared';
 import { CreateDirectMessageDto } from './dto/create-direct-message.dto';
+import { UpdateDirectConversationMuteDto } from './dto/update-direct-conversation-mute.dto';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { PushService } from '@/modules/push/push.service';
@@ -12,10 +23,12 @@ import { findBlockBetween } from '@/modules/friends/user-blocks';
 import { readVoiceMaxBytes, toAttachmentCreateData } from '@/modules/messages/message-attachments';
 import type { StickerAttachmentData } from '@/modules/messages/message-stickers';
 import type { ForwardSnapshot } from '@/common/forward-snapshot';
+import { resolveMutedUntil } from '@/modules/users/notification-mute';
 import {
   directConversationInclude,
   directMessageInclude,
   formatDirectMessages,
+  loadDirectConversationMutes,
   requireConversationMembership,
 } from './direct-message.format';
 
@@ -34,24 +47,71 @@ export class DirectMessagesService {
     this.voiceMaxBytes = readVoiceMaxBytes(config);
   }
 
-  async listConversations(userId: string): Promise<{ conversations: DirectConversation[] }> {
+  async listConversations(
+    userId: string,
+  ): Promise<{ conversations: DirectConversationWithMute[] }> {
     const conversations = await this.prisma.directConversation.findMany({
       where: { members: { some: { userId } } },
       include: directConversationInclude(userId),
       orderBy: { updatedAt: 'desc' },
     });
+    const conversationIds = conversations.map((conversation) => conversation.id);
 
-    const unreadCounts = await countDirectUnread(
-      this.prisma,
-      userId,
-      conversations.map((conversation) => conversation.id),
-    );
-    const conversationsWithUnread = conversations.map((conversation) => ({
-      ...conversation,
-      unreadCount: unreadCounts[conversation.id] ?? 0,
-    }));
+    const [unreadCounts, mutes] = await Promise.all([
+      countDirectUnread(this.prisma, userId, conversationIds),
+      loadDirectConversationMutes(this.prisma, userId, conversationIds),
+    ]);
+    const conversationsWithUnread = conversations.map((conversation) => {
+      const mute = mutes[conversation.id];
+      return {
+        ...conversation,
+        unreadCount: unreadCounts[conversation.id] ?? 0,
+        muted: mute?.muted ?? false,
+        mutedUntil: mute?.mutedUntil?.toISOString() ?? null,
+      };
+    });
 
     return { conversations: conversationsWithUnread };
+  }
+
+  /**
+   * The one write path for a conversation's DM push mute (docs/features/dm-conversation-mute.md).
+   * Upserts on `(userId, conversationId)`, mirroring `UsersService.updateNotificationPreference`'s
+   * mute rules exactly: `muted: false` always clears `mutedUntil`, `muteDuration` without
+   * `muted: true` is a 400, and re-muting overwrites `mutedUntil` from `now` (no merge with any
+   * remaining time).
+   */
+  async muteConversation(
+    userId: string,
+    conversationId: string,
+    dto: UpdateDirectConversationMuteDto,
+  ): Promise<DirectConversationMuteResult> {
+    if (dto.muteDuration !== undefined && dto.muted !== true) {
+      throw new BadRequestException('Mute duration requires muted to be true');
+    }
+    await this.requireConversationMember(userId, conversationId);
+
+    const mutedUntil = dto.muted
+      ? resolveMutedUntil(dto.muteDuration ?? 'forever', new Date())
+      : null;
+    await this.prisma.directConversationMute.upsert({
+      where: { userId_conversationId: { userId, conversationId } },
+      update: { muted: dto.muted, mutedUntil },
+      create: { userId, conversationId, muted: dto.muted, mutedUntil },
+    });
+
+    // Own preference only: no other member's client needs to react to it, so this goes to the
+    // caller's own room, never the conversation room (RealtimeEvents.DmConversationUpdated already
+    // has a client listener that refetches the conversation list, no payload read).
+    this.realtime.emitToRoom(this.realtime.userRoom(userId), RealtimeEvents.DmConversationUpdated, {
+      conversationId,
+    });
+
+    return {
+      conversationId,
+      muted: dto.muted,
+      mutedUntil: mutedUntil?.toISOString() ?? null,
+    };
   }
 
   async listMessages(

@@ -22,6 +22,7 @@ import { BotMessagesService } from './bot-messages.service';
 import { CurrentBot, type RequestBot } from './bot-request';
 import { BotCreateMessageDto } from './dto/bot-create-message.dto';
 import { CreateSlashCommandDto } from './dto/create-slash-command.dto';
+import { InteractionCallbackDto } from './dto/interaction-callback.dto';
 import { UpdateSlashCommandDto } from './dto/update-slash-command.dto';
 import { InteractionsService } from './interactions.service';
 import { SlashCommandsService } from './slash-commands.service';
@@ -123,14 +124,15 @@ export class BotApiController {
   }
 
   /**
-   * The bot's answer to an invoked slash command — same body shape as a bot's channel message
-   * (`BotCreateMessageDto`), reused rather than duplicated (Changes → Invocation flow, step 6).
+   * The bot's answer to an invoked slash command or a clicked message component — `type: 'MESSAGE'`
+   * (default, unchanged from today) posts a new message; `type: 'UPDATE_MESSAGE'` edits the message a
+   * component lived on (`bot-message-components.md` → Changes, step 7).
    */
   @Post('interactions/:interactionToken/callback')
   respondToInteraction(
     @CurrentBot() bot: RequestBot,
     @Param('interactionToken') interactionToken: string,
-    @Body() dto: BotCreateMessageDto,
+    @Body() dto: InteractionCallbackDto,
   ) {
     return this.interactions.respondToCallback(bot, interactionToken, dto);
   }

@@ -642,6 +642,43 @@ read for this spec). Manual scenarios:
   this doc doubles as the living contract until (if) a second workflows doc appears, at which point
   it should be promoted to `docs/features/workflows/overview.md` per `documentation.md`'s own rule.
 
+## Deviations
+
+Recorded during implementation (2026-09-29), per this doc's own rule: a mid-implementation deviation
+stops, updates this section, then continues. No acceptance criterion, API contract, or DB shape
+changed — both items are mechanism-only.
+
+- **Chained-workflow depth is passed as a call parameter, not read back from a tag stored on the
+  message.** The doc's Technical approach says a `POST_MESSAGE` step "tags the message it creates
+  with the run's id ... so a `MESSAGE_MATCHES` trigger elsewhere can read the cause chain." That
+  would need a new column on `Message`, and `apps/api/prisma/models/messages.prisma` /
+  `apps/api/src/modules/messages/**` belong to a concurrent agent this wave (task brief, "Files you
+  MUST NOT touch"). Implemented instead as: `WorkflowActionsService.postMessage` calls
+  `WorkflowTriggerService.evaluateMessage(message, { causeRunId, depth: run.depth + 1 })` directly,
+  right after it creates the message and before returning — the depth/cause context travels through
+  the same call stack that created the message instead of a round-trip through a stored column.
+  Every acceptance criterion in Rules item 7 (chain depth capped at `MAX_WORKFLOW_CHAIN_DEPTH`,
+  `CHAIN_DEPTH_EXCEEDED` on the run that would exceed it) and the Loop scenario in Test plan hold
+  identically; a `MESSAGE_MATCHES` trigger fired through `messages.service.ts`'s own send path
+  (human or webhook message) still gets `depth: 0`, exactly as Rules item 7 specifies. The cost: a
+  message a workflow posted carries no on-row evidence of which run produced it (no `causedByRunId`
+  on `Message`) — `WorkflowRun.causeRunId`/`depth` are still the source of truth for the chain, same
+  as the doc's shape, just not cross-referenced from the `Message` side. Revisit once `Message` is
+  back in this feature's ownership, if a "which run posted this message" lookup is ever needed from a
+  message row itself.
+- **The `UserKind` enum value is added inside the same transaction as the rest of the migration's
+  DDL, not as a separate pre-transaction statement.** The doc's Technical approach and Deployment
+  notes both say Postgres requires `ALTER TYPE ... ADD VALUE` "outside the same transaction ... the
+  migration file issues it as its own statement." That is true for PostgreSQL <12, but this repo's own
+  most recent enum-extending migrations
+  (`20260925001000_add_decision_channels`, `20260918007000_add_stage_channels`,
+  `20260922003000_add_announcement_channels`) already established the PostgreSQL 12+ rule this repo
+  actually relies on: `ADD VALUE` is allowed inside the migration's implicit transaction as long as
+  the new value is not *used* before that same transaction commits — and none of those migrations'
+  later statements reference the new value, exactly like this one. Matched that precedent instead of
+  the doc's (more conservative, pre-12) text; the migration file's own header comment explains why.
+  No behavior difference — same one-way, non-revertible `ADD VALUE` either way.
+
 ## Open questions
 
 None open. Questions 64–68 (raised by the first draft of this doc) were reviewed and closed on

@@ -7,6 +7,7 @@ export const viApiMessages = {
   ALREADY_A_STAGE_SPEAKER: 'Bạn đã là người nói trên sân khấu',
   ANNOUNCEMENTS_CAN_ONLY_BE_FOLLOWED_INTO_A_TEXT_CHANNEL:
     'Chỉ có thể theo dõi thông báo vào một kênh văn bản',
+  AN_ACTION_ROW_CANNOT_BE_EMPTY: 'Hàng thao tác không được rỗng',
   AN_AGE_RESTRICTED_CHANNEL_CAN_ONLY_BE_FOLLOWED_INTO_AN_AGE_RESTRICTED_CHANNEL:
     'Kênh giới hạn độ tuổi chỉ có thể được theo dõi vào một kênh giới hạn độ tuổi',
   AN_EXPORT_IS_ALREADY_IN_PROGRESS: 'Một bản xuất dữ liệu đang được xử lý',
@@ -16,6 +17,13 @@ export const viApiMessages = {
   A_CHANNEL_CANNOT_FOLLOW_ITSELF: 'Kênh không thể tự theo dõi chính nó',
   A_CROSSPOSTED_MESSAGE_CANNOT_BE_PUBLISHED: 'Không thể đăng tin nhắn được chia sẻ chéo',
   A_DECISION_CANNOT_SUPERSEDE_ITSELF: 'Một quyết định không thể thay thế chính nó',
+  A_LINK_BUTTON_CANNOT_CARRY_A_CUSTOMID: 'Nút LINK không được mang customId',
+  A_LINK_BUTTON_REQUIRES_A_URL: 'Nút LINK bắt buộc phải có url',
+  A_NON_LINK_BUTTON_REQUIRES_A_CUSTOMID: 'Nút không phải LINK bắt buộc phải có customId',
+  A_ROW_HOLDS_EITHER_ONE_SELECT_MENU_OR_UP_TO_5_BUTTONS_NEVER_BOTH:
+    'Một hàng chứa một menu chọn hoặc tối đa 5 nút, không được cả hai',
+  A_SELECT_MENU_REQUIRES_AT_LEAST_ONE_OPTION: 'Menu chọn phải có ít nhất một lựa chọn',
+  A_SELECT_MENU_REQUIRES_A_CUSTOMID: 'Menu chọn bắt buộc phải có customId',
   BAN_NOT_FOUND: 'Không tìm thấy lệnh cấm',
   BOT_ALREADY_IN_THIS_SERVER: 'Bot đã có trong máy chủ này',
   BOT_IS_NOT_A_MEMBER_OF_THIS_SERVER: 'Bot không phải là thành viên của máy chủ này',
@@ -56,6 +64,8 @@ export const viApiMessages = {
   COMMAND_NAME_ALREADY_USED_IN_THIS_SERVER: 'Tên lệnh đã được dùng trong máy chủ này',
   COMMAND_NAME_IS_RESERVED: 'Tên lệnh đã được hệ thống dành riêng',
   COMMAND_NOT_FOUND: 'Không tìm thấy lệnh',
+  COMPONENT_IS_DISABLED: 'Thành phần đã bị vô hiệu hoá',
+  COMPONENT_NOT_FOUND: 'Không tìm thấy thành phần',
   CONVERSATION_NOT_FOUND: 'Không tìm thấy cuộc trò chuyện',
   DECISION_ALREADY_RESOLVED: 'Quyết định đã được xử lý',
   DECISION_IS_NOT_AN_ACCEPTED_DECISION: 'Quyết định này chưa được chấp thuận',
@@ -63,6 +73,8 @@ export const viApiMessages = {
   DECISION_TITLE_IS_REQUIRED: 'Tiêu đề quyết định là bắt buộc',
   DELETION_ALREADY_COMPLETED: 'Tài khoản đã bị xóa',
   DO_NOT_INCLUDE_YOURSELF_IN_USERIDS: 'Không đưa chính bạn vào userIds',
+  DUPLICATE_CUSTOMID: 'customId bị trùng',
+  DUPLICATE_SELECT_OPTION_VALUE: 'Giá trị lựa chọn bị trùng',
   EMAIL_IS_NOT_VERIFIED: 'Email chưa được xác minh',
   EMAIL_OR_USERNAME_ALREADY_EXISTS: 'Email hoặc tên đăng nhập đã tồn tại',
   EMOJI_LIMIT_REACHED: 'Đã đạt giới hạn emoji',
@@ -97,6 +109,7 @@ export const viApiMessages = {
   INVALID_DISCOVERY_TAG: 'Thẻ khám phá không hợp lệ',
   INVALID_EMAIL_OR_PASSWORD: 'Email hoặc mật khẩu không đúng',
   INVALID_MESSAGE: 'Tin nhắn không hợp lệ',
+  INVALID_OPTION_VALUE: 'Giá trị lựa chọn không hợp lệ',
   INVALID_OR_EXPIRED_RESET_TOKEN: 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
   INVALID_OR_EXPIRED_SIGN_IN_CODE: 'Mã đăng nhập không hợp lệ hoặc đã hết hạn',
   INVALID_OR_EXPIRED_VERIFICATION_TOKEN: 'Token xác minh không hợp lệ hoặc đã hết hạn',
@@ -137,6 +150,7 @@ export const viApiMessages = {
   ONLY_ANNOUNCEMENT_CHANNELS_CAN_BE_FOLLOWED: 'Kênh thông báo mới có thể được theo dõi',
   ONLY_ANNOUNCEMENT_CHANNEL_MESSAGES_CAN_BE_PUBLISHED:
     'Chỉ có thể đăng tin nhắn trong kênh thông báo',
+  ONLY_A_LINK_BUTTON_CARRIES_A_URL: 'Chỉ nút LINK mới mang url',
   ONLY_GROUP_CONVERSATIONS_CAN_ADD_MEMBERS: 'Chỉ cuộc trò chuyện nhóm mới có thể thêm thành viên',
   ONLY_GROUP_CONVERSATIONS_CAN_BE_RENAMED: 'Chỉ cuộc trò chuyện nhóm mới có thể đổi tên',
   ONLY_GROUP_CONVERSATIONS_CAN_REMOVE_MEMBERS: 'Chỉ cuộc trò chuyện nhóm mới có thể xoá thành viên',
@@ -232,6 +246,8 @@ export const viApiMessages = {
   UNKNOWN_FORUM_TAG: 'Thẻ diễn đàn không hợp lệ',
   UNKNOWN_POLL_OPTION: 'Lựa chọn bình chọn không hợp lệ',
   UNSUPPORTED_FILE_TYPE: 'Định dạng tệp không được hỗ trợ',
+  UPDATE_MESSAGE_REQUIRES_A_COMPONENT_INTERACTION:
+    'UPDATE_MESSAGE yêu cầu một tương tác thành phần',
   UPLOAD_CHUNK_IS_MISSING: 'Thiếu phần tải lên',
   UPLOAD_CHUNK_IS_REQUIRED: 'Cần có phần tải lên',
   UPLOAD_CHUNK_IS_TOO_LARGE: 'Phần tải lên quá lớn',
@@ -319,4 +335,25 @@ export const viApiMessages = {
     'Quy tắc AutoMod "{rule}" đã chặn một tin nhắn của @{author} trong #{channel}:\n{content}',
   'automod.alert.flagged':
     'Quy tắc AutoMod "{rule}" đã gắn cờ một tin nhắn của @{author} trong #{channel}:\n{content}',
+  // Channel workflows (docs/features/channel-workflows.md).
+  ALLOWLIST_ENTRY_NOT_FOUND: 'Không tìm thấy mục trong danh sách cho phép',
+  CHANNEL_MUST_BE_A_TEXT_CHANNEL: 'Kênh phải là kênh văn bản',
+  CHANNEL_NOT_FOUND_IN_THIS_SERVER: 'Không tìm thấy kênh trong server này',
+  HOST_ALREADY_IN_ALLOWLIST: 'Máy chủ đã có trong danh sách cho phép',
+  HOST_NOT_IN_ALLOWLIST: 'Máy chủ không nằm trong danh sách cho phép',
+  HTTP_ACTIONS_ARE_DISABLED_UNTIL_AN_ALLOWED_HOST_IS_CONFIGURED:
+    'Hành động HTTP bị vô hiệu hóa cho đến khi có một máy chủ được cho phép',
+  IDEMPOTENCY_KEY_REQUIRED: 'Yêu cầu khóa idempotency',
+  ONLY_A_WEBHOOK_RECEIVED_WORKFLOW_HAS_A_TOKEN_TO_REGENERATE:
+    'Chỉ workflow loại WEBHOOK_RECEIVED mới có token để tạo lại',
+  WORKFLOW_CHANNEL_ID_REQUIRED_FOR_MESSAGE_MATCHES: 'channelId là bắt buộc cho MESSAGE_MATCHES',
+  WORKFLOW_CHANNEL_ID_REQUIRED_FOR_POST_MESSAGE: 'channelId là bắt buộc cho POST_MESSAGE',
+  WORKFLOW_CONTENT_REQUIRED_FOR_POST_MESSAGE: 'content là bắt buộc cho POST_MESSAGE',
+  WORKFLOW_INTERVAL_MINUTES_REQUIRED_FOR_SCHEDULE: 'intervalMinutes là bắt buộc cho SCHEDULE',
+  WORKFLOW_LIMIT_REACHED: 'Đã đạt giới hạn số lượng workflow',
+  WORKFLOW_METHOD_REQUIRED_FOR_HTTP_CALL: 'method là bắt buộc cho HTTP_CALL',
+  WORKFLOW_NEEDS_AT_LEAST_ONE_STEP: 'Workflow cần ít nhất một bước',
+  WORKFLOW_NOT_FOUND: 'Không tìm thấy workflow',
+  WORKFLOW_TERMS_REQUIRED_FOR_MESSAGE_MATCHES: 'terms là bắt buộc cho MESSAGE_MATCHES',
+  WORKFLOW_URL_REQUIRED_FOR_HTTP_CALL: 'url là bắt buộc cho HTTP_CALL',
 } as const;

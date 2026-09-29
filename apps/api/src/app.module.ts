@@ -37,6 +37,7 @@ import { ServersModule } from './modules/servers/servers.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ScheduledMessagesModule,
     UploadsModule,
     WebhooksModule,
+    WorkflowsModule,
     BotsModule,
     PushModule,
     RealtimeModule,

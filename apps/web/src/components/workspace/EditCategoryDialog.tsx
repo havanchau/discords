@@ -9,7 +9,7 @@ interface EditCategoryDialogProps {
   category: ChannelCategory | null;
   pendingAction: string | null;
   onClose: () => void;
-  onSave: (categoryId: string, changes: { name: string; position: number }) => Promise<boolean>;
+  onSave: (categoryId: string, changes: { name: string }) => Promise<boolean>;
   onDelete: (categoryId: string) => Promise<boolean>;
 }
 
@@ -28,12 +28,7 @@ export function EditCategoryDialog({
     event.preventDefault();
     if (!category) return;
     const form = new FormData(event.currentTarget);
-    const positionValue = formText(form, 'position').trim();
-    const saved = await onSave(category.id, {
-      name: formText(form, 'name').trim(),
-      // An emptied field keeps the current position instead of becoming 0.
-      position: positionValue ? Number(positionValue) : category.position,
-    });
+    const saved = await onSave(category.id, { name: formText(form, 'name').trim() });
     if (saved) close();
   }
 
@@ -64,13 +59,6 @@ export function EditCategoryDialog({
               defaultValue={category.name}
               maxLength={80}
               required
-            />
-            <TextField
-              name="position"
-              label={t('category.field.position')}
-              type="number"
-              min={0}
-              defaultValue={category.position}
             />
             <Button type="submit" fullWidth disabled={isPending}>
               {t('category.action.save')}

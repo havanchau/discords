@@ -38,6 +38,14 @@ pattern.
 - [ ] Clicking a component on a message in a channel the clicker cannot view, or clicking after the
       bot that owns the message has been removed from the server, is rejected the same way an
       unauthorized slash-command invoke is today.
+- [ ] A member currently under timeout cannot click a component — `403`, same as their being unable
+      to send, edit, react, or vote (Open Question #51, decided).
+
+Implementation status: code complete (backend, migration, shared types, web rendering and click
+flow) and typecheck/lint/build-verified; **not yet runtime-verified** — the migration
+(`20260925006000_add_message_components`) has not been applied to any database in this session (the
+task's environment note reserves that step for the user), so none of the above could be exercised
+against a live API. See Test plan for the manual scenario to run once the migration lands.
 
 ## Scope
 
@@ -160,6 +168,14 @@ pattern.
    - The clicking member must hold `Permission.ViewChannel` on the message's channel — **not**
      `SendMessages` (see Trade-offs: this differs from the slash-command invoke check, which requires
      both).
+   - **Decided (Open Question #51):** the clicking member must also pass
+     `PermissionsService.requireNotTimedOut` — the same gate a message send, edit, reaction, and poll
+     vote already run. A member currently under timeout cannot drive a bot through a component click
+     either. Rationale: decision #39 already established that a timed-out member cannot even edit
+     their own messages; leaving component clicks unchecked (the click endpoint requires only
+     `ViewChannel`, never `SendMessages`) would be an inconsistent hole letting a timed-out member
+     still act through a bot's button. Implemented in `InteractionsService.invokeComponent`
+     (`apps/api/src/modules/bots/interactions.service.ts`), right after the `ViewChannel` check.
    - A `LINK` button is never posted to this endpoint at all — the client opens `url` directly
      (`target="_blank" rel="noopener noreferrer"`), so a link button has no `customId`, creates no
      `Interaction`, and never reaches the bot.
@@ -206,6 +222,7 @@ pattern.
 | Click on a `customId` that does not exist on that message (stale client, edited message) | `404 Component not found`. |
 | Click on a `disabled` component | `403 Component is disabled`. |
 | Click by a member without `ViewChannel` on the message's channel | `403`, no `Interaction` row created — never trust the client-side render alone. |
+| Click by a member currently under timeout (`ServerMember.timeoutUntil`) | `403`, no `Interaction` row created (Open Question #51, decided: same gate as sends/edits/reactions/poll votes). |
 | Click after the bot has been removed from the server (message still visible, author's membership gone) | `Interaction` is still created (mirrors the slash-command "bot removed mid-flight" edge case) and delivery is a no-op empty-room emit; it times out normally — same UX as an offline bot. |
 | Callback `UPDATE_MESSAGE` for a message that was deleted between click and callback | `404 Message not found`; claim is reverted, interaction still times out. |
 | Callback `UPDATE_MESSAGE` for a message the responding bot does not own (`Message.authorId` is a different bot's user) | `403 Only the author can edit this message` (the existing `updateMessage` check), claim reverted. |

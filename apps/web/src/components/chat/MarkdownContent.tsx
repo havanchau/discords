@@ -72,7 +72,11 @@ function renderNode(node: MarkdownNode, resolveEmoji: EmojiResolver | undefined)
         </a>
       );
     case 'mention':
-      return <span className={styles.mention}>{node.value}</span>;
+      return (
+        <span className={node.kind === 'user' ? styles.mention : styles.mentionKeyword}>
+          {node.value}
+        </span>
+      );
     case 'emoji': {
       const url = resolveEmoji?.(node.name);
       const shortcode = `:${node.name}:`;

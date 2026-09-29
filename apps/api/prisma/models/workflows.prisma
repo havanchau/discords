@@ -1,0 +1,109 @@
+// Channel workflows (docs/features/channel-workflows.md): no-code automation a MANAGE_SERVER
+// holder defines — one trigger, 1-5 ordered steps. `WorkflowRun.stepSnapshot` copies the step list
+// at claim time so a later edit never changes an in-flight run (Scope, "Editing a workflow
+// definition takes effect mid-run").
+enum WorkflowTriggerType {
+  MESSAGE_MATCHES
+  WEBHOOK_RECEIVED
+  SCHEDULE
+}
+
+enum WorkflowActionType {
+  POST_MESSAGE
+  HTTP_CALL
+}
+
+enum WorkflowRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model ChannelWorkflow {
+  id               String              @id @default(cuid())
+  serverId         String
+  name             String
+  enabled          Boolean             @default(true)
+  triggerType      WorkflowTriggerType
+  /// Shape depends on triggerType: MESSAGE_MATCHES { channelId, terms }, WEBHOOK_RECEIVED {},
+  /// SCHEDULE { intervalMinutes } (Changes -> Rules item 2).
+  triggerConfig    Json
+  /// SHA-256 of the WEBHOOK_RECEIVED trigger's token; the plaintext is shown once, never stored.
+  webhookTokenHash String?             @unique
+  /// Only set/advanced for SCHEDULE; the sweep's claim query filters on this.
+  nextRunAt        DateTime?
+  /// Synthetic UserKind.WORKFLOW author for this workflow's POST_MESSAGE steps. No onDelete clause
+  /// (defaults to Restrict): deleting the workflow never deletes this row (Changes -> Rules item 10).
+  executorUserId   String              @unique
+  /// Plain id, no foreign key, same precedent as AutoModRule.createdById: a workflow outlives the
+  /// account that created it.
+  createdById      String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  server           Server              @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  executorUser     User                @relation("WorkflowExecutor", fields: [executorUserId], references: [id])
+  steps            WorkflowStep[]
+  runs             WorkflowRun[]
+
+  @@index([serverId])
+  @@index([triggerType, enabled])
+  @@index([nextRunAt])
+}
+
+/// Per-server allowlist of hosts an HTTP_CALL step may target. Empty = HTTP_CALL disabled
+/// server-wide (Changes -> Rules item 4; Trade-offs, mandatory allowlist).
+model WorkflowHttpAllowlistEntry {
+  id          String   @id @default(cuid())
+  serverId    String
+  /// Exact hostname, or `*.example.com` to also allow every subdomain — the leading `*.` is an
+  /// explicit per-entry opt-in, never implied by adding the bare domain.
+  hostname    String
+  createdById String
+  createdAt   DateTime @default(now())
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, hostname])
+  @@index([serverId])
+}
+
+model WorkflowStep {
+  id         String             @id @default(cuid())
+  workflowId String
+  position   Int
+  actionType WorkflowActionType
+  /// Shape depends on actionType: POST_MESSAGE { channelId, content }, HTTP_CALL { url, method,
+  /// body?, secretHeader?: { name, sealedValue } } — secretHeader.value is sealed with
+  /// createSecretBox before storage (Technical approach -> Secrets), never stored in plaintext.
+  config     Json
+  workflow   ChannelWorkflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, position])
+}
+
+model WorkflowRun {
+  id              String              @id @default(cuid())
+  workflowId      String
+  status          WorkflowRunStatus   @default(PENDING)
+  triggerType     WorkflowTriggerType
+  /// WEBHOOK_RECEIVED dedup key; null for every other trigger type.
+  idempotencyKey  String?
+  /// The WorkflowRun whose action produced the message/call that started this one, if any.
+  causeRunId      String?
+  /// 0 = a real external/scheduled/message trigger; N = the Nth hop in a chained-workflow run.
+  depth           Int                 @default(0)
+  /// The step list at claim time (Changes -> Rules item 5); never re-read from WorkflowStep once set.
+  stepSnapshot    Json
+  failedStepIndex Int?
+  failureReason   String?
+  claimedAt       DateTime?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  workflow        ChannelWorkflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, createdAt])
+  @@index([status, claimedAt])
+  // NULLs don't collide in Postgres, so this only dedups WEBHOOK_RECEIVED runs.
+  @@unique([workflowId, idempotencyKey])
+}

@@ -72,6 +72,12 @@ export const bots = {
   'bot.section.hint':
     'Bots call the API with their token. Share the authorize link with a server admin to add a bot to a server. Regenerating or deleting stops the old token at once.',
   'bot.section.title': 'Bots ({count}/{max})',
+  'bot.serverBots.empty': 'No bots are installed in this server.',
+  'bot.serverBots.hint':
+    'Bots installed in this server and the slash commands each one has registered here. Read-only: only a bot’s owner can change its commands.',
+  'bot.serverBots.loading': 'Loading bots',
+  'bot.serverBots.noCommands': 'This bot has registered no commands in this server.',
+  'bot.serverBots.title': 'Server bots',
   'bot.summary': 'Created {date} · Servers: {count}',
   'error.fallback.cannot-authorize-bot': 'Cannot authorize bot',
   'error.fallback.cannot-create-bot': 'Cannot create bot',
@@ -81,6 +87,7 @@ export const bots = {
   'error.fallback.cannot-load-bot-commands': 'Cannot load commands',
   'error.fallback.cannot-load-bot-servers': 'Cannot load the servers of this bot',
   'error.fallback.cannot-load-bots': 'Cannot load bots',
+  'error.fallback.cannot-load-server-bots': 'Cannot load this server’s bots',
   'error.fallback.cannot-regenerate-bot-token': 'Cannot regenerate bot token',
   'error.fallback.cannot-save-bot-command': 'Cannot save command',
   'members.botBadgeLabel': 'A bot added by a server admin',

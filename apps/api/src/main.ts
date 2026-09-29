@@ -16,6 +16,7 @@ import { readLimitsConfig } from './common/limits-config';
 import { I18nService } from './common/i18n/i18n.service';
 import { TranslatingExceptionFilter } from './common/http-exception.filter';
 import { assertOAuthConfigured } from './modules/auth/oauth/oauth-config';
+import { assertWorkflowSecretKeyConfigured } from './common/config/workflow-secret-config';
 import { assertTwoFactorKeyConfigured } from './modules/auth/two-factor-config';
 import { defaultWebOrigin, isAllowedWebOrigin, parseWebOrigins } from './common/web-origins';
 
@@ -35,6 +36,7 @@ async function bootstrap() {
     throw new Error('JWT_SECRET must be set to a non-default value in production');
   }
   assertTwoFactorKeyConfigured(config);
+  assertWorkflowSecretKeyConfigured(config);
   assertOAuthConfigured(config);
   const limits = readLimitsConfig(config);
 

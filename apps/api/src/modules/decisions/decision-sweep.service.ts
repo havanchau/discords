@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
+import { RealtimeEvents } from '@discord-clone/shared';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RealtimePublisher } from '@/modules/realtime/realtime-publisher.service';
 import { decisionInclude, formatDecision } from './decision.format';
@@ -133,10 +134,22 @@ export class DecisionSweepService implements OnApplicationBootstrap, OnModuleDes
       select: { serverId: true },
     });
     if (!channel) return;
-    this.realtime.emitToRooms(
-      [this.realtime.channelRoom(channelId), `server:${channel.serverId}:decisions`],
-      'decision:updated',
+    // Same two emits as the manual path (`DecisionsService.emitUpdated`): the full view only to the
+    // channel room, whose members already passed the channel's view check, and an id-only event to
+    // the server room so the server-wide index refetches and re-applies its own visibility filter.
+    this.realtime.emitToRoom(
+      this.realtime.channelRoom(channelId),
+      RealtimeEvents.DecisionUpdated,
       formatDecision(row, null),
+    );
+    this.realtime.emitToRoom(
+      this.realtime.serverRoom(channel.serverId),
+      RealtimeEvents.DecisionIndexUpdated,
+      {
+        serverId: channel.serverId,
+        channelId,
+        decisionId: row.id,
+      },
     );
   }
 }

@@ -124,7 +124,7 @@ export class PushService {
    */
   async sendDirectMessagePush(input: SendDirectMessagePushInput) {
     if (input.toUserId === input.fromUserId) return;
-    if (!(await this.shouldSendDirectMessagePush(input.toUserId))) return;
+    if (!(await this.shouldSendDirectMessagePush(input.toUserId, input.conversationId))) return;
 
     const subscriptions = await this.prisma.pushSubscription.findMany({
       where: { userId: input.toUserId },
@@ -243,21 +243,30 @@ export class PushService {
   }
 
   /**
-   * The global-only slice of `shouldSendPush`: a DM has no server/channel scope, so only the global
-   * `NotificationPreference` row (`serverId: null, channelId: null`) gates it.
+   * The global-only slice of `shouldSendPush` (a DM has no server/channel scope, so only the global
+   * `NotificationPreference` row, `serverId: null, channelId: null`, gates it there), plus this
+   * conversation's own `DirectConversationMute` row — an additional, independent gate: either one
+   * suppresses (docs/features/dm-conversation-mute.md). This is the one place the conversation mute
+   * is checked; `sendDirectMessagePush` is the DM send path's single call site.
    */
-  private async shouldSendDirectMessagePush(userId: string) {
+  private async shouldSendDirectMessagePush(userId: string, conversationId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { status: true },
     });
     if (user?.status === 'ONLINE') return false;
 
-    const globalPreference = await this.prisma.notificationPreference.findFirst({
-      where: { userId, serverId: null, channelId: null },
-    });
+    const now = new Date();
+    const [globalPreference, conversationMute] = await Promise.all([
+      this.prisma.notificationPreference.findFirst({
+        where: { userId, serverId: null, channelId: null },
+      }),
+      this.prisma.directConversationMute.findUnique({
+        where: { userId_conversationId: { userId, conversationId } },
+      }),
+    ]);
     if (globalPreference && !globalPreference.desktopEnabled) return false;
-    return !isMuteActive(globalPreference, new Date());
+    return !isMuteActive(globalPreference, now) && !isMuteActive(conversationMute, now);
   }
 
   private async reserveRateLimit(userId: string, channelId: string) {
