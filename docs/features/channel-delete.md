@@ -1,6 +1,10 @@
 # Channel Delete
 
-- **Status**: draft — awaiting review
+- **Status**: implemented (`channels.service.ts:220`, wired at `channels.controller.ts:55`, web
+  `useWorkspaceNavigation.ts:304`); verified 2026-10-01. 10 assertions across scenarios 1, 4, 6, 7, 8
+  and the API half of 9 all pass. **Not run:** scenario 2 (the open-channel redirect), scenario 3
+  (deleting a VOICE/STAGE channel with a live call), scenario 5 (an ANNOUNCEMENT channel's follower
+  list) and the web half of scenario 9 — all four need a browser or a live call.
 - **Date**: 2026-09-29
 - **Related**: [`channel-categories.md`](channel-categories.md), [`channel-live-settings-sync.md`](channel-live-settings-sync.md), [`announcement-channels.md`](announcement-channels.md), [`decision-channels.md`](decision-channels.md), `../feature-roadmap.md:463`
 

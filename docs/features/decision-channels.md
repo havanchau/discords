@@ -556,8 +556,12 @@ runs for a channel-type addition (`npm run i18n:check`, `npm run check:file-size
 
 ## Deviations
 
-Backend built 2026-09-25 against the approved spec. The web UI is **not built**; the API contract
-below is what it will consume. Differences from the text above:
+Backend built 2026-09-25 against the approved spec. **Web UI built as well** (corrected
+2026-10-01 — this section previously said it was not): `DecisionChannelView.tsx`, `DecisionCard.tsx`,
+`DecisionIndexView.tsx`, `NewDecisionDialog.tsx`, the `useDecisions`/`useDecisionIndex`/
+`useDecisionResolution` hooks and `en`/`vi` `decisions.*` strings. The API contract below is what it
+consumes. Verified 2026-10-01: 8/8 manual scenarios pass over REST; the UI itself has not been driven
+in a browser. Differences from the text above:
 
 1. **`users.prisma` had to change too.** Prisma requires both sides of a relation, so `User` gained
    `proposedDecisions`/`decidedDecisions` back-relations, and `Decision` gained a

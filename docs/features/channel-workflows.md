@@ -3,7 +3,13 @@
 No-code automation that a server manager defines in the UI: **when** something happens (a trigger),
 **then** the server does one or more things (a chain of actions) — without writing code.
 
-- **Status**: draft — awaiting review
+- **Status**: implemented; verified 2026-10-01 at 12/13 manual scenarios. **One blocker open**: a
+  `SCHEDULE` workflow created through the API never fires, because nothing ever writes `nextRunAt`
+  (`workflows.service.ts:62-95` omits it; the only write is the sweep's own advance at
+  `workflow-run-sweep.service.ts:94`, which needs a non-null value, while the claim query at `:84`
+  filters `nextRunAt: { lte: now }`, which NULL never matches). Scenario 6 of the test plan is wrong
+  as written (a non-default port is rejected by `assertFetchableUrl` before the address-class check,
+  so it yields `UNKNOWN`, not `BLOCKED_ADDRESS`); scenario 8 is not runnable locally.
 - **Date**: 2026-09-25
 - **Related**: [`automod.md`](./automod.md) (rule/trigger shape, AutoMod screening reused by the
   `POST_MESSAGE` action), [`incoming-webhooks.md`](./incoming-webhooks.md) (synthetic author,
