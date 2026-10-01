@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   CheckCheck,
@@ -16,10 +16,10 @@ import { buildMessageSearchSnippet } from '@/utils/messageSearch';
 import { Button, TextField } from '@/components/ui';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { buildMediaCollections } from '@/utils/mediaCollections';
-import type { ActivePanel } from './types';
+import { EncryptionPanel } from './EncryptionPanel';
+import type { ActivePanel, ChatPanelEncryption } from './types';
 import type { ParsedMessageSearch } from '@/utils/messageSearch';
 import styles from './UtilityPanel.module.css';
-import { formText } from '@/utils/formText';
 
 const MEDIA_TAB_LABEL_KEYS = {
   media: 'media.tab.media',
@@ -44,14 +44,12 @@ interface UtilityPanelProps {
   notifications: NotificationItem[];
   notificationUnreadCount: number;
   isLoadingNotifications: boolean;
-  isChannelEncrypted: boolean;
+  encryption: ChatPanelEncryption;
   setSearchQuery: (value: string) => void;
   loadNotifications: () => Promise<void>;
   markNotificationRead: (notificationId: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   onJumpToMessage: (messageId: string) => void;
-  configureChannelEncryption: (passphrase: string) => Promise<void>;
-  clearChannelEncryption: () => void;
 }
 
 export function UtilityPanel({
@@ -65,14 +63,12 @@ export function UtilityPanel({
   notifications,
   notificationUnreadCount,
   isLoadingNotifications,
-  isChannelEncrypted,
+  encryption,
   setSearchQuery,
   loadNotifications,
   markNotificationRead,
   markAllNotificationsRead,
   onJumpToMessage,
-  configureChannelEncryption,
-  clearChannelEncryption,
 }: UtilityPanelProps) {
   const t = useTranslation();
   const dates = useDateFormat();
@@ -103,13 +99,6 @@ export function UtilityPanel({
   }, [renderedSearchResults.length]);
 
   if (!activePanel) return null;
-
-  function handleEncryptionSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    void configureChannelEncryption(formText(form, 'passphrase'));
-    event.currentTarget.reset();
-  }
 
   function handleSearchResultKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (!renderedSearchResults.length) return;
@@ -378,32 +367,7 @@ export function UtilityPanel({
         </div>
       )}
 
-      {activePanel === 'encryption' && (
-        <form className={styles.encryptionPanel} onSubmit={handleEncryptionSubmit}>
-          <strong>
-            {isChannelEncrypted ? t('encryption.titleActive') : t('encryption.titleInactive')}
-          </strong>
-          <span>{t('encryption.hint')}</span>
-          <TextField
-            name="passphrase"
-            type="password"
-            minLength={8}
-            placeholder={t('encryption.passphrasePlaceholder')}
-            autoComplete="off"
-            required
-          />
-          <div className={styles.encryptionActions}>
-            <Button size="sm" type="submit">
-              {isChannelEncrypted ? t('encryption.action.update') : t('encryption.action.enable')}
-            </Button>
-            {isChannelEncrypted && (
-              <Button size="sm" variant="ghost" onClick={clearChannelEncryption}>
-                {t('encryption.action.forget')}
-              </Button>
-            )}
-          </div>
-        </form>
-      )}
+      {activePanel === 'encryption' && <EncryptionPanel encryption={encryption} />}
     </div>
   );
 }

@@ -71,8 +71,17 @@ export interface ChatPanelPanels {
 
 export interface ChatPanelEncryption {
   isChannelEncrypted: boolean;
-  configure: (passphrase: string) => Promise<void>;
-  clear: () => void;
+  /** Turning encryption on or off is a `ManageChannels` action; the API enforces it too. */
+  canManageEncryption: boolean;
+  deviceStatus: 'loading' | 'ready' | 'error';
+  deviceError: string | null;
+  /** Encrypted messages here are locked because this device holds no key for them yet. */
+  isWaitingForKey: boolean;
+  /** Old passphrase-encrypted (`e2ee:v1:`) messages are on screen and still locked. */
+  hasLockedLegacyMessages: boolean;
+  isUpdating: boolean;
+  setEncryption: (enabled: boolean) => Promise<void>;
+  unlockLegacyMessages: (passphrase: string) => Promise<void>;
 }
 
 export interface ChatPanelCall {

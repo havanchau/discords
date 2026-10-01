@@ -4,6 +4,7 @@ import { useSyncAccountLocale, useTranslation } from './i18n/LocaleProvider';
 import { buildMemberIdentityMap } from './utils/memberIdentity';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useChannelEncryption } from './hooks/useChannelEncryption';
+import { useDeviceKeys } from './hooks/useDeviceKeys';
 import { useChannelReadState } from './hooks/useChannelReadState';
 import { useChannelCall } from './hooks/useChannelCall';
 import { useChannelOpening } from './hooks/useChannelOpening';
@@ -150,6 +151,9 @@ export function AppShell() {
     draftKey: channel ? `channel:${channel.id}` : null,
   });
 
+  // One instance for the whole shell: it registers this browser's key and polls for pending wraps.
+  const deviceKeys = useDeviceKeys({ auth });
+
   const {
     activeConversation,
     setDirectMessages,
@@ -166,6 +170,7 @@ export function AppShell() {
     homeProps,
   } = useHomeWorkspace({
     auth,
+    deviceKeys,
     pendingAction,
     setPendingAction,
     setWorkspaceError,
@@ -186,17 +191,22 @@ export function AppShell() {
   const { uiTheme, resolvedTheme, setUiTheme } = useTheme();
 
   const {
-    channelKeys,
-    channelKeysRef,
+    panel: encryptionPanel,
+    isChannelEncrypted,
     clearChannelKeys,
-    configureChannelEncryption,
-    clearChannelEncryption,
+    encryptForChannel,
     decryptMessagesForDisplay,
     decryptMessageForDisplay,
   } = useChannelEncryption({
+    auth,
+    server,
+    servers,
     channel,
     messages,
     setMessages,
+    deviceKeys,
+    patchServer,
+    patchServers,
     setWorkspaceError,
     setWorkspaceNotice,
   });
@@ -288,7 +298,7 @@ export function AppShell() {
   const threadPanel = useThreadPanel({
     auth,
     socket,
-    channelKeysRef,
+    encryptForChannel,
     decryptMessageForDisplay,
     decryptMessagesForDisplay,
     setMessages,
@@ -411,8 +421,7 @@ export function AppShell() {
       server,
       socket,
       messages,
-      channelKeysRef,
-      channelKeys,
+      encryptForChannel,
       channelDraft,
       selectedFiles,
       setSelectedFiles,
@@ -471,7 +480,7 @@ export function AppShell() {
     selectChannel,
     setActivePanel,
     setActiveDialog,
-    isChannelEncrypted: (channelId: string) => Boolean(channelKeys[channelId]),
+    isChannelEncrypted,
     openSavedMessages: () => setIsSavedMessagesOpen(true),
     openMobileNav: () => setIsMobileNavOpen(true),
     openMemberList: () => setIsMemberListOpen(true),
@@ -569,9 +578,7 @@ export function AppShell() {
     markNotificationRead,
     markAllNotificationsRead,
     openMobileNav: () => setIsMobileNavOpen(true),
-    isChannelEncrypted: Boolean(channel && channelKeys[channel.id]),
-    configureChannelEncryption,
-    clearChannelEncryption,
+    encryption: encryptionPanel,
     callState,
     activeCalls,
     remoteMedia,

@@ -1,22 +1,13 @@
-import {
-  Dispatch,
-  FormEvent,
-  RefObject,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import { Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { RealtimeEvents } from '@discord-clone/shared';
 import { apiRequest, AuthState, Message, ThreadMessageResult } from '@/api';
-import { encryptChannelMessage } from '@/e2ee';
 import { useTranslation } from '@/i18n/LocaleProvider';
 
 interface UseThreadPanelOptions {
   auth: AuthState | null;
   socket: Socket | null;
-  channelKeysRef: RefObject<Record<string, CryptoKey>>;
+  encryptForChannel: (channelId: string, plaintext: string) => Promise<string>;
   decryptMessageForDisplay: (message: Message) => Promise<Message>;
   decryptMessagesForDisplay: (messages: Message[]) => Promise<Message[]>;
   setMessages: Dispatch<SetStateAction<Message[]>>;
@@ -26,7 +17,7 @@ interface UseThreadPanelOptions {
 export function useThreadPanel({
   auth,
   socket,
-  channelKeysRef,
+  encryptForChannel,
   decryptMessageForDisplay,
   decryptMessagesForDisplay,
   setMessages,
@@ -90,9 +81,7 @@ export function useThreadPanel({
       setIsThreadSending(true);
       setWorkspaceError(null);
       try {
-        const channelKey = channelKeysRef.current[rootMessage.channelId];
-        const messageContent =
-          content && channelKey ? await encryptChannelMessage(channelKey, content) : content;
+        const messageContent = await encryptForChannel(rootMessage.channelId, content);
         const result = await apiRequest<ThreadMessageResult>(
           `/messages/${rootMessage.id}/thread/messages`,
           {
@@ -121,7 +110,7 @@ export function useThreadPanel({
     },
     [
       auth,
-      channelKeysRef,
+      encryptForChannel,
       decryptMessageForDisplay,
       rootMessage,
       updateRootMessage,

@@ -124,14 +124,12 @@ export function ChatPanel({
         notifications={messages.notifications}
         notificationUnreadCount={messages.notificationUnreadCount}
         isLoadingNotifications={messages.isLoadingNotifications}
-        isChannelEncrypted={encryption.isChannelEncrypted}
+        encryption={encryption}
         setSearchQuery={panels.setSearchQuery}
         loadNotifications={panels.loadNotifications}
         markNotificationRead={panels.markNotificationRead}
         markAllNotificationsRead={panels.markAllNotificationsRead}
         onJumpToMessage={jumpToMessage}
-        configureChannelEncryption={encryption.configure}
-        clearChannelEncryption={encryption.clear}
       />
 
       {alerts.error && (

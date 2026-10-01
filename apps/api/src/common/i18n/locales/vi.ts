@@ -301,6 +301,8 @@ export const viApiMessages = {
   'push.channelMessage.ageRestrictedBody': 'Tin nhắn mới trong kênh giới hạn độ tuổi',
   'push.directMessage.title': '{title}',
   'push.directMessage.body': '{content}',
+  'push.channelMessage.encryptedBody': 'Tin nhắn mã hóa mới',
+  'push.directMessage.encryptedBody': 'Tin nhắn mã hóa mới',
   'reminder.savedMessage.title': 'Lời nhắc: tin nhắn đã lưu',
   'reminder.savedMessage.body': '{author}: {content}',
   'reminder.savedMessage.ageRestrictedBody': 'Tin nhắn bạn đã lưu từ kênh giới hạn độ tuổi',
@@ -356,4 +358,14 @@ export const viApiMessages = {
   WORKFLOW_NOT_FOUND: 'Không tìm thấy workflow',
   WORKFLOW_TERMS_REQUIRED_FOR_MESSAGE_MATCHES: 'terms là bắt buộc cho MESSAGE_MATCHES',
   WORKFLOW_URL_REQUIRED_FOR_HTTP_CALL: 'url là bắt buộc cho HTTP_CALL',
+  // Per-device E2EE key management (docs/features/e2ee-key-management.md).
+  ENCRYPTION_IS_NOT_AVAILABLE: 'Mã hoá chưa khả dụng',
+  A_DEVICE_ID_IS_REQUIRED: 'Cần có device id',
+  DEVICE_DOES_NOT_BELONG_TO_THIS_ACCOUNT: 'Thiết bị không thuộc tài khoản này',
+  DEVICE_KEY_HAS_BEEN_REVOKED: 'Khoá thiết bị đã bị thu hồi',
+  ENCRYPTION_IS_NOT_ENABLED: 'Mã hoá chưa được bật',
+  INVALID_DEVICE_PUBLIC_KEY: 'Khoá công khai của thiết bị không hợp lệ',
+  INVALID_KEY_VERSION: 'Phiên bản khoá không hợp lệ',
+  INVALID_WRAP_TARGET: 'Đích wrap không hợp lệ',
+  NOTHING_TO_UPDATE: 'Không có gì để cập nhật',
 } as const;

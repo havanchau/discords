@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type MemberKind } from '@prisma/client';
 import { syncBotGatewayOnRemoval } from '@/modules/bots/bot-gateway-sync';
 import { LivekitService } from '@/modules/livekit/livekit.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
@@ -21,6 +21,25 @@ const moderationUserSelect = {
 } as const;
 
 type RemovalReason = 'KICK' | 'BAN' | 'LEAVE';
+
+/**
+ * Rotation on removal (docs/features/e2ee-key-management.md Rules item 8): the next online member's
+ * client generates a fresh content key at the bumped version, so the removed member is left out of
+ * it. Runs inside the removal transaction so a removal can never commit without its rotation. A bot
+ * is never a wrap target, so removing one needs no new key. The increment is atomic, so two removals
+ * racing each bump once.
+ */
+async function bumpEncryptedChannelKeyVersions(
+  tx: Prisma.TransactionClient,
+  serverId: string,
+  removedMemberKind: MemberKind,
+) {
+  if (removedMemberKind === 'BOT') return;
+  await tx.channel.updateMany({
+    where: { serverId, isEncrypted: true },
+    data: { encryptionKeyVersion: { increment: 1 } },
+  });
+}
 
 @Injectable()
 export class ServerModerationService {
@@ -51,6 +70,7 @@ export class ServerModerationService {
 
     const removedStageRows = await this.prisma.$transaction(async (tx) => {
       await tx.serverMember.delete({ where: { id: target.id } });
+      await bumpEncryptedChannelKeyVersions(tx, serverId, target.kind);
       return deleteMemberStageRows(tx, serverId, target.userId);
     });
     await this.writeAuditLog(serverId, userId, 'MEMBER_KICK', target.id, {
@@ -77,6 +97,7 @@ export class ServerModerationService {
 
     const removedStageRows = await this.prisma.$transaction(async (tx) => {
       await tx.serverMember.delete({ where: { id: member.id } });
+      await bumpEncryptedChannelKeyVersions(tx, serverId, member.kind);
       return deleteMemberStageRows(tx, serverId, userId);
     });
     await this.writeAuditLog(serverId, userId, 'MEMBER_LEAVE', member.id, {
@@ -159,7 +180,13 @@ export class ServerModerationService {
 
     const reason = dto.reason?.trim() || null;
     const { ban, created, removedStageRows } = await this.prisma.$transaction(async (tx) => {
+      const removedMember = await tx.serverMember.findUnique({
+        where: { userId_serverId: { userId: target.id, serverId } },
+        select: { kind: true },
+      });
       await tx.serverMember.deleteMany({ where: { serverId, userId: target.id } });
+      // Banning a non-member removes nobody, so there is nothing to rotate.
+      if (removedMember) await bumpEncryptedChannelKeyVersions(tx, serverId, removedMember.kind);
       const stageRows = await deleteMemberStageRows(tx, serverId, target.id);
       const existing = await tx.serverBan.findUnique({
         where: { serverId_userId: { serverId, userId: target.id } },

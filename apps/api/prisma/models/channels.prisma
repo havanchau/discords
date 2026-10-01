@@ -33,6 +33,10 @@ model Channel {
   slowmodeSeconds           Int                         @default(0)
   /// Members must have `User.ageConfirmedAt` set to read or post (docs/features/age-restricted-channels.md).
   isAgeRestricted           Boolean                     @default(false)
+  /// Opt-in per channel by a `ManageChannels` holder (docs/features/e2ee-key-management.md).
+  isEncrypted               Boolean                     @default(false)
+  /// Bumped on member removal to force a fresh content key; an ordering hint, not a key identity.
+  encryptionKeyVersion      Int                         @default(0)
   /// Shown above the new-post form of a FORUM channel; null on every other type.
   postGuidelines            String?
   createdAt                 DateTime                    @default(now())
@@ -56,6 +60,7 @@ model Channel {
   stageSpeakers             StageSpeaker[]
   stageSpeakRequests        StageSpeakRequest[]
   decisions                 Decision[]
+  encryptionKeys            EncryptedChannelKey[]
 
   @@unique([serverId, name])
   @@index([categoryId])

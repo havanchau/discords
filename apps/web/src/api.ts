@@ -107,6 +107,8 @@ import type {
   DecisionListResult as ServerDecisionListResult,
   DecisionStatus,
   DecisionView as ServerDecisionView,
+  DeviceKeyView as ServerDeviceKeyView,
+  DevicePendingWrapsView,
   DirectConversation as ServerDirectConversation,
   DirectConversationMuteResult as ServerDirectConversationMuteResult,
   DirectConversationWithMute as ServerDirectConversationWithMute,
@@ -143,6 +145,7 @@ import type {
   MuteDuration,
   NotificationPreference as ServerNotificationPreference,
   UpdateNotificationPreferenceInput,
+  PendingWrapsView,
   PollOptionView as ServerPollOptionView,
   PollUpdatedPayload as ServerPollUpdatedPayload,
   PollView as ServerPollView,
@@ -160,6 +163,7 @@ import type {
   ResolveDecisionInput,
   SupersedeDecisionInput,
   PublicUser as ServerPublicUser,
+  RegisterDeviceKeyInput,
   Role as ServerRole,
   SavedMessageView as ServerSavedMessageView,
   CreateScheduledMessageInput as ServerCreateScheduledMessageInput,
@@ -178,6 +182,8 @@ import type {
   ThreadMessageResult as ServerThreadMessageResult,
   ThreadSummary as ServerThreadSummary,
   UpdateDirectConversationMuteInput,
+  UploadWrappedKeysInput,
+  UploadWrappedKeysResult,
   User as ServerUser,
   UserNote as ServerUserNote,
   UserNoteResult as ServerUserNoteResult,
@@ -217,6 +223,7 @@ import type {
   WorkflowTriggerInput,
   WorkflowTriggerResult,
   WorkflowView as ServerWorkflowView,
+  WrappedKeyView,
 } from '@discord-clone/shared';
 
 export type AccountDeletionScheduledResult = Json<ServerAccountDeletionScheduledResult>;
@@ -237,6 +244,7 @@ export type DecisionDetailResult = Json<ServerDecisionDetailResult>;
 export type DecisionListResult = Json<ServerDecisionListResult>;
 export type DecisionView = Json<ServerDecisionView>;
 export type { DecisionStatus, ResolveDecisionInput, SupersedeDecisionInput };
+export type DeviceKey = Json<ServerDeviceKeyView>;
 export type DirectConversation = Json<ServerDirectConversation>;
 export type DirectConversationWithMute = Json<ServerDirectConversationWithMute>;
 export type DirectConversationMuteResult = Json<ServerDirectConversationMuteResult>;
@@ -387,6 +395,74 @@ export async function muteDirectConversation(
   return apiRequest<DirectConversationMuteResult>(
     `/direct-conversations/${conversationId}/mute`,
     { method: 'PATCH', body: JSON.stringify(input) },
+    token,
+  );
+}
+
+/** Which channel or conversation a wrapped content key belongs to. */
+export interface EncryptionScope {
+  kind: 'channel' | 'conversation';
+  id: string;
+}
+
+function encryptionPath(scope: EncryptionScope, suffix: string) {
+  const base = scope.kind === 'channel' ? 'channels' : 'direct-conversations';
+  return `/${base}/${scope.id}/encryption/${suffix}`;
+}
+
+/** `POST /devices/keys` — registers this device's public key (docs/features/e2ee-key-management.md). */
+export function registerDeviceKey(input: RegisterDeviceKeyInput, token: string) {
+  return apiRequest<{ deviceKey: DeviceKey }>(
+    '/devices/keys',
+    { method: 'POST', body: JSON.stringify(input) },
+    token,
+  );
+}
+
+export function listDeviceKeys(token: string) {
+  return apiRequest<{ devices: DeviceKey[] }>('/devices/keys', {}, token);
+}
+
+export function revokeDeviceKey(deviceId: string, token: string) {
+  return apiRequest<{ ok: true }>(
+    `/devices/keys/${encodeURIComponent(deviceId)}`,
+    { method: 'DELETE' },
+    token,
+  );
+}
+
+/** Pairs this device still lacks a wrap for, held by a sibling device of the same account. */
+export function fetchDevicePendingWraps(deviceId: string, token: string) {
+  return apiRequest<DevicePendingWrapsView>(
+    `/devices/keys/pending-wraps?deviceId=${encodeURIComponent(deviceId)}`,
+    {},
+    token,
+  );
+}
+
+export function fetchScopePendingWraps(scope: EncryptionScope, token: string) {
+  return apiRequest<PendingWrapsView>(encryptionPath(scope, 'pending-wraps'), {}, token);
+}
+
+/** The wrap of one exact `keyId` addressed to `deviceId`; `wrappedKey` is null until one exists. */
+export function fetchWrappedKey(
+  scope: EncryptionScope,
+  keyId: string,
+  deviceId: string,
+  token: string,
+) {
+  const query = `keyId=${encodeURIComponent(keyId)}&deviceId=${encodeURIComponent(deviceId)}`;
+  return apiRequest<WrappedKeyView>(encryptionPath(scope, `keys?${query}`), {}, token);
+}
+
+export function uploadWrappedKeys(
+  scope: EncryptionScope,
+  input: UploadWrappedKeysInput,
+  token: string,
+) {
+  return apiRequest<UploadWrappedKeysResult>(
+    encryptionPath(scope, 'keys'),
+    { method: 'POST', body: JSON.stringify(input) },
     token,
   );
 }

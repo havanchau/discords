@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import { isE2eeEnabled } from '@/common/config/e2ee-feature-config';
 import { LivekitService } from '@/modules/livekit/livekit.service';
 import { Permission, PermissionsService } from '@/modules/permissions/permissions.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
@@ -31,10 +33,23 @@ export class ChannelsService {
     private readonly calls: CallRegistryService,
     private readonly livekit: LivekitService,
     private readonly uploads: UploadsService,
+    private readonly config: ConfigService,
   ) {}
+
+  /**
+   * The feature flag is enforced here, not in the client: while E2EE is off nothing may mark a new
+   * scope encrypted (docs/features/e2ee-key-management.md -> Risks, "Feature flag"). Already-
+   * encrypted channels are untouched, so turning the flag off never strands their ciphertext.
+   */
+  private requireEncryptionEnabled(isEncrypted: boolean | undefined) {
+    if (isEncrypted === true && !isE2eeEnabled(this.config)) {
+      throw new BadRequestException('Encryption is not available');
+    }
+  }
 
   async createChannel(userId: string, serverId: string, dto: CreateChannelDto) {
     await this.permissions.requireServerPermission(userId, serverId, Permission.ManageChannels);
+    this.requireEncryptionEnabled(dto.isEncrypted);
     const name = this.servers.normalizeChannelName(dto.name);
     if (dto.categoryId) await this.requireCategoryInServer(serverId, dto.categoryId);
     const channelCount = await this.prisma.channel.count({ where: { serverId } });
@@ -47,6 +62,7 @@ export class ChannelsService {
         type,
         topic: dto.topic,
         isAgeRestricted: dto.isAgeRestricted,
+        isEncrypted: dto.isEncrypted,
         postGuidelines: type === 'FORUM' ? normalizeGuidelines(dto.postGuidelines) : undefined,
         categoryId: dto.categoryId,
         position: channelCount,
@@ -56,6 +72,7 @@ export class ChannelsService {
       name: channel.name,
       type: channel.type,
       isAgeRestricted: channel.isAgeRestricted,
+      isEncrypted: channel.isEncrypted,
     });
     return { channel };
   }
@@ -167,6 +184,7 @@ export class ChannelsService {
       existing.serverId,
       Permission.ManageChannels,
     );
+    this.requireEncryptionEnabled(dto.isEncrypted);
     if (dto.categoryId) await this.requireCategoryInServer(existing.serverId, dto.categoryId);
     if (dto.postGuidelines !== undefined && existing.type !== 'FORUM') {
       throw new BadRequestException('Channel is not a forum channel');
@@ -179,6 +197,7 @@ export class ChannelsService {
         avatarUrl: dto.avatarUrl,
         isPrivate: dto.isPrivate,
         isAgeRestricted: dto.isAgeRestricted,
+        isEncrypted: dto.isEncrypted,
         position: dto.position,
         slowmodeSeconds: dto.slowmodeSeconds,
         categoryId: dto.categoryId,
@@ -189,6 +208,7 @@ export class ChannelsService {
       name: channel.name,
       isPrivate: channel.isPrivate,
       isAgeRestricted: channel.isAgeRestricted,
+      isEncrypted: channel.isEncrypted,
       position: channel.position,
       slowmodeSeconds: channel.slowmodeSeconds,
       categoryId: channel.categoryId,

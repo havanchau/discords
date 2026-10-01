@@ -465,7 +465,14 @@ Agents cannot edit `.env*` files.
 ## Wave 6 Backlog — 2026-09-25
 
 Sixth wave: three small gaps found by auditing the codebase against Discord parity, plus three
-larger specs. Everything here is uncommitted working-tree state unless noted.
+larger specs.
+
+**Status recheck 2026-10-01.** The text below was stale: it described decision channels as
+"migration unapplied, web UI not built, nothing executed", channel workflows as "spec only, no
+code" and channel delete as an unreviewed draft, while all three are implemented and committed
+(`342444f` and earlier) and all 55 migrations are applied to the local dev database
+(`prisma migrate status`: "Database schema is up to date!"). The per-item notes and the checklist
+are corrected to what the code and the test runs actually show.
 
 - **Live channel settings sync:** [channel-live-settings-sync.md](features/channel-live-settings-sync.md).
   Implemented. `updateChannel` emits an id-only `channel:updated` to the server room; the web
@@ -483,27 +490,117 @@ larger specs. Everything here is uncommitted working-tree state unless noted.
   is committed, isolated per recipient so a push failure cannot fail the send. Unblocks open
   question #41 (per-conversation DM mute), which stays out of scope. Actual push delivery to a
   browser subscription is unverified — no VAPID subscription exists locally.
-- **Decision channels:** [decision-channels.md](features/decision-channels.md). Backend implemented,
-  **migration `20260925001000_add_decision_channels` written but not applied to any database**, web UI
-  not built. Nothing in the feature has been executed. Its `ChannelType` enum value cannot be rolled
-  back, same as `ANNOUNCEMENT`.
-- **Channel workflows:** [channel-workflows.md](features/channel-workflows.md). Spec only, reviewed.
-  `HTTP_CALL` requires a per-server hostname allowlist that is empty by default, so the action is off
-  until someone deliberately turns it on; the check runs again at request time against the resolved
-  host of every redirect hop, and every call is audited.
-- **E2EE key management:** [e2ee-key-management.md](features/e2ee-key-management.md). Spec only,
-  awaiting a decision on the threat model. Replaces today's shared-passphrase E2EE
+- **Decision channels:** [decision-channels.md](features/decision-channels.md). Backend **and** web UI
+  implemented (`apps/api/src/modules/decisions/`, `apps/web/src/components/decisions/`, `en`/`vi`
+  strings). Migration `20260925001000_add_decision_channels` **is applied** to the local dev
+  database. Its `ChannelType` enum value cannot be rolled back, same as `ANNOUNCEMENT`.
+  **Verified 2026-10-01: 8/8 manual scenarios pass** over REST plus direct row reads (13 individual
+  assertions). Highlights: the deadline sweep resolved a no-quorum proposal to `ACCEPTED` on a
+  2-Accept/1-Reject tally with `decidedById` left null (sweep, not a person); an unmet
+  `quorumCount: 10` correctly stayed `PROPOSED` with `expiredAt` set rather than silently reading as
+  `REJECTED`; a second resolve returned `409 DECISION_ALREADY_RESOLVED`; a member without
+  `MANAGE_MESSAGES` got `403 MISSING_PERMISSION`; supersession set `supersededByDecisionId` and
+  dropped the old decision out of the default index. **Not run:** the web UI was never driven in a
+  browser — every assertion above went through the API.
+- **Channel workflows:** [channel-workflows.md](features/channel-workflows.md). **Implemented**, not
+  "spec only": 15 files under `apps/api/src/modules/workflows/`, a web UI (`WorkflowForm.tsx`,
+  `WorkflowRunHistory.tsx`), `en`/`vi` strings, and migration `20260925007000_add_channel_workflows`
+  applied. `HTTP_CALL` requires a per-server hostname allowlist that is empty by default, so the
+  action is off until someone deliberately turns it on; the check runs again at request time against
+  the resolved host of every redirect hop, and every call is audited.
+  **Verified 2026-10-01: 12 of 13 manual scenarios pass.** Confirmed behaviour includes webhook
+  idempotency (a replayed `X-Idempotency-Key` returned the same `runId` and posted exactly one
+  message), a missing key returning `400 IDEMPOTENCY_KEY_REQUIRED`, partial failure (step 0 posted
+  and was not retracted while the run recorded `FAILED` / `INVALID_TARGET` / `failedStepIndex: 1`),
+  the chain cap (7 runs, the last `CHAIN_DEPTH_EXCEEDED`, 7 messages total), `AUTOMOD_BLOCKED` with
+  nothing posted, `400 HTTP_ACTIONS_ARE_DISABLED_UNTIL_AN_ALLOWED_HOST_IS_CONFIGURED` on an empty
+  allowlist, `HOST_NOT_ALLOWED` once the entry is removed, `BLOCKED_ADDRESS` for an allowlisted
+  hostname that resolves to loopback, `WORKFLOW_HTTP_CALL` audited with `host` + `statusCode` only,
+  and no `secretHeader` value anywhere in the list or run payloads.
+  - **Not runnable as written:** scenario 6 says to point `HTTP_CALL` at
+    `http://127.0.0.1:<api-port>/health`. A non-default port is rejected by `assertFetchableUrl`
+    (`apps/api/src/modules/link-previews/safe-fetch.ts:35`, "Only default ports can be previewed")
+    _before_ the address-class check, so the run fails `UNKNOWN`, never `BLOCKED_ADDRESS`. Verified
+    instead with a default-port hostname that resolves to loopback, which does produce
+    `BLOCKED_ADDRESS`. The test plan is wrong there, not the code — though a port rejected by policy
+    surfacing as `UNKNOWN` rather than its own reason is worth its own look.
+  - **Not run:** scenario 8 (a redirect from an allowlisted host to a non-allowlisted one) needs two
+    controlled public hostnames; there is no way to set that up locally.
+  - **Blocker found — a `SCHEDULE` workflow created through the API never fires.** `nextRunAt` is
+    `DateTime?` with no default and is never written on create or update:
+    `channelWorkflow.create` (`apps/api/src/modules/workflows/workflows.service.ts:62-95`) omits it,
+    and `grep -rn "nextRunAt" apps/api/src` shows the only write is the sweep's own advance
+    (`workflow-run-sweep.service.ts:94`), which requires an already-non-null value. The sweep claims
+    on `nextRunAt: { lte: now }` (`:84`), and NULL never matches that in PostgreSQL. The web form
+    offers `SCHEDULE` with an interval field (`WorkflowForm.tsx:109-118`), so a user can save a
+    schedule that silently never runs. Scenario 3 hides this because it instructs the tester to
+    back-date `nextRunAt` at the DB level — the only thing that ever gives the column a value. With
+    that DB write, the rest of the schedule path is correct: the sweep claimed it once, posted one
+    message, and advanced `nextRunAt` by the interval. **Not fixed — out of the scope of this
+    recheck.**
+- **E2EE key management:** [e2ee-key-management.md](features/e2ee-key-management.md). Spec
+  **approved 2026-10-01**; implementation started. Replaces today's shared-passphrase E2EE
   (`apps/web/src/e2ee.ts`) with per-device ECDH keys and wrapped content keys, and encrypts DMs by
   default. Losing every device permanently loses encrypted history — no recovery, decided
-  deliberately. Must not ship to users until the two rotation gaps named in its Risks section close.
+  deliberately. Must not ship to users until the gate in its Risks section is met.
+  - The two gaps the spec left to the implementer are now **decided and written into it**: the
+    rotation-race convergence rule is "lowest `keyId` for that `version`, byte-wise, applied
+    client-side with no server arbitration", and the offline-at-rotation case is closed by making
+    the sending client the fallback key generator, with a failed wrap upload failing the send rather
+    than falling back to plaintext.
+  - Two self-contradictions in the spec were reconciled: it is **two** new tables, not three (there
+    is no separate `EncryptedConversationKey`), and `DirectConversation.isEncrypted` takes a **column
+    default of `false`** with the application setting `true` on creation.
+  - A real defect in the approved design was corrected before coding: the single
+    `@@unique([channelId, conversationId, keyId, deviceKeyId])` would never have fired, because
+    PostgreSQL treats NULLs as distinct and every row has one of the two scope columns NULL. It is
+    replaced by two composite uniques, one per scope.
+  - **Landed:** the schema and migration `20261001001000_add_e2ee_key_management` (applied locally,
+    `prisma migrate diff` reports "empty migration" — no drift); the shared contract
+    `packages/shared/src/encryption.ts`; the API module `apps/api/src/modules/encryption/`
+    (device register/list/revoke, per-scope and account-wide pending-wraps, wrap upload and fetch);
+    rotation on kick, ban, leave and group-DM member removal; `isEncrypted` on channel
+    create/update with audit metadata; DM-encrypted-by-default for both 1:1 and group; content-free
+    push bodies in `en`/`vi`; and the whole web side — `e2ee.ts` v2 with AAD, the IndexedDB device
+    store, the scope key manager, the device list, the safety-number dialog, the encryption panel
+    with the five-loss disclosure, and the channel settings switch.
+  - **Verified at runtime 2026-10-01**, 31 assertions over the real API: a full crypto round-trip
+    (member B unwraps with its own private key and the recomputed `keyId` matches), idempotent wrap
+    upload, `403` for a non-member and for a `deviceId` that is not the caller's, `400` for an
+    unknown wrap target / a version above the counter / an upload into a non-encrypted scope, and
+    rotation bumping the version by exactly 1 on kick and on leave while _not_ bumping for a ban of
+    an already-removed member — with old wraps still fetchable so history stays openable. Every
+    static gate is green (`typecheck`, `lint`, `i18n:check`, `check:file-size`, `ui:scan`, `build`);
+    `docs:check` fails only on a pre-existing broken image link in `ui-identity-redesign.md`.
+  - **Not verified:** nothing in the web UI has been driven in a browser, so every UI flow and the
+    390x844 layout are unexercised. The migration's `down()` was not executed — this environment's
+    command policy blocked it — so the migration is verified in the `up` direction only.
+  - **Not built:** no endpoint exposes another user's device public keys, so safety-number
+    verification only works between a user's own devices, and there is no UI for enabling encryption
+    on a pre-existing DM.
+  - **Blocks the gate:** seven server-side message-write paths (forward, incoming webhook, workflow
+    `POST_MESSAGE`, poll, forum post, decision proposal, announcement crosspost) write plaintext into
+    a channel and none of them check `isEncrypted`; `messages.service.ts` does not require a send into
+    an encrypted channel to carry ciphertext either. Plus wrap poisoning and a forged-`keyId` stall.
+    All are written up in the feature doc's Risks section and all need a decision.
 
 ### Checklist
 
 - [x] Sync channel settings to open clients over a socket event.
 - [x] Let a bot owner register slash commands from the UI instead of the bot REST API.
 - [x] Send a push notification for a direct message.
-- [ ] Add a `DECISION` channel type with proposal states, quorum voting and a decisions index
-      (backend only; migration unapplied, web UI not built, nothing executed).
-- [ ] Let a server define automated workflows in chat (spec reviewed, no code).
-- [ ] Replace passphrase E2EE with per-device key management (spec reviewed, no code, gated on a
-      threat-model decision).
+- [x] Add a `DECISION` channel type with proposal states, quorum voting and a decisions index.
+      Backend, web UI and migration all landed; 8/8 manual scenarios verified 2026-10-01 over REST.
+      Not run: the web UI in a browser.
+- [ ] Let a server define automated workflows in chat. Backend and web UI landed, migration applied,
+      12/13 scenarios verified 2026-10-01 — but **not done**: a `SCHEDULE` workflow created through
+      the API never fires, because nothing ever sets `nextRunAt` (see the item above). Scenario 8 is
+      not runnable locally and scenario 6 is wrong as written.
+- [ ] Replace passphrase E2EE with per-device key management. Spec approved and its open decisions
+      closed 2026-10-01; schema, migration, shared contract, API module and the whole web side are
+      implemented, with 31 runtime assertions passing against the real API and every static gate
+      green. **Still not done**: the seven plaintext server-write paths must be closed (an encrypted
+      scope can still receive plaintext from a webhook, workflow, poll, forum post, decision,
+      crosspost or forward), wrap poisoning and the forged-`keyId` stall need decisions, no UI flow
+      has been exercised in a browser, and the migration's `down()` has not been executed. Stays
+      gated off for real users until those close.

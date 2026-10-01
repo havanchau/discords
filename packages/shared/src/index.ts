@@ -2,6 +2,7 @@ export * from './announcements.js';
 export * from './api-contract.js';
 export * from './bots.js';
 export * from './direct-conversation-mute.js';
+export * from './encryption.js';
 export * from './i18n.js';
 export * from './json.js';
 export * from './permissions.js';

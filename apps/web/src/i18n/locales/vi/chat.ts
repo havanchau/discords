@@ -39,7 +39,7 @@ export const chat = {
   'chatHeader.search': 'Tìm kiếm',
   'chatHeader.selectChannel': 'Chọn một kênh',
   'chatHeader.selectChannelHint': 'Chọn một kênh để bắt đầu.',
-  'chatHeader.setEncryption': 'Đặt mật khẩu mã hoá',
+  'chatHeader.setEncryption': 'Bật mã hoá',
   'chatHeader.shareScreen': 'Chia sẻ màn hình',
   'chatHeader.startVideoCall': 'Bắt đầu gọi video',
   'chatHeader.startVoiceCall': 'Bắt đầu gọi thoại',

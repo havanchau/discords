@@ -123,6 +123,7 @@ model User {
   stageSpeakRequests        StageSpeakRequest[]
   proposedDecisions         Decision[]                 @relation("DecisionProposer")
   decidedDecisions          Decision[]                 @relation("DecisionDecider")
+  deviceKeys                DeviceKey[]
 
   @@index([deletionScheduledAt])
   @@index([avatarUrl])

@@ -1,6 +1,7 @@
 # E2EE Key Management
 
-- **Status**: draft — awaiting review
+- **Status**: approved 2026-10-01 — implemented. Stays gated off for real users until the
+  "Gate before enabling for real users" conditions in Risks & rollback are all met.
 - **Date**: 2026-09-25
 - **Related**: [`age-restricted-channels.md`](age-restricted-channels.md) (precedent for a gate flag +
   server-enforced check + client gate screen), [`dm-push-notifications.md`](dm-push-notifications.md),
@@ -221,7 +222,7 @@ channels/conversations.
    public key), uses it to wrap the content key (`crypto.subtle.wrapKey('raw', contentKey,
    derivedWrappingKey, 'AES-KW')`), and uploads the wrapped bytes **together with that key's `keyId`**
    (item 3) and the current `version`. The server stores only ciphertext wrapped keys
-   (`EncryptedChannelKey`/`EncryptedConversationKey`, Technical approach), each row addressable by
+   (`EncryptedChannelKey`, Technical approach), each row addressable by
    `keyId` — it cannot unwrap them, it has no private key for anyone.
 5. **Bootstrapping a device that was offline when a channel/conversation was first enabled**: on
    sign-in, a device calls `GET /encryption/pending-wraps` (its own `deviceId`); the server reports
@@ -260,13 +261,22 @@ channels/conversations.
    the removal, encrypted under the old key, are **not** re-encrypted — old ciphertext keeps
    referencing the old `keyId`; devices that already hold a wrap for that `keyId` can still open old
    messages by the same lookup (this is the same "cannot un-see" limit named in Threat model).
-   `EncryptedChannelKey`/`EncryptedConversationKey` rows are never deleted on rotation — a device that
+   `EncryptedChannelKey` rows are never deleted on rotation — a device that
    reconnects still needs its old-`keyId` wrapped key to open history sent before it went offline. If
    two different clients each independently generate a "new version N" key for the same rotation
    event (the race in Edge cases), the two keys simply have two different `keyId`s and both end up
    wrapped and stored — no data is lost, because every message unambiguously names the `keyId` it was
    encrypted under; the only cost is that `version` briefly has two live keys until clients converge on
-   reusing whichever `keyId` they see first via `pending-wraps` (Edge cases).
+   the lowest `keyId` for that `version`, per the decided convergence rule (Edge cases).
+
+   **Decided 2026-10-01 — nobody online at rotation time (the sender is the fallback generator).**
+   A rotation can bump `version` while every remaining member is offline, so no client is present to
+   generate and wrap the new version's key. The first client that tries to **send** into the
+   channel/conversation and finds no content key for the current `version` generates it itself — it is
+   by definition an online, current member — wraps it for every non-revoked `DeviceKey` of every
+   current member including its own, uploads those wraps, and only then encrypts and sends. If the
+   wrap upload fails, the send **fails visibly** and nothing is posted; it must never fall back to
+   sending plaintext into a channel/conversation marked `isEncrypted`.
 9. **Multi-device.** Nothing in this design assumes one device per user: every rule above already
    operates per `DeviceKey`, not per user. A user's account settings gain a **device list**
    (`label`, first-seen date, verified/unverified) with a "log out this device" action that sets
@@ -300,8 +310,8 @@ channels/conversations.
 | Case | Expected behavior |
 |---|---|
 | Empty / no content key yet for this device | UI shows "waiting for a key" (item 5) instead of a broken decrypt; message list still renders sender/timestamp, content shows a locked placeholder — same placeholder pattern `useChannelEncryption.ts:85-92` already uses for "no key". |
-| Duplicate wrap upload (two online devices both wrap the same content key, identified by its `keyId`, for the same missing device at once) | `EncryptedChannelKey`/`EncryptedConversationKey` unique on `(channelId, conversationId, keyId, deviceKeyId)` (Technical approach) — the second insert is a no-op upsert, not an error; both wraps decrypt to the same content key because they wrap the same key material by construction (same `keyId`). |
-| Two devices race to generate a "new key for this rotation" at the same time | No longer a data-loss case, now that messages name their `keyId` rather than only a `version` (Rules item 3, item 8). Two independently generated keys for the same `version` simply get two different `keyId`s; both get wrapped and stored, and every message stays openable by the exact `keyId` it names. The only residual cost is transient: clients may briefly disagree on which `keyId` is "the current one to encrypt new sends under" until they converge (e.g. the lowest `keyId` for that `version` wins, checked via `pending-wraps`, which reports both). This is a UX/coordination nuisance, not a decryption failure — restated in Risks & rollback as a remaining implementation-time detail to verify, not a silent-loss risk. |
+| Duplicate wrap upload (two online devices both wrap the same content key, identified by its `keyId`, for the same missing device at once) | `EncryptedChannelKey` unique on `(channelId, keyId, deviceKeyId)` for channel wraps and on `(conversationId, keyId, deviceKeyId)` for conversation wraps (Technical approach -> Correction 2026-10-01) — the second insert is a no-op upsert, not an error; both wraps decrypt to the same content key because they wrap the same key material by construction (same `keyId`). |
+| Two devices race to generate a "new key for this rotation" at the same time | No longer a data-loss case, now that messages name their `keyId` rather than only a `version` (Rules item 3, item 8). Two independently generated keys for the same `version` simply get two different `keyId`s; both get wrapped and stored, and every message stays openable by the exact `keyId` it names. The only residual cost is transient: clients may briefly disagree on which `keyId` is "the current one to encrypt new sends under" until they converge. **Decided convergence rule (2026-10-01):** for a given `(channelId \| conversationId, version)`, the current key is the one whose `keyId` sorts lowest by byte-wise string comparison among the keys `pending-wraps` reports for that `version`. Every client applies that rule locally, with no server arbitration and no extra column — the ordering is total and stable, so two clients that see the same set converge on the same key instead of last-write-wins. (`createdAt` was considered and rejected: equal server timestamps are possible within one tick, which leaves the tie unbroken.) This is a UX/coordination nuisance, not a decryption failure. |
 | Expired — a device revoked (item 9) tries to fetch pending wraps | `401`/`403` from the normal session check; a revoked `DeviceKey` is not itself an auth mechanism, so this is unaffected by revocation specifically — revocation only stops it being a wrap **target**. |
 | Unauthorized — a non-member tries `GET /channels/:id/encryption/keys` | `403`, same `Permission.ViewChannel` guard every other channel-content endpoint already uses (`requireReadableChannel`, `age-restricted-channels.md` Current behavior). |
 | Channel turned from encrypted back to unencrypted | New messages stop being wrapped/encrypted; `isEncrypted` flips to `false`; already-sent ciphertext stays as ciphertext forever (no server-side decryption is possible — the server never had the key) — the UI must state this is permanent, not a toggle-back. |
@@ -323,7 +333,7 @@ channels/conversations.
 | `apps/web/src/components/chat/UtilityPanel.tsx` | Replace the passphrase form with an "Enable encryption" action with no text input, plus the five-loss disclosure copy before confirming. |
 | `apps/web/src/components/settings/ChannelSettings.tsx` | `isEncrypted` `SwitchRow`, same pattern as `isPrivate` (`:178-181`) and `isAgeRestricted` (`age-restricted-channels.md`). |
 | `apps/api/prisma/models/channels.prisma` | `isEncrypted Boolean @default(false)`, `encryptionKeyVersion Int @default(0)`. |
-| `apps/api/prisma/models/direct-messages.prisma` | `DirectConversation.isEncrypted Boolean @default(true)`, `encryptionKeyVersion Int @default(1)`; new `EncryptedConversationKey` model. |
+| `apps/api/prisma/models/direct-messages.prisma` | `DirectConversation.isEncrypted Boolean @default(false)` (**column** default `false` on purpose — see the DB / migration note; the application sets `true` on every new conversation), `encryptionKeyVersion Int @default(1)`, and the back-relation to `EncryptedChannelKey`. No separate conversation key model: one `EncryptedChannelKey` with a dual-nullable `channelId`/`conversationId` FK covers both, per the DB / migration section. |
 | `apps/api/prisma/models/` (new file, e.g. `encryption.prisma`) | `DeviceKey`, `EncryptedChannelKey` models. |
 | New migration `apps/api/prisma/migrations/<ts>_add_e2ee_key_management/` | Hand-written, both directions. |
 | `apps/api/src/modules/encryption/` (new module) | `DeviceKeyController`/`Service` (register/list/revoke device keys), `EncryptionKeyController`/`Service` (upload/fetch wrapped keys, pending-wraps, rotation trigger hook). |
@@ -336,6 +346,42 @@ channels/conversations.
 | `apps/web/src/i18n/locales/{en,vi}/auth.ts` | Replace passphrase-era `encryption.*` strings with device-flow copy (enable/disable, five-loss disclosure, device list, safety number). |
 | `packages/shared/src/api-contract.ts` | `Channel.isEncrypted`, `DirectConversation.isEncrypted`, `DeviceKey`, wrapped-key request/response DTOs. |
 
+**Reconciled with the implementation, 2026-10-01.** The table above was written before the code.
+What actually landed differs in these ways, all additive:
+
+- Five web files not in the table: `apps/web/src/e2eeStore.ts` (the IndexedDB layer — `device`,
+  `contentKeys` and `verifiedDevices` stores), `apps/web/src/hooks/useScopeKeys.ts` (the key manager
+  shared by channels and DMs), `apps/web/src/hooks/useDeviceList.ts`,
+  `apps/web/src/hooks/useDirectMessageDecryption.ts`, and
+  `apps/web/src/components/chat/EncryptionPanel.tsx` (split out of `UtilityPanel.tsx`, already at
+  409 lines).
+- `apps/web/src/e2ee.ts` **drops** the `v1` writer `encryptChannelMessage`; nothing may write `v1`
+  any more. The `v1` reader is untouched, so legacy history stays readable (Rules item 10).
+- Three call sites had to move off the old key-ref API to avoid silently still writing `v1`:
+  `useMessageComposerActions.ts`, `useThreadPanel.ts`, `useChannelMessageActions.ts`. In the last,
+  `saveMessageEdit` now returns early when the edited message cannot be found, where before it would
+  `PATCH` plaintext.
+- `apps/api/src/modules/friends/friends.service.ts` sets `isEncrypted: true` on the 1:1 DM it
+  creates; the table only listed the group-DM path, and without this 1:1 DMs would not be encrypted
+  by default, which the acceptance criteria require.
+- `notifyMentionedUsers` takes `isEncrypted` as **optional**, so the four existing callers outside
+  this change keep compiling. When omitted it is read from the channel, so omission never means
+  "not encrypted".
+- The `wrappedKey` field carries `sender SPKI || AES-KW wrap` rather than a bare wrap, because the
+  recipient needs the sender's public key to derive the same ECDH wrapping key and the endpoint has
+  no field for it. The layout is documented on `E2EE_WRAPPED_KEY_MAX_LENGTH` in
+  `packages/shared/src/encryption.ts`.
+- Eight new exception literals were registered in `error-codes.ts` and both API locale catalogs.
+  `npm run i18n:check` does **not** catch a missing registration (it only checks that mapped
+  literals are still thrown), so this had to be done by hand.
+
+**What is NOT built:** no endpoint exposes another user's device public keys, so safety-number
+verification works only between a user's own devices — `SafetyNumberDialog` is mounted in
+`DeviceListSettings`, not on a profile card as Rules item 6 describes, and test plan step 6 (two
+accounts comparing numbers) cannot be run. Verification state lives only in the verifying device's
+IndexedDB; there is no server-side "verified" column. There is also no UI for the one-time
+"enable encryption on a pre-existing DM" action, though the endpoint exists.
+
 **API contract**
 
 - `POST /devices/keys` — register/update this device's public key. Request:
@@ -345,7 +391,10 @@ channels/conversations.
   `{ devices: DeviceKey[] }`.
 - `DELETE /devices/keys/:deviceId` — revoke (`revokedAt = now()`), idempotent. Response `200`:
   `{ ok: true }`.
-- `POST /channels/:channelId/encryption/keys` / `POST /conversations/:conversationId/encryption/keys`
+- `POST /channels/:channelId/encryption/keys` /
+  `POST /direct-conversations/:conversationId/encryption/keys` (the spec first wrote
+  `/conversations/...`; **corrected 2026-10-01** to the prefix the repo's `DirectMessagesController`
+  actually uses — every conversation route below reads the same way)
   — upload one or more wrapped keys for one `keyId`. Request: `{ keyId, version, wraps: [{
   deviceKeyId, wrappedKey }] }` (`keyId` is what the row is keyed and looked up on; `version` is
   carried along only as the ordering/"current" hint, per Rules item 3). Response `201`:
@@ -354,17 +403,32 @@ channels/conversations.
 - `GET /channels/:channelId/encryption/pending-wraps` / conversation equivalent — devices missing a
   wrapped key for the current `keyId`, for the caller's own account and (if the caller already holds
   the key) for other members. Response `200`: `{ keyId, version, missing: [{ deviceKeyId, publicKey,
-  userId }] }`.
-- `GET /channels/:channelId/encryption/keys?keyId=` / conversation equivalent — the caller's own
-  wrapped key for a specific `keyId` (current or historical, for opening old messages after
+  userId }] }`. `keyId` is `null` when the scope has no content key at all yet — the "I am the first
+  device, generate one" signal, not an error.
+- `GET /devices/keys/pending-wraps?deviceId=` — **added 2026-10-01.** Rules item 5 describes a
+  device calling "`GET /encryption/pending-wraps`" at sign-in to learn every
+  `(channel|conversation, keyId)` pair it is missing a wrap for, but this section only specified the
+  per-channel variant above, which answers a different question ("which devices still need a wrap
+  from me, in this channel"). Both are needed, so the account-wide one is specified here rather than
+  left implied. Response `200`:
+  `{ pending: [{ channelId, conversationId, keyId, version }] }` — one entry per pair where a wrap
+  exists for some non-revoked device of the caller's account but not for `deviceId`. It returns
+  pairs, never key material. `403` if `deviceId` does not belong to the caller.
+- `GET /channels/:channelId/encryption/keys?keyId=&deviceId=` / conversation equivalent — the
+  caller's own wrapped key for a specific `keyId`. **`deviceId` added 2026-10-01:** a wrap is
+  addressed to one device, so for a multi-device account the endpoint cannot guess which one is
+  asking; omitting it is accepted only while the caller has at most one wrapped device, and otherwise
+  returns `400`. A `deviceId` that is not the caller's returns `403` (current or historical, for opening old messages after
   rotation — a client reads the `keyId` off the message it is trying to decrypt and requests exactly
   that one, never a `version`-wide scan). Response `200`: `{ wrappedKey: string | null }` (`null`
   while waiting, matching Edge cases "no content key yet").
 - `PATCH /channels/:channelId` (existing) — request body gains `isEncrypted?: boolean`; same
   authorization (`ManageChannels`) and audit-log pattern as every other channel field.
-- `PATCH /conversations/:conversationId` (existing group-DM settings endpoint) — gains
-  `isEncrypted?: boolean` for the one-time "enable for this pre-existing conversation" action (Rules
-  item 2); 1:1 DMs default `isEncrypted: true` at creation with no toggle exposed.
+- `PATCH /direct-conversations/:conversationId` (existing group-DM settings endpoint) — gains
+  `isEncrypted?: true` for the one-time "enable for this pre-existing conversation" action (Rules
+  item 2). Only `true` is accepted: turning encryption **off** is refused, because already-written
+  ciphertext can never be read back by the server. 1:1 DMs default `isEncrypted: true` at creation
+  with no toggle exposed.
 
 **DB / migration**
 
@@ -399,14 +463,32 @@ model EncryptedChannelKey {
   conversation   DirectConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   deviceKey      DeviceKey           @relation(fields: [deviceKeyId], references: [id], onDelete: Cascade)
 
-  @@unique([channelId, conversationId, keyId, deviceKeyId])
+  @@unique([channelId, keyId, deviceKeyId])
+  @@unique([conversationId, keyId, deviceKeyId])
   @@index([deviceKeyId])
-  @@index([channelId, keyId])
-  @@index([conversationId, keyId])
   @@index([channelId, version])
   @@index([conversationId, version])
 }
 ```
+
+**Correction 2026-10-01 — the uniqueness constraint had to be split in two.** Earlier drafts of this
+section specified a single `@@unique([channelId, conversationId, keyId, deviceKeyId])`. That
+constraint would never have fired: PostgreSQL treats `NULL`s as *distinct* in a unique index, and
+every row of this table has exactly one of `channelId`/`conversationId` set to `NULL`, so two
+byte-identical wrap rows would both have been accepted — exactly the duplicate the Edge cases
+"duplicate wrap upload" row relies on the database to collapse into a no-op upsert. It is replaced by
+two composite uniques, `(channelId, keyId, deviceKeyId)` and `(conversationId, keyId, deviceKeyId)`.
+Every row has exactly one non-null scope column, so each row is covered by exactly one of the two,
+and uniqueness is now actually enforced for both scopes without needing PostgreSQL 15+'s
+`UNIQUE NULLS NOT DISTINCT` (which Prisma's `@@unique` cannot express). The two plain
+`@@index([channelId, keyId])` and `@@index([conversationId, keyId])` entries are dropped as
+redundant: each new unique index already covers that exact lookup on its leading `(scope, keyId)`
+prefix (`~/.claude/rules/database.md`). The index count is unchanged at five.
+
+**Two new tables only** (`DeviceKey`, `EncryptedChannelKey`): there is no separate
+`EncryptedConversationKey` model — reconciled 2026-10-01, since earlier drafts named one in passing
+while this section, the rollback note ("both tables additive") and the `down()` description all
+describe a single dual-FK table.
 
 `keyId` is the column a `v2` message's ciphertext actually references (Changes → Rules item 3) and is
 what the unique constraint and the two new indexes are built around — this is the fix for the design
@@ -430,11 +512,13 @@ every existing plaintext DM as "encrypted", which is false; the migration must s
 correction from a naive `DEFAULT true` and must be implemented exactly this way — flagged here so it
 is not missed during implementation.
 
-Indexes: `(deviceKeyId)` (a device's own wraps), `(channelId, keyId)`/`(conversationId, keyId)` (the
-lookup a message's decrypt-by-`keyId` and `pending-wraps` actually use), `(channelId,
-version)`/`(conversationId, version)` (the "give me the current version's wraps" display/ordering
-query, Rules item 8) — five lookup shapes total, covering both the `keyId`-exact path every real
-decrypt takes and the `version`-wide path only used for "what should I generate next." `DeviceKey(userId)`
+Indexes: the two unique constraints `(channelId, keyId, deviceKeyId)`/`(conversationId, keyId,
+deviceKeyId)` double as the index for the lookup a message's decrypt-by-`keyId` and `pending-wraps`
+actually use (their `(scope, keyId)` prefix); plus `(deviceKeyId)` (a device's own wraps) and
+`(channelId, version)`/`(conversationId, version)` (the "give me the current version's wraps"
+display/ordering query, Rules item 8) — five index objects total, covering both the `keyId`-exact
+path every real decrypt takes and the `version`-wide path only used for "what should I generate
+next." `DeviceKey(userId)`
 for "list my devices" and for looking up wrap targets by member.
 
 Migration: hand-written, both tables additive, both `Channel`/`DirectConversation` column additions
@@ -487,16 +571,19 @@ here in case a very large server's channel encryption is later proposed.
   undecryptable or ambiguous; both independently generated keys get wrapped and stored under their own
   `keyId`, and every message stays openable by the `keyId` it names. What remains is a **coordination
   cost, not a data-loss risk**: two live "current" keys for one `version` until clients converge on
-  one (via `pending-wraps`, Edge cases) — flagged for the implementer to pick and document the exact
-  convergence rule (e.g. lowest `keyId` wins) before shipping, so it is deterministic rather than
+  one (via `pending-wraps`, Edge cases) — **decided 2026-10-01**: the convergence rule is
+  "lowest `keyId` for that `version`, byte-wise", specified in Edge cases and applied client-side
+  with no server arbitration, so the outcome is deterministic rather than
   "whichever client's write happened to run last."
 - **A channel/conversation rotates while every member is offline**: no client is present to generate
   and wrap the new version's key, so new messages sent in that state have **no** content key to
   encrypt under until some member's client comes online — the sender's own client must be the
   fallback generator (it is itself an online, current member) the first time it tries to send after a
   rotation with an empty current version, rather than assuming another member will have done it.
-  This must be implemented as part of Rules item 8, not left implicit — named here as a gap the
-  Technical approach section does not yet fully close.
+  **Decided and specified 2026-10-01**: Rules item 8 now carries this as the
+  sender-as-fallback-generator rule, including the "a failed wrap upload fails the send, it never
+  falls back to plaintext" requirement — so the design gap is closed. It still has to be *verified*
+  by the rotation scenarios in the Test plan before the gate below opens.
 - **Not covered**: hardware-backed key protection (Scope), DM history predating encryption being
   enabled (Scope), account-level key recovery after losing every device (Trade-offs G/H — **decided,
   not built, by design**), server-side search/AutoMod/bot-reading/mention-pings on encrypted content
@@ -505,10 +592,101 @@ here in case a very large server's channel encryption is later proposed.
   migration, `down()` drops them if a full rollback is needed). Any channel/conversation already
   flipped to `isEncrypted = true` before a rollback keeps that ciphertext in the database — rolling
   back the *code* does not decrypt it; a full schema rollback (`down()`) would delete the
-  `DeviceKey`/`EncryptedChannelKey`/`EncryptedConversationKey` rows, permanently losing every wrapped
+  `DeviceKey`/`EncryptedChannelKey` rows, permanently losing every wrapped
   key (equivalent to losing all devices at once for every affected channel/conversation) — this
   `down()` must say so in its own comment, per `~/.claude/rules/database.md`, and the report at
   rollback time must repeat it.
+- **Found during implementation 2026-10-01 — BLOCKER: the server has seven message-write paths that
+  put plaintext into a channel, and none of them know about `isEncrypted`.** The Threat model section
+  covers what a bot or webhook can no longer *read* in an encrypted channel; it never addresses what
+  the server itself *writes*. Encryption is applied by the sending client, so every write path that
+  does not come from a client's composer stores plaintext in a scope whose whole promise is "the
+  server only ever stores ciphertext". Confirmed writers (`prisma.message.create` /
+  `directMessage.create`):
+  - `modules/forwarding/forwarding.service.ts` — a forward carries `forwardOriginContent:
+    source.content` as a plaintext snapshot into the destination, plus `content: dto.comment`.
+  - `modules/webhooks/webhook-delivery.service.ts` — an incoming webhook posts plaintext.
+  - `modules/workflows/workflow-actions.ts` — a `POST_MESSAGE` step posts plaintext.
+  - `modules/polls/polls.service.ts` — a poll's question becomes the message content, in channels
+    and in DMs.
+  - `modules/forum/forum-posts.service.ts` — a forum post's root message.
+  - `modules/decisions/decisions.service.ts` — a proposal's root message, so a `DECISION` channel
+    cannot be meaningfully encrypted as things stand.
+  - `modules/announcements/publish.service.ts` — a crosspost copies a message into follower channels.
+
+  Separately, `modules/messages/messages.service.ts` reads `isEncrypted` only to choose the push body
+  (`:959-977`); it does **not** require that a send into an encrypted channel actually carries `v2`
+  ciphertext. So a client can also post plaintext into an encrypted channel and nothing refuses it.
+  `isEncrypted` is therefore **advisory today, not enforced**.
+
+  **Not fixed — needs a product decision, and it must close before the gate below opens.** The
+  honest option is to refuse these writes for a scope with `isEncrypted = true` (a `400`), which
+  turns the "five losses" into a sixth: server-composed messages — webhooks, workflows, polls, forum
+  posts, decision proposals, crossposts and forwards — do not work in an encrypted scope, and the
+  enable dialog must say so before a moderator confirms. Letting them through makes `isEncrypted` a
+  claim the data does not support, which is worse than not shipping: `~/.claude/rules/security.md` is
+  explicit that a rule enforced in one of several write paths is not enforced. Deciding "refuse" also
+  decides what an encrypted `DECISION` or `FORUM` channel means — most likely that those channel
+  types cannot be encrypted at all.
+- **Found during implementation 2026-10-01 — wrap poisoning (integrity/availability, not
+  confidentiality).** The upload is insert-only and idempotent on `(scope, keyId, deviceKeyId)`
+  (`ON CONFLICT DO NOTHING`), and `EncryptedChannelKey` has no uploader column. First write wins, so
+  any member who can read the scope can pre-upload a junk `wrappedKey` for *another* member's device
+  and permanently block the real wrap from landing — that device then shows "waiting for a key"
+  forever. The server cannot detect it: it cannot unwrap, by design. No plaintext reaches the
+  attacker, so this is a denial of service against a specific device, not a confidentiality break.
+  **Not mitigated — needs a decision.** Options: (a) add an `uploadedByDeviceKeyId` column so the
+  owning device can replace a wrap addressed to itself (schema change + migration), or (b) let the
+  owning device overwrite its own row unconditionally (no new column, but a compromised member device
+  can then flap its own key). (a) is the recommendation.
+- **Found during implementation 2026-10-01 — a forged `keyId` can stall a whole scope.** The
+  convergence rule picks the lowest `keyId` at the highest version that has any wrap, and the server
+  applies the same rule in `pending-wraps`. A member can upload wraps under a **made-up** `keyId`
+  that sorts below the real one, at the current version; every client then selects a key nobody
+  holds, fails to unwrap it, and cannot encrypt new sends — a scope-wide stall. The
+  `version > encryptionKeyVersion` cap narrows the window but does not close it, because the forged
+  `keyId` sits at the *current* version. **Partially mitigated:** `contentKeyIdsByPreference()` was
+  added to `packages/shared/src/encryption.ts` so a client can walk the candidates in order, but it
+  is **not wired into the client yet** and `currentContentKeyId()` still returns only the lowest. The
+  fix is to narrow the rule to **"lowest `keyId` that this device can actually unwrap"**; adopting it
+  means changing that helper and the Edge cases rule together.
+- **Found during implementation 2026-10-01 — membership-removal paths that do NOT rotate.** Rotation
+  is wired into kick, ban and leave (`server-moderation.service.ts`) and group-DM member removal
+  (`direct-conversations.service.ts`), all verified at runtime. It is **not** wired into account
+  anonymization (`apps/api/src/modules/users/account-anonymization.ts:161`) or the bot-removal paths.
+  The bot case is intentional — a bot is never a wrap target. Account anonymization is a genuine gap:
+  the account stops being a member without bumping any version. **Not fixed.**
+- **Found during implementation 2026-10-01 — in-app `Notification.body` stores ciphertext.** The DM
+  push body is now content-free (Rules item 11), but the in-app `Notification.body` row is still
+  built from `message.content`, which is ciphertext for an encrypted conversation. Nothing leaks, but
+  the notification list renders an `e2ee:v2:...` blob unless the client special-cases it. **Not
+  fixed.**
+- **Found during implementation 2026-10-01 — unbounded member fetch on the key paths.**
+  `EncryptionKeysService`'s channel scope loads every `ServerMember` of the server with their roles,
+  then filters by `ViewChannel`, on every wrap upload and every `pending-wraps` call — a full member
+  scan per request on a large server (`~/.claude/rules/performance.md`). Correct, but it needs paging
+  or a narrower query before this is enabled for a real server. **Not fixed.**
+- **No cap on registered devices per account.** Registration is rate-limited (10/minute) and nothing
+  else bounds how many `DeviceKey` rows one account accumulates; each becomes a wrap target for every
+  member of every encrypted scope. **Not addressed.**
+- **Feature flag — added 2026-10-01, default OFF.** The implementation originally shipped with no
+  runtime gate at all, which made the "gate before enabling for real users" below a *process* gate
+  with nothing to actually switch off: the channel toggle was live for any `ManageChannels` holder
+  the moment it deployed, and DMs were encrypted by default with no opt-out. Since this repo's
+  `main` auto-deploys to production (`.github/workflows/deploy.yml` fires on CI `completed`, with no
+  success guard), that meant merging shipped the feature. A flag was therefore added:
+
+  - **`E2EE_ENABLED`** (API, default `false`) is the **authoritative** gate and the only one that
+    enforces anything. While it is false the API refuses to enable encryption on a channel, refuses
+    the one-time "enable for a pre-existing conversation" action, and creates every new conversation
+    with `isEncrypted: false` instead of `true`. Scopes already marked encrypted keep working, so
+    turning the flag off is not a data-destroying action — it stops new ones being created.
+  - **`VITE_E2EE_ENABLED`** (web, default `false`) only hides the UI: the channel settings switch and
+    the encryption panel's enable action. It enforces nothing. If the two ever disagree, the failure
+    is a visible switch whose request is refused — which fails safe, and is why the API check is not
+    allowed to rely on the client having hidden anything.
+
+  Turning `E2EE_ENABLED` on is gated on the blockers above, not on the flag existing.
 - **Gate before enabling for real users**: per the user's explicit instruction, this feature must
   **not** be turned on for anyone until (a) the rotation-on-removal race above is verified fixed,
   (b) the "offline at rotation" fallback (above) is implemented, and (c) the manual test scenarios
@@ -557,6 +735,16 @@ Not covered by automated tests (repo has no test suite by policy,
    endpoints for anything resembling a private key parameter (there should be none).
 
 ## Deployment notes
+
+**New env vars (added 2026-10-01).** Both default to disabled, so a deploy that sets neither ships
+the feature inert:
+
+- `E2EE_ENABLED=false` — API. The authoritative gate (see Risks & rollback). Set to `true` only once
+  the blockers in that section are closed.
+- `VITE_E2EE_ENABLED=false` — web, build time. Hides the encryption UI; enforces nothing.
+
+The migration must run before the API deploy, as below. The flag does not gate the migration: the
+tables and columns are created either way, unused while the flag is off.
 
 - New env vars: none — WebCrypto is browser-native, no server-side crypto secret is introduced by
   this feature (unlike `TWO_FACTOR_ENCRYPTION_KEY` in `two-factor-auth.md`, because the server never

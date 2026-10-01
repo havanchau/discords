@@ -511,6 +511,8 @@ export function useSettingsActions({
             topic: formText(form, 'topic').trim(),
             isPrivate: form.get('isPrivate') === 'on',
             isAgeRestricted: form.get('isAgeRestricted') === 'on',
+            // Only text channels render the switch; elsewhere the field is left alone.
+            isEncrypted: channel.type === 'TEXT' ? form.get('isEncrypted') === 'on' : undefined,
             slowmodeSeconds: slowmodeValue === null ? undefined : Number(slowmodeValue),
             // The select is only rendered when the server has categories; '' means "No category".
             categoryId: categoryValue === null ? undefined : formText(form, 'categoryId') || null,

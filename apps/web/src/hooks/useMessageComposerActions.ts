@@ -1,4 +1,4 @@
-import { Dispatch, FormEvent, MutableRefObject, SetStateAction, useMemo } from 'react';
+import { Dispatch, FormEvent, SetStateAction, useMemo } from 'react';
 import type { Socket } from 'socket.io-client';
 import {
   apiRequest,
@@ -9,7 +9,6 @@ import {
   uploadMessageAttachments,
 } from '@/api';
 import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
-import { encryptChannelMessage } from '@/e2ee';
 import type { Translate } from '@/i18n/LocaleProvider';
 import { executeSlashCommand } from '@/utils/executeSlashCommand';
 import { memberHasServerPermission } from '@/utils/serverPermissions';
@@ -25,8 +24,7 @@ interface UseMessageComposerActionsOptions {
   server: ServerDetail | null;
   socket: Socket | null;
   messages: Message[];
-  channelKeysRef: MutableRefObject<Record<string, CryptoKey>>;
-  channelKeys: Record<string, CryptoKey>;
+  encryptForChannel: (channelId: string, plaintext: string) => Promise<string>;
   channelDraft: ReturnType<typeof usePersistentDraft>;
   selectedFiles: File[];
   setSelectedFiles: Dispatch<SetStateAction<File[]>>;
@@ -59,8 +57,7 @@ export function useMessageComposerActions({
   server,
   socket,
   messages,
-  channelKeysRef,
-  channelKeys,
+  encryptForChannel,
   channelDraft,
   selectedFiles,
   setSelectedFiles,
@@ -112,10 +109,10 @@ export function useMessageComposerActions({
     setPendingAction('send-message');
     setWorkspaceError(null);
     try {
+      // Encrypt first: a failure must not leave freshly uploaded attachments behind, and it must
+      // fail the send instead of falling back to plaintext.
+      const messageContent = await encryptForChannel(channel.id, content);
       const attachments = await uploadMessageAttachments(files, auth.accessToken, voice);
-      const channelKey = channelKeysRef.current[channel.id];
-      const messageContent =
-        content && channelKey ? await encryptChannelMessage(channelKey, content) : content;
       const payload = {
         channelId: channel.id,
         content: messageContent,
@@ -185,7 +182,7 @@ export function useMessageComposerActions({
     if (!content && files.length === 0) return;
     const commandResult = await executeSlashCommand({
       content,
-      isChannelEncrypted: Boolean(channel && channelKeys[channel.id]),
+      isChannelEncrypted: Boolean(channel?.isEncrypted),
       auth,
       server,
       channel,
@@ -225,7 +222,7 @@ export function useMessageComposerActions({
     socket,
     channel,
     messages,
-    channelKeysRef,
+    encryptForChannel,
     decryptMessageForDisplay,
     setMessages,
     editingMessageId,

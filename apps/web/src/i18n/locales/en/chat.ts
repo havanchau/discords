@@ -39,7 +39,7 @@ export const chat = {
   'chatHeader.search': 'Search',
   'chatHeader.selectChannel': 'Select a channel',
   'chatHeader.selectChannelHint': 'Choose a workspace channel to start.',
-  'chatHeader.setEncryption': 'Set encryption passphrase',
+  'chatHeader.setEncryption': 'Enable encryption',
   'chatHeader.shareScreen': 'Share screen',
   'chatHeader.startVideoCall': 'Start video call',
   'chatHeader.startVoiceCall': 'Start voice call',

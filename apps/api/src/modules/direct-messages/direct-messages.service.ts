@@ -254,6 +254,12 @@ export class DirectMessagesService {
     title: string,
     body: string,
   ) {
+    // Read here rather than threaded through `announceCreatedMessage`, whose other caller (direct
+    // polls) passes its own conversation select.
+    const { isEncrypted } = await this.prisma.directConversation.findUniqueOrThrow({
+      where: { id: conversationId },
+      select: { isEncrypted: true },
+    });
     await Promise.all(
       recipientIds.map(async (recipientId) => {
         try {
@@ -263,6 +269,7 @@ export class DirectMessagesService {
             conversationId,
             title,
             body,
+            isEncrypted,
           });
         } catch (err) {
           this.logger.warn(

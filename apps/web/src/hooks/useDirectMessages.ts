@@ -13,14 +13,23 @@ import {
   uploadMessageAttachments,
 } from '@/api';
 import type { VoiceAttachmentMetadata } from '@discord-clone/shared';
+import { useDirectMessageDecryption } from './useDirectMessageDecryption';
+import type { DeviceKeysState } from './useDeviceKeys';
 import { usePersistentDrafts } from './usePersistentDrafts';
+import { useScopeKeys } from './useScopeKeys';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { formText } from '@/utils/formText';
 import { parsePollCommand } from '@/utils/polls';
 import { parseSlashCommand } from '@/utils/slashCommands';
 
+/** How often an open encrypted conversation hands its key to new devices and retries locked messages. */
+const MAINTENANCE_INTERVAL_MS = 20_000;
+/** `DirectConversation.encryptionKeyVersion` starts at 1 (the channel counterpart starts at 0). */
+const DEFAULT_CONVERSATION_KEY_VERSION = 1;
+
 interface UseDirectMessagesOptions {
   auth: AuthState | null;
+  deviceKeys: DeviceKeysState;
   setPendingAction: (action: string | null) => void;
   setWorkspaceError: (message: string | null) => void;
   setWorkspaceNotice: (message: string | null) => void;
@@ -28,20 +37,36 @@ interface UseDirectMessagesOptions {
 
 export function useDirectMessages({
   auth,
+  deviceKeys,
   setPendingAction,
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseDirectMessagesOptions) {
   const t = useTranslation();
   const [friendsSummary, setFriendsSummary] = useState<FriendsSummary | null>(null);
-  const [directConversations, setDirectConversations] = useState<DirectConversationWithMute[]>([]);
+  // Both lists hold what the server sent (ciphertext included); `useDirectMessageDecryption` below
+  // derives the readable versions that this hook returns.
+  const [rawDirectConversations, setDirectConversations] = useState<DirectConversationWithMute[]>(
+    [],
+  );
   const [activeConversation, setActiveConversation] = useState<DirectConversationWithMute | null>(
     null,
   );
-  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
+  const [rawDirectMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [replyingToDirectMessage, setReplyingToDirectMessage] = useState<DirectMessage | null>(
     null,
   );
+  const scopeKeys = useScopeKeys({ auth, deviceKeys, onError: setWorkspaceError });
+  const { encryptContent, shareCurrentKey } = scopeKeys;
+  const decryption = useDirectMessageDecryption({
+    messages: rawDirectMessages,
+    conversations: rawDirectConversations,
+    decryptContent: scopeKeys.decryptContent,
+    keyEpoch: scopeKeys.keyEpoch,
+  });
+  const directMessages = decryption.messages;
+  const directConversations = decryption.conversations;
+  const { retryLocked } = decryption;
   const directDrafts = usePersistentDrafts({ storageKey: 'discord-clone-direct-drafts' });
   const activeDraftKey = activeConversation ? `conversation:${activeConversation.id}` : null;
   const directMessageDraft = directDrafts.getDraft(activeDraftKey);
@@ -92,6 +117,87 @@ export function useDirectMessages({
   useEffect(() => {
     activeConversationIdRef.current = activeConversation?.id ?? null;
   }, [activeConversation?.id]);
+
+  // The newest conversation list entry wins over the open conversation's copy, which can be older.
+  const findConversation = useCallback(
+    (conversationId: string) =>
+      rawDirectConversations.find((conversation) => conversation.id === conversationId) ??
+      (activeConversation?.id === conversationId ? activeConversation : undefined),
+    [rawDirectConversations, activeConversation],
+  );
+  const findConversationRef = useRef(findConversation);
+  useEffect(() => {
+    findConversationRef.current = findConversation;
+  }, [findConversation]);
+  const rawMessagesRef = useRef(rawDirectMessages);
+  useEffect(() => {
+    rawMessagesRef.current = rawDirectMessages;
+  }, [rawDirectMessages]);
+
+  /** Plaintext in, wire format out; throws (so the send fails) rather than ever sending plaintext. */
+  const encryptForConversation = useCallback(
+    async (conversationId: string, plaintext: string) => {
+      if (plaintext === '') return plaintext;
+      const conversation = findConversationRef.current(conversationId);
+      if (!conversation) throw new Error(t('encryption.error.unknownChannel'));
+      return encryptContent(
+        {
+          kind: 'conversation',
+          id: conversation.id,
+          isEncrypted: Boolean(conversation.isEncrypted),
+          version: conversation.encryptionKeyVersion ?? DEFAULT_CONVERSATION_KEY_VERSION,
+        },
+        plaintext,
+      );
+    },
+    [encryptContent, t],
+  );
+
+  /** For an edit, which only knows the message id: encrypts for the conversation it belongs to. */
+  const encryptDirectMessageEdit = useCallback(
+    (messageId: string, plaintext: string) => {
+      const message = rawMessagesRef.current.find((item) => item.id === messageId);
+      if (!message) throw new Error(t('encryption.error.unknownChannel'));
+      return encryptForConversation(message.conversationId, plaintext);
+    },
+    [encryptForConversation, t],
+  );
+
+  const activeEncryptedConversationId = activeConversation?.isEncrypted
+    ? activeConversation.id
+    : null;
+  const activeKeyVersion =
+    activeConversation?.encryptionKeyVersion ?? DEFAULT_CONVERSATION_KEY_VERSION;
+  useEffect(() => {
+    if (!activeEncryptedConversationId || !deviceKeys.identity) return;
+    const scope = {
+      kind: 'conversation' as const,
+      id: activeEncryptedConversationId,
+      isEncrypted: true,
+      version: activeKeyVersion,
+    };
+    const maintain = async () => {
+      try {
+        await shareCurrentKey(scope);
+        retryLocked();
+      } catch (err) {
+        setWorkspaceError(
+          err instanceof Error ? err.message : t('encryption.error.keyShareFailed'),
+        );
+      }
+    };
+    void maintain();
+    const timer = window.setInterval(() => void maintain(), MAINTENANCE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [
+    activeEncryptedConversationId,
+    activeKeyVersion,
+    deviceKeys.identity,
+    shareCurrentKey,
+    retryLocked,
+    setWorkspaceError,
+    t,
+  ]);
 
   const removeDirectConversation = useCallback((conversationId: string) => {
     setDirectConversations((current) =>
@@ -363,6 +469,9 @@ export function useDirectMessages({
     setPendingAction('direct-message');
     setWorkspaceError(null);
     try {
+      // Encrypt first: a failure must not leave freshly uploaded attachments behind, and it must
+      // fail the send instead of falling back to plaintext. A poll carries no message content.
+      const messageContent = poll ? content : await encryptForConversation(conversationId, content);
       const attachments = await uploadMessageAttachments(files, auth.accessToken);
       const result = await apiRequest<{ message: DirectMessage }>(
         poll
@@ -373,7 +482,11 @@ export function useDirectMessages({
           body: JSON.stringify(
             poll
               ? poll.input
-              : { content, attachments, replyToMessageId: replyingToDirectMessage?.id },
+              : {
+                  content: messageContent,
+                  attachments,
+                  replyToMessageId: replyingToDirectMessage?.id,
+                },
           ),
         },
         auth.accessToken,
@@ -451,6 +564,7 @@ export function useDirectMessages({
     setDirectMessageDraft: (value: string) => directDrafts.updateDraft(activeDraftKey, value),
     clearDirectMessages,
     removeDirectConversation,
+    encryptDirectMessageEdit,
     loadFriends,
     loadDirectConversations,
     requestFriend,

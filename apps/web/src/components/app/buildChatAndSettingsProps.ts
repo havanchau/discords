@@ -61,9 +61,7 @@ interface BuildChatAndSettingsPropsOptions {
   markNotificationRead: (notificationId: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   openMobileNav: () => void;
-  isChannelEncrypted: boolean;
-  configureChannelEncryption: (passphrase: string) => Promise<void>;
-  clearChannelEncryption: () => void;
+  encryption: ChatPanelProps['encryption'];
   callState: CallState | null;
   activeCalls: Record<string, ActiveCallSummary>;
   remoteMedia: RemoteMedia[];
@@ -155,9 +153,7 @@ export function buildChatAndSettingsProps({
   markNotificationRead,
   markAllNotificationsRead,
   openMobileNav,
-  isChannelEncrypted,
-  configureChannelEncryption,
-  clearChannelEncryption,
+  encryption,
   callState,
   activeCalls,
   remoteMedia,
@@ -248,11 +244,7 @@ export function buildChatAndSettingsProps({
         markAllNotificationsRead,
         openMobileNav,
       },
-      encryption: {
-        isChannelEncrypted,
-        configure: (passphrase: string) => configureChannelEncryption(passphrase),
-        clear: () => clearChannelEncryption(),
-      },
+      encryption,
       call: {
         state: callState,
         active: channel ? (activeCalls[channel.id] ?? null) : null,

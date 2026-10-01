@@ -1,11 +1,14 @@
 import type { AuthState } from '@/api';
 import type { HomePanelProps } from '@/components/home/types';
+import type { DeviceKeysState } from './useDeviceKeys';
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { useDirectMessageActions } from './useDirectMessageActions';
 import { useDirectMessages } from './useDirectMessages';
 import { useGroupConversations } from './useGroupConversations';
 
 interface UseHomeWorkspaceOptions {
   auth: AuthState | null;
+  deviceKeys: DeviceKeysState;
   pendingAction: string | null;
   setPendingAction: (action: string | null) => void;
   setWorkspaceError: (message: string | null) => void;
@@ -15,13 +18,16 @@ interface UseHomeWorkspaceOptions {
 /** Composes friends, direct messages, group DMs, and DM actions into the Home panel's props. */
 export function useHomeWorkspace({
   auth,
+  deviceKeys,
   pendingAction,
   setPendingAction,
   setWorkspaceError,
   setWorkspaceNotice,
 }: UseHomeWorkspaceOptions) {
+  const t = useTranslation();
   const directMessages = useDirectMessages({
     auth,
+    deviceKeys,
     setPendingAction,
     setWorkspaceError,
     setWorkspaceNotice,
@@ -43,6 +49,17 @@ export function useHomeWorkspace({
     setDirectConversations: directMessages.setDirectConversations,
     setWorkspaceError,
   });
+
+  // An edit is re-encrypted for the conversation the message belongs to; if that fails the edit
+  // fails visibly instead of storing plaintext in an encrypted conversation.
+  async function editDirectMessage(messageId: string, content: string) {
+    try {
+      const wireContent = await directMessages.encryptDirectMessageEdit(messageId, content);
+      await messageActions.editDirectMessage(messageId, wireContent);
+    } catch (err) {
+      setWorkspaceError(err instanceof Error ? err.message : t('encryption.error.keyShareFailed'));
+    }
+  }
 
   // The call section is added by AppShell, which owns the socket-bound call hooks.
   const homeProps: Omit<HomePanelProps, 'call'> | null = auth
@@ -75,7 +92,7 @@ export function useHomeWorkspace({
           reportComposerError: setWorkspaceError,
           setDirectMessageDraft: directMessages.setDirectMessageDraft,
           setReplyingToDirectMessage: directMessages.setReplyingToDirectMessage,
-          editDirectMessage: messageActions.editDirectMessage,
+          editDirectMessage,
           deleteDirectMessage: messageActions.deleteDirectMessage,
           toggleDirectReaction: messageActions.toggleDirectReaction,
           toggleDirectPin: messageActions.toggleDirectPin,

@@ -30,6 +30,11 @@ export class UpdateChannelDto {
   @IsBoolean()
   isAgeRestricted?: boolean;
 
+  /** Opt-in end-to-end encryption; `ManageChannels` only, like every other channel setting. */
+  @IsOptional()
+  @IsBoolean()
+  isEncrypted?: boolean;
+
   @IsOptional()
   @IsInt()
   @Min(0)

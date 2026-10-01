@@ -42,12 +42,12 @@ export class DirectMessagesController {
 
   @RateLimit({ keyPrefix: 'group-conversation-update', limit: 30, windowMs: 60_000 })
   @Patch(':conversationId')
-  rename(
+  update(
     @CurrentUser() user: RequestUser,
     @Param('conversationId') conversationId: string,
     @Body() dto: UpdateConversationDto,
   ) {
-    return this.conversations.rename(user.id, conversationId, dto);
+    return this.conversations.update(user.id, conversationId, dto);
   }
 
   @RateLimit({ keyPrefix: 'group-conversation-member', limit: 30, windowMs: 60_000 })

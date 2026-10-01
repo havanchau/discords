@@ -16,6 +16,7 @@ interface SendMentionPushInput {
   channelId: string;
   channelName: string;
   isAgeRestricted: boolean;
+  isEncrypted: boolean;
   content: string;
 }
 
@@ -33,6 +34,8 @@ interface SendDirectMessagePushInput {
   title: string;
   /** The same content-with-fallback text already computed for the in-app `Notification.body`. */
   body: string;
+  /** An encrypted conversation's push carries no content; `body` is ciphertext there. */
+  isEncrypted: boolean;
 }
 
 @Injectable()
@@ -97,13 +100,17 @@ export class PushService {
     const payload = JSON.stringify({
       title: this.i18n.t(locale, 'push.channelMessage.title', { channel: input.channelName }),
       // A lock screen is more public than the app: an age-restricted channel's push never carries
-      // its author or content, even for a recipient who confirmed their age.
-      body: input.isAgeRestricted
-        ? this.i18n.t(locale, 'push.channelMessage.ageRestrictedBody')
-        : this.i18n.t(locale, 'push.channelMessage.body', {
-            author: input.fromUsername,
-            content: truncate(input.content, 100),
-          }),
+      // its author or content, even for a recipient who confirmed their age. Encrypted is checked
+      // first because there is no plaintext to redact in the first place
+      // (docs/features/e2ee-key-management.md Rules item 11).
+      body: input.isEncrypted
+        ? this.i18n.t(locale, 'push.channelMessage.encryptedBody')
+        : input.isAgeRestricted
+          ? this.i18n.t(locale, 'push.channelMessage.ageRestrictedBody')
+          : this.i18n.t(locale, 'push.channelMessage.body', {
+              author: input.fromUsername,
+              content: truncate(input.content, 100),
+            }),
       icon: '/favicon.svg',
       badge: '/favicon.svg',
       data: {
@@ -139,9 +146,11 @@ export class PushService {
 
     const payload = JSON.stringify({
       title: this.i18n.t(locale, 'push.directMessage.title', { title: input.title }),
-      body: this.i18n.t(locale, 'push.directMessage.body', {
-        content: truncate(input.body, 100),
-      }),
+      body: input.isEncrypted
+        ? this.i18n.t(locale, 'push.directMessage.encryptedBody')
+        : this.i18n.t(locale, 'push.directMessage.body', {
+            content: truncate(input.body, 100),
+          }),
       icon: '/favicon.svg',
       badge: '/favicon.svg',
       data: {

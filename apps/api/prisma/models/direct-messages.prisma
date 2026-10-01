@@ -3,6 +3,12 @@ model DirectConversation {
   isGroup           Boolean                    @default(false)
   name              String?
   ownerId           String?
+  /// DMs are encrypted by default, but the COLUMN default is `false` on purpose: a `DEFAULT true`
+  /// would retroactively mark every pre-existing plaintext conversation as encrypted, which is
+  /// false. The application sets `true` explicitly when creating a conversation
+  /// (docs/features/e2ee-key-management.md -> DB / migration).
+  isEncrypted          Boolean                 @default(false)
+  encryptionKeyVersion Int                     @default(1)
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
   owner             User?                      @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
@@ -11,6 +17,7 @@ model DirectConversation {
   readStates        DirectReadState[]
   mutes             DirectConversationMute[]
   scheduledMessages ScheduledMessage[]
+  encryptionKeys    EncryptedChannelKey[]
 }
 
 model DirectConversationMember {

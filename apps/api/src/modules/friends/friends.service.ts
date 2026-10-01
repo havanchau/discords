@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { isE2eeEnabled } from '@/common/config/e2ee-feature-config';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import type { FriendsSummary } from '@discord-clone/shared';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
@@ -18,6 +20,7 @@ export class FriendsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimePublisher,
+    private readonly config: ConfigService,
   ) {}
 
   async list(userId: string): Promise<FriendsSummary> {
@@ -261,6 +264,9 @@ export class FriendsService {
 
     const conversation = await this.prisma.directConversation.create({
       data: {
+        // Encrypted from creation; the column default is false so older conversations stay
+        // plaintext. Gated on the E2EE feature flag, same as the group-DM path.
+        isEncrypted: isE2eeEnabled(this.config),
         members: {
           create: [{ userId }, { userId: friendUserId }],
         },

@@ -299,6 +299,7 @@ export class MessagesService {
       channelId: channel.id,
       channelName: channel.name,
       isAgeRestricted: channel.isAgeRestricted,
+      isEncrypted: channel.isEncrypted,
       isPrivate: channel.isPrivate,
       content,
     });
@@ -431,6 +432,7 @@ export class MessagesService {
       channelId: rootMessage.channelId,
       channelName: rootMessage.channel.name,
       isAgeRestricted: rootMessage.channel.isAgeRestricted,
+      isEncrypted: rootMessage.channel.isEncrypted,
       isPrivate: rootMessage.channel.isPrivate,
       content,
     });
@@ -849,6 +851,12 @@ export class MessagesService {
     channelName: string;
     /** Age-restricted channels get a content-free push body, whoever the recipient is. */
     isAgeRestricted: boolean;
+    /**
+     * Encrypted channels get a content-free push body; it wins over the age-restricted body. Callers
+     * that already hold the channel row pass it; one that omits it (forum, webhook, workflow and
+     * decision posts) has it read from the channel, so omission can never mean "not encrypted".
+     */
+    isEncrypted?: boolean;
     /** Required: every call site passes its channel's real value, so an `@everyone` fan-out in a
      * private channel can never fall back to the permissive default. */
     isPrivate: boolean;
@@ -948,6 +956,14 @@ export class MessagesService {
       );
     }
 
+    const isEncrypted =
+      input.isEncrypted ??
+      (
+        await this.prisma.channel.findUniqueOrThrow({
+          where: { id: input.channelId },
+          select: { isEncrypted: true },
+        })
+      ).isEncrypted;
     await Promise.all(
       [...recipientIds].map((toUserId) =>
         this.push.sendMentionPush({
@@ -958,6 +974,7 @@ export class MessagesService {
           channelId: input.channelId,
           channelName: input.channelName,
           isAgeRestricted: input.isAgeRestricted,
+          isEncrypted,
           content: input.content,
         }),
       ),

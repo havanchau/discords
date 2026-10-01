@@ -30,6 +30,9 @@ export const channels = {
   'channel.dialog.createStage': 'Create stage channel',
   'channel.dialog.createText': 'Create text channel',
   'channel.dialog.createVoice': 'Create voice channel',
+  'channel.encrypted.hint':
+    'Encrypts new messages end to end. Server search, AutoMod, bots and webhooks cannot read them, mentions send no notifications, and push shows a generic message. Turning it off later does not decrypt anything already sent, and lost keys cannot be recovered.',
+  'channel.encrypted.title': 'End-to-end encryption',
   'channel.field.ageRestricted': 'Age-restricted channel',
   'channel.field.category': 'Category',
   'channel.field.name': 'Channel name',

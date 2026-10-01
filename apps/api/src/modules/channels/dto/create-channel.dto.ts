@@ -25,6 +25,11 @@ export class CreateChannelDto {
   @IsBoolean()
   isAgeRestricted?: boolean;
 
+  /** Opt-in end-to-end encryption; `ManageChannels` only, like every other channel setting. */
+  @IsOptional()
+  @IsBoolean()
+  isEncrypted?: boolean;
+
   /** Kept only when `type` is FORUM. */
   @IsOptional()
   @IsString()

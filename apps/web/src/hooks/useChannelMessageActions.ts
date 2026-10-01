@@ -1,16 +1,7 @@
-import {
-  Dispatch,
-  MutableRefObject,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Socket } from 'socket.io-client';
 import { apiRequest, AuthState, Channel, Message, Poll } from '@/api';
 import type { ChannelMessageActions } from '@/components/chat/types';
-import { encryptChannelMessage } from '@/e2ee';
 import { updatePollInMessages } from '@/utils/polls';
 
 interface UseChannelMessageActionsOptions {
@@ -18,7 +9,7 @@ interface UseChannelMessageActionsOptions {
   socket: Socket | null;
   channel: Channel | null;
   messages: Message[];
-  channelKeysRef: MutableRefObject<Record<string, CryptoKey>>;
+  encryptForChannel: (channelId: string, plaintext: string) => Promise<string>;
   decryptMessageForDisplay: (message: Message) => Promise<Message>;
   setMessages: Dispatch<SetStateAction<Message[]>>;
   editingMessageId: string | null;
@@ -39,7 +30,7 @@ export function useChannelMessageActions({
   socket,
   channel,
   messages,
-  channelKeysRef,
+  encryptForChannel,
   decryptMessageForDisplay,
   setMessages,
   editingMessageId,
@@ -63,10 +54,8 @@ export function useChannelMessageActions({
     async (messageId: string) => {
       if (!auth || !editingDraft.trim()) return;
       const editingMessage = messagesRef.current.find((message) => message.id === messageId);
-      const channelKey = editingMessage ? channelKeysRef.current[editingMessage.channelId] : null;
-      const content = channelKey
-        ? await encryptChannelMessage(channelKey, editingDraft.trim())
-        : editingDraft.trim();
+      if (!editingMessage) return;
+      const content = await encryptForChannel(editingMessage.channelId, editingDraft.trim());
       const result = await apiRequest<{ message: Message }>(
         `/messages/${messageId}`,
         {
@@ -85,7 +74,7 @@ export function useChannelMessageActions({
     [
       auth,
       editingDraft,
-      channelKeysRef,
+      encryptForChannel,
       decryptMessageForDisplay,
       setMessages,
       setEditingMessageId,

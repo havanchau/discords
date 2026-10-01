@@ -191,6 +191,10 @@ export interface Channel {
   slowmodeSeconds?: number;
   /** Message content needs `User.ageConfirmedAt`; the channel row itself stays visible. */
   isAgeRestricted: boolean;
+  /** Opt-in per channel by a `ManageChannels` holder (docs/features/e2ee-key-management.md). */
+  isEncrypted?: boolean;
+  /** Rotation counter; an ordering hint for "which content key to encrypt new sends under". */
+  encryptionKeyVersion?: number;
   /** Set only on a FORUM channel. */
   postGuidelines?: string | null;
   unreadCount?: number;
@@ -564,6 +568,9 @@ export interface DirectConversation {
   isGroup?: boolean;
   name?: string | null;
   ownerId?: string | null;
+  /** True from creation for every new conversation; false for ones that predate E2EE. */
+  isEncrypted?: boolean;
+  encryptionKeyVersion?: number;
   members: Array<{ user: PublicUser }>;
   messages: DirectMessage[];
   updatedAt?: Date;

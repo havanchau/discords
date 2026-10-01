@@ -13,6 +13,8 @@ export const queryKeys = {
   serverStickers: (serverId: string) => ['server-stickers', serverId] as const,
   serverSoundboard: (serverId: string) => ['server-soundboard', serverId] as const,
   sessions: (userId: string) => ['auth-sessions', userId] as const,
+  /** The viewer's own registered E2EE devices. */
+  deviceKeys: (userId: string) => ['device-keys', userId] as const,
   accountExport: (userId: string) => ['account-export', userId] as const,
   userProfile: (userId: string, serverId: string | null) =>
     ['user-profile', userId, serverId] as const,

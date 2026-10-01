@@ -30,6 +30,9 @@ export const channels = {
   'channel.dialog.createStage': 'Tạo kênh sân khấu',
   'channel.dialog.createText': 'Tạo kênh văn bản',
   'channel.dialog.createVoice': 'Tạo kênh thoại',
+  'channel.encrypted.hint':
+    'Mã hoá đầu cuối các tin nhắn mới. Tìm kiếm trên máy chủ, AutoMod, bot và webhook không đọc được chúng, lượt nhắc tên không gửi thông báo và thông báo đẩy chỉ hiện nội dung chung. Tắt sau này không giải mã những gì đã gửi, và khoá bị mất không thể khôi phục.',
+  'channel.encrypted.title': 'Mã hoá đầu cuối',
   'channel.field.ageRestricted': 'Kênh giới hạn độ tuổi',
   'channel.field.category': 'Danh mục',
   'channel.field.name': 'Tên kênh',

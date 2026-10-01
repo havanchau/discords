@@ -1,0 +1,56 @@
+/// Per-device E2EE key management (docs/features/e2ee-key-management.md).
+///
+/// A device's private key never exists server-side: only the public key is registered here, and
+/// content keys are stored exclusively as ciphertext wrapped for one specific device.
+
+model DeviceKey {
+  id        String    @id @default(cuid())
+  userId    String
+  /// Client-generated, stable per browser profile / machine; unique per user.
+  deviceId  String
+  /// Base64url SPKI of an ECDH P-256 public key. Never a private key — there is none here.
+  publicKey String
+  label     String?
+  createdAt DateTime  @default(now())
+  /// Set by "log out this device" (Rules item 9). A revoked device is skipped by every future wrap,
+  /// but its existing wraps are not retracted — it can still open history it already had a key for.
+  revokedAt DateTime?
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wrappedKeys EncryptedChannelKey[]
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+}
+
+/// One content key, wrapped for one device. Holds both channel and conversation keys through a
+/// dual-nullable FK, following the `Poll` model's `messageId`/`directMessageId` pattern.
+model EncryptedChannelKey {
+  id             String   @id @default(cuid())
+  channelId      String?
+  conversationId String?
+  /// Identifies the exact content key: base64url of the first 16 bytes of SHA-256(raw key bytes).
+  /// What a `v2` message actually names and what decryption looks up — never guessed or scanned for.
+  keyId          String
+  /// Ordering/"current key to encrypt new sends under" hint only; never what a message references.
+  /// Clients converge on the lowest `keyId` for a `version` (Edge cases → convergence rule).
+  version        Int
+  deviceKeyId    String
+  /// AES-KW output: the content key wrapped to `deviceKey`'s public key. Ciphertext only.
+  wrappedKey     String
+  createdAt      DateTime @default(now())
+
+  channel      Channel?            @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  conversation DirectConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  deviceKey    DeviceKey           @relation(fields: [deviceKeyId], references: [id], onDelete: Cascade)
+
+  /// Split in two on purpose: PostgreSQL treats NULLs as distinct, so a single composite unique
+  /// across both scope columns would never fire (every row has one of them NULL). Each row has
+  /// exactly one non-null scope column, so exactly one of these two covers it. Their
+  /// `(scope, keyId)` prefix also serves the decrypt-by-keyId and pending-wraps lookups.
+  @@unique([channelId, keyId, deviceKeyId])
+  @@unique([conversationId, keyId, deviceKeyId])
+  @@index([deviceKeyId])
+  @@index([channelId, version])
+  @@index([conversationId, version])
+}

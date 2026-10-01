@@ -11,6 +11,7 @@ import { ChannelsModule } from './modules/channels/channels.module';
 import { DecisionsModule } from './modules/decisions/decisions.module';
 import { DirectMessagesModule } from './modules/direct-messages/direct-messages.module';
 import { EmojisModule } from './modules/emojis/emojis.module';
+import { EncryptionModule } from './modules/encryption/encryption.module';
 import { SoundboardModule } from './modules/soundboard/soundboard.module';
 import { StageModule } from './modules/stage/stage.module';
 import { StickersModule } from './modules/stickers/stickers.module';
@@ -58,6 +59,7 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
     DecisionsModule,
     MessagesModule,
     EmojisModule,
+    EncryptionModule,
     StickersModule,
     SoundboardModule,
     EventsModule,

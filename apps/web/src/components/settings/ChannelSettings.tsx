@@ -2,6 +2,7 @@ import { FORUM_POST_GUIDELINES_MAX_LENGTH } from '@discord-clone/shared';
 import { Hash } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { assetUrl } from '@/api';
+import { E2EE_UI_ENABLED } from '@/featureFlags';
 import { useTranslation, type Translate } from '@/i18n/LocaleProvider';
 import { Button, TextArea, TextField } from '@/components/ui';
 import { CheckRow, SwitchRow } from './SettingsRows';
@@ -191,6 +192,14 @@ export function ChannelSettings({
           description={t('channel.ageRestricted.hint')}
           defaultChecked={Boolean(channel.isAgeRestricted)}
         />
+        {channel.type === 'TEXT' && (E2EE_UI_ENABLED || channel.isEncrypted) ? (
+          <SwitchRow
+            name="isEncrypted"
+            title={t('channel.encrypted.title')}
+            description={t('channel.encrypted.hint')}
+            defaultChecked={Boolean(channel.isEncrypted)}
+          />
+        ) : null}
         <TextField
           label={t('channel.field.type')}
           value={

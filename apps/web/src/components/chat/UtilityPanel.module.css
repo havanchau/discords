@@ -121,29 +121,6 @@
   padding: var(--space-2) 0;
 }
 
-.encryptionPanel {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.encryptionPanel strong {
-  color: var(--text-primary);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-}
-
-.encryptionPanel span {
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-base);
-}
-
-.encryptionActions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .searchResults {
   display: grid;
   gap: var(--space-2);

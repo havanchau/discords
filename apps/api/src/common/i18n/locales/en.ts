@@ -297,6 +297,8 @@ export const enApiMessages = {
   'push.channelMessage.ageRestrictedBody': 'New message in an age-restricted channel',
   'push.directMessage.title': '{title}',
   'push.directMessage.body': '{content}',
+  'push.channelMessage.encryptedBody': 'New encrypted message',
+  'push.directMessage.encryptedBody': 'New encrypted message',
   'reminder.savedMessage.title': 'Reminder: saved message',
   'reminder.savedMessage.body': '{author}: {content}',
   'reminder.savedMessage.ageRestrictedBody': 'A message you saved from an age-restricted channel',
@@ -350,4 +352,14 @@ export const enApiMessages = {
   WORKFLOW_NOT_FOUND: 'Workflow not found',
   WORKFLOW_TERMS_REQUIRED_FOR_MESSAGE_MATCHES: 'terms is required for MESSAGE_MATCHES',
   WORKFLOW_URL_REQUIRED_FOR_HTTP_CALL: 'url is required for HTTP_CALL',
+  // Per-device E2EE key management (docs/features/e2ee-key-management.md).
+  ENCRYPTION_IS_NOT_AVAILABLE: 'Encryption is not available',
+  A_DEVICE_ID_IS_REQUIRED: 'A_DEVICE_ID_IS_REQUIRED',
+  DEVICE_DOES_NOT_BELONG_TO_THIS_ACCOUNT: 'DEVICE_DOES_NOT_BELONG_TO_THIS_ACCOUNT',
+  DEVICE_KEY_HAS_BEEN_REVOKED: 'DEVICE_KEY_HAS_BEEN_REVOKED',
+  ENCRYPTION_IS_NOT_ENABLED: 'ENCRYPTION_IS_NOT_ENABLED',
+  INVALID_DEVICE_PUBLIC_KEY: 'INVALID_DEVICE_PUBLIC_KEY',
+  INVALID_KEY_VERSION: 'INVALID_KEY_VERSION',
+  INVALID_WRAP_TARGET: 'INVALID_WRAP_TARGET',
+  NOTHING_TO_UPDATE: 'NOTHING_TO_UPDATE',
 } as const;
