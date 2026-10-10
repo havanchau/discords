@@ -188,6 +188,20 @@ Acceptance criteria:
 
 ## Deployment Notes
 
+### Web build portability repair
+
+The web build must force `NODE_ENV=production` on Windows and Unix shells. Use a
+Node entry point that sets the environment before importing Vite and runs its
+production build. Declare `@dnd-kit/utilities` directly because web source imports
+it, and restore the installed workspace dependencies from the lockfile.
+
+- [x] Replace the shell-specific environment assignment with a Node entry point.
+- [x] Declare the directly imported drag-and-drop utility dependency and restore dependencies.
+- [x] Verify the web build, scoped lint, and formatting.
+- [ ] Pass the repository documentation check: blocked by the existing missing
+      `docs/screenshots/before/redesign-baseline-desktop.png` link in
+      `docs/features/ui-identity-redesign.md`.
+
 - Run the new migration (`prisma migrate deploy`) before or with the API deploy; it only adds an index on a small table.
 - Rebuild Docker images so `.env` files are excluded from the build context and the web image gets the production React build.
 - Frontend and API can ship independently; the `email` removal only affects third-party clients.
