@@ -118,6 +118,24 @@ Project settings:
 - Build command: `npm run build --workspace apps/web`
 - Output directory: `apps/web/dist`
 
+If Root Directory is `apps/web`, use the app-local `vercel.json`: install from
+the repository root with `npm ci --prefix ../..`, build with `npm run build`,
+and output to `dist`. Enable **Include source files outside of the Root
+Directory in the Build Step** because TypeScript and Vite use `packages/shared`
+and the root TypeScript configuration. Clear dashboard command overrides that
+still use `--workspace apps/web` from inside the app directory.
+
+Vercel build repair checklist:
+
+- [x] Add explicit install commands and configuration for both supported root directories.
+- [x] Verify both configured build commands locally.
+- [x] Run `vercel build --prod` with the linked project's settings and environment.
+      Verified on 2026-10-10 with CLI 62.7.0 against
+      `havanchaus-projects/discords-web` (Root Directory: `apps/web`): clean install,
+      TypeScript, Vite, and Vercel output generation passed. Production
+      `VITE_API_URL` and `VITE_SOCKET_URL` were pulled as sensitive placeholders,
+      so this verifies compilation, not live API connectivity. No deployment was made.
+
 Vercel variables:
 
 ```env
