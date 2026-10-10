@@ -102,7 +102,8 @@ copies of Discord's palette at slightly different luminance and are not meaningf
 
 ### Observed visual defects
 
-Captured before the change, from [`../screenshots/before/redesign-baseline-desktop.png`](../screenshots/before/redesign-baseline-desktop.png):
+Recorded before the change. The original baseline screenshot
+(`docs/screenshots/before/redesign-baseline-desktop.png`) is not included in this repository:
 
 - The server rail clips its first icon and renders a stray element at `x=0`.
 - The workspace banner is a purple gradient with an unrelated red disc and yellow bar.
