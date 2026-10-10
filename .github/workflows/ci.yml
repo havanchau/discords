@@ -10,6 +10,15 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     services:
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
       postgres:
         image: postgres:16-alpine
         env:
@@ -25,6 +34,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/discord_clone
+      REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-secret
       WEB_ORIGIN: http://localhost:5173
       VITE_API_URL: http://localhost:3000
@@ -47,6 +57,7 @@ jobs:
       - run: npm run i18n:check
       - run: npm run ui:scan
       - run: npm run build
+      - run: npm run test:startup
       - name: Start API for smoke test
         run: |
           npm run start --workspace apps/api > /tmp/discord-api.log 2>&1 &

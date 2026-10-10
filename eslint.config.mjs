@@ -13,6 +13,7 @@ export default tseslint.config(
       'apps/web/dist/**',
       'package-lock.json',
       '.claude/worktrees/**',
+      '.vercel/**',
     ],
   },
   js.configs.recommended,

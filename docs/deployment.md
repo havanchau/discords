@@ -168,6 +168,26 @@ Where to find them:
 
 ## 4. Deployment Flow
 
+CI requires healthy PostgreSQL and Redis services before API startup. The smoke
+test environment must set `REDIS_URL` to its Redis service. Automatic production
+deployment must only follow a successful CI run.
+
+CI repair checklist:
+
+- [x] Add a healthy Redis service and its URL to the CI environment.
+- [x] Prevent automatic deployment after a failed CI run.
+- [x] Exclude generated Vercel build artifacts from source linting.
+- [x] Start realtime maintenance timers only after module initialization has finished.
+- [x] Run all CI checks, database setup, API/web startup, and UI smoke tests.
+- [x] Review the verified repair before pushing.
+
+Verified on 2026-10-10: clean install, Prisma generate/schema setup/seed, format,
+lint, typecheck, file size, docs, i18n, UI scan, shared/API/web builds, startup
+regression test, API health, web preview, and desktop/mobile UI smoke passed.
+Local verification used disposable PostgreSQL and Redis containers and separate
+API/web ports. `npm run test:startup` runs after the build and checks that a slow
+module initialization cannot start Redis maintenance commands prematurely.
+
 Pull request:
 
 ```text

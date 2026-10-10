@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { RedisService } from '@/modules/redis/redis.service';
 import { CallRegistryService } from './call-registry.service';
@@ -17,10 +17,11 @@ const RING_SWEEP_INTERVAL_MS = 2_000;
  * was killed" — the second case never runs a disconnect handler, so nothing else would clean it up.
  */
 @Injectable()
-export class RealtimeHeartbeatService implements OnModuleDestroy {
+export class RealtimeHeartbeatService implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(RealtimeHeartbeatService.name);
   private heartbeatTimer?: ReturnType<typeof setInterval>;
   private ringSweepTimer?: ReturnType<typeof setInterval>;
+  private server?: Server;
 
   constructor(
     private readonly redis: RedisService,
@@ -30,6 +31,13 @@ export class RealtimeHeartbeatService implements OnModuleDestroy {
   ) {}
 
   start(server: Server) {
+    this.server = server;
+  }
+
+  onApplicationBootstrap() {
+    const server = this.server;
+    if (!server) return;
+
     this.heartbeatTimer = setInterval(() => {
       void this.tick(server);
     }, this.redis.config.heartbeatIntervalMs);
