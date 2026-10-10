@@ -144,8 +144,7 @@ Acceptance criteria:
   `node-cron` dependency (grepped, same finding `scheduled-messages.md` → Current Behavior already
   recorded).
 - `Permission` (`apps/api/src/modules/permissions/channel-permission.ts:1-14`) is
-  `ViewChannel, SendMessages, ManageMessages, ManageChannels, ManageServer, ManageRoles, KickMembers,
-  BanMembers, CreateInvite, ConnectVoice, SpeakVoice, UploadFiles, MuteMembers` — there is no
+  `ViewChannel, SendMessages, ManageMessages, ManageChannels, ManageServer, ManageRoles, KickMembers, BanMembers, CreateInvite, ConnectVoice, SpeakVoice, UploadFiles, MuteMembers` — there is no
   `PUBLISH`/`DECIDE`/`MODERATE_DECISIONS` bit. `announcement-channels.md` and `forum-channels.md` both
   established this repo's precedent of reusing `ManageMessages`/`ManageChannels` rather than minting a
   new permission for a new moderator-only action; this doc follows the same precedent for
@@ -178,16 +177,13 @@ ACCEPTED --(MANAGE_MESSAGES marks superseded by a newer decision)--> SUPERSEDED
   `PROPOSED` with a not-yet-passed deadline; the thread's replies are the discussion.
 - Every transition is a single conditional `UPDATE`, per `rules/failure-and-state.md` ("the allowed
   transition belongs in the `WHERE`, not in an `if` above the update"):
-  - Resolve: `UPDATE "Decision" SET status = <ACCEPTED|REJECTED>, decidedAt = now(), decidedById = ?
-    WHERE id = ? AND status = 'PROPOSED'` — an affected-row count of `0` means someone already
+  - Resolve: `UPDATE "Decision" SET status = <ACCEPTED|REJECTED>, decidedAt = now(), decidedById = ? WHERE id = ? AND status = 'PROPOSED'` — an affected-row count of `0` means someone already
     resolved it (deadline sweep raced a manual resolve, or a double-click); the caller sees
     `409 Decision already resolved`, not a second write.
-  - Supersede: `UPDATE "Decision" SET status = 'SUPERSEDED', supersededByDecisionId = ?
-    WHERE id = ? AND status = 'ACCEPTED'` — `0` rows means it was not `ACCEPTED` (already superseded,
+  - Supersede: `UPDATE "Decision" SET status = 'SUPERSEDED', supersededByDecisionId = ? WHERE id = ? AND status = 'ACCEPTED'` — `0` rows means it was not `ACCEPTED` (already superseded,
     still `PROPOSED`, or `REJECTED`); `409 Decision is not an accepted decision`.
   - Expire (deadline reached, quorum not met — decided, see Voting → Quorum):
-    `UPDATE "Decision" SET "expiredAt" = now() WHERE id = ? AND status = 'PROPOSED' AND "expiredAt" IS
-    NULL` — this does **not** change `status`; the decision stays `PROPOSED` and waits for a manual
+    `UPDATE "Decision" SET "expiredAt" = now() WHERE id = ? AND status = 'PROPOSED' AND "expiredAt" IS NULL` — this does **not** change `status`; the decision stays `PROPOSED` and waits for a manual
     resolve. `0` rows means it was already marked or already resolved.
 - **What can fail here** (`rules/failure-and-state.md` — before writing the write path):
   1. What can fail: the poll vote count read and the status write are not atomic without care; the
@@ -241,16 +237,14 @@ ACCEPTED --(MANAGE_MESSAGES marks superseded by a newer decision)--> SUPERSEDED
     someone considered it and voted it down. Leaving it visibly unresolved ("expired, needs a human")
     is the honest state; a moderator's manual resolve is itself now the recorded decision-maker.
   - Setting `expiredAt` is its own conditional write, same discipline as every other transition:
-    `UPDATE "Decision" SET "expiredAt" = now() WHERE id = ? AND status = 'PROPOSED' AND "expiredAt" IS
-    NULL` — a `0`-row result means another sweep tick or a manual resolve already handled it; skip,
+    `UPDATE "Decision" SET "expiredAt" = now() WHERE id = ? AND status = 'PROPOSED' AND "expiredAt" IS NULL` — a `0`-row result means another sweep tick or a manual resolve already handled it; skip,
     no error. `expiredAt` being set does not change `status`; the later manual `resolve` still runs
     the same `UPDATE ... WHERE status = 'PROPOSED'` from Status lifecycle (it does not need to check
     `expiredAt` — a `PROPOSED` decision is resolvable whether or not it has expired).
-- **Accept/reject rule**, applied only once quorum is met (or none is required): `acceptVotes >
-  rejectVotes` → `ACCEPTED`; `acceptVotes <= rejectVotes` (a tie, including 0–0 when no quorum is
+- **Accept/reject rule**, applied only once quorum is met (or none is required): `acceptVotes > rejectVotes` → `ACCEPTED`; `acceptVotes <= rejectVotes` (a tie, including 0–0 when no quorum is
   set) → `REJECTED` — **closed** (`open-questions.md` #60, closed 2026-09-25): a tie has no majority
   to act on, so it defaults to "no change," the same reasoning a below-quorum vote does not get, since
-  a tie means people *did* participate and reached no consensus, which is a real, recordable outcome
+  a tie means people _did_ participate and reached no consensus, which is a real, recordable outcome
   (unlike zero participation).
 
 ### Deadline resolution
@@ -261,16 +255,15 @@ ACCEPTED --(MANAGE_MESSAGES marks superseded by a newer decision)--> SUPERSEDED
   decision deadline has none of scheduled-messages' "post it now" urgency, so a longer interval than
   `ReminderSweepService`'s reminder cadence is acceptable — a specific number to confirm at
   implementation time, not load-bearing to this doc).
-- Each tick: `SELECT id FROM "Decision" WHERE status = 'PROPOSED' AND "expiredAt" IS NULL AND
-  "votingDeadlineAt" <= now() LIMIT 50` (the `"expiredAt" IS NULL` guard skips decisions already
+- Each tick: `SELECT id FROM "Decision" WHERE status = 'PROPOSED' AND "expiredAt" IS NULL AND "votingDeadlineAt" <= now() LIMIT 50` (the `"expiredAt" IS NULL` guard skips decisions already
   marked expired-and-waiting-for-manual-resolve, so the tick does not keep re-reading them every 30
   seconds), then for each id: read the poll's total vote count, and
   - below `quorumCount` (when set) → the **expire** write (Status lifecycle) — stays `PROPOSED`, sets
     `expiredAt`;
   - quorum met or no `quorumCount` → the **resolve** write (Status lifecycle) — `ACCEPTED`/`REJECTED`
     per the accept/reject rule.
-  A `0`-row update on either write means another instance's tick, or a manual resolve, already
-  claimed it — skip, no error.
+    A `0`-row update on either write means another instance's tick, or a manual resolve, already
+    claimed it — skip, no error.
 - No `@nestjs/schedule` or queue library is added — same reasoning `scheduled-messages.md` gives:
   `ReminderSweepService`'s plain-timer-plus-conditional-claim pattern already proves correct across
   multiple API instances, and a decision deadline needs even less precision than a scheduled message
@@ -307,8 +300,7 @@ ACCEPTED --(MANAGE_MESSAGES marks superseded by a newer decision)--> SUPERSEDED
 
 ### Rules / Flow — proposal creation
 
-1. `POST /channels/:channelId/decisions` on a `DECISION` channel: `{ title, content, attachments?,
-   votingDeadlineAt, quorumCount? }`.
+1. `POST /channels/:channelId/decisions` on a `DECISION` channel: `{ title, content, attachments?, votingDeadlineAt, quorumCount? }`.
 2. Same gates as a forum post (`forum-channels.md` → Rules): `SendMessages`, `requireNotTimedOut`,
    slowmode, rules screening (onboarding), AutoMod screening of title + body together — via a new
    `MessagesService.requireCanPostInDecision`, mirroring `requireCanPostInForum`
@@ -317,7 +309,7 @@ ACCEPTED --(MANAGE_MESSAGES marks superseded by a newer decision)--> SUPERSEDED
    list, hence longer than a forum post's 100-character cap — `forum-channels.md` → Rules). `content`:
    same empty-content rule as any thread root (`messages.service.ts:284-286` per `forum-channels.md`).
 4. `votingDeadlineAt`: **closed — reuses the poll's own bound exactly, no separate bound**
-   (`open-questions.md` #61, closed 2026-09-25). The vote *is* the underlying `Poll`'s `expiresAt`
+   (`open-questions.md` #61, closed 2026-09-25). The vote _is_ the underlying `Poll`'s `expiresAt`
    (Voting → reusing `Poll`); a decision-specific bound that differs from the poll's own
    `validatePollExpiry` window (`apps/api/src/modules/polls/poll-status.ts:24-31`, 5 minutes with a
    1-minute grace to 7 days) would let a caller set a `votingDeadlineAt` the underlying poll then
@@ -340,55 +332,53 @@ ACCEPTED --(MANAGE_MESSAGES marks superseded by a newer decision)--> SUPERSEDED
 
 ### Edge cases
 
-| Case | Expected behavior |
-|---|---|
-| No `quorumCount` set, 0 votes at deadline | Quorum is vacuously met (no requirement) → accept/reject rule applies to `0 <= 0` → `REJECTED` (a tie, not "no participation" in this case, since there was no minimum to fail). |
-| `quorumCount` set, votes below it at deadline | **Stays `PROPOSED`**, `expiredAt` set (decided, `open-questions.md` #60) — not auto-`REJECTED`. Visible as "expired, needs manual resolution"; a `MANAGE_MESSAGES` holder resolves it via the same `resolve` endpoint. |
-| Tie vote (quorum met or not required) | `REJECTED` — a tie is a real, recorded "no consensus" outcome, decided in Voting → Accept/reject rule. |
-| Duplicate resolve (deadline sweep and a manual resolve race) | Conditional `UPDATE ... WHERE status = 'PROPOSED'` — whichever commits first wins; the loser gets `0` affected rows (sweep: skip silently; manual: `409`). |
-| Expired proposal never picked up (API down at deadline) | Resolves (or expires, per quorum) on the next tick after restart — `votingDeadlineAt <= now()` still matches; no time-boxed miss unlike `ScheduledMessageSweepService`'s `SENDING`-timeout case, because resolving a decision has no external side effect to worry about re-doing. |
-| Manual resolve of a decision already marked `expiredAt` | Allowed — the `resolve` endpoint's `UPDATE ... WHERE status = 'PROPOSED'` does not check `expiredAt`; a `PROPOSED` decision is resolvable whether or not it expired. |
-| Unauthorized resolve/supersede (missing `MANAGE_MESSAGES`) | `403`. |
-| Resolve a channel-view-only member's `GET` on an already-resolved decision | Reads fine (`200`); only the resolve/supersede *write* is gated. |
-| Supersede target not `ACCEPTED` | `409 Decision is not an accepted decision`. |
-| Proposal in a non-`DECISION` channel | `POST /channels/:channelId/decisions` on `TEXT`/`FORUM`/etc. → `400 Channel is not a decision channel`, mirroring `requireReadableForumChannel`'s `400 Channel is not a forum channel`. |
-| Caller cannot view the channel | `404`, matching `requireReadableChannel`'s not-found-not-forbidden convention for `ViewChannel` failures. |
+| Case                                                                       | Expected behavior                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No `quorumCount` set, 0 votes at deadline                                  | Quorum is vacuously met (no requirement) → accept/reject rule applies to `0 <= 0` → `REJECTED` (a tie, not "no participation" in this case, since there was no minimum to fail).                                                                                                   |
+| `quorumCount` set, votes below it at deadline                              | **Stays `PROPOSED`**, `expiredAt` set (decided, `open-questions.md` #60) — not auto-`REJECTED`. Visible as "expired, needs manual resolution"; a `MANAGE_MESSAGES` holder resolves it via the same `resolve` endpoint.                                                             |
+| Tie vote (quorum met or not required)                                      | `REJECTED` — a tie is a real, recorded "no consensus" outcome, decided in Voting → Accept/reject rule.                                                                                                                                                                             |
+| Duplicate resolve (deadline sweep and a manual resolve race)               | Conditional `UPDATE ... WHERE status = 'PROPOSED'` — whichever commits first wins; the loser gets `0` affected rows (sweep: skip silently; manual: `409`).                                                                                                                         |
+| Expired proposal never picked up (API down at deadline)                    | Resolves (or expires, per quorum) on the next tick after restart — `votingDeadlineAt <= now()` still matches; no time-boxed miss unlike `ScheduledMessageSweepService`'s `SENDING`-timeout case, because resolving a decision has no external side effect to worry about re-doing. |
+| Manual resolve of a decision already marked `expiredAt`                    | Allowed — the `resolve` endpoint's `UPDATE ... WHERE status = 'PROPOSED'` does not check `expiredAt`; a `PROPOSED` decision is resolvable whether or not it expired.                                                                                                               |
+| Unauthorized resolve/supersede (missing `MANAGE_MESSAGES`)                 | `403`.                                                                                                                                                                                                                                                                             |
+| Resolve a channel-view-only member's `GET` on an already-resolved decision | Reads fine (`200`); only the resolve/supersede _write_ is gated.                                                                                                                                                                                                                   |
+| Supersede target not `ACCEPTED`                                            | `409 Decision is not an accepted decision`.                                                                                                                                                                                                                                        |
+| Proposal in a non-`DECISION` channel                                       | `POST /channels/:channelId/decisions` on `TEXT`/`FORUM`/etc. → `400 Channel is not a decision channel`, mirroring `requireReadableForumChannel`'s `400 Channel is not a forum channel`.                                                                                            |
+| Caller cannot view the channel                                             | `404`, matching `requireReadableChannel`'s not-found-not-forbidden convention for `ViewChannel` failures.                                                                                                                                                                          |
 
 ## Technical approach
 
 **Files touched**
 
-| File | Change |
-|---|---|
-| `apps/api/prisma/models/channels.prisma` | `ChannelType` gains `DECISION`. |
-| `apps/api/prisma/models/messages.prisma` (or a new `decisions.prisma` model file, following the repo's per-domain model-file split seen in `ls apps/api/prisma/models/`) | New `DecisionStatus` enum and `Decision` model. |
-| new migration `apps/api/prisma/migrations/<timestamp>_add_decision_channels/` | Hand-written; adds the enum value, `DecisionStatus`, and the `Decision` table. |
-| `apps/api/src/modules/channels/dto/create-channel.dto.ts` | `@IsIn([...])` gains `'DECISION'`. |
-| `apps/api/src/modules/channels/channels.service.ts` | New `requireReadableDecisionChannel`, mirroring `requireReadableForumChannel` (`:192-197`). |
-| `apps/api/src/modules/messages/messages.service.ts` | New `requireCanPostInDecision`, mirroring `requireCanPostInForum` (`:186-190`). |
-| `apps/api/src/modules/polls/polls.service.ts`, `apps/api/src/modules/polls/poll.format.ts` | `pollCreateData` (private, `polls.service.ts:69,128`) is promoted to an exported function (e.g. `buildPollCreateData` in `poll.format.ts`); `createChannelPoll`/the DM equivalent call the exported function instead of the private method — **closed**, `open-questions.md` #62; see Voting → `pollCreateData`. |
-| `apps/api/src/modules/decisions/` (new module) | `decisions.module.ts`, `decisions.service.ts` (create/resolve/supersede/list), `decision-sweep.service.ts` (the interval), `decision.format.ts`, `dto/create-decision.dto.ts`, `dto/resolve-decision.dto.ts`. |
-| `apps/api/src/modules/messages/messages.search.ts` | No change (see Changes → Search). |
-| `packages/shared/src/api-contract.ts` | `ChannelType` gains `'DECISION'`; new `DecisionView`, `DecisionStatus` union, `CreateDecisionInput`. |
-| `apps/web/src/components/workspace/ChannelSidebar.tsx` | New icon branch (e.g. `Gavel` or `CheckSquare`) alongside `:150-155`, new "Create decision channel" menu item alongside `:199-214`. |
-| `apps/web/src/components/workspace/types.ts` | `ChannelCreateType` gains `'DECISION'`. |
-| `apps/web/src/components/decisions/` (new) | `DecisionChannelView.tsx`, `DecisionCard.tsx` (reuses `PollCard` for the vote UI), `NewDecisionDialog.tsx`, `DecisionIndexView.tsx` (server-wide index). |
-| `apps/web/src/i18n/locales/en.ts`, `vi.ts` | New `decision.*` keys. |
+| File                                                                                                                                                                     | Change                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/models/channels.prisma`                                                                                                                                 | `ChannelType` gains `DECISION`.                                                                                                                                                                                                                                                                                  |
+| `apps/api/prisma/models/messages.prisma` (or a new `decisions.prisma` model file, following the repo's per-domain model-file split seen in `ls apps/api/prisma/models/`) | New `DecisionStatus` enum and `Decision` model.                                                                                                                                                                                                                                                                  |
+| new migration `apps/api/prisma/migrations/<timestamp>_add_decision_channels/`                                                                                            | Hand-written; adds the enum value, `DecisionStatus`, and the `Decision` table.                                                                                                                                                                                                                                   |
+| `apps/api/src/modules/channels/dto/create-channel.dto.ts`                                                                                                                | `@IsIn([...])` gains `'DECISION'`.                                                                                                                                                                                                                                                                               |
+| `apps/api/src/modules/channels/channels.service.ts`                                                                                                                      | New `requireReadableDecisionChannel`, mirroring `requireReadableForumChannel` (`:192-197`).                                                                                                                                                                                                                      |
+| `apps/api/src/modules/messages/messages.service.ts`                                                                                                                      | New `requireCanPostInDecision`, mirroring `requireCanPostInForum` (`:186-190`).                                                                                                                                                                                                                                  |
+| `apps/api/src/modules/polls/polls.service.ts`, `apps/api/src/modules/polls/poll.format.ts`                                                                               | `pollCreateData` (private, `polls.service.ts:69,128`) is promoted to an exported function (e.g. `buildPollCreateData` in `poll.format.ts`); `createChannelPoll`/the DM equivalent call the exported function instead of the private method — **closed**, `open-questions.md` #62; see Voting → `pollCreateData`. |
+| `apps/api/src/modules/decisions/` (new module)                                                                                                                           | `decisions.module.ts`, `decisions.service.ts` (create/resolve/supersede/list), `decision-sweep.service.ts` (the interval), `decision.format.ts`, `dto/create-decision.dto.ts`, `dto/resolve-decision.dto.ts`.                                                                                                    |
+| `apps/api/src/modules/messages/messages.search.ts`                                                                                                                       | No change (see Changes → Search).                                                                                                                                                                                                                                                                                |
+| `packages/shared/src/api-contract.ts`                                                                                                                                    | `ChannelType` gains `'DECISION'`; new `DecisionView`, `DecisionStatus` union, `CreateDecisionInput`.                                                                                                                                                                                                             |
+| `apps/web/src/components/workspace/ChannelSidebar.tsx`                                                                                                                   | New icon branch (e.g. `Gavel` or `CheckSquare`) alongside `:150-155`, new "Create decision channel" menu item alongside `:199-214`.                                                                                                                                                                              |
+| `apps/web/src/components/workspace/types.ts`                                                                                                                             | `ChannelCreateType` gains `'DECISION'`.                                                                                                                                                                                                                                                                          |
+| `apps/web/src/components/decisions/` (new)                                                                                                                               | `DecisionChannelView.tsx`, `DecisionCard.tsx` (reuses `PollCard` for the vote UI), `NewDecisionDialog.tsx`, `DecisionIndexView.tsx` (server-wide index).                                                                                                                                                         |
+| `apps/web/src/i18n/locales/en.ts`, `vi.ts`                                                                                                                               | New `decision.*` keys.                                                                                                                                                                                                                                                                                           |
 
 **API contract**
 
-| Method | Path | Body | Response | Status |
-|---|---|---|---|---|
-| `POST` | `/channels/:channelId/decisions` | `{ title, content, attachments?, votingDeadlineAt, quorumCount? }` | `201 { decision, thread, rootMessage }` | `201` |
-| `GET` | `/channels/:channelId/decisions` | query: `cursor?, status?` | `{ decisions: DecisionView[], nextCursor? }` | `200` |
-| `GET` | `/decisions/:decisionId` | — | `{ decision, thread, rootMessage }` | `200` |
-| `POST` | `/decisions/:decisionId/resolve` | `{ status: 'ACCEPTED' \| 'REJECTED' }` | `{ decision }` | `200`, `409` if not `PROPOSED` |
-| `POST` | `/decisions/:decisionId/supersede` | `{ supersededByDecisionId }` | `{ decision }` | `200`, `409` if not `ACCEPTED` |
-| `GET` | `/servers/:serverId/decisions` | query: `cursor?, status?, from?, to?, channelId?` | `{ decisions: DecisionView[], nextCursor? }` | `200` — the index |
+| Method | Path                               | Body                                                               | Response                                     | Status                         |
+| ------ | ---------------------------------- | ------------------------------------------------------------------ | -------------------------------------------- | ------------------------------ |
+| `POST` | `/channels/:channelId/decisions`   | `{ title, content, attachments?, votingDeadlineAt, quorumCount? }` | `201 { decision, thread, rootMessage }`      | `201`                          |
+| `GET`  | `/channels/:channelId/decisions`   | query: `cursor?, status?`                                          | `{ decisions: DecisionView[], nextCursor? }` | `200`                          |
+| `GET`  | `/decisions/:decisionId`           | —                                                                  | `{ decision, thread, rootMessage }`          | `200`                          |
+| `POST` | `/decisions/:decisionId/resolve`   | `{ status: 'ACCEPTED' \| 'REJECTED' }`                             | `{ decision }`                               | `200`, `409` if not `PROPOSED` |
+| `POST` | `/decisions/:decisionId/supersede` | `{ supersededByDecisionId }`                                       | `{ decision }`                               | `200`, `409` if not `ACCEPTED` |
+| `GET`  | `/servers/:serverId/decisions`     | query: `cursor?, status?, from?, to?, channelId?`                  | `{ decisions: DecisionView[], nextCursor? }` | `200` — the index              |
 
-`DecisionView`: `{ id, channelId, channelName, threadId, title, status, votingDeadlineAt, quorumCount,
-expiredAt, decidedAt, decidedById, supersededByDecisionId, poll: PollView, proposer: { id,
-displayName, avatarUrl } }` — reuses `PollView` (`polls.md` → API) unchanged for the vote counts.
+`DecisionView`: `{ id, channelId, channelName, threadId, title, status, votingDeadlineAt, quorumCount, expiredAt, decidedAt, decidedById, supersededByDecisionId, poll: PollView, proposer: { id, displayName, avatarUrl } }` — reuses `PollView` (`polls.md` → API) unchanged for the vote counts.
 `expiredAt` set with `status` still `PROPOSED` is the client's signal to render "expired — needs
 manual resolution" (Voting → Quorum, decided).
 
@@ -399,13 +389,14 @@ Errors: `400` bad title/deadline/quorum, non-`DECISION` channel · `403` missing
 **DB / migration**
 
 - `ChannelType` enum: add `DECISION` — Postgres `ALTER TYPE ... ADD VALUE`. Per `database.md` and this
-  repo's own precedent (`announcement-channels.md` → Risks: *"the ChannelType enum value itself is
-  not dropped on rollback (Postgres limitation)"*), **this is a one-way change**: a Postgres enum
+  repo's own precedent (`announcement-channels.md` → Risks: _"the ChannelType enum value itself is
+  not dropped on rollback (Postgres limitation)"_), **this is a one-way change**: a Postgres enum
   value, once added, cannot be removed by a migration `down()` without recreating the whole type. Any
   `DECISION` channel created before a rollback keeps that type in the database after the code stops
   understanding it. Called out again in Risks below, as the instructions require.
 - New `DecisionStatus` enum: `PROPOSED, ACCEPTED, REJECTED, SUPERSEDED`.
 - New `Decision` table:
+
   ```prisma
   model Decision {
     id                     String         @id @default(cuid())
@@ -434,12 +425,14 @@ Errors: `400` bad title/deadline/quorum, non-`DECISION` channel · `403` missing
     @@index([status, expiredAt])
   }
   ```
+
   No `pollId` column: the poll is reached through `thread.rootMessage.poll` (`Poll.messageId`,
   already unique) — one less duplicated reference to keep in sync (see Current behavior).
   `votingDeadlineAt` is `NOT NULL` on a brand-new table, so the "nullable or DEFAULT" rule for adding
   a column to a populated table (`database.md` → Migrations) does not apply here — the table has no
   existing rows. `channel`/`thread` relations use `onDelete: Cascade`, matching the verified cascade
   chain in Current behavior (`Thread.channel`/`Thread.rootMessage` cascades).
+
 - Every new column is either on a new table or, for `Message`/`Thread`, not touched at all — no
   existing column changes, no backfill.
 - Migration file: `<timestamp>_add_decision_channels`, hand-written. `down()` drops the `Decision`
@@ -453,14 +446,14 @@ Errors: `400` bad title/deadline/quorum, non-`DECISION` channel · `403` missing
 
 ## Trade-offs
 
-| Option | Pros | Cons | Verdict |
-|---|---|---|---|
-| **A (chosen): new `ChannelType = DECISION`** | Follows this repo's established path (`forum-channels.md`, `stage-channels.md`, `announcement-channels.md`) exactly: a dedicated sidebar icon, a dedicated create flow, and a channel-level gate (`requireCanPostInDecision`) that cannot be bypassed by posting an ordinary message. Matches how the user's own prompt frames the feature ("a channel type"). | A fourth precedent of the same enum-extension cost: the `ALTER TYPE ... ADD VALUE` migration is one-way (see DB / migration and Risks) — this repo now carries five non-`TEXT`/`VOICE` channel-type branches wherever code pattern-matches on `ChannelType` without a `default` case, same risk `forum-channels.md` already flagged for its own addition. | **Chosen** — directly what was asked, and the smallest-diff option that reuses the repo's own established channel-type pattern rather of inventing a new one. |
-| B: reuse a `FORUM` channel + a `decision` tag, with `ThreadTag`-based status | No new `ChannelType` value, no new enum-migration one-way cost; forum tags already exist and are renamable/orderable. | A tag is a label, not a state machine — nothing stops two tags (`accepted` and `rejected`) being applied to the same post at once, nothing enforces the transition table in Status lifecycle, and "resolve" would just be "apply a tag," bypassing every guard this doc's conditional `UPDATE`s provide. Voting would still need the same `Poll` embedding either way, so this option saves no real code, only the enum value. Quorum and deadline-sweep resolution would need their own table regardless of whether the channel is `FORUM` or `DECISION`, so the "channel type" question is orthogonal to "does the state machine exist." | Ruled out — a tag cannot express or enforce a state machine; the acceptance criteria explicitly require invalid-transition rejection (`409`), which a tag-based model cannot give without building the same `Decision` table anyway, at which point the tag route has all of option A's cost and none of its clarity. |
-| **C (chosen): `Decision` as its own table referencing `Thread`, not columns added directly onto `Thread`** | Keeps `Thread` free of decision-only fields; `forum-channels.md`'s own precedent of adding `title`/`tags` directly to `Thread` was acceptable for two nullable columns, but a decision needs `status`, `votingDeadlineAt`, `quorumCount`, `decidedAt`, `decidedById`, `supersededByDecisionId` — six columns that mean nothing on a reply-originated or forum thread. A separate table keeps that entirely off `Thread`. | One more join to read a proposal's full state (`Thread` + `Decision` + `Message` + `Poll`), versus everything living on one row. | **Chosen** — six decision-only nullable columns on every `Thread` row is a materially bigger pollution of a shared table than forum's two; a dedicated table with a `@unique threadId` costs one join and keeps `Thread` legible for its other two callers (reply threads, forum posts). |
-| D: columns directly on `Thread`, mirroring forum's `title`/`tags` precedent exactly | Smallest schema diff; one fewer table; matches forum's own chosen precedent literally. | `Thread` becomes a grab-bag of three unrelated feature's fields (thread reply metadata, forum title/tags, decision status/deadline/quorum/decider/supersession) — every future reader of `Thread` has to know which fields apply to which channel type; `rules/code-design.md`'s "a module changes for two unrelated reasons is two modules" reasoning applies at the column level here. | Ruled out — the field count crosses from "small, forum-shaped addition" into "shared table doing three jobs." |
-| **E (chosen, closed): reuse `Poll` unchanged; quorum as a `Decision`-only column; weighted voting not built** | Zero new vote-counting code, zero new race conditions in vote casting (`PollVote`'s existing primary key and `polls.md`'s existing `SELECT ... FOR UPDATE` transaction on vote replace already cover this); the smallest correct answer to "does the existing poll suffice," with no speculative schema left behind for a feature nobody has asked to build. | Quorum sits one join away from the vote count it gauges (`Decision.quorumCount` next to `Poll.votes`, not on `Poll` itself), so a reader must know to check both tables; weighted voting is not available at all — a real future need is a new task doc, not a hidden column in this one. | **Decided** (`open-questions.md` #63, closed 2026-09-25) — v1 ships quorum only; weighted voting is out of scope entirely (Scope → Out of scope), not sketched as a follow-up column in this doc (YAGNI). |
-| F: add `quorumCount`/a weight column directly to `Poll` | Every poll would gain quorum/weighting "for free," including ordinary non-decision polls. | Every existing poll caller (`/poll` slash command, DM polls) would carry unused decision-only semantics; `polls.md`'s existing acceptance criteria say nothing about quorum or weight, so this changes a live, already-implemented feature's contract for a caller that does not need it — a repurposing of a shared field the pitfalls rule explicitly warns against ("never repurpose a field — add one", `rules/code-design.md`). | Ruled out — the quorum concept belongs to decisions, not to polls in general. |
+| Option                                                                                                        | Pros                                                                                                                                                                                                                                                                                                                                                                                                                     | Cons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Verdict                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A (chosen): new `ChannelType = DECISION`**                                                                  | Follows this repo's established path (`forum-channels.md`, `stage-channels.md`, `announcement-channels.md`) exactly: a dedicated sidebar icon, a dedicated create flow, and a channel-level gate (`requireCanPostInDecision`) that cannot be bypassed by posting an ordinary message. Matches how the user's own prompt frames the feature ("a channel type").                                                           | A fourth precedent of the same enum-extension cost: the `ALTER TYPE ... ADD VALUE` migration is one-way (see DB / migration and Risks) — this repo now carries five non-`TEXT`/`VOICE` channel-type branches wherever code pattern-matches on `ChannelType` without a `default` case, same risk `forum-channels.md` already flagged for its own addition.                                                                                                                                                                                                                                                                                  | **Chosen** — directly what was asked, and the smallest-diff option that reuses the repo's own established channel-type pattern rather of inventing a new one.                                                                                                                                                         |
+| B: reuse a `FORUM` channel + a `decision` tag, with `ThreadTag`-based status                                  | No new `ChannelType` value, no new enum-migration one-way cost; forum tags already exist and are renamable/orderable.                                                                                                                                                                                                                                                                                                    | A tag is a label, not a state machine — nothing stops two tags (`accepted` and `rejected`) being applied to the same post at once, nothing enforces the transition table in Status lifecycle, and "resolve" would just be "apply a tag," bypassing every guard this doc's conditional `UPDATE`s provide. Voting would still need the same `Poll` embedding either way, so this option saves no real code, only the enum value. Quorum and deadline-sweep resolution would need their own table regardless of whether the channel is `FORUM` or `DECISION`, so the "channel type" question is orthogonal to "does the state machine exist." | Ruled out — a tag cannot express or enforce a state machine; the acceptance criteria explicitly require invalid-transition rejection (`409`), which a tag-based model cannot give without building the same `Decision` table anyway, at which point the tag route has all of option A's cost and none of its clarity. |
+| **C (chosen): `Decision` as its own table referencing `Thread`, not columns added directly onto `Thread`**    | Keeps `Thread` free of decision-only fields; `forum-channels.md`'s own precedent of adding `title`/`tags` directly to `Thread` was acceptable for two nullable columns, but a decision needs `status`, `votingDeadlineAt`, `quorumCount`, `decidedAt`, `decidedById`, `supersededByDecisionId` — six columns that mean nothing on a reply-originated or forum thread. A separate table keeps that entirely off `Thread`. | One more join to read a proposal's full state (`Thread` + `Decision` + `Message` + `Poll`), versus everything living on one row.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | **Chosen** — six decision-only nullable columns on every `Thread` row is a materially bigger pollution of a shared table than forum's two; a dedicated table with a `@unique threadId` costs one join and keeps `Thread` legible for its other two callers (reply threads, forum posts).                              |
+| D: columns directly on `Thread`, mirroring forum's `title`/`tags` precedent exactly                           | Smallest schema diff; one fewer table; matches forum's own chosen precedent literally.                                                                                                                                                                                                                                                                                                                                   | `Thread` becomes a grab-bag of three unrelated feature's fields (thread reply metadata, forum title/tags, decision status/deadline/quorum/decider/supersession) — every future reader of `Thread` has to know which fields apply to which channel type; `rules/code-design.md`'s "a module changes for two unrelated reasons is two modules" reasoning applies at the column level here.                                                                                                                                                                                                                                                   | Ruled out — the field count crosses from "small, forum-shaped addition" into "shared table doing three jobs."                                                                                                                                                                                                         |
+| **E (chosen, closed): reuse `Poll` unchanged; quorum as a `Decision`-only column; weighted voting not built** | Zero new vote-counting code, zero new race conditions in vote casting (`PollVote`'s existing primary key and `polls.md`'s existing `SELECT ... FOR UPDATE` transaction on vote replace already cover this); the smallest correct answer to "does the existing poll suffice," with no speculative schema left behind for a feature nobody has asked to build.                                                             | Quorum sits one join away from the vote count it gauges (`Decision.quorumCount` next to `Poll.votes`, not on `Poll` itself), so a reader must know to check both tables; weighted voting is not available at all — a real future need is a new task doc, not a hidden column in this one.                                                                                                                                                                                                                                                                                                                                                  | **Decided** (`open-questions.md` #63, closed 2026-09-25) — v1 ships quorum only; weighted voting is out of scope entirely (Scope → Out of scope), not sketched as a follow-up column in this doc (YAGNI).                                                                                                             |
+| F: add `quorumCount`/a weight column directly to `Poll`                                                       | Every poll would gain quorum/weighting "for free," including ordinary non-decision polls.                                                                                                                                                                                                                                                                                                                                | Every existing poll caller (`/poll` slash command, DM polls) would carry unused decision-only semantics; `polls.md`'s existing acceptance criteria say nothing about quorum or weight, so this changes a live, already-implemented feature's contract for a caller that does not need it — a repurposing of a shared field the pitfalls rule explicitly warns against ("never repurpose a field — add one", `rules/code-design.md`).                                                                                                                                                                                                       | Ruled out — the quorum concept belongs to decisions, not to polls in general.                                                                                                                                                                                                                                         |
 
 What the chosen option (A + C + E) costs: a fourth `ChannelType` branch to audit everywhere the
 codebase pattern-matches without a `default` case (same risk class `forum-channels.md` already
@@ -474,9 +467,9 @@ of a copy that could drift.
 - **Risk — the enum value is one-way.** Adding `DECISION` to `ChannelType` is a Postgres
   `ALTER TYPE ... ADD VALUE`, which **cannot be reverted by a migration `down()`** without recreating
   the enum type entirely (`database.md`; this repo's own precedent,
-  `announcement-channels.md` → Risks & rollback: *"The ChannelType.ANNOUNCEMENT enum value cannot be
+  `announcement-channels.md` → Risks & rollback: _"The ChannelType.ANNOUNCEMENT enum value cannot be
   removed by down() (Postgres limitation) ... any ANNOUNCEMENT channel created before rollback keeps
-  that type in the database even after the code stops understanding it"*). The same is true here: a
+  that type in the database even after the code stops understanding it"_). The same is true here: a
   rollback of this feature's code leaves any already-created `DECISION` channel in the database with a
   type the reverted code does not recognize — the rollback plan must treat this as "the channel
   renders as an unrecognized type client-side," not as a data-loss bug to fix.
@@ -504,8 +497,8 @@ of a copy that could drift.
 ## Test plan
 
 Not covered by automated tests — this repo forbids `*.test.ts`/`*.spec.ts` files and test
-runners/configs (`RULE.md`, Code Quality Rules: *"Do not create automated test files ... Verify
-changes with typecheck, lint, build, and a written manual verification scenario"*). Verify with
+runners/configs (`RULE.md`, Code Quality Rules: _"Do not create automated test files ... Verify
+changes with typecheck, lint, build, and a written manual verification scenario"_). Verify with
 `npm run typecheck`, `npm run lint`, `npm run build`, and the i18n/file-size checks this repo already
 runs for a channel-type addition (`npm run i18n:check`, `npm run check:file-size`, following
 `forum-channels.md`'s Test Plan).
@@ -568,8 +561,7 @@ in a browser. Differences from the text above:
    `supersededDecision` self-relation field. Neither is in the doc's schema listing; both are
    mechanical consequences of the schema it does specify, not a design change.
 2. **`404` vs `403` for a caller who cannot view the channel.** The edge-case table says `404`. The
-   real `requireReadableChannel`/`requireReadableForumChannel` return `403 Missing permission:
-   VIEW_CHANNEL` when the member exists but lacks the permission, and `404` only when the channel
+   real `requireReadableChannel`/`requireReadableForumChannel` return `403 Missing permission: VIEW_CHANNEL` when the member exists but lacks the permission, and `404` only when the channel
    does not exist. The implementation follows the real code, since the doc's own instruction was to
    mirror `requireReadableForumChannel`. The doc's table is the thing that was wrong.
 3. **Self-supersede guard added.** `decisionId === supersededByDecisionId` returns `400`. Not in the
@@ -600,28 +592,28 @@ plan above is entirely unrun. `prisma migrate diff` has not been checked against
 
 ### Web client (built 2026-09-29)
 
-7. **i18n catalog location.** This doc's Technical approach table says
-   `apps/web/src/i18n/locales/en.ts`, `vi.ts`. The repo has since split the catalogs into one module
-   per area under `locales/en/`/`locales/vi/`, merged by each locale's `index.ts`
-   (`apps/web/src/i18n/locales/en/announcements.ts` is the precedent this doc's own web build
-   predates). The web client follows the current layout: `locales/en/decisions.ts` and
-   `locales/vi/decisions.ts`, merged into `en`/`vi` in each `index.ts` — same key set, current
-   convention, not the doc's now-stale file names.
-8. **Decision list payload stays light; the discussion thread is fetched on demand.** The doc's
-   `DecisionView` (Technical approach → API contract) has no `rootMessage`/`Message` field, only
-   `threadId`. Opening "Discuss" on a card therefore calls `GET /decisions/:decisionId` to get the
-   full `rootMessage` before opening the thread panel, rather than the channel list already carrying
-   it (as a forum post's list row does via `ForumPostView.rootMessage`). Not a deviation from the API
-   contract — the contract already shipped this way — but the UI consequence (an extra request per
-   "Discuss" click, with its own loading/error state) is worth recording since it was not spelled out
-   in Technical approach.
-9. **Supersede target picker.** The doc leaves the UI mechanism open ("a new proposal that names the
-   `ACCEPTED` decision it replaces, or a separate 'Mark as superseded' action... decided: superseding
-   happens as an explicit action after the new decision is `ACCEPTED`"). The web client builds the
-   explicit-action variant: a `MANAGE_MESSAGES` holder on an `ACCEPTED` card opens an inline picker
-   listing the channel's other `ACCEPTED` decisions (fetched through the existing
-   `GET /channels/:channelId/decisions?status=ACCEPTED`, no new endpoint) and confirms
-   `POST /decisions/:decisionId/supersede`.
+7.  **i18n catalog location.** This doc's Technical approach table says
+    `apps/web/src/i18n/locales/en.ts`, `vi.ts`. The repo has since split the catalogs into one module
+    per area under `locales/en/`/`locales/vi/`, merged by each locale's `index.ts`
+    (`apps/web/src/i18n/locales/en/announcements.ts` is the precedent this doc's own web build
+    predates). The web client follows the current layout: `locales/en/decisions.ts` and
+    `locales/vi/decisions.ts`, merged into `en`/`vi` in each `index.ts` — same key set, current
+    convention, not the doc's now-stale file names.
+8.  **Decision list payload stays light; the discussion thread is fetched on demand.** The doc's
+    `DecisionView` (Technical approach → API contract) has no `rootMessage`/`Message` field, only
+    `threadId`. Opening "Discuss" on a card therefore calls `GET /decisions/:decisionId` to get the
+    full `rootMessage` before opening the thread panel, rather than the channel list already carrying
+    it (as a forum post's list row does via `ForumPostView.rootMessage`). Not a deviation from the API
+    contract — the contract already shipped this way — but the UI consequence (an extra request per
+    "Discuss" click, with its own loading/error state) is worth recording since it was not spelled out
+    in Technical approach.
+9.  **Supersede target picker.** The doc leaves the UI mechanism open ("a new proposal that names the
+    `ACCEPTED` decision it replaces, or a separate 'Mark as superseded' action... decided: superseding
+    happens as an explicit action after the new decision is `ACCEPTED`"). The web client builds the
+    explicit-action variant: a `MANAGE_MESSAGES` holder on an `ACCEPTED` card opens an inline picker
+    listing the channel's other `ACCEPTED` decisions (fetched through the existing
+    `GET /channels/:channelId/decisions?status=ACCEPTED`, no new endpoint) and confirms
+    `POST /decisions/:decisionId/supersede`.
 10. **`PollCard`'s `canClose` is always `false` on a decision's embedded poll.** Nothing in Changes or
     Who can change status describes a "close the poll early" action separate from resolve/supersede;
     the poll's own `expiresAt` (set to `votingDeadlineAt` at creation) is what ends voting. Exposing
@@ -636,38 +628,12 @@ plan above is entirely unrun. `prisma migrate diff` has not been checked against
     `RealtimeEvents.DecisionIndexUpdated` (`{ serverId, channelId, decisionId }`) to
     `this.realtime.serverRoom(serverId)`, which is the room every connected member's socket actually
     joins (`server:${serverId}`, `realtime-publisher.service.ts:79-81`). But
-    `DecisionSweepService.emitUpdated` (`apps/api/src/modules/decisions/decision-sweep.service.ts:
-    125-141`, used by the automatic deadline sweep — both the resolve and the quorum-expire path)
+    `DecisionSweepService.emitUpdated` (`apps/api/src/modules/decisions/decision-sweep.service.ts: 125-141`, used by the automatic deadline sweep — both the resolve and the quorum-expire path)
     instead emits the **full** `formatDecision(row, null)` payload under the raw string literal
     `'decision:updated'` to two rooms: `channelRoom(channelId)` (fine — matches
     `RealtimeEvents.DecisionUpdated`'s value and reaches members who opened that channel) and
-    `` `server:${channel.serverId}:decisions` `` — a room string no client ever joins (clients join
-    `serverRoom(serverId)` = `` `server:${serverId}` ``, not this one), and it never emits
-    `decision:index-updated` at all. Net effect: a decision that leaves `PROPOSED` **automatically**
-    (deadline reached, accepted/rejected/expired-for-quorum by the sweep, not by a manual
-    resolve/supersede) does not live-update `DecisionIndexView` for any member who is not currently
-    viewing that channel — the index only shows it after the dialog is closed and reopened
-    (`decisionsIndexOf` gets invalidated on `DecisionIndexUpdated`, which the sweep never sends).
-    Manual resolve/supersede are unaffected and update the index live, per Verified below.
-
-    **Fixed after the web task handed back.** The web task was scoped out of `apps/api/**`, so it
-    reported the defect instead of fixing it; the fix landed separately, because the code as written
-    contradicted this doc (Deviation 5 states the server room gets the id-only index event — the
-    sweep was the one path that did not do it, so the code, not the doc, was wrong). The sweep's
-    `emitUpdated` now mirrors `DecisionsService.emitUpdated` exactly: `RealtimeEvents.DecisionUpdated`
-    with the full view to `channelRoom(channelId)`, and `RealtimeEvents.DecisionIndexUpdated` with
-    `{ serverId, channelId, decisionId }` to `serverRoom(channel.serverId)`. The dead
-    `` `server:${serverId}:decisions` `` room string and the raw `'decision:updated'` literal are
-    gone. Verified by `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check` and `ui:scan`;
-    **not** verified by observing a real sweep tick fire in a running stack (see Not verified below).
-
-**Web client verified**: `npm run build:shared`, `npm run typecheck`, `npm run lint`
-(`eslint --max-warnings 0`), `npm run build` (shared + api + web), `npm run check:file-size`,
-`npm run i18n:check`, `npm run ui:scan` (token/contrast scan) all pass — real command output in the
-implementation report, not re-pasted here. `npx prettier --check .` was run repo-wide; it already
-failed on pre-existing files outside this task's scope (docs, unrelated `apps/api` sources) before
-this change — every file this task touched was formatted with `npx prettier --write` individually and
-re-verified.
+    `` `server:${channel.serverId}:decisions` `` — a room string no client ever joins (clients join `serverRoom(serverId)` = `` `server:${serverId}` ``, not this one), and it never emits `decision:index-updated` at all. Net effect: a decision that leaves `PROPOSED` **automatically** (deadline reached, accepted/rejected/expired-for-quorum by the sweep, not by a manual resolve/supersede) does not live-update `DecisionIndexView` for any member who is not currently viewing that channel — the index only shows it after the dialog is closed and reopened (`decisionsIndexOf` gets invalidated on `DecisionIndexUpdated`, which the sweep never sends). Manual resolve/supersede are unaffected and update the index live, per Verified below. **Fixed after the web task handed back.** The web task was scoped out of `apps/api/**`, so it reported the defect instead of fixing it; the fix landed separately, because the code as written contradicted this doc (Deviation 5 states the server room gets the id-only index event — the sweep was the one path that did not do it, so the code, not the doc, was wrong). The sweep's `emitUpdated` now mirrors `DecisionsService.emitUpdated` exactly: `RealtimeEvents.DecisionUpdated` with the full view to `channelRoom(channelId)`, and `RealtimeEvents.DecisionIndexUpdated` with `{ serverId, channelId, decisionId }` to `serverRoom(channel.serverId)`. The dead `` `server:${serverId}:decisions` `` room string and the raw `'decision:updated'` literal are gone. Verified by `typecheck`, `lint`, `build`, `check:file-size`, `i18n:check` and `ui:scan`; **not** verified by observing a real sweep tick fire in a running stack (see Not verified below). **Web client verified**: `npm run build:shared`, `npm run typecheck`, `npm run lint` (`eslint --max-warnings 0`), `npm run build` (shared + api + web), `npm run check:file-size`, `npm run i18n:check`, `npm run ui:scan` (token/contrast scan) all pass — real command output in the implementation report, not re-pasted here. `npx prettier --check .` was run repo-wide; it already failed on pre-existing files outside this task's scope (docs, unrelated `apps/api` sources) before this change — every file this task touched was formatted with `npx prettier --write` individually and
+    re-verified.
 
 **Web client not verified**: the API dev server could not be started in this environment (port 3001
 was already occupied by an unrelated container) and the migration has never been applied to any

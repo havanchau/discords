@@ -5,11 +5,13 @@ Ensures users resume reading from where they left off by displaying the oldest u
 ## Goal
 
 When opening or reloading a channel/DM conversation:
+
 - If unread messages exist, the message view automatically scrolls to the **oldest unread message** (or newest read message) instead of forcing the scroll to the absolute bottom.
 - An **"Unread Messages"** (Tin nhắn chưa đọc) divider line is displayed directly above the oldest unread message.
 - Marking messages as read is handled smoothly so the unread position is preserved upon reload until the user reads to the bottom.
 
 Acceptance criteria:
+
 - Opening a channel with unread messages centers/scrolls to the oldest unread message in the initial batch.
 - A divider bar ("New Messages" / "Tin nhắn mới") marks the transition between read and unread messages.
 - If all messages in the channel are read, the view scrolls to the newest message at the bottom.
@@ -30,6 +32,7 @@ Acceptance criteria:
 ### 1. API Payload Enhancement
 
 Include the viewer's `lastReadMessageId` and `lastReadAt` in channel message list responses:
+
 - `GET /channels/:channelId/messages` returns `{ messages, nextCursor, lastReadMessageId, lastReadAt }`.
 - `GET /conversations/:id/messages` returns `{ messages, nextCursor, lastReadMessageId, lastReadAt }`.
 
@@ -60,10 +63,12 @@ Include the viewer's `lastReadMessageId` and `lastReadAt` in channel message lis
 ## Risks & Verification Plan
 
 ### Automated Checks
+
 - `npm run typecheck`
 - `npm run lint`
 
 ### Manual Verification
+
 - Send 5 test messages in `#general` using account B.
 - Log in as account A and refresh the page (reload).
 - Verify the chat window scrolls to the 1st unread message with a red `"NEW MESSAGES"` divider line above it.

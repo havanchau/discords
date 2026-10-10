@@ -18,6 +18,14 @@ with token values in `apps/web/src/styles/tokens.css`. Product rules live in `RU
 
 Run `npm run format` before committing; CI does not fix formatting, it only fails on it.
 
+Git keeps text files on LF line endings through `.gitattributes`, including on Windows,
+so local Prettier checks agree with CI.
+
+Formatting repair checklist:
+
+- [x] Normalize text line endings and apply the repository Prettier configuration.
+- [x] Verify `npm run format:check` and review the diff for formatting-only changes.
+
 ESLint (`eslint.config.mjs`) applies, beyond the recommended presets:
 
 - `typescript-eslint` **type-checked** rules on every `.ts`/`.tsx` file — unhandled promises, async

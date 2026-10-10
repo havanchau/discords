@@ -201,12 +201,12 @@ model PlatformAuditLog {
 
 ### Which events, and why (vs. what stays server-scoped only)
 
-| Event | Written here | Also still written to server-scoped `AuditLog`? |
-|---|---|---|
-| Server delete | Yes — the only record of it (`server-ownership.service.ts:117-119` currently the only trace) | No — nothing to duplicate; the server-scoped row would be deleted in the same statement anyway (existing comment at `:117-118` explains why none is written there) |
-| Ownership transfer | Yes — new | Yes, unchanged (`server-ownership.service.ts:64-72`) — that row is useful to that server's own moderators for as long as the server exists; duplicating here is what makes it survive if the server is *later* deleted |
-| Platform report dismiss/delist | Yes — new | Yes, unchanged (`platform-reports.service.ts`, per `platform-report-review.md:57`) — same reasoning: the server-scoped copy serves that server's own `MANAGE_SERVER` holders today, the platform copy survives a later server delete |
-| Account deletion (completed) | Yes — new, first persisted record of this event at all | N/A — never had one; see Current behavior |
+| Event                          | Written here                                                                                 | Also still written to server-scoped `AuditLog`?                                                                                                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server delete                  | Yes — the only record of it (`server-ownership.service.ts:117-119` currently the only trace) | No — nothing to duplicate; the server-scoped row would be deleted in the same statement anyway (existing comment at `:117-118` explains why none is written there)                                                                   |
+| Ownership transfer             | Yes — new                                                                                    | Yes, unchanged (`server-ownership.service.ts:64-72`) — that row is useful to that server's own moderators for as long as the server exists; duplicating here is what makes it survive if the server is _later_ deleted               |
+| Platform report dismiss/delist | Yes — new                                                                                    | Yes, unchanged (`platform-reports.service.ts`, per `platform-report-review.md:57`) — same reasoning: the server-scoped copy serves that server's own `MANAGE_SERVER` holders today, the platform copy survives a later server delete |
+| Account deletion (completed)   | Yes — new, first persisted record of this event at all                                       | N/A — never had one; see Current behavior                                                                                                                                                                                            |
 
 Duplication for transfer/dismiss/delist is accepted, not incidental: the two tables serve different
 readers (a server's own moderators vs. platform admins across all servers) and different lifetimes
@@ -225,26 +225,26 @@ low-traffic admin surface — the same trade this repo already made for
 2. `ServerOwnershipService.deleteServer` (`server-ownership.service.ts:83-159`): after the conditional
    `deleteMany` succeeds (`:113-116`) and in place of the `Logger.warn` at `:119`, call
    `platformAudit.record('SERVER_DELETE', { actorId: userId, actorUsername, actorDisplayName,
-   targetType: 'SERVER', targetId: serverId, targetName: server.name })`, using
+targetType: 'SERVER', targetId: serverId, targetName: server.name })`, using
    `userId`'s username/displayName read alongside the existing `avatarUrl` read at `:93-96`
    (both already known: the caller is the current owner, whose row is not going anywhere) and the
    server's `name` read alongside its `avatarUrl` in the same query. The `Logger.warn` line stays as
    a same-process breadcrumb, not the record of truth.
 3. `ServerOwnershipService.transferOwnership` (`:36-81`): inside the same transaction that writes the
    existing `AuditLog` row (`:64-72`), also call `platformAudit.record('SERVER_OWNERSHIP_TRANSFER',
-   { actorId: userId, actorUsername: <old owner's username, already loaded by
-   requireOwner→permissions.requireMembership>, targetType: 'SERVER', targetId: serverId, targetName:
-   <server name>, metadata: { fromUserId: userId, toUserId: dto.userId, toUsername:
-   target.user.username } })`. Same metadata shape already used for the server-scoped row.
+{ actorId: userId, actorUsername: <old owner's username, already loaded by
+requireOwner→permissions.requireMembership>, targetType: 'SERVER', targetId: serverId, targetName:
+<server name>, metadata: { fromUserId: userId, toUserId: dto.userId, toUsername:
+target.user.username } })`. Same metadata shape already used for the server-scoped row.
 4. `PlatformReportsService.dismiss`/`.delist`: alongside the existing `AuditLog` write described in
    `platform-report-review.md:57`, also call `platformAudit.record('PLATFORM_REPORT_DISMISS' |
-   'PLATFORM_REPORT_DELIST', { actorId: admin.id, actorUsername: admin.username, actorDisplayName:
-   admin.displayName, targetType: 'REPORT', targetId: report.id, targetName: <reported server's
-   name, already fetched for the detail view>, metadata: { serverId: report.serverId } })`.
+'PLATFORM_REPORT_DELIST', { actorId: admin.id, actorUsername: admin.username, actorDisplayName:
+admin.displayName, targetType: 'REPORT', targetId: report.id, targetName: <reported server's
+name, already fetched for the detail view>, metadata: { serverId: report.serverId } })`.
 5. `AccountDeletionService.completeDeletion` (`:124-...`): only on the success path (`outcome.status`
    is neither `OWNS_SERVERS` nor `NOT_DUE`), call `platformAudit.record('ACCOUNT_DELETION', {
-   actorId: userId, actorUsername: <pre-anonymization username>, actorDisplayName: <pre-anonymization
-   displayName>, targetType: 'USER', targetId: userId, targetName: <pre-anonymization displayName> })`.
+actorId: userId, actorUsername: <pre-anonymization username>, actorDisplayName: <pre-anonymization
+displayName>, targetType: 'USER', targetId: userId, targetName: <pre-anonymization displayName> })`.
    `anonymizeAccount`'s existing `before` select (`account-anonymization.ts:41-45`) is extended to
    also select `username`/`displayName`, read **before** the `updateMany` overwrites them, and
    returned as part of `AnonymizedAccount` alongside `avatarUrl`/`bannerUrl` so the caller has them
@@ -259,38 +259,38 @@ low-traffic admin surface — the same trade this repo already made for
 
 ### Edge cases
 
-| Case | Expected behavior |
-|---|---|
-| Server deleted, then its `PlatformAuditLog` rows queried | Return normally — nothing in this table references the deleted `Server` row, so there is nothing to break |
-| Account anonymized after being an actor in several rows | Every existing row keeps its pre-anonymization `actorUsername`/`actorDisplayName` snapshot unchanged; a fresh action by the now-anonymized account cannot happen (their session was revoked as part of deletion) |
-| `targetId` filter for a report that was itself later deleted (cannot actually happen — `ServerReport` cascades with its `Server`, `discovery.prisma:41`) | The `PlatformAuditLog` rows about that report still return; `targetId` simply cannot be resolved back to a live `ServerReport` row via a join the reader does not attempt anyway |
-| Non-admin calls `GET /platform/audit-logs` | `403`, same `PlatformAdminGuard` behavior as `/platform/reports` |
-| Empty result set | `{ logs: [], nextCursor: null }`, `200` |
-| `actorId`/`targetId` filter with no matches | `{ logs: [], nextCursor: null }`, `200` — not a `404`, matching `GET /platform/reports`'s own empty-list behavior |
+| Case                                                                                                                                                     | Expected behavior                                                                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server deleted, then its `PlatformAuditLog` rows queried                                                                                                 | Return normally — nothing in this table references the deleted `Server` row, so there is nothing to break                                                                                                        |
+| Account anonymized after being an actor in several rows                                                                                                  | Every existing row keeps its pre-anonymization `actorUsername`/`actorDisplayName` snapshot unchanged; a fresh action by the now-anonymized account cannot happen (their session was revoked as part of deletion) |
+| `targetId` filter for a report that was itself later deleted (cannot actually happen — `ServerReport` cascades with its `Server`, `discovery.prisma:41`) | The `PlatformAuditLog` rows about that report still return; `targetId` simply cannot be resolved back to a live `ServerReport` row via a join the reader does not attempt anyway                                 |
+| Non-admin calls `GET /platform/audit-logs`                                                                                                               | `403`, same `PlatformAdminGuard` behavior as `/platform/reports`                                                                                                                                                 |
+| Empty result set                                                                                                                                         | `{ logs: [], nextCursor: null }`, `200`                                                                                                                                                                          |
+| `actorId`/`targetId` filter with no matches                                                                                                              | `{ logs: [], nextCursor: null }`, `200` — not a `404`, matching `GET /platform/reports`'s own empty-list behavior                                                                                                |
 
 ## Technical approach
 
 **Files touched**
 
-| File | Change |
-|---|---|
-| `apps/api/prisma/models/platform-audit.prisma` | New — `PlatformAuditLog` model, `PlatformAuditAction`, `PlatformAuditTargetType` enums. |
-| `apps/api/prisma/migrations/20260925002000_add_platform_audit_log/` | New hand-written migration. |
-| `apps/api/src/modules/platform/platform-audit.service.ts` | New — `record(...)`, thin wrapper over `prisma.platformAuditLog.create`. |
-| `apps/api/src/modules/platform/platform-audit-logs.service.ts` | New — `list(query)` for the read side, mirroring `platform-reports.service.ts`'s cursor pattern. |
-| `apps/api/src/modules/platform/platform-audit-logs.controller.ts` | New — `@UseGuards(JwtAuthGuard, PlatformAdminGuard)`, `GET /platform/audit-logs`. |
-| `apps/api/src/modules/platform/dto/list-platform-audit-logs-query.dto.ts` | New DTO — `action?`, `targetId?`, `actorId?`, `cursor?`. |
-| `apps/api/src/modules/platform/platform.module.ts` | Export `PlatformAuditService`; register the two new providers/controller. |
-| `apps/api/src/modules/servers/server-ownership.service.ts` | Inject `PlatformAuditService`; call `record('SERVER_DELETE', ...)` and `record('SERVER_OWNERSHIP_TRANSFER', ...)`; extend the existing pre-cascade reads to also fetch `name`/`username`/`displayName`. |
-| `apps/api/src/modules/servers/servers.module.ts` | Import `PlatformModule` so `ServerOwnershipService` can inject `PlatformAuditService`. |
-| `apps/api/src/modules/platform/platform-reports.service.ts` | Inject `PlatformAuditService`; call `record(...)` alongside the existing `AuditLog` write in `dismiss`/`delist`. |
-| `apps/api/src/modules/users/account-anonymization.ts` | Extend the `before` select to include `username`, `displayName`; add them to `AnonymizedAccount`. |
-| `apps/api/src/modules/users/account-deletion.service.ts` | Inject `PlatformAuditService`; call `record('ACCOUNT_DELETION', ...)` on the success path of `completeDeletion`. |
-| `apps/api/src/modules/users/users.module.ts` | Import `PlatformModule`. |
-| `packages/shared/src/api-contract.ts` | `PlatformAuditAction`, `PlatformAuditTargetType`, `PlatformAuditLogView`, `PlatformAuditLogPage`, `PLATFORM_AUDIT_LOGS_PAGE_SIZE`. |
-| `apps/web/src/api.ts`, `apps/web/src/hooks/usePlatformAuditLogs.ts` | New — fetch the list. |
-| `apps/web/src/components/platform/PlatformAuditLogPage.tsx` | New — a second tab/section inside the existing `PlatformReportsPage.tsx` dialog (see Trade-offs), reusing `Badge`/`TextField`/pagination patterns from `PlatformReportsPage.tsx:1-50`. |
-| `apps/web/src/i18n/locales/{en,vi}/platform.ts` | New `platform.auditLog.*` keys. |
+| File                                                                      | Change                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/prisma/models/platform-audit.prisma`                            | New — `PlatformAuditLog` model, `PlatformAuditAction`, `PlatformAuditTargetType` enums.                                                                                                                 |
+| `apps/api/prisma/migrations/20260925002000_add_platform_audit_log/`       | New hand-written migration.                                                                                                                                                                             |
+| `apps/api/src/modules/platform/platform-audit.service.ts`                 | New — `record(...)`, thin wrapper over `prisma.platformAuditLog.create`.                                                                                                                                |
+| `apps/api/src/modules/platform/platform-audit-logs.service.ts`            | New — `list(query)` for the read side, mirroring `platform-reports.service.ts`'s cursor pattern.                                                                                                        |
+| `apps/api/src/modules/platform/platform-audit-logs.controller.ts`         | New — `@UseGuards(JwtAuthGuard, PlatformAdminGuard)`, `GET /platform/audit-logs`.                                                                                                                       |
+| `apps/api/src/modules/platform/dto/list-platform-audit-logs-query.dto.ts` | New DTO — `action?`, `targetId?`, `actorId?`, `cursor?`.                                                                                                                                                |
+| `apps/api/src/modules/platform/platform.module.ts`                        | Export `PlatformAuditService`; register the two new providers/controller.                                                                                                                               |
+| `apps/api/src/modules/servers/server-ownership.service.ts`                | Inject `PlatformAuditService`; call `record('SERVER_DELETE', ...)` and `record('SERVER_OWNERSHIP_TRANSFER', ...)`; extend the existing pre-cascade reads to also fetch `name`/`username`/`displayName`. |
+| `apps/api/src/modules/servers/servers.module.ts`                          | Import `PlatformModule` so `ServerOwnershipService` can inject `PlatformAuditService`.                                                                                                                  |
+| `apps/api/src/modules/platform/platform-reports.service.ts`               | Inject `PlatformAuditService`; call `record(...)` alongside the existing `AuditLog` write in `dismiss`/`delist`.                                                                                        |
+| `apps/api/src/modules/users/account-anonymization.ts`                     | Extend the `before` select to include `username`, `displayName`; add them to `AnonymizedAccount`.                                                                                                       |
+| `apps/api/src/modules/users/account-deletion.service.ts`                  | Inject `PlatformAuditService`; call `record('ACCOUNT_DELETION', ...)` on the success path of `completeDeletion`.                                                                                        |
+| `apps/api/src/modules/users/users.module.ts`                              | Import `PlatformModule`.                                                                                                                                                                                |
+| `packages/shared/src/api-contract.ts`                                     | `PlatformAuditAction`, `PlatformAuditTargetType`, `PlatformAuditLogView`, `PlatformAuditLogPage`, `PLATFORM_AUDIT_LOGS_PAGE_SIZE`.                                                                      |
+| `apps/web/src/api.ts`, `apps/web/src/hooks/usePlatformAuditLogs.ts`       | New — fetch the list.                                                                                                                                                                                   |
+| `apps/web/src/components/platform/PlatformAuditLogPage.tsx`               | New — a second tab/section inside the existing `PlatformReportsPage.tsx` dialog (see Trade-offs), reusing `Badge`/`TextField`/pagination patterns from `PlatformReportsPage.tsx:1-50`.                  |
+| `apps/web/src/i18n/locales/{en,vi}/platform.ts`                           | New `platform.auditLog.*` keys.                                                                                                                                                                         |
 
 **API contract**
 
@@ -356,12 +356,12 @@ No FK constraints are added on `actorId` or `targetId`, deliberately (see Data m
 
 ## Trade-offs
 
-| Option | Pros | Cons | Verdict |
-|---|---|---|---|
-| **New standalone `PlatformAuditLog` table with snapshot-only actor/target fields (chosen)** | Survives any cascade; no FK to defend against; matches the exact ask in open question #40 | A second insert alongside the existing `AuditLog` write for transfer/dismiss/delist (see Duplication note); one more table to keep in sync by convention (a future platform action must remember to call `record(...)`) | Chosen — it is the only option that actually satisfies "survives the deletion of the thing it describes," which a server-scoped table structurally cannot |
-| Detach `AuditLog` from the server: make `serverId` nullable, drop its `onDelete: Cascade` | Reuses one table instead of two; `server-insights.service.ts`'s existing reads keep working unchanged | `AuditLog.server` is a required relation read by every other writer (kick, ban, timeout, invite, `SERVER_UPDATE`, ...) via `serverId` — making it nullable and non-cascading would leave every past row for a deleted server permanently in the table with a dangling `serverId` that no longer resolves, still with no `username`/`displayName` snapshot for its `actorId` (today's rows rely on a live join to `User` for the actor's current name in some reads, and rely on `metadata` only for others) — fixing that requires the same actor-snapshot work this doc already does, on top of migrating every existing writer's assumption that `serverId` is always present | Ruled out — it is a bigger, riskier change to a table nine other writers already depend on, to solve a problem that only a handful of platform-level actions actually have |
-| Accept a log-line only (status quo, extended to the other four events) | Zero schema change, zero migration risk | Exactly the gap open question #40 is asking to close: nothing durable, unqueryable, invisible to the platform-admin page, lost on a process restart before anyone reads the log | Ruled out — does not solve the stated problem, only documents it further |
-| FK `actorId`/`targetId` to `User`/`Server` with `onDelete: SetNull` | Standard relational integrity; a live join is "free" until the referenced row is gone | `targetId` for `SERVER_DELETE` would go straight to `NULL` the instant the server that generated the row is deleted — deleting the one identifying fact (which server) from the row whose entire purpose is to say which server was deleted; a three-way polymorphic target (`Server`/`ServerReport`/`User`) also cannot be one FK column at all | Ruled out — SetNull on the target erases exactly the information this table exists to keep; explained fully in Data model |
+| Option                                                                                      | Pros                                                                                                  | Cons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Verdict                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **New standalone `PlatformAuditLog` table with snapshot-only actor/target fields (chosen)** | Survives any cascade; no FK to defend against; matches the exact ask in open question #40             | A second insert alongside the existing `AuditLog` write for transfer/dismiss/delist (see Duplication note); one more table to keep in sync by convention (a future platform action must remember to call `record(...)`)                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Chosen — it is the only option that actually satisfies "survives the deletion of the thing it describes," which a server-scoped table structurally cannot                  |
+| Detach `AuditLog` from the server: make `serverId` nullable, drop its `onDelete: Cascade`   | Reuses one table instead of two; `server-insights.service.ts`'s existing reads keep working unchanged | `AuditLog.server` is a required relation read by every other writer (kick, ban, timeout, invite, `SERVER_UPDATE`, ...) via `serverId` — making it nullable and non-cascading would leave every past row for a deleted server permanently in the table with a dangling `serverId` that no longer resolves, still with no `username`/`displayName` snapshot for its `actorId` (today's rows rely on a live join to `User` for the actor's current name in some reads, and rely on `metadata` only for others) — fixing that requires the same actor-snapshot work this doc already does, on top of migrating every existing writer's assumption that `serverId` is always present | Ruled out — it is a bigger, riskier change to a table nine other writers already depend on, to solve a problem that only a handful of platform-level actions actually have |
+| Accept a log-line only (status quo, extended to the other four events)                      | Zero schema change, zero migration risk                                                               | Exactly the gap open question #40 is asking to close: nothing durable, unqueryable, invisible to the platform-admin page, lost on a process restart before anyone reads the log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Ruled out — does not solve the stated problem, only documents it further                                                                                                   |
+| FK `actorId`/`targetId` to `User`/`Server` with `onDelete: SetNull`                         | Standard relational integrity; a live join is "free" until the referenced row is gone                 | `targetId` for `SERVER_DELETE` would go straight to `NULL` the instant the server that generated the row is deleted — deleting the one identifying fact (which server) from the row whose entire purpose is to say which server was deleted; a three-way polymorphic target (`Server`/`ServerReport`/`User`) also cannot be one FK column at all                                                                                                                                                                                                                                                                                                                                | Ruled out — SetNull on the target erases exactly the information this table exists to keep; explained fully in Data model                                                  |
 
 What the chosen option costs: one new table with no automated purge (accepted, matches `AuditLog`'s
 own precedent); a small amount of duplicated data between `AuditLog` and `PlatformAuditLog` for
@@ -444,7 +444,7 @@ Found during implementation; behavior still matches every acceptance criterion a
   `requireOwner`→`permissions.requireMembership`" (Rules/Flow item 3), but that call returns the
   `ServerMember` row without a `user` relation
   (`apps/api/src/modules/permissions/permissions.service.ts:20-31` — `include: { roles: { include: {
-  role: true } } }`, no `user`). Implemented as one additional `prisma.user.findUniqueOrThrow`
+role: true } } }`, no `user`). Implemented as one additional `prisma.user.findUniqueOrThrow`
   (`username`, `displayName` only) run in parallel with the existing server-name read, before the
   transaction — same cost class as the extra reads already accepted for `deleteServer`/
   `completeDeletion` in Risks & rollback.

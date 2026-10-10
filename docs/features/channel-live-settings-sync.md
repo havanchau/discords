@@ -156,6 +156,7 @@ Built 2026-09-25 against the approved spec. Differences from the text above:
    `RealtimeEvents.ChannelUpdated` export is invisible to `apps/api` until `npm run build:shared` runs.
 
 **Verified** (browser, 2026-09-25, `qa-age-f1` on a channel flipped from another session):
+
 - The age gate rendered in place of a channel that was already open, without reopening or reloading.
 - The `18+` badge appeared in the sidebar live.
 - A channel rename landed in the sidebar live.

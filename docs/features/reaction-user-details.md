@@ -7,6 +7,7 @@ Brings transparency to message reactions by showing which users reacted with eac
 Enable users in channel text messages, thread messages, and direct messages to see who reacted with each emoji via rich tooltips when hovering over reaction buttons.
 
 Acceptance criteria:
+
 - Hovering over a reaction badge shows a tooltip listing the display names of members who added that reaction (e.g. "Demo User, Team Mate reacted with 👍").
 - When more than 3 users reacted, format as "User 1, User 2, User 3 and N others reacted with :emoji:".
 - If the current viewer reacted, their name is formatted nicely (or included as "You").
@@ -58,7 +59,7 @@ export interface Reaction {
     - 1 user: **"Demo User reacted with 👍"**
     - 2 users: **"Demo User and Team Mate reacted with 👍"**
     - 3 users: **"User 1, User 2, and User 3 reacted with 👍"**
-    - >3 users: **"User 1, User 2, User 3, and N others reacted with 👍"**
+    - > 3 users: **"User 1, User 2, User 3, and N others reacted with 👍"**
   - Wrap reaction button with modern `<Tooltip>` component.
 
 ## Technical Approach
@@ -75,10 +76,12 @@ export interface Reaction {
 ## Risks & Verification Plan
 
 ### Automated Tests & Checks
+
 - Run `npm run typecheck`
 - Run `npm run lint`
 - Run `npm run db:seed` to verify seed data displays `[👍 2]` with tooltip "Demo User, Team Mate reacted with 👍".
 
 ### Manual Verification
+
 - Mouse hover over `[👍 2]` badge in message list.
 - Confirm tooltip displays "Demo User and Team Mate reacted with 👍".
